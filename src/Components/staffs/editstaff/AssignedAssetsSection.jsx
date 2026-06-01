@@ -34,7 +34,7 @@ export default function AssignedAssetsSection({ assets }) {
             </div>
             {asset.serial_number && (
               <p className="text-sm text-gray-600 mt-2">
-                <span className="font-medium">S/N:</span> {asset.serial_number}
+                <span className="font-medium">{asset.asset_type === 'Mobiles' ? 'IMEI:' : 'S/N:'}</span> {asset.serial_number}
               </p>
             )}
             {asset.attachment_url && (
@@ -46,6 +46,28 @@ export default function AssignedAssetsSection({ assets }) {
               >
                 <FileText className="w-4 h-4" /> View Document
               </a>
+            )}
+            
+            {asset.attached_assets && asset.attached_assets.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-gray-200 space-y-3">
+                <h5 className="text-xs font-semibold text-gray-500 uppercase">Attached Items</h5>
+                {asset.attached_assets.map(child => (
+                  <div key={child.id} className="flex justify-between items-start pl-3 border-l-2 border-indigo-200">
+                    <div>
+                      <p className="font-semibold text-sm text-gray-800">{child.name}</p>
+                      <p className="text-[10px] text-gray-500">{child.asset_type}</p>
+                      {child.serial_number && (
+                        <p className="text-xs text-gray-600 mt-0.5">
+                          <span className="font-medium">{child.asset_type === 'Mobiles' ? 'IMEI:' : 'S/N:'}</span> {child.serial_number}
+                        </p>
+                      )}
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 uppercase">
+                      {child.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         ))}

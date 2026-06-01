@@ -36,10 +36,11 @@ export default function AssetManagementPage() {
 
   const [formData, setFormData] = useState({
     name: '',
-    asset_type: '',
+    asset_type: 'Mobiles',
     serial_number: '',
     status: 'AVAILABLE',
     assigned_to: '',
+    parent_asset: '',
     purchase_date: '',
     notes: '',
   });
@@ -54,6 +55,8 @@ export default function AssetManagementPage() {
     { value: 'MAINTENANCE', label: 'In Maintenance' },
     { value: 'RETIRED', label: 'Retired' }
   ];
+
+  const assetTypeOptions = ['Mobiles', 'Monitors', 'PC', 'Keyboard', 'Mouse', 'Laptops', 'SIM'];
 
   const fetchWithAuth = async (url, options = {}) => {
     try {
@@ -164,8 +167,8 @@ export default function AssetManagementPage() {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Asset Name is required';
     if (!formData.asset_type.trim()) newErrors.asset_type = 'Asset Type is required';
-    if (formData.status === 'ASSIGNED' && !formData.assigned_to) {
-      newErrors.assigned_to = 'Must assign an employee if status is ASSIGNED';
+    if (formData.status === 'ASSIGNED' && !formData.assigned_to && !formData.parent_asset) {
+      newErrors.assigned_to = 'Must assign an employee or parent asset if status is ASSIGNED';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -191,8 +194,18 @@ export default function AssetManagementPage() {
       if (formData.serial_number) formDataObj.append('serial_number', formData.serial_number);
       formDataObj.append('status', formData.status);
       formDataObj.append('company', companyFilter);
-      if (formData.assigned_to) formDataObj.append('assigned_to', formData.assigned_to);
-      else if (editingAsset && editingAsset.assigned_to && !formData.assigned_to) formDataObj.append('assigned_to', '');
+      if (formData.parent_asset) {
+        formDataObj.append('parent_asset', formData.parent_asset);
+      } else {
+        if (editingAsset && editingAsset.parent_asset) {
+            formDataObj.append('parent_asset', '');
+        }
+        if (formData.assigned_to) {
+            formDataObj.append('assigned_to', formData.assigned_to);
+        } else if (editingAsset && editingAsset.assigned_to) {
+            formDataObj.append('assigned_to', '');
+        }
+      }
 
       if (formData.purchase_date) formDataObj.append('purchase_date', formData.purchase_date);
       if (formData.notes) formDataObj.append('notes', formData.notes);
@@ -219,10 +232,11 @@ export default function AssetManagementPage() {
       setFileToUpload(null);
       setFormData({
         name: '',
-        asset_type: '',
+        asset_type: 'Mobiles',
         serial_number: '',
         status: 'AVAILABLE',
         assigned_to: '',
+        parent_asset: '',
         purchase_date: '',
         notes: '',
       });
@@ -240,10 +254,11 @@ export default function AssetManagementPage() {
     setEditingAsset(asset);
     setFormData({
       name: asset.name,
-      asset_type: asset.asset_type,
+      asset_type: asset.asset_type || 'Mobiles',
       serial_number: asset.serial_number || '',
       status: asset.status,
       assigned_to: asset.assigned_to || '',
+      parent_asset: asset.parent_asset || '',
       purchase_date: asset.purchase_date || '',
       notes: asset.notes || '',
     });
@@ -296,6 +311,7 @@ export default function AssetManagementPage() {
   });
 
   const nonAdminEmployees = employees.filter(emp => emp.role !== 'ADMIN');
+  const potentialParents = assets.filter(a => a.id !== editingAsset?.id && a.asset_type !== 'SIM');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -320,10 +336,11 @@ export default function AssetManagementPage() {
                   setEditingAsset(null);
                   setFormData({
                     name: '',
-                    asset_type: '',
+                    asset_type: 'Mobiles',
                     serial_number: '',
                     status: 'AVAILABLE',
                     assigned_to: '',
+                    parent_asset: '',
                     purchase_date: '',
                     notes: '',
                   });
@@ -520,27 +537,29 @@ export default function AssetManagementPage() {
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                         Asset Type <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="text"
+                      <select
                         name="asset_type"
                         value={formData.asset_type}
                         onChange={handleInputChange}
-                        placeholder="Laptop, Phone, etc."
                         className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.asset_type ? 'border-red-500' : 'border-gray-200'}`}
-                      />
+                      >
+                        {assetTypeOptions.map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
                       {errors.asset_type && <p className="mt-1 text-sm text-red-500">{errors.asset_type}</p>}
                     </div>
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Serial Number
+                        {formData.asset_type === 'Mobiles' ? 'IMEI Number' : 'Serial Number'}
                       </label>
                       <input
                         type="text"
                         name="serial_number"
                         value={formData.serial_number}
                         onChange={handleInputChange}
-                        placeholder="ABC123XYZ"
+                        placeholder={formData.asset_type === 'Mobiles' ? "e.g. 351234567890123" : "ABC123XYZ"}
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                       />
                     </div>
@@ -563,23 +582,42 @@ export default function AssetManagementPage() {
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Assigned To
+                        Attach to Parent Asset
                       </label>
                       <select
-                        name="assigned_to"
-                        value={formData.assigned_to}
+                        name="parent_asset"
+                        value={formData.parent_asset}
                         onChange={handleInputChange}
-                        className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.assigned_to ? 'border-red-500' : 'border-gray-200'}`}
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                       >
-                        <option value="">-- Unassigned --</option>
-                        {nonAdminEmployees.map(emp => (
-                          <option key={emp.id} value={emp.id}>
-                            {emp.full_name || emp.username || `Employee #${emp.id}`}
-                          </option>
+                        <option value="">-- No Parent (Standalone) --</option>
+                        {potentialParents.map(a => (
+                          <option key={a.id} value={a.id}>{a.name} ({a.asset_type})</option>
                         ))}
                       </select>
-                      {errors.assigned_to && <p className="mt-1 text-sm text-red-500">{errors.assigned_to}</p>}
                     </div>
+
+                    {!formData.parent_asset && (
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                          Assigned To
+                        </label>
+                        <select
+                          name="assigned_to"
+                          value={formData.assigned_to}
+                          onChange={handleInputChange}
+                          className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.assigned_to ? 'border-red-500' : 'border-gray-200'}`}
+                        >
+                          <option value="">-- Unassigned --</option>
+                          {nonAdminEmployees.map(emp => (
+                            <option key={emp.id} value={emp.id}>
+                              {emp.full_name || emp.username || `Employee #${emp.id}`}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.assigned_to && <p className="mt-1 text-sm text-red-500">{errors.assigned_to}</p>}
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">
