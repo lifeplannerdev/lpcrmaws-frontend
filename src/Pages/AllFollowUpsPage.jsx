@@ -6,8 +6,13 @@ import {
   CalendarClock, Phone, MessageSquare, Mail, Users,
   AlertTriangle, ArrowLeft, RefreshCw, Search, SlidersHorizontal,
   CheckCircle, Clock, Trash2, X, ChevronDown, ChevronUp,
-  Calendar, Sunrise, Star, UserCheck
+  Calendar as CalendarIcon, Sunrise, Star, UserCheck, LayoutList
 } from 'lucide-react';
+import { Calendar, momentLocalizer } from 'react-big-calendar';
+import moment from 'moment';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+
+const localizer = momentLocalizer(moment);
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -257,6 +262,8 @@ export default function AllFollowUpsPage() {
   const today    = toLocalISO(new Date());
   const tomorrow = toLocalISO(new Date(Date.now() + 86400000));
 
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
+
   const [todayItems,    setTodayItems]    = useState([]);
   const [tomorrowItems, setTomorrowItems] = useState([]);
   const [otherItems,    setOtherItems]    = useState([]);
@@ -436,14 +443,35 @@ export default function AllFollowUpsPage() {
               </div>
               <p className="text-gray-500 ml-[52px] text-sm">Today · Tomorrow · Upcoming</p>
             </div>
-            <button
-              onClick={loadAll}
-              disabled={loadingToday && loadingTomorrow && loadingOther}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 hover:border-indigo-400 rounded-xl text-sm font-semibold text-gray-600 hover:text-indigo-600 transition-all"
-            >
-              <RefreshCw size={16} className={(loadingToday || loadingTomorrow || loadingOther) ? 'animate-spin' : ''} />
-              Refresh
-            </button>
+            <div className="flex gap-2">
+              <div className="flex bg-gray-100 p-1 rounded-xl">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                    viewMode === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <LayoutList size={16} /> List
+                </button>
+                <button
+                  onClick={() => setViewMode('calendar')}
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                    viewMode === 'calendar' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <CalendarIcon size={16} /> Calendar
+                </button>
+              </div>
+
+              <button
+                onClick={loadAll}
+                disabled={loadingToday && loadingTomorrow && loadingOther}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 hover:border-indigo-400 rounded-xl text-sm font-semibold text-gray-600 hover:text-indigo-600 transition-all"
+              >
+                <RefreshCw size={16} className={(loadingToday || loadingTomorrow || loadingOther) ? 'animate-spin' : ''} />
+                Refresh
+              </button>
+            </div>
           </div>
         </div>
 
@@ -559,44 +587,73 @@ export default function AllFollowUpsPage() {
           )}
         </div>
 
-        {/* ── Today ── */}
-        <Section
-          title="Today"
-          subtitle={todayLabel}
-          icon={Star}
-          iconBg="bg-gradient-to-br from-emerald-500 to-teal-600"
-          items={filteredToday}
-          loading={loadingToday}
-          onStatusChange={handleStatusChange}
-          onDelete={handleDelete}
-          defaultOpen={true}
-        />
+        {viewMode === 'list' ? (
+          <>
+            {/* ── Today ── */}
+            <Section
+              title="Today"
+              subtitle={todayLabel}
+              icon={Star}
+              iconBg="bg-gradient-to-br from-emerald-500 to-teal-600"
+              items={filteredToday}
+              loading={loadingToday}
+              onStatusChange={handleStatusChange}
+              onDelete={handleDelete}
+              defaultOpen={true}
+            />
 
-        {/* ── Tomorrow ── */}
-        <Section
-          title="Tomorrow"
-          subtitle={tomorrowLabel}
-          icon={Sunrise}
-          iconBg="bg-gradient-to-br from-blue-500 to-indigo-600"
-          items={filteredTomorrow}
-          loading={loadingTomorrow}
-          onStatusChange={handleStatusChange}
-          onDelete={handleDelete}
-          defaultOpen={true}
-        />
+            {/* ── Tomorrow ── */}
+            <Section
+              title="Tomorrow"
+              subtitle={tomorrowLabel}
+              icon={Sunrise}
+              iconBg="bg-gradient-to-br from-blue-500 to-indigo-600"
+              items={filteredTomorrow}
+              loading={loadingTomorrow}
+              onStatusChange={handleStatusChange}
+              onDelete={handleDelete}
+              defaultOpen={true}
+            />
 
-        {/* ── Upcoming ── */}
-        <Section
-          title="Upcoming"
-          subtitle="After tomorrow"
-          icon={Calendar}
-          iconBg="bg-gradient-to-br from-purple-500 to-pink-600"
-          items={filteredOther}
-          loading={loadingOther}
-          onStatusChange={handleStatusChange}
-          onDelete={handleDelete}
-          defaultOpen={false}
-        />
+            {/* ── Upcoming ── */}
+            <Section
+              title="Upcoming"
+              subtitle="After tomorrow"
+              icon={CalendarIcon}
+              iconBg="bg-gradient-to-br from-purple-500 to-pink-600"
+              items={filteredOther}
+              loading={loadingOther}
+              onStatusChange={handleStatusChange}
+              onDelete={handleDelete}
+              defaultOpen={false}
+            />
+          </>
+        ) : (
+          <div className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100 h-[600px]">
+            <Calendar
+              localizer={localizer}
+              events={[...filteredToday, ...filteredTomorrow, ...filteredOther].map(item => {
+                const date = new Date(item.follow_up_date);
+                if (item.follow_up_time) {
+                  const [h, m] = item.follow_up_time.split(':');
+                  date.setHours(h, m);
+                }
+                return {
+                  title: `${item.name || item.phone_number} (${item.followup_type})`,
+                  start: date,
+                  end: new Date(date.getTime() + 60*60*1000), // + 1 hour
+                  resource: item
+                };
+              })}
+              startAccessor="start"
+              endAccessor="end"
+              style={{ height: '100%' }}
+              eventPropGetter={(event) => ({
+                className: `text-xs font-semibold !bg-indigo-500 text-white border-none rounded p-1 shadow-sm`
+              })}
+            />
+          </div>
+        )}
 
       </div>
     </div>

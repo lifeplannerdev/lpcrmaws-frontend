@@ -11,6 +11,8 @@ import Navbar from '../Components/layouts/Navbar';
 import LeadFollowUps from '../Components/leads/LeadFollowUps';
 import ConversionDetailSection from '../Components/leads/ConversionDetailSection';
 import UnifiedTimeline from '../Components/leads/UnifiedTimeline';
+import CustomerJourney from '../Components/leads/CustomerJourney';
+import LeadDocuments from '../Components/leads/LeadDocuments';
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -196,7 +198,6 @@ export default function LeadDetailPage() {
 
   const TABS = [
     { id: 'details',    label: 'Details',    Icon: FileText      },
-    { id: 'timeline',   label: 'Timeline',   Icon: Clock         },
     { id: 'followups',  label: 'Follow-Ups', Icon: CalendarClock },
     { id: 'assignment', label: 'Assignment', Icon: Users         },
     { id: 'history',    label: 'History',    Icon: History       },
@@ -261,9 +262,15 @@ export default function LeadDetailPage() {
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          <div className="border-b border-gray-200">
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column: Customer Journey + Tabs */}
+          <div className="lg:col-span-2 space-y-6">
+            <CustomerJourney lead={lead} />
+
+            {/* Tabs */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+              <div className="border-b border-gray-200">
             <nav className="flex -mb-px overflow-x-auto">
               {TABS.map(({ id, label, Icon }) => (
                 <button key={id} onClick={() => setActiveTab(id)}
@@ -359,17 +366,13 @@ export default function LeadDetailPage() {
                 {/* Conversion Details */}
                 <ConversionDetailSection lead={lead} />
 
+                {/* Documents Drag and Drop */}
+                <LeadDocuments leadId={leadId} authFetch={authFetch} />
+
               </div>
             )}
 
-            {/* ── Timeline ────────────────────────────────────────── */}
-            {activeTab === 'timeline' && (
-              <UnifiedTimeline 
-                followUps={followUps} 
-                processingTimeline={processingTimeline} 
-                assignmentHistory={assignmentHistory} 
-              />
-            )}
+
 
             {/* ── Follow-Ups ──────────────────────────────────────── */}
             {activeTab === 'followups' && (
@@ -539,9 +542,16 @@ export default function LeadDetailPage() {
               </div>
             )}
 
+            </div>
+          </div>
+
+          {/* Right Column: Unified Timeline (Command Center) */}
+          <div className="lg:col-span-1">
+            <UnifiedTimeline authFetch={authFetch} />
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
