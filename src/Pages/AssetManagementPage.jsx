@@ -123,7 +123,7 @@ export default function AssetManagementPage() {
       if (companyFilter) params.set('company', companyFilter);
       
       const token = accessToken || await refreshAccessToken();
-      const response = await fetch(`${API_BASE_URL}/hr/assets/?${params}`, {
+      const response = await fetch(`${API_BASE_URL}/assets/?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -180,8 +180,8 @@ export default function AssetManagementPage() {
       if (!token) throw new Error('Authentication required');
 
       const url = editingAsset
-        ? `${API_BASE_URL}/hr/assets/${editingAsset.id}/`
-        : `${API_BASE_URL}/hr/assets/`;
+        ? `${API_BASE_URL}/assets/${editingAsset.id}/`
+        : `${API_BASE_URL}/assets/`;
 
       const method = editingAsset ? 'PUT' : 'POST';
 
@@ -260,7 +260,7 @@ export default function AssetManagementPage() {
       const token = accessToken || await refreshAccessToken();
       if (!token) throw new Error('Authentication required');
 
-      const response = await fetch(`${API_BASE_URL}/hr/assets/${assetId}/`, {
+      const response = await fetch(`${API_BASE_URL}/assets/${assetId}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
