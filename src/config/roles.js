@@ -8,7 +8,8 @@ import {
   ShieldAlert,
   FolderClock,
   PhoneCall,
-  CalendarClock
+  CalendarClock,
+  Monitor
 } from "lucide-react";
 
 export const masterNavigation = [
@@ -22,6 +23,7 @@ export const masterNavigation = [
   { id: "penalties",      label: "Penalties",       icon: ShieldAlert,   path: "/hr/penalties",   requiredPermission: "view_penalties" },
   { id: "attendanceDocs", label: "Attendance Docs", icon: FolderClock,   path: "/hr/attendance",  requiredPermission: "view_attendance_docs" },
   { id: "candidates",     label: "Candidates",      icon: Users,         path: "/candidates",     requiredPermission: "view_candidates" },
+  { id: "assets",         label: "Assets",          icon: Monitor,       path: "/hr/assets",      requiredPermission: "view_asset" },
   { id: "myReports",      label: "My Reports",      icon: FileText,      path: "/myreports",      requiredPermission: "view_my_reports" },
   { id: "reports",        label: "Staff Reports",   icon: FileText,      path: "/daily/reports",  requiredPermission: "view_staff_reports" },
   { id: "call",           label: "Voxbay",          icon: PhoneCall,     path: "/call-analytics", requiredPermission: "view_voxbay" },

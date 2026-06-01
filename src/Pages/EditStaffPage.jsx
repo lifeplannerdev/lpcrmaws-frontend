@@ -21,6 +21,7 @@ export default function EditStaffPage() {
     salary: '',
     isActive: true,
     company: 'LP',
+    assets: [],
   });
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
@@ -82,7 +83,8 @@ export default function EditStaffPage() {
           salary: data.salary || '',
           team: data.team || '',
           isActive: data.is_active ?? true,
-          company: data.company || 'LP'
+          company: data.company || 'LP',
+          assets: data.assets || [],
         });
       } catch (err) {
         setFetchError('Network error occurred');

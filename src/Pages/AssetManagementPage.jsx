@@ -1,0 +1,653 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import Navbar from '../Components/layouts/Navbar';
+import CompanySwitcher from '../Components/common/CompanySwitcher';
+import {
+  Monitor,
+  Plus,
+  X,
+  User,
+  Edit,
+  Trash2,
+  Search,
+  Loader2,
+  AlertCircle,
+  FileText,
+  Filter
+} from 'lucide-react';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+export default function AssetManagementPage() {
+  const { accessToken, refreshAccessToken, user } = useAuth();
+
+  const [showModal, setShowModal] = useState(false);
+  const [assets, setAssets] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [editingAsset, setEditingAsset] = useState(null);
+
+  // Filters
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [companyFilter, setCompanyFilter] = useState(user?.company || 'LP');
+
+  const [formData, setFormData] = useState({
+    name: '',
+    asset_type: '',
+    serial_number: '',
+    status: 'AVAILABLE',
+    assigned_to: '',
+    purchase_date: '',
+    notes: '',
+  });
+  const [fileToUpload, setFileToUpload] = useState(null);
+
+  const [errors, setErrors] = useState({});
+  const canManageAssets = user?.permissions?.includes('manage_asset') || user?.role === 'ADMIN' || user?.role === 'HR';
+
+  const statusOptions = [
+    { value: 'AVAILABLE', label: 'Available' },
+    { value: 'ASSIGNED', label: 'Assigned' },
+    { value: 'MAINTENANCE', label: 'In Maintenance' },
+    { value: 'RETIRED', label: 'Retired' }
+  ];
+
+  const fetchWithAuth = async (url, options = {}) => {
+    try {
+      let token = accessToken;
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+        },
+      });
+
+      if (response.status === 401) {
+        token = await refreshAccessToken();
+        if (!token) throw new Error('Unable to refresh token');
+
+        // Modify headers for retry
+        const retryHeaders = { ...options.headers };
+        if (retryHeaders.Authorization) {
+          retryHeaders.Authorization = `Bearer ${token}`;
+        }
+        
+        const retryResponse = await fetch(url, {
+          ...options,
+          headers: retryHeaders,
+        });
+
+        if (!retryResponse.ok) {
+          throw new Error(`HTTP error! status: ${retryResponse.status}`);
+        }
+        return await retryResponse.json();
+      }
+
+      if (!response.ok) {
+        if (response.status !== 204) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return {};
+      }
+
+      return response.status !== 204 ? await response.json() : {};
+    } catch (err) {
+      console.error('Fetch error:', err);
+      throw err;
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const token = accessToken || await refreshAccessToken();
+      const response = await fetch(`${API_BASE_URL}/staffs/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      setEmployees(data.results || data || []);
+    } catch (err) {
+      console.error('Error fetching employees:', err);
+      setEmployees([]);
+    }
+  };
+
+  const fetchAssets = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (companyFilter) params.set('company', companyFilter);
+      
+      const token = accessToken || await refreshAccessToken();
+      const response = await fetch(`${API_BASE_URL}/hr/assets/?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      setAssets(data.results || data || []);
+    } catch (err) {
+      console.error('Error fetching assets:', err);
+      setAssets([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (accessToken) {
+      fetchAssets();
+      fetchEmployees();
+    }
+  }, [accessToken, companyFilter]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFileToUpload(file);
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.name.trim()) newErrors.name = 'Asset Name is required';
+    if (!formData.asset_type.trim()) newErrors.asset_type = 'Asset Type is required';
+    if (formData.status === 'ASSIGNED' && !formData.assigned_to) {
+      newErrors.assigned_to = 'Must assign an employee if status is ASSIGNED';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+    setSubmitting(true);
+
+    try {
+      const token = accessToken || await refreshAccessToken();
+      if (!token) throw new Error('Authentication required');
+
+      const url = editingAsset
+        ? `${API_BASE_URL}/hr/assets/${editingAsset.id}/`
+        : `${API_BASE_URL}/hr/assets/`;
+
+      const method = editingAsset ? 'PUT' : 'POST';
+
+      const formDataObj = new FormData();
+      formDataObj.append('name', formData.name);
+      formDataObj.append('asset_type', formData.asset_type);
+      if (formData.serial_number) formDataObj.append('serial_number', formData.serial_number);
+      formDataObj.append('status', formData.status);
+      formDataObj.append('company', companyFilter);
+      if (formData.assigned_to) formDataObj.append('assigned_to', formData.assigned_to);
+      else if (editingAsset && editingAsset.assigned_to && !formData.assigned_to) formDataObj.append('assigned_to', '');
+
+      if (formData.purchase_date) formDataObj.append('purchase_date', formData.purchase_date);
+      if (formData.notes) formDataObj.append('notes', formData.notes);
+      
+      if (fileToUpload) {
+        formDataObj.append('attachment', fileToUpload);
+      }
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formDataObj,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to save asset');
+      }
+
+      setShowModal(false);
+      setEditingAsset(null);
+      setFileToUpload(null);
+      setFormData({
+        name: '',
+        asset_type: '',
+        serial_number: '',
+        status: 'AVAILABLE',
+        assigned_to: '',
+        purchase_date: '',
+        notes: '',
+      });
+      setErrors({});
+      fetchAssets();
+    } catch (err) {
+      console.error('Error saving asset:', err);
+      setErrors({ submit: err.message || 'Failed to save asset' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEdit = (asset) => {
+    setEditingAsset(asset);
+    setFormData({
+      name: asset.name,
+      asset_type: asset.asset_type,
+      serial_number: asset.serial_number || '',
+      status: asset.status,
+      assigned_to: asset.assigned_to || '',
+      purchase_date: asset.purchase_date || '',
+      notes: asset.notes || '',
+    });
+    setFileToUpload(null);
+    setShowModal(true);
+  };
+
+  const handleDelete = async (assetId) => {
+    if (!window.confirm('Are you sure you want to delete this asset?')) {
+      return;
+    }
+
+    try {
+      const token = accessToken || await refreshAccessToken();
+      if (!token) throw new Error('Authentication required');
+
+      const response = await fetch(`${API_BASE_URL}/hr/assets/${assetId}/`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete asset');
+      }
+
+      fetchAssets();
+    } catch (err) {
+      console.error('Error deleting asset:', err);
+      alert('Failed to delete asset');
+    }
+  };
+
+  const getEmployeeName = (userId) => {
+    if (!userId) return 'Unassigned';
+    const employee = employees.find(e => e.id === userId);
+    return employee ? (employee.full_name || employee.username) : 'Unknown';
+  };
+
+  const filteredAssets = assets.filter(asset => {
+    const matchesStatus = !selectedStatus || asset.status === selectedStatus;
+    const matchesEmployee = !selectedEmployee || asset.assigned_to === parseInt(selectedEmployee);
+    const matchesSearch =
+      !searchTerm ||
+      asset.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.asset_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.serial_number?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesEmployee && matchesSearch;
+  });
+
+  const nonAdminEmployees = employees.filter(emp => emp.role !== 'ADMIN');
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <Navbar />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h1 className="text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+                Asset Management
+              </h1>
+              <p className="text-gray-600 text-lg">
+                Track and manage company assets and inventory
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <CompanySwitcher activeCompany={companyFilter} onChange={setCompanyFilter} />
+              {canManageAssets && (
+                <button
+                onClick={() => {
+                  setEditingAsset(null);
+                  setFormData({
+                    name: '',
+                    asset_type: '',
+                    serial_number: '',
+                    status: 'AVAILABLE',
+                    assigned_to: '',
+                    purchase_date: '',
+                    notes: '',
+                  });
+                  setFileToUpload(null);
+                  setShowModal(true);
+                }}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold"
+              >
+                <Plus className="w-5 h-5" />
+                Add Asset
+              </button>
+            )}
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Filter className="w-5 h-5 text-gray-500" />
+            <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                Status
+              </label>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow"
+              >
+                <option value="">All Statuses</option>
+                {statusOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                Assigned Employee
+              </label>
+              <select
+                value={selectedEmployee}
+                onChange={(e) => setSelectedEmployee(e.target.value)}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow"
+              >
+                <option value="">All Employees</option>
+                {nonAdminEmployees.map(emp => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.full_name || emp.username || `Employee #${emp.id}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                Search
+              </label>
+              <div className="relative">
+                <Search className="w-5 h-5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search assets..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Assets List */}
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+          </div>
+        ) : filteredAssets.length === 0 ? (
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-16 shadow-sm border border-gray-100 text-center">
+            <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-5">
+              <Monitor className="w-10 h-10 text-blue-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">No Assets Found</h3>
+            <p className="text-gray-500">
+              {searchTerm || selectedStatus || selectedEmployee
+                ? 'Try adjusting your filters.'
+                : 'No assets have been added to this company yet.'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredAssets.map((asset) => (
+              <div key={asset.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg transition-all group relative overflow-hidden">
+                <div className={`absolute top-0 left-0 w-1.5 h-full ${asset.status === 'AVAILABLE' ? 'bg-emerald-500' : asset.status === 'ASSIGNED' ? 'bg-blue-500' : asset.status === 'MAINTENANCE' ? 'bg-amber-500' : 'bg-gray-400'}`}></div>
+                
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-bold text-lg text-gray-900">{asset.name}</h3>
+                    <p className="text-sm text-gray-500">{asset.asset_type}</p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${asset.status === 'AVAILABLE' ? 'bg-emerald-100 text-emerald-700' : asset.status === 'ASSIGNED' ? 'bg-blue-100 text-blue-700' : asset.status === 'MAINTENANCE' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>
+                    {statusOptions.find(s => s.value === asset.status)?.label || asset.status}
+                  </span>
+                </div>
+
+                <div className="space-y-3 mb-6">
+                  {asset.serial_number && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">S/N:</span>
+                      <span className="font-medium text-gray-800">{asset.serial_number}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500 flex items-center gap-1"><User className="w-4 h-4"/> Assigned:</span>
+                    <span className="font-medium text-gray-800">{getEmployeeName(asset.assigned_to)}</span>
+                  </div>
+                  {asset.attachment_url && (
+                     <div className="flex items-center justify-between text-sm">
+                       <span className="text-gray-500 flex items-center gap-1"><FileText className="w-4 h-4"/> Docs:</span>
+                       <a href={asset.attachment_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">View File</a>
+                     </div>
+                  )}
+                </div>
+
+                {canManageAssets && (
+                  <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
+                    <button
+                      onClick={() => handleEdit(asset)}
+                      className="flex-1 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Edit className="w-4 h-4" /> Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(asset.id)}
+                      className="flex-1 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add/Edit Modal */}
+        {showModal && (
+          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl my-8 relative">
+              <div className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {editingAsset ? 'Edit Asset' : 'Add New Asset'}
+                </h2>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="p-6">
+                {errors.submit && (
+                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex gap-3">
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    <p>{errors.submit}</p>
+                  </div>
+                )}
+
+                <div className="space-y-5">
+                  <div className="grid grid-cols-2 gap-5">
+                    <div className="col-span-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Asset Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        placeholder="e.g. MacBook Pro M2"
+                        className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.name ? 'border-red-500' : 'border-gray-200'}`}
+                      />
+                      {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Asset Type <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="asset_type"
+                        value={formData.asset_type}
+                        onChange={handleInputChange}
+                        placeholder="Laptop, Phone, etc."
+                        className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.asset_type ? 'border-red-500' : 'border-gray-200'}`}
+                      />
+                      {errors.asset_type && <p className="mt-1 text-sm text-red-500">{errors.asset_type}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Serial Number
+                      </label>
+                      <input
+                        type="text"
+                        name="serial_number"
+                        value={formData.serial_number}
+                        onChange={handleInputChange}
+                        placeholder="ABC123XYZ"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Status <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="status"
+                        value={formData.status}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      >
+                        {statusOptions.map(option => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Assigned To
+                      </label>
+                      <select
+                        name="assigned_to"
+                        value={formData.assigned_to}
+                        onChange={handleInputChange}
+                        className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.assigned_to ? 'border-red-500' : 'border-gray-200'}`}
+                      >
+                        <option value="">-- Unassigned --</option>
+                        {nonAdminEmployees.map(emp => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.full_name || emp.username || `Employee #${emp.id}`}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.assigned_to && <p className="mt-1 text-sm text-red-500">{errors.assigned_to}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Purchase Date
+                      </label>
+                      <input
+                        type="date"
+                        name="purchase_date"
+                        value={formData.purchase_date}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      />
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Attachment (Invoice/Photo)
+                      </label>
+                      <input
+                        type="file"
+                        onChange={handleFileChange}
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      />
+                      {editingAsset?.attachment_url && !fileToUpload && (
+                        <p className="mt-2 text-sm text-gray-500">Current file: <a href={editingAsset.attachment_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">View</a></p>
+                      )}
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Notes
+                      </label>
+                      <textarea
+                        name="notes"
+                        value={formData.notes}
+                        onChange={handleInputChange}
+                        rows={3}
+                        placeholder="Additional details..."
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8 flex justify-end gap-3 pt-6 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    disabled={submitting}
+                    className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    className="px-8 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
+                  >
+                    {submitting && <Loader2 className="w-5 h-5 animate-spin" />}
+                    {editingAsset ? 'Save Changes' : 'Add Asset'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

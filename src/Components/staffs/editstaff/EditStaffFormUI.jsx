@@ -3,6 +3,7 @@ import StaffHeader from "../newstaff/StaffHeader";
 import StaffActionButtons from "../newstaff/StaffActionButtons";
 import PersonalInfoSection from "../newstaff/PersonalInfoSection";
 import ProfessionalInfoSection from "../newstaff/ProfessionalInfoSection";
+import AssignedAssetsSection from "./AssignedAssetsSection";
 
 export default function EditStaffFormUI({
   formData,
@@ -75,6 +76,8 @@ export default function EditStaffFormUI({
             onChange={handleInputChange}
             hasDualAccess={hasDualAccess}
           />
+
+          <AssignedAssetsSection assets={formData.assets} />
 
           <StaffActionButtons
             onSubmit={handleSubmit}

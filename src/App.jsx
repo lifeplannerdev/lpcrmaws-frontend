@@ -32,6 +32,7 @@ import AllFollowUpsPage from './Pages/AllFollowUpsPage';
 import CandidatesPage from "./Pages/CandidatesPage";
 import CandidateDetailPage from "./Pages/CandidateDetailPage";
 import CandidateFormPage from "./Pages/CandidateFormPage";
+import AssetManagementPage from "./Pages/AssetManagementPage.jsx";
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -84,6 +85,7 @@ export default function App() {
         <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
         
         <Route path="/call-analytics" element={<ProtectedRoute><CallAnalyticsPage /></ProtectedRoute>} />
+        <Route path="/hr/assets" element={<ProtectedRoute><AssetManagementPage /></ProtectedRoute>} />
         <Route path="*" element={<div>404 Not Found</div>} />
       </Routes>
     </Router>
