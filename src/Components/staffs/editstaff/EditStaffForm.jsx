@@ -47,8 +47,8 @@ export default function EditStaffForm({
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
     }
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
+    if (!formData.officePhone?.trim()) {
+      newErrors.officePhone = 'Company Phone is required';
     }
     if (!formData.role) {
       newErrors.role = 'Role is required';
@@ -70,7 +70,9 @@ export default function EditStaffForm({
       last_name: formData.lastName,
       username: formData.username,
       email: formData.email,
-      phone: formData.phone,
+      office_phone: formData.officePhone,
+      personal_phone: formData.personalPhone,
+      phone: formData.officePhone, // keep mapping to phone as fallback
       location: formData.location,
       role: formData.role,
       team: formData.team,

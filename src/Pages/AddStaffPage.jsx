@@ -59,10 +59,10 @@ export default function AddStaffPage() {
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
     }
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!/^\+?[\d\s\-()]+$/.test(formData.phone)) {
-      newErrors.phone = 'Phone number format is invalid';
+    if (!formData.officePhone?.trim()) {
+      newErrors.officePhone = 'Company Phone is required';
+    } else if (!/^\+?[\d\s\-()]+$/.test(formData.officePhone)) {
+      newErrors.officePhone = 'Company Phone format is invalid';
     }
     if (!formData.role) newErrors.role = 'Role is required';
     if (!formData.password) {
@@ -88,7 +88,9 @@ export default function AddStaffPage() {
       last_name: formData.lastName,
       username: formData.username,
       email: formData.email,
-      phone: formData.phone,
+      office_phone: formData.officePhone,
+      personal_phone: formData.personalPhone,
+      phone: formData.officePhone, // Keep mapping to phone to satisfy any backend expectations
       location: formData.location || '',
       role: formData.role,
       team: formData.team || '',

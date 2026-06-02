@@ -70,13 +70,25 @@ const PersonalInfoSection = React.memo(({ formData, errors, onChange }) => {
         />
 
         <FormField
-          label="Phone Number"
-          name="phone"
+          label="Company Phone"
+          name="officePhone"
           type="tel"
-          value={formData.phone}
+          value={formData.officePhone}
           onChange={onChange}
-          error={errors.phone}
+          error={errors.officePhone}
           required
+          placeholder="+1 (555) 000-0000"
+          icon={Phone}
+          className="px-4 py-3 border-2 rounded-xl font-medium"
+        />
+
+        <FormField
+          label="Personal Phone"
+          name="personalPhone"
+          type="tel"
+          value={formData.personalPhone}
+          onChange={onChange}
+          error={errors.personalPhone}
           placeholder="+1 (555) 000-0000"
           icon={Phone}
           className="px-4 py-3 border-2 rounded-xl font-medium"
