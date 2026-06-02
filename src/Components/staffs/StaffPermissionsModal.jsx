@@ -20,6 +20,8 @@ const PERMISSION_OPTIONS = [
   { id: 'mark_attendance', label: 'Mark Student Attendance', group: 'Trainer' },
   { id: 'view_asset', label: 'View Assets', group: 'HR' },
   { id: 'manage_asset', label: 'Manage Assets', group: 'HR' },
+  { id: 'view_staff_assets', label: 'View Staff Assets Tab', group: 'Staff' },
+  { id: 'edit_staff_contact_logic', label: 'Manage Contact Logic', group: 'Staff' },
   { id: 'access_flag', label: 'Cross-Company Access (FLAG)', group: 'System' },
 ];
 
