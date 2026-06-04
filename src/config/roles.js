@@ -9,7 +9,8 @@ import {
   FolderClock,
   PhoneCall,
   CalendarClock,
-  Monitor
+  Monitor,
+  IndianRupee
 } from "lucide-react";
 
 export const masterNavigation = [
@@ -19,6 +20,7 @@ export const masterNavigation = [
   { id: "myTasks",        label: "My Tasks",        icon: ListTodo,      path: "/mytasks",        requiredPermission: "view_my_tasks" },
   { id: "allTasks",       label: "Tasks",           icon: ListTodo,      path: "/staff/tasks",    requiredPermission: "view_all_tasks" },
   { id: "students",       label: "Students",        icon: GraduationCap, path: "/students",       requiredPermission: "view_students" },
+  { id: "fees",           label: "Fees",             icon: IndianRupee,    path: "/fees",           requiredPermission: "view_fees" },
   { id: "markAttendance", label: "Mark Attendance", icon: CalendarCheck, path: "/attendance/mark",requiredPermission: "mark_attendance" },
   { id: "penalties",      label: "Penalties",       icon: ShieldAlert,   path: "/hr/penalties",   requiredPermission: "view_penalties" },
   { id: "attendanceDocs", label: "Attendance Docs", icon: FolderClock,   path: "/hr/attendance",  requiredPermission: "view_attendance_docs" },

@@ -22,8 +22,9 @@ const statusColors = {
 
 const StudentCard = React.memo(({ student, onDelete }) => {
   const navigate = useNavigate();
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   const avatar = `https://api.dicebear.com/7.x/initials/svg?seed=${student.name}`;
+  const canEditStudents = (user?.permissions || []).includes('edit_students');
 
   const handleDelete = async () => {
     if (!window.confirm(`Are you sure you want to delete ${student.name}? This action cannot be undone.`)) {
@@ -77,17 +78,25 @@ const StudentCard = React.memo(({ student, onDelete }) => {
             </span>
           </div>
         </div>
-        <div className="text-right text-sm text-gray-600">
-          <div className="flex items-center gap-1 justify-end">
-            <User size={16} className="text-indigo-500" />
-            <span className="font-medium">{student.trainer_name || 'No Trainer'}</span>
-          </div>
-          <div className="text-xs text-gray-500 mt-1 font-medium">
-            {student.academic_batch_details 
-              ? `${student.academic_batch_details.name} (${student.academic_batch_details.academic_year})` 
-              : `Batch ${student.batch || 'N/A'}`}
-          </div>
+      <div className="text-right text-sm text-gray-600">
+        <div className="flex items-center gap-1 justify-end">
+          <User size={16} className="text-indigo-500" />
+          <span className="font-medium">{student.trainer_name || 'No Trainer'}</span>
         </div>
+        <div className="text-xs text-gray-500 mt-1 font-medium">
+          {student.academic_batch_details 
+            ? `${student.academic_batch_details.name} (${student.academic_batch_details.academic_year})` 
+            : `Batch ${student.batch || 'N/A'}`}
+        </div>
+        {student.fee_summary && (
+          <div className="mt-2 inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold">
+            <span>Fee</span>
+            <span>{student.fee_summary.status}</span>
+            <span>•</span>
+            <span>₹{student.fee_summary.balance_due}</span>
+          </div>
+        )}
+      </div>
       </div>
 
       {/* Class & Admission */}
@@ -130,13 +139,23 @@ const StudentCard = React.memo(({ student, onDelete }) => {
           <Eye size={16} />
           View
         </button>
-        <button 
-          onClick={() => navigate(`/students/edit/${student.id}`)} 
-          className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all border border-blue-200 hover:border-blue-300"
-        >
-          <Edit size={16} />
-          Edit
-        </button>
+        {canEditStudents ? (
+          <button 
+            onClick={() => navigate(`/students/edit/${student.id}`)} 
+            className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all border border-blue-200 hover:border-blue-300"
+          >
+            <Edit size={16} />
+            Edit
+          </button>
+        ) : (
+          <button
+            disabled
+            className="px-4 py-2 text-gray-400 bg-gray-50 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold border border-gray-200 cursor-not-allowed"
+          >
+            <Edit size={16} />
+            Read Only
+          </button>
+        )}
         
         {/* ATTENDANCE BUTTON */}
         <button 
@@ -148,13 +167,23 @@ const StudentCard = React.memo(({ student, onDelete }) => {
         </button>
         
         {/* DELETE BUTTON */}
-        <button 
-          onClick={handleDelete}
-          className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all border border-red-200 hover:border-red-300"
-        >
-          <Trash2 size={16} />
-          Delete
-        </button>
+        {canEditStudents ? (
+          <button 
+            onClick={handleDelete}
+            className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all border border-red-200 hover:border-red-300"
+          >
+            <Trash2 size={16} />
+            Delete
+          </button>
+        ) : (
+          <button
+            disabled
+            className="px-4 py-2 text-gray-400 bg-gray-50 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold border border-gray-200 cursor-not-allowed"
+          >
+            <Trash2 size={16} />
+            Locked
+          </button>
+        )}
       </div>
     </div>
   );

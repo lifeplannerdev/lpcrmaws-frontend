@@ -34,11 +34,21 @@ import CandidatesPage from "./Pages/CandidatesPage";
 import CandidateDetailPage from "./Pages/CandidateDetailPage";
 import CandidateFormPage from "./Pages/CandidateFormPage";
 import AssetManagementPage from "./Pages/AssetManagementPage.jsx";
+import FeesManagementPage from "./Pages/FeesManagementPage.jsx";
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return null;
   return isAuthenticated ? children : <Navigate to="/login" replace />;
+};
+
+const PermissionRoute = ({ children, permissions = [] }) => {
+  const { isAuthenticated, loading, user } = useAuth();
+  if (loading) return null;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  const userPermissions = user?.permissions || [];
+  const allowed = permissions.length === 0 || permissions.some((permission) => userPermissions.includes(permission));
+  return allowed ? children : <Navigate to="/" replace />;
 };
 
 export default function App() {
@@ -70,15 +80,15 @@ export default function App() {
         <Route path="/reports/view/:id" element={<ProtectedRoute><ReportViewPage /></ProtectedRoute>} />
         <Route path="/myreports/" element={<ProtectedRoute><MyReportsPage /></ProtectedRoute>} />
 
-        <Route path="/students" element={<ProtectedRoute><StudentsPage /></ProtectedRoute>} />
-        <Route path="/students/add" element={<ProtectedRoute><AddStudentPage /></ProtectedRoute>} />
-        <Route path="/students/view/:id" element={<ProtectedRoute><StudentViewPage /></ProtectedRoute>} />
-        <Route path="/students/edit/:id" element={<ProtectedRoute><StudentEditPage /></ProtectedRoute>} />
-        <Route path="/academic-batches" element={<ProtectedRoute><AcademicBatchesPage /></ProtectedRoute>} />
-        <Route path="/attendance/mark" element={<ProtectedRoute><AttendanceMarkingPage /></ProtectedRoute>} />
-        <Route path="/students/:studentId/attendance" element={<ProtectedRoute><StudentAttendanceRecordsPage /></ProtectedRoute>} />
+        <Route path="/students" element={<PermissionRoute permissions={['view_students', 'edit_students', 'manage_students']}><StudentsPage /></PermissionRoute>} />
+        <Route path="/students/add" element={<PermissionRoute permissions={['edit_students']}><AddStudentPage /></PermissionRoute>} />
+        <Route path="/students/view/:id" element={<PermissionRoute permissions={['view_students', 'edit_students', 'manage_students']}><StudentViewPage /></PermissionRoute>} />
+        <Route path="/students/edit/:id" element={<PermissionRoute permissions={['edit_students']}><StudentEditPage /></PermissionRoute>} />
+        <Route path="/academic-batches" element={<PermissionRoute permissions={['view_students', 'manage_students', 'view_fee_reports']}><AcademicBatchesPage /></PermissionRoute>} />
+        <Route path="/attendance/mark" element={<PermissionRoute permissions={['mark_attendance']}><AttendanceMarkingPage /></PermissionRoute>} />
+        <Route path="/students/:studentId/attendance" element={<PermissionRoute permissions={['view_students', 'mark_attendance']}><StudentAttendanceRecordsPage /></PermissionRoute>} />
 
-        <Route path="/hr/attendance" element={<ProtectedRoute><AttendanceDocumentsPage /></ProtectedRoute>} />
+        <Route path="/hr/attendance" element={<PermissionRoute permissions={['view_attendance_docs']}><AttendanceDocumentsPage /></PermissionRoute>} />
         <Route path="/hr/penalties" element={<ProtectedRoute><PenaltyManagementPage /></ProtectedRoute>} />
         <Route path="/candidates" element={<ProtectedRoute><CandidatesPage /></ProtectedRoute>} />
         <Route path="/candidates/new" element={<ProtectedRoute><CandidateFormPage /></ProtectedRoute>} />
@@ -88,6 +98,7 @@ export default function App() {
         
         <Route path="/call-analytics" element={<ProtectedRoute><CallAnalyticsPage /></ProtectedRoute>} />
         <Route path="/hr/assets" element={<ProtectedRoute><AssetManagementPage /></ProtectedRoute>} />
+        <Route path="/fees" element={<PermissionRoute permissions={['view_fees', 'manage_fees', 'view_fee_reports']}><FeesManagementPage /></PermissionRoute>} />
         <Route path="*" element={<div>404 Not Found</div>} />
       </Routes>
     </Router>
