@@ -7,6 +7,7 @@ import {
   XCircle, Laptop, Smartphone, Clock, Edit, ShieldAlert, ArrowLeft
 } from 'lucide-react';
 import StaffPermissionsModal from '../Components/staffs/StaffPermissionsModal';
+import { Can } from '../context/PermissionsContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -166,7 +167,7 @@ export default function StaffDetailsPage() {
               </div>
               
               <div className="mt-4 sm:mt-0 flex gap-3">
-                {user?.permissions?.includes('edit_staff') && (
+                <Can perform="staff:edit_any">
                   <>
                     <button
                       onClick={() => setPermissionsModalOpen(true)}
@@ -181,7 +182,7 @@ export default function StaffDetailsPage() {
                       <Edit size={18} /> Edit Profile
                     </button>
                   </>
-                )}
+                </Can>
               </div>
             </div>
           </div>
@@ -195,14 +196,14 @@ export default function StaffDetailsPage() {
           >
             Profile Info
           </button>
-          {(user?.permissions?.includes('view_staff_assets') || user?.role === 'ADMIN' || user?.role === 'HR') && (
+          <Can perform="assets:read_any">
             <button
               onClick={() => setActiveTab('assets')}
               className={`px-8 py-3 rounded-xl font-medium transition-all duration-300 ${activeTab === 'assets' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
             >
               Assets & Timeline
             </button>
-          )}
+          </Can>
         </div>
 
         {/* Tab Content */}

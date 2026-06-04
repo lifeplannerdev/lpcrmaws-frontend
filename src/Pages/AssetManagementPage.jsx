@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import Navbar from '../Components/layouts/Navbar';
 import CompanySwitcher from '../Components/common/CompanySwitcher';
 import {
@@ -47,7 +48,8 @@ export default function AssetManagementPage() {
   const [fileToUpload, setFileToUpload] = useState(null);
 
   const [errors, setErrors] = useState({});
-  const canManageAssets = user?.permissions?.includes('manage_asset') || user?.role === 'ADMIN' || user?.role === 'HR';
+  const { hasPermission } = usePermissions();
+  const canManageAssets = hasPermission('assets:create') || hasPermission('assets:edit_any') || hasPermission('assets:edit_tenant') || hasPermission('assets:edit_own');
 
   const statusOptions = [
     { value: 'AVAILABLE', label: 'Available' },
