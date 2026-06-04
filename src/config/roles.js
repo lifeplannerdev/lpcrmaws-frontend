@@ -14,26 +14,26 @@ import {
 } from "lucide-react";
 
 export const masterNavigation = [
-  { id: "overview",       label: "Overview",        icon: FileText,      path: "/",               requiredPermission: "view_overview" },
-  { id: "leads",          label: "Leads",           icon: Users,         path: "/leads",          requiredPermission: "view_leads" },
-  { id: "staff",          label: "Staff",           icon: UserCheck,     path: "/staff",          requiredPermission: "view_staff" },
-  { id: "myTasks",        label: "My Tasks",        icon: ListTodo,      path: "/mytasks",        requiredPermission: "view_my_tasks" },
-  { id: "allTasks",       label: "Tasks",           icon: ListTodo,      path: "/staff/tasks",    requiredPermission: "view_all_tasks" },
-  { id: "students",       label: "Students",        icon: GraduationCap, path: "/students",       requiredPermission: "view_students" },
-  { id: "fees",           label: "Fees",             icon: IndianRupee,    path: "/fees",           requiredPermission: "view_fees" },
-  { id: "markAttendance", label: "Mark Attendance", icon: CalendarCheck, path: "/attendance/mark",requiredPermission: "mark_attendance" },
-  { id: "penalties",      label: "Penalties",       icon: ShieldAlert,   path: "/hr/penalties",   requiredPermission: "view_penalties" },
-  { id: "attendanceDocs", label: "Attendance Docs", icon: FolderClock,   path: "/hr/attendance",  requiredPermission: "view_attendance_docs" },
-  { id: "candidates",     label: "Candidates",      icon: Users,         path: "/candidates",     requiredPermission: "view_candidates" },
-  { id: "assets",         label: "Assets",          icon: Monitor,       path: "/hr/assets",      requiredPermission: "view_asset" },
-  { id: "myReports",      label: "My Reports",      icon: FileText,      path: "/myreports",      requiredPermission: "view_my_reports" },
-  { id: "reports",        label: "Staff Reports",   icon: FileText,      path: "/daily/reports",  requiredPermission: "view_staff_reports" },
-  { id: "call",           label: "Voxbay",          icon: PhoneCall,     path: "/call-analytics", requiredPermission: "view_voxbay" },
+  { id: "overview",       label: "Overview",        icon: FileText,      path: "/",               requiredResource: "dashboard" },
+  { id: "leads",          label: "Leads",           icon: Users,         path: "/leads",          requiredResource: "leads" },
+  { id: "staff",          label: "Staff",           icon: UserCheck,     path: "/staff",          requiredResource: "staff" },
+  { id: "myTasks",        label: "My Tasks",        icon: ListTodo,      path: "/mytasks",        requiredResource: "tasks" },
+  { id: "allTasks",       label: "Tasks",           icon: ListTodo,      path: "/staff/tasks",    requiredResource: "tasks" },
+  { id: "students",       label: "Students",        icon: GraduationCap, path: "/students",       requiredResource: "students" },
+  { id: "fees",           label: "Fees",             icon: IndianRupee,    path: "/fees",           requiredResource: "fees" },
+  { id: "markAttendance", label: "Mark Attendance", icon: CalendarCheck, path: "/attendance/mark",requiredResource: "attendance" },
+  { id: "penalties",      label: "Penalties",       icon: ShieldAlert,   path: "/hr/penalties",   requiredResource: "penalties" },
+  { id: "attendanceDocs", label: "Attendance Docs", icon: FolderClock,   path: "/hr/attendance",  requiredResource: "attendance" },
+  { id: "candidates",     label: "Candidates",      icon: Users,         path: "/candidates",     requiredResource: "candidates" },
+  { id: "assets",         label: "Assets",          icon: Monitor,       path: "/hr/assets",      requiredResource: "assets" },
+  { id: "myReports",      label: "My Reports",      icon: FileText,      path: "/myreports",      requiredResource: "reports" },
+  { id: "reports",        label: "Staff Reports",   icon: FileText,      path: "/daily/reports",  requiredResource: "reports" },
+  { id: "call",           label: "Voxbay",          icon: PhoneCall,     path: "/call-analytics", requiredResource: "voxbay" },
 ];
 
-export const getMenuForPermissions = (permissions = []) => {
-  if (!Array.isArray(permissions)) return [];
-  return masterNavigation.filter((item) => permissions.includes(item.requiredPermission));
+export const getFilteredMenu = (hasAnyPermission) => {
+  if (typeof hasAnyPermission !== 'function') return [];
+  return masterNavigation.filter((item) => hasAnyPermission(item.requiredResource));
 };
 
 // Fallback for legacy imports until fully removed

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getMenuForPermissions } from '../../config/roles';
+import { usePermissions } from '../../context/PermissionsContext';
+import { getFilteredMenu } from '../../config/roles';
 import DesktopNavbar from './DesktopNavbar';
 import MobileNavbar from './MobileNavbar';
 import { useUserChannel } from '../../hooks/useUserChannel';
@@ -12,6 +13,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, accessToken, refreshAccessToken } = useAuth();
+  const { hasAnyPermission } = usePermissions();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -99,7 +101,7 @@ const Navbar = () => {
     }),
   });
 
-  const navItems = getMenuForPermissions(user?.permissions);
+  const navItems = getFilteredMenu(hasAnyPermission);
   const handleNavigation = (path) => { navigate(path); setIsMobileMenuOpen(false); };
   const handleLogout = async () => { await logout(); navigate('/login'); };
   const handleChatOpen = () => { navigate('/chat'); setIsMobileMenuOpen(false); };

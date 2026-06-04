@@ -33,8 +33,18 @@ export const PermissionsProvider = ({ children }) => {
     return false;
   };
 
+  const hasAnyPermission = (resource) => {
+    if (!resource) return false;
+    if (permissions["*"] && permissions["*"].includes("*")) return true;
+    
+    if (permissions[resource] && permissions[resource].length > 0) {
+      return true;
+    }
+    return false;
+  };
+
   return (
-    <PermissionsContext.Provider value={{ permissions, hasPermission }}>
+    <PermissionsContext.Provider value={{ permissions, hasPermission, hasAnyPermission }}>
       {children}
     </PermissionsContext.Provider>
   );
