@@ -22,6 +22,7 @@ export const STATUS_CHOICES = [
 
 export const initialStudentFormData = {
   name: '',
+  batch: '',
   academic_batch: '',
   branch: '',
   trainer: '',
@@ -32,4 +33,6 @@ export const initialStudentFormData = {
   phone_number: '',
   drive_link: '',
   notes: '',
+  fee_template: '',
+  company: 'LP',
 };

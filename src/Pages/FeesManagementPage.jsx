@@ -64,6 +64,44 @@ export default function FeesManagementPage() {
     [accounts, selectedAccountId]
   );
 
+  const applyTemplateToFeeForm = (template, setter) => {
+    setter((prev) => {
+      if (!template) {
+        return {
+          ...prev,
+          template: '',
+          plan_code: '',
+          plan_name: '',
+          plan_type: 'CUSTOM',
+          total_due: '',
+          registration_amount: '',
+          due_day: 10,
+        };
+      }
+
+      return {
+        ...prev,
+        template: String(template.id),
+        plan_code: template.code || '',
+        plan_name: template.name || '',
+        plan_type: template.plan_type || 'CUSTOM',
+        total_due: template.total_amount ? String(template.total_amount) : prev.total_due,
+        registration_amount: template.registration_amount ? String(template.registration_amount) : prev.registration_amount,
+        due_day: template.due_day || 10,
+      };
+    });
+  };
+
+  const selectedCreateTemplate = useMemo(
+    () => templates.find((template) => String(template.id) === String(createForm.template)) || null,
+    [templates, createForm.template]
+  );
+
+  const selectedRestructureTemplate = useMemo(
+    () => templates.find((template) => String(template.id) === String(restructureForm.template_id)) || null,
+    [templates, restructureForm.template_id]
+  );
+
   const getToken = async () => accessToken || await refreshAccessToken();
 
   const fetchData = async () => {
@@ -155,6 +193,36 @@ export default function FeesManagementPage() {
     }
   };
 
+  const handleCreateTemplateChange = (e) => {
+    const templateId = e.target.value;
+    if (!templateId) {
+      applyTemplateToFeeForm(null, setCreateForm);
+      return;
+    }
+    const template = templates.find((item) => String(item.id) === String(templateId));
+    applyTemplateToFeeForm(template, setCreateForm);
+  };
+
+  const handleRestructureTemplateChange = (e) => {
+    const templateId = e.target.value;
+    if (!templateId) {
+      applyTemplateToFeeForm(null, setRestructureForm);
+      setRestructureForm((prev) => ({ ...prev, template_id: '' }));
+      return;
+    }
+    const template = templates.find((item) => String(item.id) === String(templateId));
+    if (template) {
+      setRestructureForm((prev) => ({
+        ...prev,
+        template_id: String(template.id),
+        plan_type: template.plan_type || prev.plan_type,
+        total_due: template.total_amount ? String(template.total_amount) : prev.total_due,
+        registration_amount: template.registration_amount ? String(template.registration_amount) : prev.registration_amount,
+        due_day: template.due_day || prev.due_day,
+      }));
+    }
+  };
+
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
     if (!selectedAccount) return;
@@ -203,6 +271,8 @@ export default function FeesManagementPage() {
   const selectedInstallments = selectedAccount?.installments || [];
   const selectedPayments = selectedAccount?.payments || [];
   const selectedAdjustments = selectedAccount?.adjustments || [];
+  const createFormLocked = !!selectedCreateTemplate && createForm.plan_type !== 'CUSTOM';
+  const restructureFormLocked = !!selectedRestructureTemplate && restructureForm.plan_type !== 'CUSTOM';
 
   if (!canViewFees) {
     return (
@@ -365,11 +435,11 @@ export default function FeesManagementPage() {
               <h2 className="text-xl font-bold text-gray-900 mb-4">Create Fee Account</h2>
               <form className="space-y-3" onSubmit={handleCreateAccount}>
                 <input value={createForm.student} onChange={(e) => setCreateForm((p) => ({ ...p, student: e.target.value }))} placeholder="Student ID" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
-                <select value={createForm.template} onChange={(e) => setCreateForm((p) => ({ ...p, template: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
+                <select value={createForm.template} onChange={handleCreateTemplateChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
                   <option value="">Select template</option>
                   {templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
                 </select>
-                <input value={createForm.plan_name} onChange={(e) => setCreateForm((p) => ({ ...p, plan_name: e.target.value }))} placeholder="Plan name" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
+                <input value={createForm.plan_name} onChange={(e) => setCreateForm((p) => ({ ...p, plan_name: e.target.value }))} placeholder="Plan name" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
                 <select value={createForm.plan_type} onChange={(e) => setCreateForm((p) => ({ ...p, plan_type: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
                   <option value="CUSTOM">Custom</option>
                   <option value="ONE_TIME">One Time</option>
@@ -378,11 +448,21 @@ export default function FeesManagementPage() {
                   <option value="PACKAGE">Package</option>
                 </select>
                 <div className="grid grid-cols-2 gap-3">
-                  <input value={createForm.total_due} onChange={(e) => setCreateForm((p) => ({ ...p, total_due: e.target.value }))} placeholder="Total due" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
-                  <input value={createForm.registration_amount} onChange={(e) => setCreateForm((p) => ({ ...p, registration_amount: e.target.value }))} placeholder="Registration" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
+                  <input value={createForm.total_due} onChange={(e) => setCreateForm((p) => ({ ...p, total_due: e.target.value }))} placeholder="Total due" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
+                  <input value={createForm.registration_amount} onChange={(e) => setCreateForm((p) => ({ ...p, registration_amount: e.target.value }))} placeholder="Registration" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
                 </div>
-                <input value={createForm.plan_code} onChange={(e) => setCreateForm((p) => ({ ...p, plan_code: e.target.value }))} placeholder="Plan code" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
+                <input value={createForm.plan_code} onChange={(e) => setCreateForm((p) => ({ ...p, plan_code: e.target.value }))} placeholder="Plan code" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
+                <input value={createForm.due_day} onChange={(e) => setCreateForm((p) => ({ ...p, due_day: e.target.value }))} placeholder="Due day" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
                 <textarea value={createForm.notes} onChange={(e) => setCreateForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 min-h-24" />
+                {selectedCreateTemplate ? (
+                  <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
+                    Template selected: <span className="font-semibold">{selectedCreateTemplate.name}</span>. Standard fields are auto-filled; switch to Custom to override.
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    No template selected yet. Choose one from the catalog to auto-fill the fee plan.
+                  </div>
+                )}
                 <button disabled={saving || !canManageFees} type="submit" className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold disabled:opacity-50">
                   <Plus size={16} />
                   Create Account
@@ -459,19 +539,24 @@ export default function FeesManagementPage() {
                           <option value="CUSTOM">Custom</option>
                           <option value="ONE_TIME">One Time</option>
                         </select>
-                        <select value={restructureForm.template_id} onChange={(e) => setRestructureForm((p) => ({ ...p, template_id: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
+                        <select value={restructureForm.template_id} onChange={handleRestructureTemplateChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
                           <option value="">Choose template</option>
                           {templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
                         </select>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
-                        <input value={restructureForm.total_due} onChange={(e) => setRestructureForm((p) => ({ ...p, total_due: e.target.value }))} placeholder="New total due" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
-                        <input value={restructureForm.registration_amount} onChange={(e) => setRestructureForm((p) => ({ ...p, registration_amount: e.target.value }))} placeholder="Registration" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
+                        <input value={restructureForm.total_due} onChange={(e) => setRestructureForm((p) => ({ ...p, total_due: e.target.value }))} placeholder="New total due" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={restructureFormLocked} />
+                        <input value={restructureForm.registration_amount} onChange={(e) => setRestructureForm((p) => ({ ...p, registration_amount: e.target.value }))} placeholder="Registration" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={restructureFormLocked} />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
-                        <input value={restructureForm.due_day} onChange={(e) => setRestructureForm((p) => ({ ...p, due_day: e.target.value }))} placeholder="Due day" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
+                        <input value={restructureForm.due_day} onChange={(e) => setRestructureForm((p) => ({ ...p, due_day: e.target.value }))} placeholder="Due day" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={restructureFormLocked} />
                         <input type="date" value={restructureForm.next_due_date} onChange={(e) => setRestructureForm((p) => ({ ...p, next_due_date: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
                       </div>
+                      {selectedRestructureTemplate ? (
+                        <div className="rounded-2xl border border-purple-100 bg-purple-50 px-4 py-3 text-sm text-purple-700">
+                          Restructure template: <span className="font-semibold">{selectedRestructureTemplate.name}</span>.
+                        </div>
+                      ) : null}
                       <textarea value={restructureForm.notes} onChange={(e) => setRestructureForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Why is this being restructured?" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 min-h-20" />
                       <button disabled={saving || !canRestructureFees} className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-600 text-white font-semibold disabled:opacity-50">
                         <Repeat size={16} />

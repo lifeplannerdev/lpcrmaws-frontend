@@ -19,6 +19,8 @@ export default function AddStudentPage() {
     batchesLoading,
     branches,
     branchesLoading,
+    feeTemplates,
+    feeTemplatesLoading,
     loading,
     errors,
     handleChange,
@@ -66,6 +68,8 @@ export default function AddStudentPage() {
               batchesLoading={batchesLoading}
               branches={branches}
               branchesLoading={branchesLoading}
+              feeTemplates={feeTemplates}
+              feeTemplatesLoading={feeTemplatesLoading}
               onChange={handleChange}
               batchChoices={BATCH_CHOICES}
               statusChoices={STATUS_CHOICES}
@@ -75,7 +79,7 @@ export default function AddStudentPage() {
               onCancel={handleCancel}
               onSubmit={handleSubmit}
               loading={loading}
-              disabled={trainersLoading}
+              disabled={trainersLoading || feeTemplatesLoading}
               submitLabel="Save Student"
             />
           </Card>

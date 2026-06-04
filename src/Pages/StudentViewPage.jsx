@@ -134,6 +134,9 @@ export default function StudentViewPage() {
               <span className={`px-4 py-2 rounded-full text-sm font-medium ${statusColors[student.status]}`}>
                 {student.status}
               </span>
+              <span className="ml-3 px-4 py-2 rounded-full text-sm font-medium bg-slate-100 text-slate-700">
+                Fee: {student.fee_setup_status || (student.fee_summary ? student.fee_summary.status : 'PENDING_FEE_SETUP')}
+              </span>
             </div>
 
             <div className="mb-6 border-b border-gray-200">
@@ -324,7 +327,7 @@ export default function StudentViewPage() {
                 ) : (
                   <div className="rounded-2xl border border-dashed border-gray-300 p-8 text-center text-gray-500">
                     <CreditCard className="mx-auto mb-3 text-gray-300" size={28} />
-                    No structured fee account is linked yet. Accounting can create one from the fee workspace.
+                    No structured fee account is linked yet. {student.fee_setup_status === 'PENDING_FEE_SETUP' ? 'A fee plan can be assigned during enrollment or from the fee workspace.' : 'Accounting can create one from the fee workspace.'}
                   </div>
                 )}
 

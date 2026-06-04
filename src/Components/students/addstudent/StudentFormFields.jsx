@@ -15,6 +15,8 @@ export default function StudentFormFields({
   batchesLoading = false,
   branches = [],
   branchesLoading = false,
+  feeTemplates = [],
+  feeTemplatesLoading = false,
 }) {
   // Transform trainers for select options
   const trainerOptions = trainers.map(trainer => ({
@@ -33,6 +35,11 @@ export default function StudentFormFields({
   const branchOptions = branches.map(branch => ({
     value: branch.id,
     label: branch.name
+  }));
+
+  const feeTemplateOptions = feeTemplates.map(template => ({
+    value: template.id,
+    label: `${template.name} ${template.total_amount ? `- ₹${template.total_amount}` : ''}`,
   }));
 
   return (
@@ -92,6 +99,18 @@ export default function StudentFormFields({
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Academic Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <FormField
+              label="Batch"
+              name="batch"
+              type="select"
+              value={formData.batch}
+              onChange={onChange}
+              options={batchChoices}
+              placeholder="Select Batch"
+            />
+          </div>
+
           {/* Academic Batch - now a dropdown connected to AcademicBatch model */}
           <div>
             <FormField
@@ -207,6 +226,27 @@ export default function StudentFormFields({
             rows={4}
             className="md:col-span-2"
           />
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Fee Setup</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="md:col-span-2">
+            <FormField
+              label="Fee Template"
+              name="fee_template"
+              type="select"
+              value={formData.fee_template}
+              onChange={onChange}
+              options={feeTemplateOptions}
+              placeholder={feeTemplatesLoading ? 'Loading templates...' : 'Select Fee Template'}
+              error={errors.fee_template}
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              Choose a standard plan from the catalog. If you leave this blank, the student will be created with pending fee setup.
+            </p>
+          </div>
         </div>
       </div>
     </div>

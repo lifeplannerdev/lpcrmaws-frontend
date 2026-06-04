@@ -7,7 +7,7 @@ import { initialStudentFormData } from '../Components/utils/studentConstants';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export function useStudentForm(studentId = null) {
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   
   const [formData, setFormData] = useState(initialStudentFormData);
   const [trainers, setTrainers] = useState([]);
@@ -16,9 +16,21 @@ export function useStudentForm(studentId = null) {
   const [batchesLoading, setBatchesLoading] = useState(true);
   const [branches, setBranches] = useState([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
+  const [feeTemplates, setFeeTemplates] = useState([]);
+  const [feeTemplatesLoading, setFeeTemplatesLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [feeTemplateTouched, setFeeTemplateTouched] = useState(false);
+
+  const company = user?.company || 'LP';
+
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      company,
+    }));
+  }, [company]);
 
   // Fetch student data if editing
   useEffect(() => {
@@ -32,7 +44,36 @@ export function useStudentForm(studentId = null) {
     fetchTrainers();
     fetchAcademicBatches();
     fetchBranches();
-  }, [accessToken]);
+    fetchFeeTemplates();
+  }, [accessToken, company]);
+
+  useEffect(() => {
+    if (!feeTemplateTouched) {
+      const suggestedTemplate = suggestFeeTemplate(formData.batch, feeTemplates);
+      if (suggestedTemplate) {
+        setFormData(prev => ({ ...prev, fee_template: String(suggestedTemplate.id) }));
+      }
+    }
+  }, [formData.batch, feeTemplates, feeTemplateTouched]);
+
+  const suggestFeeTemplate = (batchValue, templates) => {
+    if (!batchValue || !Array.isArray(templates) || templates.length === 0) {
+      return null;
+    }
+
+    const normalizedBatch = String(batchValue).trim().toUpperCase();
+    const baseLabel = normalizedBatch.split(' ')[0];
+
+    const exactMatch = templates.find((template) => (
+      String(template.course_label || '').trim().toUpperCase() === baseLabel
+    ));
+    if (exactMatch) return exactMatch;
+
+    const codeMatch = templates.find((template) => (
+      String(template.code || '').toUpperCase().includes(baseLabel)
+    ));
+    return codeMatch || null;
+  };
 
   const fetchStudent = async () => {
     try {
@@ -47,7 +88,13 @@ export function useStudentForm(studentId = null) {
         withCredentials: true,
       });
 
-      setFormData(response.data);
+      setFormData(prev => ({
+        ...initialStudentFormData,
+        ...prev,
+        ...response.data,
+        fee_template: response.data.fee_template || prev.fee_template || '',
+        company: response.data.company || prev.company || company,
+      }));
       setErrors({});
     } catch (err) {
       console.error('Failed to fetch student:', err);
@@ -138,8 +185,33 @@ export function useStudentForm(studentId = null) {
     }
   };
 
+  const fetchFeeTemplates = async () => {
+    try {
+      setFeeTemplatesLoading(true);
+      let token = accessToken || await refreshAccessToken();
+      if (!token) return;
+
+      const res = await axios.get(`${API_BASE_URL}/fees/catalog/`, {
+        params: { company, active: 'true' },
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
+      });
+
+      const templatesData = Array.isArray(res.data) ? res.data : [];
+      setFeeTemplates(templatesData);
+    } catch (err) {
+      console.error('Failed to load fee templates:', err);
+      setFeeTemplates([]);
+    } finally {
+      setFeeTemplatesLoading(false);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'fee_template') {
+      setFeeTemplateTouched(true);
+    }
     setFormData(prev => ({ ...prev, [name]: value }));
     // Clear error for this field
     if (errors[name]) {
@@ -164,6 +236,9 @@ export function useStudentForm(studentId = null) {
     }
     if (!formData.admission_date) {
       newErrors.admission_date = 'Admission date is required';
+    }
+    if (formData.fee_template && isNaN(Number(formData.fee_template))) {
+      newErrors.fee_template = 'Select a valid fee template';
     }
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Invalid email format';
@@ -196,6 +271,12 @@ export function useStudentForm(studentId = null) {
         }
         return acc;
       }, {});
+
+      if (submitData.fee_template) {
+        submitData.fee_template = Number(submitData.fee_template);
+      } else {
+        delete submitData.fee_template;
+      }
 
       // Determine if we're creating or updating
       if (studentId) {
@@ -245,6 +326,8 @@ export function useStudentForm(studentId = null) {
     batchesLoading,
     branches,
     branchesLoading,
+    feeTemplates,
+    feeTemplatesLoading,
     loading,
     fetchLoading,
     errors,
