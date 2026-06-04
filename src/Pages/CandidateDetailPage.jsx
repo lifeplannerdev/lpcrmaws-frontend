@@ -8,8 +8,7 @@ import {
 
 import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
-
-const CANDIDATE_ASSIGNER_ROLES = ['ADMIN', 'HR'];
+import { usePermissions } from '../context/PermissionsContext';
 
 const STATUS_CONFIG = {
   applied: {
@@ -107,6 +106,7 @@ export default function CandidateDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { accessToken, refreshAccessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const [candidate, setCandidate] = useState(null);
@@ -116,7 +116,7 @@ export default function CandidateDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const canManage = user?.permissions?.includes('edit_candidates');
+  const canManage = hasPermission('candidates:edit_any') || hasPermission('candidates:edit_tenant') || hasPermission('candidates:edit_own');
 
   const getToken = useCallback(async () => {
     const token = accessToken || await refreshAccessToken();

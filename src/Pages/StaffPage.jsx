@@ -23,12 +23,14 @@ import { downloadCSV, downloadPDF } from '../utils/exportUtils';
 import Pagination from '../Components/common/Pagination';
 import StaffPermissionsModal from '../Components/staffs/StaffPermissionsModal';
 import CompanySwitcher from '../Components/common/CompanySwitcher';
+import { usePermissions } from '../context/PermissionsContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function StaffPage() {
   const navigate = useNavigate();
   const { user, accessToken, refreshAccessToken, loading: authLoading, isAuthenticated } = useAuth();
+  const { hasPermission } = usePermissions();
 
   const [staffMembers, setStaffMembers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -457,7 +459,7 @@ export default function StaffPage() {
                       >
                         <UserCheck size={16} /> View
                       </button>
-                      {user?.permissions?.includes('edit_staff') && (
+                      {(hasPermission('staff:edit_any') || hasPermission('staff:edit_tenant')) && (
                         <button
                           onClick={() => navigate(`/staff/edit/${staff.id}`)}
                           className="flex-1 px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 font-medium"
@@ -465,7 +467,7 @@ export default function StaffPage() {
                           <Edit size={16} /> Edit
                         </button>
                       )}
-                      {user?.permissions?.includes('edit_staff') && (
+                      {(hasPermission('staff:edit_any') || hasPermission('staff:edit_tenant')) && (
                         <button
                           onClick={() => {
                             setSelectedStaffForPerms(staff);

@@ -51,8 +51,6 @@ export default function LeadsPage() {
   const navigate = useNavigate();
   const { accessToken, refreshAccessToken, loading: authLoading, user } = useAuth();
 
-  const userRole = user?.role || user?.user_role || '';
-
   const tokenRef = useRef(accessToken);
   useEffect(() => { tokenRef.current = accessToken; }, [accessToken]);
 
@@ -359,7 +357,6 @@ export default function LeadsPage() {
                 leads={leads}
                 statusColors={statusColors}
                 onDeleteLead={handleDeleteLead}
-                userRole={userRole}
               />
             ) : (
               <LeadsKanbanBoard

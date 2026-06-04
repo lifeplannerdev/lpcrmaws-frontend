@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import {
   CalendarClock, Phone, MessageSquare, Mail, Users,
   AlertTriangle, ArrowLeft, RefreshCw, Search, SlidersHorizontal,
@@ -254,10 +255,11 @@ const Section = ({ title, subtitle, icon: Icon, iconBg, items, loading,
 export default function AllFollowUpsPage() {
   const navigate  = useNavigate();
   const { accessToken, refreshAccessToken, loading: authLoading, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const tokenRef  = useRef(accessToken);
   useEffect(() => { tokenRef.current = accessToken; }, [accessToken]);
 
-  const isAdmin = user?.permissions?.includes('view_staff');
+  const isAdmin = hasPermission('staff:view_any') || hasPermission('system:access_flag');
 
   const today    = toLocalISO(new Date());
   const tomorrow = toLocalISO(new Date(Date.now() + 86400000));

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import TaskFormFields from '../Components/tasks/TaskFormFields';
 import PrioritySelector from '../Components/tasks/PrioritySelector';
 import { Building } from 'lucide-react';
@@ -10,9 +11,10 @@ import { Building } from 'lucide-react';
 export default function TaskCreationPage() {
   const navigate = useNavigate();
   const { accessToken, refreshAccessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   
-  const hasDualAccess = user?.permissions?.includes('access_flag');
+  const hasDualAccess = hasPermission('system:access_flag');
 
   const [teamMembers, setTeamMembers] = useState([]);
   const [loading, setLoading] = useState(false);

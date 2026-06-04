@@ -9,12 +9,14 @@ import Card from "../Components/common/Card";
 import { initialFormData } from "../Components/utils/staffConstants";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { usePermissions } from "../context/PermissionsContext";
 
 export default function AddStaffPage() {
   const { accessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-  const hasDualAccess = user?.permissions?.includes('access_flag');
+  const hasDualAccess = hasPermission('system:access_flag');
 
   const [formData, setFormData] = useState(initialFormData);
   const [submitted, setSubmitted] = useState(false);

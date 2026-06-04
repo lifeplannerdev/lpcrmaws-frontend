@@ -9,6 +9,7 @@ import {
 
 import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import KanbanBoard from '../Components/KanbanBoard';
 import { downloadCSV, downloadPDF } from '../utils/exportUtils';
 import CompanySwitcher from '../Components/common/CompanySwitcher';
@@ -19,6 +20,7 @@ const TASK_ASSIGNER_ROLES = ['ADMIN', 'CEO', 'OPS', 'GENERAL_MANAGER', 'CM', 'BD
 export default function TasksPage() {
   const navigate = useNavigate();
   const { accessToken, refreshAccessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const [tasks, setTasks]   = useState([]);
@@ -43,7 +45,7 @@ export default function TasksPage() {
   const [error,   setError]   = useState(null);
 
   // FIX: any role in TASK_ASSIGNERS can see the Create button, not just ADMIN
-  const canAssignTasks = user?.permissions?.includes('edit_tasks');
+  const canAssignTasks = hasPermission('tasks:edit_any') || hasPermission('tasks:edit_tenant') || hasPermission('tasks:edit_own');
 
   // ── Stat card config ───────────────────────────────────────────────────────
   const statsData = stats ? [

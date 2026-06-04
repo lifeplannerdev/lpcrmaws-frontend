@@ -1,11 +1,13 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionsContext';
 
 const CompanySwitcher = ({ activeCompany, onChange }) => {
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   
   // Only show the switcher if the user has cross-company access
-  if (!user || !user.permissions || !user.permissions.includes('access_flag')) {
+  if (!user || !hasPermission('system:access_flag')) {
     return null;
   }
 

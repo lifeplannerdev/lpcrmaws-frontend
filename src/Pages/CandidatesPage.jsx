@@ -9,8 +9,7 @@ import {
 import Navbar from '../Components/layouts/Navbar';
 import CompanySwitcher from '../Components/common/CompanySwitcher';
 import { useAuth } from '../context/AuthContext';
-
-const CANDIDATE_ASSIGNER_ROLES = ['ADMIN', 'HR'];
+import { usePermissions } from '../context/PermissionsContext';
 
 const STATUS_BADGE = {
   applied:     'bg-blue-100 text-blue-700 border-blue-200',
@@ -49,6 +48,7 @@ function RatingStars({ rating }) {
 export default function CandidatesPage() {
   const navigate  = useNavigate();
   const { accessToken, refreshAccessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const [candidates, setCandidates] = useState([]);
@@ -66,7 +66,7 @@ export default function CandidatesPage() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
 
-  const canManage = user?.permissions?.includes('edit_candidates');
+  const canManage = hasPermission('candidates:edit_any') || hasPermission('candidates:edit_tenant') || hasPermission('candidates:edit_own');
 
   // ── Stat card config ───────────────────────────────────────────────────────
   const statsData = stats ? [

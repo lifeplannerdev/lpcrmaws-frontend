@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionsContext';
 import {
   Activity, Search, Filter, ChevronDown, X,
   User, FileText, CheckSquare, Users, GraduationCap,
@@ -112,7 +113,8 @@ const PAGE_SIZE = 20;
 
 export default function RecentActivities() {
   const { accessToken, refreshAccessToken, user } = useAuth();
-  const isAdmin = user?.permissions?.includes('view_staff');
+  const { hasPermission } = usePermissions();
+  const isAdmin = hasPermission('staff:view_any') || hasPermission('system:access_flag');
 
   const [activities, setActivities]     = useState([]);
   const [loading, setLoading]           = useState(true);

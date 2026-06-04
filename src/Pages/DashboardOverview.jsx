@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import DashboardHeader from '../Components/dashboard/DashboardHeader';
 import AdminStatsGrid from '../Components/dashboard/AdminStatsGrid';
 import UserQuickActions from '../Components/dashboard/UserQuickActions';
@@ -14,7 +15,6 @@ import RecentActivities from '../Components/dashboard/RecentActivities';
 import { formatTimeAgo, formatTaskTime, getPriorityColor } from '../Components/utils/dashboardHelpers';
 import { LayoutDashboard, Activity } from 'lucide-react';
 
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const TABS = [
@@ -24,6 +24,7 @@ const TABS = [
 
 export default function DashboardOverview() {
   const { accessToken, refreshAccessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('overview');
@@ -42,7 +43,9 @@ export default function DashboardOverview() {
 
   const userRole = user?.role || 'User';
   const userName = user?.name || user?.username || 'User';
-  const isAdmin  = userRole?.toUpperCase() === 'ADMIN';
+  
+  // Replace role check with actual capabilities
+  const isAdmin  = hasPermission('staff:view_any') || hasPermission('system:access_flag');
 
   const fetchWithAuth = async (url, options = {}) => {
     let token = accessToken;

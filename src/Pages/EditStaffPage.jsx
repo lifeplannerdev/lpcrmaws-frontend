@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { usePermissions } from "../context/PermissionsContext";
 import EditStaffForm from "../Components/staffs/editstaff/EditStaffForm";
 
 export default function EditStaffPage() {
   const { id } = useParams();
   const { accessToken, refreshAccessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -131,7 +133,7 @@ export default function EditStaffPage() {
       authFetch={authFetch}
       apiBaseUrl={API_BASE_URL}
       navigate={navigate}
-      hasDualAccess={user?.permissions?.includes('access_flag')}
+      hasDualAccess={hasPermission('system:access_flag')}
     />
   );
 }

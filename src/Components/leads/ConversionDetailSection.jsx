@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { GraduationCap, Save, Edit2, Lock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionsContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const CONVERSION_ROLES = ['ADMIN', 'OPS', 'CM', 'CEO', 'BUSINESS_HEAD'];
 
 export default function ConversionDetailSection({ lead }) {
   const { accessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const [detail,  setDetail]  = useState(null);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -14,7 +16,7 @@ export default function ConversionDetailSection({ lead }) {
   const [error,   setError]   = useState(null);
   const [form,    setForm]    = useState({});
 
-  const canEdit = user?.permissions?.includes('view_leads');
+  const canEdit = hasPermission('leads:edit_any') || hasPermission('leads:edit_tenant');
 
   // ── Fetch existing conversion detail
   useEffect(() => {

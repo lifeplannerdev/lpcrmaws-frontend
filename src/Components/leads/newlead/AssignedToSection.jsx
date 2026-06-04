@@ -2,12 +2,14 @@
 import React, { useEffect, useState } from 'react';
 import { UserCheck, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { usePermissions } from '../../../context/PermissionsContext';
 import { Combobox } from '../../common/Combobox';
 
 const AssignedToSection = ({ formData, errors, onChange }) => {
   const [availableUsers, setAvailableUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const { accessToken, refreshAccessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
@@ -33,7 +35,7 @@ const AssignedToSection = ({ formData, errors, onChange }) => {
 
       const data = await response.json();
       
-      const filteredUsers = filterUsersByRole(data, user?.role);
+      const filteredUsers = filterUsersByPermissions(data);
       setAvailableUsers(filteredUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -43,10 +45,12 @@ const AssignedToSection = ({ formData, errors, onChange }) => {
     }
   };
 
-  const filterUsersByRole = (users, userRole) => {
-    if (!userRole) return users;
+  const filterUsersByPermissions = (users) => {
+    if (hasPermission('leads:edit_any') || hasPermission('leads:assign_any') || hasPermission('staff:view_any')) {
+      return users;
+    }
 
-    if (userRole === 'ADM_MANAGER') {
+    if (hasPermission('leads:edit_tenant') || hasPermission('leads:assign_tenant')) {
       return users.filter(u => 
         u.role === 'ADM_MANAGER' || 
         u.role === 'ADM_EXEC' || 
@@ -55,11 +59,7 @@ const AssignedToSection = ({ formData, errors, onChange }) => {
       );
     }
 
-    if (userRole === 'FOE' || userRole === 'ADM_EXEC') {
-      return users.filter(u => u.id === user?.id);
-    }
-
-    return users;
+    return users.filter(u => u.id === user?.id);
   };
 
   const getRoleDisplayName = (role) => {

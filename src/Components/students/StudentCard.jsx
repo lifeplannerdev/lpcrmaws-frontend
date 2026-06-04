@@ -3,6 +3,7 @@ import { Mail, Phone, BookOpen, Calendar, Edit, Trash2, Eye, User, ClipboardChec
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionsContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -23,8 +24,9 @@ const statusColors = {
 const StudentCard = React.memo(({ student, onDelete }) => {
   const navigate = useNavigate();
   const { accessToken, refreshAccessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const avatar = `https://api.dicebear.com/7.x/initials/svg?seed=${student.name}`;
-  const canEditStudents = (user?.permissions || []).includes('edit_students');
+  const canEditStudents = hasPermission('students:edit_any') || hasPermission('students:edit_tenant');
 
   const handleDelete = async () => {
     if (!window.confirm(`Are you sure you want to delete ${student.name}? This action cannot be undone.`)) {

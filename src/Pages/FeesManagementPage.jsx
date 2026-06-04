@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import { RefreshCw, Plus, Receipt, AlertTriangle, Repeat, IndianRupee } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -31,6 +32,7 @@ const emptyRestructure = {
 
 export default function FeesManagementPage() {
   const { accessToken, refreshAccessToken, user } = useAuth();
+  const { hasPermission, hasAnyPermission } = usePermissions();
   const [templates, setTemplates] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [students, setStudents] = useState([]);
@@ -52,7 +54,6 @@ export default function FeesManagementPage() {
     registration_amount: '',
     due_day: 10,
     notes: '',
-    notes: '',
     source_label: 'manual',
   });
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -72,10 +73,10 @@ export default function FeesManagementPage() {
     notes: '',
   });
 
-  const canManageFees = (user?.permissions || []).includes('manage_fees');
-  const canRestructureFees = canManageFees || (user?.permissions || []).includes('restructure_fees');
-  const canRecordPartial = canManageFees || (user?.permissions || []).includes('record_partial_payment');
-  const canViewFees = canManageFees || (user?.permissions || []).includes('view_fees') || (user?.permissions || []).includes('view_fee_reports');
+  const canManageFees = hasPermission('fees:edit_any') || hasPermission('fees:edit_tenant');
+  const canRestructureFees = canManageFees;
+  const canRecordPartial = canManageFees;
+  const canViewFees = hasAnyPermission('fees');
 
   const selectedAccount = useMemo(
     () => accounts.find((account) => account.id === selectedAccountId) || null,

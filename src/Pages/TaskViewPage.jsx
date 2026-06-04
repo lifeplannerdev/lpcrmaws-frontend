@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import {
   ArrowLeft, Calendar, User, FileText, Clock,
   Edit2, CheckCircle, AlertTriangle, Loader,
@@ -15,6 +16,7 @@ export default function TaskViewPage() {
   const { id }       = useParams();
   const navigate     = useNavigate();
   const { accessToken, refreshAccessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const [task,    setTask]    = useState(null);
@@ -102,7 +104,8 @@ export default function TaskViewPage() {
 
     // FIX: coerce both sides to Number to avoid string vs int mismatch
     const createdByMe = Number(task.assigned_by) === Number(user.id);
-    return user?.permissions?.includes('edit_tasks') && createdByMe;
+    const hasEditRights = hasPermission('tasks:edit_any') || hasPermission('tasks:edit_tenant') || hasPermission('tasks:edit_own');
+    return hasEditRights && createdByMe;
   };
 
   const canUpdateStatus = () => {

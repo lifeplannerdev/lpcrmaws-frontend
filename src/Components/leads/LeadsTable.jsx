@@ -4,12 +4,13 @@ import {
   ExternalLink, UserCheck, Users, History,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { canViewCallHistory } from '../../Components/utils/callPermissions';
+import { usePermissions } from '../../context/PermissionsContext';
 
-const LeadsTable = ({ leads, statusColors, onDeleteLead, userRole = '' }) => {
+const LeadsTable = ({ leads, statusColors, onDeleteLead }) => {
   const navigate = useNavigate();
+  const { hasPermission } = usePermissions();
 
-  const allowHistory = canViewCallHistory(userRole);
+  const allowHistory = hasPermission('leads:view_any') || hasPermission('calls:view_any');
 
   const handleCallHistory = (id) =>
     navigate(`/leads/${id}`, { state: { scrollTo: 'call-history' } });

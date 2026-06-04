@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import Navbar from '../Components/layouts/Navbar';
 import CompanySwitcher from '../Components/common/CompanySwitcher';
 import {
@@ -44,8 +45,8 @@ export default function PenaltyManagementPage() {
   });
 
   const [errors, setErrors] = useState({});
-  const canManagePenalties = user?.permissions?.includes('edit_penalties');
-
+  const { hasPermission } = usePermissions();
+  const canManagePenalties = hasPermission('penalties:edit_any');
   const generateMonthOptions = () => {
     const months = [
       'January', 'February', 'March', 'April', 'May', 'June',
