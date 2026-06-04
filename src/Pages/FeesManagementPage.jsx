@@ -52,7 +52,24 @@ export default function FeesManagementPage() {
     registration_amount: '',
     due_day: 10,
     notes: '',
+    notes: '',
     source_label: 'manual',
+  });
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [newTemplateForm, setNewTemplateForm] = useState({
+    company: user?.company || 'FLAG',
+    code: '',
+    name: '',
+    plan_type: 'PACKAGE',
+    course_label: '',
+    total_amount: '',
+    registration_amount: '',
+    installment_amount: '',
+    installment_count: '',
+    monthly_amount: '',
+    duration_months: '',
+    due_day: 10,
+    notes: '',
   });
 
   const canManageFees = (user?.permissions || []).includes('manage_fees');
@@ -191,6 +208,46 @@ export default function FeesManagementPage() {
         source_label: 'manual',
       });
       setMessage({ type: 'success', text: 'Fee account created.' });
+      await fetchData();
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateTemplate = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setMessage(null);
+    try {
+      await postJson(`${API_BASE_URL}/fees/catalog/`, {
+        ...newTemplateForm,
+        total_amount: newTemplateForm.total_amount || '0.00',
+        registration_amount: newTemplateForm.registration_amount || '0.00',
+        installment_amount: newTemplateForm.installment_amount || '0.00',
+        monthly_amount: newTemplateForm.monthly_amount || '0.00',
+        installment_count: newTemplateForm.installment_count ? Number(newTemplateForm.installment_count) : null,
+        duration_months: newTemplateForm.duration_months ? Number(newTemplateForm.duration_months) : null,
+        due_day: newTemplateForm.due_day ? Number(newTemplateForm.due_day) : 10,
+      });
+      setNewTemplateForm({
+        company: user?.company || 'FLAG',
+        code: '',
+        name: '',
+        plan_type: 'PACKAGE',
+        course_label: '',
+        total_amount: '',
+        registration_amount: '',
+        installment_amount: '',
+        installment_count: '',
+        monthly_amount: '',
+        duration_months: '',
+        due_day: 10,
+        notes: '',
+      });
+      setIsTemplateModalOpen(false);
+      setMessage({ type: 'success', text: 'Template created successfully.' });
       await fetchData();
     } catch (err) {
       setMessage({ type: 'error', text: err.message });
@@ -348,7 +405,18 @@ export default function FeesManagementPage() {
                   <h2 className="text-xl font-bold text-gray-900">Fee Catalog</h2>
                   <p className="text-sm text-gray-500">Template plans imported from the spreadsheet and image rules.</p>
                 </div>
-                <span className="text-sm text-gray-500">{templates.length} templates</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-500">{templates.length} templates</span>
+                  {canManageFees && (
+                    <button
+                      onClick={() => setIsTemplateModalOpen(true)}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-sm font-medium"
+                    >
+                      <Plus size={16} className="inline mr-1" />
+                      New
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {templates.map((template) => (
@@ -641,6 +709,114 @@ export default function FeesManagementPage() {
           </div>
         </div>
       </div>
+
+      {/* Template Creation Modal */}
+      {isTemplateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Create Fee Template</h2>
+                <button onClick={() => setIsTemplateModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+              <form onSubmit={handleCreateTemplate} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                    <select value={newTemplateForm.company} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, company: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" required>
+                      <option value="FLAG">FLAG</option>
+                      <option value="LP">LP</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Plan Type</label>
+                    <select value={newTemplateForm.plan_type} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, plan_type: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" required>
+                      <option value="PACKAGE">Package</option>
+                      <option value="ONE_TIME">One Time</option>
+                      <option value="INSTALLMENT">Installment</option>
+                      <option value="MONTHLY">Monthly</option>
+                      <option value="CUSTOM">Custom</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
+                    <input value={newTemplateForm.code} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, code: e.target.value })} placeholder="e.g. FLAG-A1-B2" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input value={newTemplateForm.name} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, name: e.target.value })} placeholder="e.g. FLAG A1-B2 Package" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" required />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Course Label</label>
+                  <input value={newTemplateForm.course_label} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, course_label: e.target.value })} placeholder="e.g. A1-B2" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-2xl border border-gray-100 space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-900">Pricing Details</h3>
+                  
+                  {['ONE_TIME', 'PACKAGE', 'INSTALLMENT', 'MONTHLY', 'CUSTOM'].includes(newTemplateForm.plan_type) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
+                      <input value={newTemplateForm.total_amount} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, total_amount: e.target.value })} placeholder="0.00" type="number" step="0.01" className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white" />
+                    </div>
+                  )}
+
+                  {['MONTHLY', 'CUSTOM'].includes(newTemplateForm.plan_type) && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Registration Amount</label>
+                        <input value={newTemplateForm.registration_amount} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, registration_amount: e.target.value })} placeholder="0.00" type="number" step="0.01" className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Amount</label>
+                        <input value={newTemplateForm.monthly_amount} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, monthly_amount: e.target.value })} placeholder="0.00" type="number" step="0.01" className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Duration (Months)</label>
+                        <input value={newTemplateForm.duration_months} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, duration_months: e.target.value })} placeholder="e.g. 10" type="number" className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Due Day</label>
+                        <input value={newTemplateForm.due_day} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, due_day: e.target.value })} placeholder="e.g. 10" type="number" className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white" />
+                      </div>
+                    </div>
+                  )}
+
+                  {['INSTALLMENT', 'CUSTOM'].includes(newTemplateForm.plan_type) && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Installment Count</label>
+                        <input value={newTemplateForm.installment_count} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, installment_count: e.target.value })} placeholder="e.g. 3" type="number" className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Installment Amount</label>
+                        <input value={newTemplateForm.installment_amount} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, installment_amount: e.target.value })} placeholder="0.00" type="number" step="0.01" className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <textarea value={newTemplateForm.notes} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, notes: e.target.value })} placeholder="Template notes..." className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 min-h-20" />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4">
+                  <button type="button" onClick={() => setIsTemplateModalOpen(false)} className="px-5 py-3 rounded-xl font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                  <button type="submit" disabled={saving} className="px-5 py-3 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-50">
+                    {saving ? 'Creating...' : 'Create Template'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
