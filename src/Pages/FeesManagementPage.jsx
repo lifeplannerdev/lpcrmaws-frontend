@@ -33,6 +33,7 @@ export default function FeesManagementPage() {
   const { accessToken, refreshAccessToken, user } = useAuth();
   const [templates, setTemplates] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [students, setStudents] = useState([]);
   const [selectedAccountId, setSelectedAccountId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -110,20 +111,25 @@ export default function FeesManagementPage() {
       const token = await getToken();
       if (!token) return;
 
-      const [templatesRes, accountsRes] = await Promise.all([
+      const [templatesRes, accountsRes, studentsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/fees/catalog/?company=${company}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`${API_BASE_URL}/fees/accounts/?company=${company}${search ? `&search=${encodeURIComponent(search)}` : ''}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
+        fetch(`${API_BASE_URL}/fees/students/?company=${company}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
       const templatesData = await templatesRes.json();
       const accountsData = await accountsRes.json();
+      const studentsData = await studentsRes.json();
 
       setTemplates(Array.isArray(templatesData) ? templatesData : []);
       setAccounts(Array.isArray(accountsData) ? accountsData : []);
+      setStudents(Array.isArray(studentsData) ? studentsData : []);
       if (!selectedAccountId && Array.isArray(accountsData) && accountsData.length > 0) {
         setSelectedAccountId(accountsData[0].id);
       }
@@ -434,7 +440,12 @@ export default function FeesManagementPage() {
             <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Create Fee Account</h2>
               <form className="space-y-3" onSubmit={handleCreateAccount}>
-                <input value={createForm.student} onChange={(e) => setCreateForm((p) => ({ ...p, student: e.target.value }))} placeholder="Student ID" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
+                <select value={createForm.student} onChange={(e) => setCreateForm((p) => ({ ...p, student: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
+                  <option value="">Select student</option>
+                  {students.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name} {s.branch_name ? `(${s.branch_name})` : ''}</option>
+                  ))}
+                </select>
                 <select value={createForm.template} onChange={handleCreateTemplateChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
                   <option value="">Select template</option>
                   {templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
