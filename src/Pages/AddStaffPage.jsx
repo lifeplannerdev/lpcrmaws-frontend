@@ -31,10 +31,13 @@ export default function AddStaffPage() {
       try {
         const [branchesRes, rolesRes] = await Promise.all([
           fetch(`${API_BASE_URL}/branches/`, { headers: { Authorization: `Bearer ${accessToken}` } }),
-          fetch(`${API_BASE_URL}/accounts/roles/`, { headers: { Authorization: `Bearer ${accessToken}` } })
+          fetch(`${API_BASE_URL}/roles/`, { headers: { Authorization: `Bearer ${accessToken}` } })
         ]);
         if (branchesRes.ok) setBranches(await branchesRes.json() || []);
-        if (rolesRes.ok) setDbRolesList(await rolesRes.json() || []);
+        if (rolesRes.ok) {
+          const r = await rolesRes.json();
+          setDbRolesList(r.results || r || []);
+        }
       } catch (err) {
         console.error('Failed to load branches and roles', err);
       }

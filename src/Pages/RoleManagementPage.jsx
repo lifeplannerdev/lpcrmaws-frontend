@@ -30,8 +30,8 @@ export default function RoleManagementPage() {
           headers: { Authorization: `Bearer ${authTokens.access}` }
         })
       ]);
-      setRoles(rolesRes.data);
-      setPermissions(permsRes.data);
+      setRoles(rolesRes.data.results || rolesRes.data || []);
+      setPermissions(permsRes.data.results || permsRes.data || []);
     } catch (error) {
       console.error("Error fetching roles/permissions", error);
     } finally {

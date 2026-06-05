@@ -28,6 +28,7 @@ export const masterNavigation = [
   { id: "assets",         label: "Assets",          icon: Monitor,       path: "/hr/assets",      requiredResource: "assets" },
   { id: "myReports",      label: "My Reports",      icon: FileText,      path: "/myreports",      requiredResource: "reports" },
   { id: "reports",        label: "Staff Reports",   icon: FileText,      path: "/daily/reports",  requiredResource: "reports" },
+  { id: "roles",          label: "Role Management", icon: ShieldAlert,   path: "/roles",          requiredResource: "staff" },
   { id: "call",           label: "Voxbay",          icon: PhoneCall,     path: "/call-analytics", requiredResource: "voxbay" },
 ];
 

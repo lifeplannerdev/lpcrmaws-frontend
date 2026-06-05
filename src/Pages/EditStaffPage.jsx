@@ -70,7 +70,7 @@ export default function EditStaffPage() {
       try {
         const [staffRes, rolesRes] = await Promise.all([
           authFetch(`${API_BASE_URL}/staff/${id}/`),
-          authFetch(`${API_BASE_URL}/accounts/roles/`)
+          authFetch(`${API_BASE_URL}/roles/`)
         ]);
 
         if (!staffRes.ok) {
@@ -81,7 +81,7 @@ export default function EditStaffPage() {
 
         const data = await staffRes.json();
         const rolesData = rolesRes.ok ? await rolesRes.json() : [];
-        setDbRolesList(rolesData);
+        setDbRolesList(rolesData.results || rolesData);
         setFormData({
           firstName: data.first_name || '',
           lastName: data.last_name || '',
