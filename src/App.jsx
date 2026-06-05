@@ -37,6 +37,7 @@ import CandidateFormPage from "./Pages/CandidateFormPage";
 import AssetManagementPage from "./Pages/AssetManagementPage.jsx";
 import FeesManagementPage from "./Pages/FeesManagementPage.jsx";
 import RoleManagementPage from "./Pages/RoleManagementPage.jsx";
+import CredentialsVault from "./Pages/CredentialsVault.jsx";
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -112,6 +113,7 @@ export default function App() {
         <Route path="/hr/assets" element={<PermissionRoute resources={['assets']}><AssetManagementPage /></PermissionRoute>} />
         <Route path="/fees" element={<PermissionRoute resources={['fees']}><FeesManagementPage /></PermissionRoute>} />
         <Route path="/roles" element={<PermissionRoute permissions={['staff:edit_any', 'staff:edit_tenant']}><RoleManagementPage /></PermissionRoute>} />
+        <Route path="/credentials" element={<PermissionRoute resources={['credentials']}><CredentialsVault /></PermissionRoute>} />
         <Route path="*" element={<div>404 Not Found</div>} />
       </Routes>
     </Router>

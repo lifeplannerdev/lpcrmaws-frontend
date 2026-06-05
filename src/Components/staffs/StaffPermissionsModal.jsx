@@ -29,6 +29,9 @@ const PERMISSION_OPTIONS = [
   { id: 'manage_asset', label: 'Manage Assets', group: 'HR' },
   { id: 'view_staff_assets', label: 'View Staff Assets Tab', group: 'Staff' },
   { id: 'edit_staff_contact_logic', label: 'Manage Contact Logic', group: 'Staff' },
+  { id: 'credentials:view', label: 'View Credentials', group: 'Credentials' },
+  { id: 'credentials:manage', label: 'Manage Credentials', group: 'Credentials' },
+  { id: 'credentials:share', label: 'Share Credentials', group: 'Credentials' },
   { id: 'access_flag', label: 'Cross-Company Access (FLAG)', group: 'System' },
 ];
 

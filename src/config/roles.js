@@ -10,7 +10,8 @@ import {
   PhoneCall,
   CalendarClock,
   Monitor,
-  IndianRupee
+  IndianRupee,
+  Key
 } from "lucide-react";
 
 export const masterNavigation = [
@@ -29,6 +30,7 @@ export const masterNavigation = [
   { id: "myReports",      label: "My Reports",      icon: FileText,      path: "/myreports",      requiredResource: "reports" },
   { id: "reports",        label: "Staff Reports",   icon: FileText,      path: "/daily/reports",  requiredResource: "reports" },
   { id: "roles",          label: "Role Management", icon: ShieldAlert,   path: "/roles",          requiredResource: "staff" },
+  { id: "credentials",    label: "Credentials Vault", icon: Key,         path: "/credentials",    requiredResource: "credentials" },
   { id: "call",           label: "Voxbay",          icon: PhoneCall,     path: "/call-analytics", requiredResource: "voxbay" },
 ];
 
