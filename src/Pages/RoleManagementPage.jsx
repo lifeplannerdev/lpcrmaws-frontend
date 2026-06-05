@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { Can } from '../context/PermissionsContext';
 
 export default function RoleManagementPage() {
-  const { authTokens } = useAuth();
+  const { accessToken } = useAuth();
   const [roles, setRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,10 +24,10 @@ export default function RoleManagementPage() {
       setLoading(true);
       const [rolesRes, permsRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/roles/`, {
-          headers: { Authorization: `Bearer ${authTokens.access}` }
+          headers: { Authorization: `Bearer ${accessToken}` }
         }),
         axios.get(`${API_BASE_URL}/permissions/`, {
-          headers: { Authorization: `Bearer ${authTokens.access}` }
+          headers: { Authorization: `Bearer ${accessToken}` }
         })
       ]);
       setRoles(rolesRes.data.results || rolesRes.data || []);
@@ -75,11 +75,11 @@ export default function RoleManagementPage() {
     try {
       if (editingRole) {
         await axios.put(`${API_BASE_URL}/roles/${editingRole.id}/`, formData, {
-          headers: { Authorization: `Bearer ${authTokens.access}` }
+          headers: { Authorization: `Bearer ${accessToken}` }
         });
       } else {
         await axios.post(`${API_BASE_URL}/roles/`, formData, {
-          headers: { Authorization: `Bearer ${authTokens.access}` }
+          headers: { Authorization: `Bearer ${accessToken}` }
         });
       }
       fetchData();
@@ -94,7 +94,7 @@ export default function RoleManagementPage() {
     if (window.confirm("Are you sure you want to delete this role?")) {
       try {
         await axios.delete(`${API_BASE_URL}/roles/${id}/`, {
-          headers: { Authorization: `Bearer ${authTokens.access}` }
+          headers: { Authorization: `Bearer ${accessToken}` }
         });
         fetchData();
       } catch (error) {
