@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../Components/layouts/Navbar';
+import { usePermissions } from '../context/PermissionsContext';
 import { 
   ArrowLeft, 
   FileText, 
@@ -25,6 +26,8 @@ export default function ReportViewPage() {
   const { id } = useParams();
   const { accessToken } = useAuth();
   const navigate = useNavigate();
+  const { hasPermission } = usePermissions();
+  const canApproveReports = hasPermission('reports:edit_any') || hasPermission('reports:edit_tenant') || hasPermission('reports:approve_any');
 
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -276,7 +279,7 @@ export default function ReportViewPage() {
               </button>
             )}
 
-            {report.status === 'pending' && (
+            {report.status === 'pending' && canApproveReports && (
               <>
                 <button
                   onClick={() => openReviewModal('approved')}

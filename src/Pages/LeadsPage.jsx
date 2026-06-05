@@ -10,6 +10,7 @@ import { Users, UserPlus, CheckCircle, TrendingUp, LayoutList, LayoutGrid } from
 import { useAuth } from '../context/AuthContext';
 import Pagination from '../Components/common/Pagination';
 import CompanySwitcher from '../Components/common/CompanySwitcher';
+import { Can } from '../context/PermissionsContext';
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -312,12 +313,14 @@ export default function LeadsPage() {
             </button>
           </div>
           
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-sm"
-          >
-            Export Excel
-          </button>
+          <Can perform="leads:view_any">
+            <button
+              onClick={handleExportExcel}
+              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-sm"
+            >
+              Export Excel
+            </button>
+          </Can>
         </div>
 
         {/* Stats + filters always visible — no layout jump on load */}

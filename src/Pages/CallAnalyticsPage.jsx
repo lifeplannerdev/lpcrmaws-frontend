@@ -241,7 +241,7 @@ function Empty({ msg = 'No data' }) {
 
 export default function CallAnalyticsPage() {
   const { user } = useAuth();
-  const userRole = user?.role || user?.user_role || '';
+  const userRole = user?.role_names?.length ? user.role_names.join(', ') : (user?.role || user?.user_role || '');
 
   const agentMap = useAgentMap();
   const [dateRange,   setDateRange]   = useState('today');

@@ -7,10 +7,13 @@ import StudentFormFields from '../Components/students/addstudent/StudentFormFiel
 import StudentFormActions from '../Components/students/addstudent/StudentFormActions';
 import { useStudentForm } from '../hooks/useStudentForm';
 import { STATUS_CHOICES, BATCH_CHOICES } from '../Components/utils/studentConstants';
+import { usePermissions } from '../context/PermissionsContext';
 
 export default function StudentEditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { hasPermission } = usePermissions();
+  const canEditStudents = hasPermission('students:edit_any') || hasPermission('students:edit_tenant') || hasPermission('students:edit_own');
   
   const {
     formData,
@@ -95,13 +98,15 @@ export default function StudentEditPage() {
               statusChoices={STATUS_CHOICES}
             />
 
-            <StudentFormActions
-              onCancel={handleCancel}
-              onSubmit={handleSubmit}
-              loading={loading}
-              disabled={trainersLoading || fetchLoading}
-              submitLabel="Update Student"
-            />
+            {canEditStudents && (
+              <StudentFormActions
+                onCancel={handleCancel}
+                onSubmit={handleSubmit}
+                loading={loading}
+                disabled={trainersLoading || fetchLoading}
+                submitLabel="Update Student"
+              />
+            )}
           </Card>
         </form>
       </div>

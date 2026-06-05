@@ -14,8 +14,6 @@ import KanbanBoard from '../Components/KanbanBoard';
 import { downloadCSV, downloadPDF } from '../utils/exportUtils';
 import CompanySwitcher from '../Components/common/CompanySwitcher';
 
-// Roles that are allowed to create / assign tasks  (mirrors permissions.py)
-const TASK_ASSIGNER_ROLES = ['ADMIN', 'CEO', 'OPS', 'GENERAL_MANAGER', 'CM', 'BDM', 'HR'];
 
 export default function MyTasksPage() {
   const navigate = useNavigate();

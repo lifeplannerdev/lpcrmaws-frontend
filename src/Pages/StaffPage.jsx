@@ -104,10 +104,9 @@ export default function StaffPage() {
           .map((staff) => ({
             id: staff.id,
             name: `${staff.first_name || ''} ${staff.last_name || ''}`.trim() || staff.username,
-            role: staff.role
-              ?.replace(/_/g, ' ')
-              .toLowerCase()
-              .replace(/\b\w/g, (c) => c.toUpperCase()),
+            role: staff.role_names?.length 
+              ? staff.role_names.join(', ')
+              : 'Unassigned',
             department: staff.team || 'Unassigned',
             email: staff.email,
             phone: staff.phone,
@@ -124,10 +123,10 @@ export default function StaffPage() {
             initials: `${staff.first_name?.[0] || ''}${staff.last_name?.[0] || staff.username?.[0] || '?'}`.toUpperCase(),
             permissions: staff.permissions || [],
           }))
-          // Filter out Admin and Managing Director roles
+          // Filter out Admin roles
           .filter((staff) => {
-            const roleLower = staff.role?.toLowerCase();
-            return roleLower !== 'admin' && roleLower !== 'managing director';
+            const hasAdminRole = staff.role_names?.some(r => r.toLowerCase() === 'admin');
+            return !hasAdminRole;
           });
 
         setStaffMembers(mappedStaff);
@@ -467,19 +466,6 @@ export default function StaffPage() {
                           <Edit size={16} /> Edit
                         </button>
                       )}
-                      {(hasPermission('staff:edit_any') || hasPermission('staff:edit_tenant')) && (
-                        <button
-                          onClick={() => {
-                            setSelectedStaffForPerms(staff);
-                            setPermissionsModalOpen(true);
-                          }}
-                          className="px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 font-medium"
-                          title="Manage Permissions"
-                        >
-                          <ShieldAlert size={16} />
-                        </button>
-                      )}
-
                     </div>
                   </div>
                 </div>
@@ -499,19 +485,7 @@ export default function StaffPage() {
         )}
       </div>
 
-      <StaffPermissionsModal
-        isOpen={permissionsModalOpen}
-        onClose={() => setPermissionsModalOpen(false)}
-        staffId={selectedStaffForPerms?.id}
-        currentPermissions={selectedStaffForPerms?.permissions}
-        authFetch={authFetch}
-        apiBaseUrl={API_BASE_URL}
-        onSave={(newPerms) => {
-          setPermissionsModalOpen(false);
-          // Refresh staff list to get updated permissions
-          fetchStaff(pagination.currentPage, searchTerm, filterDepartment, filterBranch, filterStatus, companyFilter);
-        }}
-      />
+      </div>
     </div>
   );
 }

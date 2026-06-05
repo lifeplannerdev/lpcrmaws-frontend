@@ -8,7 +8,8 @@ export default function EditStaffForm({
   authFetch,
   apiBaseUrl,
   navigate,
-  hasDualAccess
+  hasDualAccess,
+  dbRolesList
 }) {
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
@@ -50,8 +51,8 @@ export default function EditStaffForm({
     if (!formData.officePhone?.trim()) {
       newErrors.officePhone = 'Company Phone is required';
     }
-    if (!formData.role) {
-      newErrors.role = 'Role is required';
+    if (!formData.db_roles || formData.db_roles.length === 0) {
+      newErrors.db_roles = 'At least one role is required';
     }
 
     setErrors(newErrors);
@@ -74,7 +75,8 @@ export default function EditStaffForm({
       personal_phone: formData.personalPhone,
       phone: formData.officePhone, // keep mapping to phone as fallback
       location: formData.location,
-      role: formData.role,
+      role: formData.role || '',
+      db_roles: formData.db_roles,
       team: formData.team,
       salary: formData.salary, 
       is_active: formData.isActive,
@@ -138,6 +140,8 @@ export default function EditStaffForm({
       handleSubmit={handleSubmit}
       handleBack={handleBack}
       hasDualAccess={hasDualAccess}
+      dbRolesList={dbRolesList}
+      onDbRolesChange={(roles) => setFormData({...formData, db_roles: roles})}
     />
   );
 }

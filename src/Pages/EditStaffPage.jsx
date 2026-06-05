@@ -20,12 +20,14 @@ export default function EditStaffPage() {
     personalPhone: '',
     location: '',
     role: '',
+    db_roles: [],
     team: '',
     salary: '',
     isActive: true,
     company: 'LP',
     assets: [],
   });
+  const [dbRolesList, setDbRolesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
 
@@ -66,15 +68,20 @@ export default function EditStaffPage() {
     const fetchStaffDetails = async () => {
       setLoading(true);
       try {
-        const res = await authFetch(`${API_BASE_URL}/staff/${id}/`);
+        const [staffRes, rolesRes] = await Promise.all([
+          authFetch(`${API_BASE_URL}/staff/${id}/`),
+          authFetch(`${API_BASE_URL}/accounts/roles/`)
+        ]);
 
-        if (!res.ok) {
+        if (!staffRes.ok) {
           setFetchError('Failed to fetch staff details');
           setTimeout(() => navigate('/staff'), 2000);
           return;
         }
 
-        const data = await res.json();
+        const data = await staffRes.json();
+        const rolesData = rolesRes.ok ? await rolesRes.json() : [];
+        setDbRolesList(rolesData);
         setFormData({
           firstName: data.first_name || '',
           lastName: data.last_name || '',
@@ -84,6 +91,7 @@ export default function EditStaffPage() {
           personalPhone: data.personal_phone || '',
           location: data.location || '',
           role: data.role || '',
+          db_roles: data.db_roles || [],
           salary: data.salary || '',
           team: data.team || '',
           isActive: data.is_active ?? true,
@@ -134,6 +142,7 @@ export default function EditStaffPage() {
       apiBaseUrl={API_BASE_URL}
       navigate={navigate}
       hasDualAccess={hasPermission('system:access_flag')}
+      dbRolesList={dbRolesList}
     />
   );
 }

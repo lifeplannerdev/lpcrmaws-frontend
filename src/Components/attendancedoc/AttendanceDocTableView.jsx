@@ -3,7 +3,7 @@ import { FileText, Calendar, Clock, Eye, Download, Trash2 } from 'lucide-react';
 import Card from '../common/Card';
 import { formatDate, formatMonth } from '../utils/dateFormatters';
 
-export default function AttendanceDocTableView({ documents, onDelete }) {
+export default function AttendanceDocTableView({ documents, onDelete, canDelete = true }) {
   return (
     <Card padding="p-0" className="overflow-hidden">
       <div className="overflow-x-auto">
@@ -72,13 +72,15 @@ export default function AttendanceDocTableView({ documents, onDelete }) {
                     >
                       <Download className="w-4 h-4" />
                     </a>
-                    <button
-                      onClick={() => onDelete(doc.id)}
-                      className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {canDelete && (
+                      <button
+                        onClick={() => onDelete(doc.id)}
+                        className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

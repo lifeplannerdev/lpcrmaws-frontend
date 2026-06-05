@@ -332,7 +332,7 @@ export default function PenaltyManagementPage() {
   const totalPenalty = calculateTotalPenalty();
 
   // Filter out ADMIN role from employee list for dropdowns
-  const nonAdminEmployees = employees.filter(emp => emp.role !== 'ADMIN');
+  const nonAdminEmployees = employees.filter(emp => !emp.role_names?.some(r => r.toLowerCase() === 'admin'));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">

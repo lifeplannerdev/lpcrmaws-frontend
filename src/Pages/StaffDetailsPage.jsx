@@ -7,7 +7,7 @@ import {
   XCircle, Laptop, Smartphone, Clock, Edit, ShieldAlert, ArrowLeft
 } from 'lucide-react';
 import StaffPermissionsModal from '../Components/staffs/StaffPermissionsModal';
-import { Can } from '../context/PermissionsContext';
+import { Can, usePermissions } from '../context/PermissionsContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -24,6 +24,8 @@ export default function StaffDetailsPage() {
   
   const [activeTab, setActiveTab] = useState('profile'); // profile, assets
   const [permissionsModalOpen, setPermissionsModalOpen] = useState(false);
+  const { hasPermission } = usePermissions();
+  const canEditStaff = hasPermission('staff:edit_any') || hasPermission('staff:edit_tenant');
 
   const authFetch = useCallback(async (url, options = {}, retry = true) => {
     let token = accessToken;
@@ -167,7 +169,7 @@ export default function StaffDetailsPage() {
               </div>
               
               <div className="mt-4 sm:mt-0 flex gap-3">
-                <Can perform="staff:edit_any">
+                {canEditStaff && (
                   <>
                     <button
                       onClick={() => setPermissionsModalOpen(true)}
@@ -182,7 +184,7 @@ export default function StaffDetailsPage() {
                       <Edit size={18} /> Edit Profile
                     </button>
                   </>
-                </Can>
+                )}
               </div>
             </div>
           </div>

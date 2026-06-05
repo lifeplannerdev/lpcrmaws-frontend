@@ -41,7 +41,7 @@ export default function DashboardOverview() {
   const [loading,         setLoading]         = useState(true);
   const [error,           setError]           = useState(null);
 
-  const userRole = user?.role || 'User';
+  const userRole = user?.role_names?.length ? user.role_names.join(', ') : (user?.role || 'User');
   const userName = user?.name || user?.username || 'User';
   
   // Replace role check with actual capabilities

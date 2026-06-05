@@ -4,6 +4,7 @@ import {
   Plus, Edit, Trash2, CheckCircle, AlertTriangle, Clock,
   X, Calendar, ChevronDown, ChevronUp
 } from 'lucide-react';
+import { usePermissions } from '../../context/PermissionsContext';
 
 /**
  * LeadFollowUps
@@ -150,7 +151,7 @@ const InlineForm = ({ lead, onSave, onCancel, initial }) => {
 
 // ── Item row ──────────────────────────────────────────────────────────────────
 
-const FollowUpItem = ({ item, onEdit, onDelete, onStatusChange }) => {
+const FollowUpItem = ({ item, onEdit, onDelete, onStatusChange, canEdit }) => {
   const type     = TYPE_META[item.followup_type]  || TYPE_META.call;
   const status   = STATUS_META[item.status]        || STATUS_META.pending;
   const TypeIcon = type.Icon;
@@ -191,14 +192,18 @@ const FollowUpItem = ({ item, onEdit, onDelete, onStatusChange }) => {
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => onEdit(item)}
-            className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-all" title="Edit">
-            <Edit size={14} />
-          </button>
-          <button onClick={() => onDelete(item.id)}
-            className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-all" title="Delete">
-            <Trash2 size={14} />
-          </button>
+          {canEdit && (
+            <>
+              <button onClick={() => onEdit(item)}
+                className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-all" title="Edit">
+                <Edit size={14} />
+              </button>
+              <button onClick={() => onDelete(item.id)}
+                className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-all" title="Delete">
+                <Trash2 size={14} />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -208,7 +213,7 @@ const FollowUpItem = ({ item, onEdit, onDelete, onStatusChange }) => {
         </p>
       )}
 
-      {item.status === 'pending' && (
+      {item.status === 'pending' && canEdit && (
         <div className="flex gap-2">
           <button onClick={() => onStatusChange(item.id, 'contacted')}
             className="flex-1 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-bold rounded-lg border border-green-200 transition-all flex items-center justify-center gap-1">
@@ -234,6 +239,8 @@ const LeadFollowUps = ({ lead, authFetch }) => {
   const [showForm, setShowForm] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
+  const { hasPermission } = usePermissions();
+  const canEditLead = hasPermission('leads:edit_any') || hasPermission('leads:edit_tenant') || hasPermission('leads:edit_own');
 
   const load = useCallback(async () => {
     if (!lead?.id) return;
@@ -304,12 +311,14 @@ const LeadFollowUps = ({ lead, authFetch }) => {
             {collapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
           </div>
         </button>
-        <button
-          onClick={() => { setEditItem(null); setShowForm(s => !s); setCollapsed(false); }}
-          className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all">
-          {showForm && !editItem ? <X size={14} /> : <Plus size={14} />}
-          {showForm && !editItem ? 'Cancel' : 'Add'}
-        </button>
+        {canEditLead && (
+          <button
+            onClick={() => { setEditItem(null); setShowForm(s => !s); setCollapsed(false); }}
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all">
+            {showForm && !editItem ? <X size={14} /> : <Plus size={14} />}
+            {showForm && !editItem ? 'Cancel' : 'Add'}
+          </button>
+        )}
       </div>
 
       {!collapsed && (
@@ -354,6 +363,7 @@ const LeadFollowUps = ({ lead, authFetch }) => {
                   onEdit={(i) => { setEditItem(i); setShowForm(false); }}
                   onDelete={handleDelete}
                   onStatusChange={handleStatusChange}
+                  canEdit={canEditLead}
                 />
               ))}
             </div>

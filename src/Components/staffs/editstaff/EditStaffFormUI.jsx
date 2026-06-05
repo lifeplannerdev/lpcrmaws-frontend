@@ -4,6 +4,7 @@ import StaffActionButtons from "../newstaff/StaffActionButtons";
 import PersonalInfoSection from "../newstaff/PersonalInfoSection";
 import ProfessionalInfoSection from "../newstaff/ProfessionalInfoSection";
 import AssignedAssetsSection from "./AssignedAssetsSection";
+import { usePermissions } from "../../../context/PermissionsContext";
 
 export default function EditStaffFormUI({
   formData,
@@ -13,8 +14,13 @@ export default function EditStaffFormUI({
   handleInputChange,
   handleSubmit,
   handleBack,
-  hasDualAccess
+  hasDualAccess,
+  dbRolesList,
+  onDbRolesChange
 }) {
+  const { hasPermission } = usePermissions();
+  const canEditStaff = hasPermission('staff:edit_any') || hasPermission('staff:edit_tenant');
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -75,15 +81,19 @@ export default function EditStaffFormUI({
             errors={errors}
             onChange={handleInputChange}
             hasDualAccess={hasDualAccess}
+            dbRolesList={dbRolesList}
+            onDbRolesChange={onDbRolesChange}
           />
 
           <AssignedAssetsSection assets={formData.assets} />
 
-          <StaffActionButtons
-            onSubmit={handleSubmit}
-            onCancel={handleBack}
-            isEdit={true}
-          />
+          {canEditStaff && (
+            <StaffActionButtons
+              onSubmit={handleSubmit}
+              onCancel={handleBack}
+              isEdit={true}
+            />
+          )}
         </div>
 
         {/* Info Card */}

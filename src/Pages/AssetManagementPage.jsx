@@ -312,7 +312,7 @@ export default function AssetManagementPage() {
     return matchesStatus && matchesEmployee && matchesSearch;
   });
 
-  const nonAdminEmployees = employees.filter(emp => emp.role !== 'ADMIN');
+  const nonAdminEmployees = employees.filter(emp => !emp.role_names?.some(r => r.toLowerCase() === 'admin'));
   const potentialParents = assets.filter(a => a.id !== editingAsset?.id && a.asset_type !== 'SIM');
 
   return (

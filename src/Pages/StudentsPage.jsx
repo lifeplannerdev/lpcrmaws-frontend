@@ -7,15 +7,17 @@ import StatsCards from '../Components/students/StatsCards';
 import StudentsSearchFilters from '../Components/students/StudentsSearchFilters';
 import StudentGrid from '../Components/students/StudentGrid';
 import Pagination from '../Components/common/Pagination';
-import { useAuth } from "../context/AuthContext";
 import { BATCH_CHOICES } from '../Components/utils/studentConstants';
 import { downloadCSV, downloadPDF } from '../utils/exportUtils';
+import { usePermissions } from '../context/PermissionsContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function StudentsPage() {
   const navigate = useNavigate();
   const { accessToken, refreshAccessToken } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canEditStudents = hasPermission('students:edit_any') || hasPermission('students:edit_tenant') || hasPermission('students:edit_own');
 
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -175,13 +177,15 @@ export default function StudentsPage() {
               >
                 PDF
               </button>
-              <button 
-                onClick={() => navigate('/students/add')}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold"
-              >
-                <Plus size={20} />
-                Add New Student
-              </button>
+              {canEditStudents && (
+                <button 
+                  onClick={() => navigate('/students/add')}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold"
+                >
+                  <Plus size={20} />
+                  Add New Student
+                </button>
+              )}
             </div>
           </div>
         </div>

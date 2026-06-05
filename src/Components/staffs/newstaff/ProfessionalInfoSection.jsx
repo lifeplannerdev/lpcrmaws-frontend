@@ -1,10 +1,10 @@
 import React from 'react';
-import { Briefcase, Shield, Users, DollarSign, MapPin, Building } from 'lucide-react';
+import { Briefcase, Shield, Users, DollarSign, MapPin, Building, CheckSquare } from 'lucide-react';
 import FormField from '../../common/FormField';
 import IconContainer from '../../common/IconContainer';
 import { roleOptions, teamOptions } from '../../utils/staffConstants';
 
-const ProfessionalInfoSection = React.memo(({ formData, errors, onChange, branches = [], hasDualAccess = false }) => {
+const ProfessionalInfoSection = React.memo(({ formData, errors, onChange, branches = [], hasDualAccess = false, dbRolesList = [], onDbRolesChange }) => {
   return (
     <div className="mb-6 sm:mb-8 pt-6 sm:pt-8 border-t border-gray-200">
       {/* Section Header */}
@@ -24,19 +24,33 @@ const ProfessionalInfoSection = React.memo(({ formData, errors, onChange, branch
 
       {/* Form Fields */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-        <FormField
-          label="Role"
-          name="role"
-          type="select"
-          value={formData.role}
-          onChange={onChange}
-          error={errors.role}
-          required
-          placeholder="Select a role"
-          icon={Shield}
-          options={roleOptions}
-          className="px-4 py-3 border-2 rounded-xl font-medium"
-        />
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+            <Shield className="w-4 h-4 text-gray-500" />
+            Roles (Select at least one)
+          </label>
+          {errors.db_roles && <p className="text-sm text-red-600 mb-2">{errors.db_roles}</p>}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 border-2 border-gray-100 rounded-xl p-4 bg-gray-50">
+            {dbRolesList.map(r => (
+              <label key={r.id} className="flex items-start gap-2 cursor-pointer">
+                <input 
+                  type="checkbox"
+                  className="mt-1 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  checked={formData.db_roles?.includes(r.id) || false}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    const newRoles = checked 
+                      ? [...(formData.db_roles || []), r.id]
+                      : (formData.db_roles || []).filter(id => id !== r.id);
+                    onDbRolesChange(newRoles);
+                  }}
+                />
+                <span className="text-sm font-medium text-gray-700">{r.name}</span>
+              </label>
+            ))}
+            {dbRolesList.length === 0 && <span className="text-sm text-gray-500">No roles available. Please create them in Role Management.</span>}
+          </div>
+        </div>
 
         <FormField
           label="Team/Department"
@@ -62,7 +76,10 @@ const ProfessionalInfoSection = React.memo(({ formData, errors, onChange, branch
           className="px-4 py-3 border-2 rounded-xl font-medium"
         />
 
-        {formData.role === 'TRAINER' && (
+        {formData.db_roles?.some(roleId => {
+          const roleObj = dbRolesList.find(r => r.id === roleId);
+          return roleObj?.name.toUpperCase() === 'TRAINER';
+        }) && (
           <FormField
             label="Branch"
             name="branch"

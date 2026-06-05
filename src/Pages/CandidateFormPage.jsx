@@ -7,6 +7,7 @@ import {
 
 import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 
 const STATUS_OPTIONS = [
   { value: 'applied',     label: 'Applied',     color: 'text-blue-600' },
@@ -51,7 +52,10 @@ export default function CandidateFormPage() {
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const { accessToken, refreshAccessToken } = useAuth();
+  const { hasPermission } = usePermissions();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+  const canEdit = hasPermission('candidates:edit_any') || hasPermission('candidates:edit_tenant') || hasPermission('candidates:edit_own');
 
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
@@ -444,23 +448,25 @@ export default function CandidateFormPage() {
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 min-w-[140px] justify-center"
-            >
-              {saving ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {isEdit ? 'Saving…' : 'Adding…'}
-                </>
-              ) : (
-                <>
-                  <Save size={18} />
-                  {isEdit ? 'Save Changes' : 'Add Candidate'}
-                </>
-              )}
-            </button>
+            {canEdit && (
+              <button
+                type="submit"
+                disabled={saving}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 min-w-[140px] justify-center"
+              >
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    {isEdit ? 'Saving…' : 'Adding…'}
+                  </>
+                ) : (
+                  <>
+                    <Save size={18} />
+                    {isEdit ? 'Save Changes' : 'Add Candidate'}
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
         </form>

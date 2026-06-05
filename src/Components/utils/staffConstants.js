@@ -42,4 +42,5 @@ export const initialFormData = {
   password: '',
   confirmPassword: '',
   salary: '',
+  db_roles: [],
 };

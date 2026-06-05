@@ -15,6 +15,7 @@ export default function TaskCreationPage() {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   
   const hasDualAccess = hasPermission('system:access_flag');
+  const canAssignTasks = hasPermission('tasks:edit_any') || hasPermission('tasks:edit_tenant') || hasPermission('tasks:edit_own');
 
   const [teamMembers, setTeamMembers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -68,7 +69,7 @@ export default function TaskCreationPage() {
 
         if (Array.isArray(employeeList) && employeeList.length > 0) {
           // Filter out ADMIN role employees
-          const filteredEmployees = employeeList.filter(emp => emp.role !== 'ADMIN');
+          const filteredEmployees = employeeList.filter(emp => !emp.role_names?.some(r => r.toLowerCase() === 'admin'));
           setTeamMembers(filteredEmployees);
         } else {
           setTeamMembers([]);
@@ -286,13 +287,15 @@ export default function TaskCreationPage() {
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-indigo-800 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                disabled={loading}
-              >
-                {loading ? 'Creating...' : 'Create Task'}
-              </button>
+              {canAssignTasks && (
+                <button
+                  type="submit"
+                  className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-indigo-800 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  disabled={loading}
+                >
+                  {loading ? 'Creating...' : 'Create Task'}
+                </button>
+              )}
             </div>
           </div>
         </form>

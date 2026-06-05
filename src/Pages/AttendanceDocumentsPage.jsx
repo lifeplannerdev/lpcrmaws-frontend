@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import Navbar from '../Components/layouts/Navbar';
 import { Plus } from 'lucide-react';
 import AttendanceHeader from '../Components/attendancedoc/AttendanceDocHeader';
@@ -14,6 +15,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function AttendanceDocumentsPage() {
   const { accessToken, refreshAccessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
   
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [documents, setDocuments] = useState([]);
@@ -21,6 +23,8 @@ export default function AttendanceDocumentsPage() {
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
+
+  const canManageAttendance = hasPermission('attendance:create') || hasPermission('attendance:edit_any') || hasPermission('attendance:edit_tenant') || hasPermission('attendance:edit_own');
 
   const fetchWithAuth = async (url, options = {}) => {
     try {
@@ -127,6 +131,7 @@ export default function AttendanceDocumentsPage() {
           onUploadClick={() => setShowUploadModal(true)} 
           companyFilter={companyFilter} 
           setCompanyFilter={setCompanyFilter} 
+          canUpload={canManageAttendance}
         />
 
         {/* Filters */}
@@ -151,7 +156,7 @@ export default function AttendanceDocumentsPage() {
                   : 'Get started by uploading your first attendance document'
               }
             />
-            {!searchTerm && selectedMonth === 'all' && (
+            {!searchTerm && selectedMonth === 'all' && canManageAttendance && (
               <button
                 onClick={() => setShowUploadModal(true)}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors mt-4"
@@ -165,11 +170,12 @@ export default function AttendanceDocumentsPage() {
           <AttendanceDocumentsList
             documents={filteredDocuments}
             onDelete={handleDelete}
+            canDelete={canManageAttendance}
           />
         )}
 
         {/* Upload Modal */}
-        {showUploadModal && (
+        {showUploadModal && canManageAttendance && (
           <UploadDocumentModal
             isOpen={showUploadModal}
             onClose={() => setShowUploadModal(false)}

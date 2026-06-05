@@ -11,6 +11,8 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead }) => {
   const { hasPermission } = usePermissions();
 
   const allowHistory = hasPermission('leads:view_any') || hasPermission('calls:view_any');
+  const allowEdit = hasPermission('leads:edit_any') || hasPermission('leads:edit_tenant') || hasPermission('leads:edit_own');
+  const allowDelete = hasPermission('leads:delete_any') || hasPermission('leads:delete_tenant');
 
   const handleCallHistory = (id) =>
     navigate(`/leads/${id}`, { state: { scrollTo: 'call-history' } });
@@ -183,16 +185,20 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead }) => {
                     )}
 
                     {/* Edit */}
-                    <button onClick={() => navigate(`/leads/edit/${lead.id}`)}
-                      className="group/btn p-2.5 text-blue-600 hover:bg-blue-100 rounded-xl transition-all duration-200 hover:shadow-md hover:scale-110" title="Edit lead">
-                      <Edit size={18} className="group-hover/btn:rotate-12 transition-transform" />
-                    </button>
+                    {allowEdit && (
+                      <button onClick={() => navigate(`/leads/edit/${lead.id}`)}
+                        className="group/btn p-2.5 text-blue-600 hover:bg-blue-100 rounded-xl transition-all duration-200 hover:shadow-md hover:scale-110" title="Edit lead">
+                        <Edit size={18} className="group-hover/btn:rotate-12 transition-transform" />
+                      </button>
+                    )}
 
                     {/* Delete */}
-                    <button onClick={() => onDeleteLead(lead.id)}
-                      className="group/btn p-2.5 text-red-600 hover:bg-red-100 rounded-xl transition-all duration-200 hover:shadow-md hover:scale-110" title="Delete lead">
-                      <Trash2 size={18} className="group-hover/btn:rotate-12 transition-transform" />
-                    </button>
+                    {allowDelete && (
+                      <button onClick={() => onDeleteLead(lead.id)}
+                        className="group/btn p-2.5 text-red-600 hover:bg-red-100 rounded-xl transition-all duration-200 hover:shadow-md hover:scale-110" title="Delete lead">
+                        <Trash2 size={18} className="group-hover/btn:rotate-12 transition-transform" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

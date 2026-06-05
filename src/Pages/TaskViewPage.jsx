@@ -9,8 +9,6 @@ import {
   StickyNote, Flag
 } from 'lucide-react';
 
-// Roles that can edit tasks (mirrors permissions.py TASK_ASSIGNERS)
-const TASK_ASSIGNER_ROLES = ['ADMIN', 'CEO', 'OPS', 'GENERAL_MANAGER', 'CM', 'BDM', 'HR'];
 
 export default function TaskViewPage() {
   const { id }       = useParams();

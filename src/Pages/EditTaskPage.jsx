@@ -6,11 +6,14 @@ import { Loader, ArrowLeft } from 'lucide-react';
 import TaskFormFields from '../Components/tasks/TaskFormFields';
 import PrioritySelector from '../Components/tasks/PrioritySelector';
 import StatusSelector from '../Components/tasks/StatusSelector';
+import { usePermissions } from '../context/PermissionsContext';
 
 export default function EditTaskPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { accessToken, refreshAccessToken } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canAssignTasks = hasPermission('tasks:edit_any') || hasPermission('tasks:edit_tenant') || hasPermission('tasks:edit_own');
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   
   const [teamMembers, setTeamMembers] = useState([]);
@@ -266,13 +269,15 @@ export default function EditTaskPage() {
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-indigo-800 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                disabled={submitting}
-              >
-                {submitting ? 'Updating...' : 'Update Task'}
-              </button>
+              {canAssignTasks && (
+                <button
+                  type="submit"
+                  className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-indigo-800 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Updating...' : 'Update Task'}
+                </button>
+              )}
             </div>
           </div>
         </form>

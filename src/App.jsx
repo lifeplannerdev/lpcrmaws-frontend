@@ -36,6 +36,7 @@ import CandidateDetailPage from "./Pages/CandidateDetailPage";
 import CandidateFormPage from "./Pages/CandidateFormPage";
 import AssetManagementPage from "./Pages/AssetManagementPage.jsx";
 import FeesManagementPage from "./Pages/FeesManagementPage.jsx";
+import RoleManagementPage from "./Pages/RoleManagementPage.jsx";
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -69,27 +70,27 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<ProtectedRoute><DashboardOverview /></ProtectedRoute>} />
 
-        <Route path="/leads" element={<ProtectedRoute><LeadsPage /></ProtectedRoute>} />
-        <Route path="/leads/edit/:id" element={<ProtectedRoute><EditLeadPage /></ProtectedRoute>} />
-        <Route path="/addnewlead" element={<ProtectedRoute><AddLeadPage /></ProtectedRoute>} />
-        <Route path="/leads/:id" element={<ProtectedRoute><LeadDetailPage /></ProtectedRoute>} />
-        <Route path="/followups"element={<ProtectedRoute><AllFollowUpsPage /></ProtectedRoute>} />
+        <Route path="/leads" element={<PermissionRoute resources={['leads']}><LeadsPage /></PermissionRoute>} />
+        <Route path="/leads/edit/:id" element={<PermissionRoute resources={['leads']}><EditLeadPage /></PermissionRoute>} />
+        <Route path="/addnewlead" element={<PermissionRoute resources={['leads']}><AddLeadPage /></PermissionRoute>} />
+        <Route path="/leads/:id" element={<PermissionRoute resources={['leads']}><LeadDetailPage /></PermissionRoute>} />
+        <Route path="/followups"element={<PermissionRoute resources={['leads']}><AllFollowUpsPage /></PermissionRoute>} />
 
 
-        <Route path="/staff" element={<ProtectedRoute><StaffPage /></ProtectedRoute>} />
-        <Route path="/staff/view/:id" element={<ProtectedRoute><StaffDetailsPage /></ProtectedRoute>} />
-        <Route path="/staff/create" element={<ProtectedRoute><AddStaffPage /></ProtectedRoute>} />
-        <Route path="/staff/edit/:id" element={<ProtectedRoute><EditStaffPage /></ProtectedRoute>} />
+        <Route path="/staff" element={<PermissionRoute resources={['staff']}><StaffPage /></PermissionRoute>} />
+        <Route path="/staff/view/:id" element={<PermissionRoute resources={['staff']}><StaffDetailsPage /></PermissionRoute>} />
+        <Route path="/staff/create" element={<PermissionRoute permissions={['staff:edit_any', 'staff:edit_tenant']}><AddStaffPage /></PermissionRoute>} />
+        <Route path="/staff/edit/:id" element={<PermissionRoute permissions={['staff:edit_any', 'staff:edit_tenant']}><EditStaffPage /></PermissionRoute>} />
 
-        <Route path="/staff/tasks" element={<ProtectedRoute><TasksPage /></ProtectedRoute>} />
-        <Route path="/mytasks" element={<ProtectedRoute><MyTasksPage /></ProtectedRoute>} />
-        <Route path="/tasks/new" element={<ProtectedRoute><TaskCreationPage /></ProtectedRoute>} />
-        <Route path="/tasks/:id" element={<ProtectedRoute><TaskViewPage /></ProtectedRoute>} />
-        <Route path="/tasks/edit/:id" element={<ProtectedRoute><EditTaskPage /></ProtectedRoute>} />
+        <Route path="/staff/tasks" element={<PermissionRoute resources={['tasks']}><TasksPage /></PermissionRoute>} />
+        <Route path="/mytasks" element={<PermissionRoute resources={['tasks']}><MyTasksPage /></PermissionRoute>} />
+        <Route path="/tasks/new" element={<PermissionRoute resources={['tasks']}><TaskCreationPage /></PermissionRoute>} />
+        <Route path="/tasks/:id" element={<PermissionRoute resources={['tasks']}><TaskViewPage /></PermissionRoute>} />
+        <Route path="/tasks/edit/:id" element={<PermissionRoute resources={['tasks']}><EditTaskPage /></PermissionRoute>} />
 
-        <Route path="/daily/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-        <Route path="/reports/view/:id" element={<ProtectedRoute><ReportViewPage /></ProtectedRoute>} />
-        <Route path="/myreports/" element={<ProtectedRoute><MyReportsPage /></ProtectedRoute>} />
+        <Route path="/daily/reports" element={<PermissionRoute resources={['reports']}><ReportsPage /></PermissionRoute>} />
+        <Route path="/reports/view/:id" element={<PermissionRoute resources={['reports']}><ReportViewPage /></PermissionRoute>} />
+        <Route path="/myreports/" element={<PermissionRoute resources={['reports']}><MyReportsPage /></PermissionRoute>} />
 
         <Route path="/students" element={<PermissionRoute resources={['students']}><StudentsPage /></PermissionRoute>} />
         <Route path="/students/add" element={<PermissionRoute permissions={['students:edit_any', 'students:edit_tenant']}><AddStudentPage /></PermissionRoute>} />
@@ -100,16 +101,17 @@ export default function App() {
         <Route path="/students/:studentId/attendance" element={<PermissionRoute resources={['students', 'attendance']}><StudentAttendanceRecordsPage /></PermissionRoute>} />
 
         <Route path="/hr/attendance" element={<PermissionRoute resources={['staff']}><AttendanceDocumentsPage /></PermissionRoute>} />
-        <Route path="/hr/penalties" element={<ProtectedRoute><PenaltyManagementPage /></ProtectedRoute>} />
-        <Route path="/candidates" element={<ProtectedRoute><CandidatesPage /></ProtectedRoute>} />
-        <Route path="/candidates/new" element={<ProtectedRoute><CandidateFormPage /></ProtectedRoute>} />
-        <Route path="/candidates/edit/:id" element={<ProtectedRoute><CandidateFormPage /></ProtectedRoute>} />
-        <Route path="/candidates/:id" element={<ProtectedRoute><CandidateDetailPage /></ProtectedRoute>} />
+        <Route path="/hr/penalties" element={<PermissionRoute resources={['penalties']}><PenaltyManagementPage /></PermissionRoute>} />
+        <Route path="/candidates" element={<PermissionRoute resources={['candidates']}><CandidatesPage /></PermissionRoute>} />
+        <Route path="/candidates/new" element={<PermissionRoute resources={['candidates']}><CandidateFormPage /></PermissionRoute>} />
+        <Route path="/candidates/edit/:id" element={<PermissionRoute resources={['candidates']}><CandidateFormPage /></PermissionRoute>} />
+        <Route path="/candidates/:id" element={<PermissionRoute resources={['candidates']}><CandidateDetailPage /></PermissionRoute>} />
         <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
         
-        <Route path="/call-analytics" element={<ProtectedRoute><CallAnalyticsPage /></ProtectedRoute>} />
-        <Route path="/hr/assets" element={<ProtectedRoute><AssetManagementPage /></ProtectedRoute>} />
+        <Route path="/call-analytics" element={<PermissionRoute resources={['voxbay']}><CallAnalyticsPage /></PermissionRoute>} />
+        <Route path="/hr/assets" element={<PermissionRoute resources={['assets']}><AssetManagementPage /></PermissionRoute>} />
         <Route path="/fees" element={<PermissionRoute resources={['fees']}><FeesManagementPage /></PermissionRoute>} />
+        <Route path="/roles" element={<PermissionRoute permissions={['staff:edit_any', 'staff:edit_tenant']}><RoleManagementPage /></PermissionRoute>} />
         <Route path="*" element={<div>404 Not Found</div>} />
       </Routes>
     </Router>

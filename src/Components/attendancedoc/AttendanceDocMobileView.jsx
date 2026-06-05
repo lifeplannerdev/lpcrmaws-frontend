@@ -3,7 +3,7 @@ import { FileText, Eye, Download, Trash2 } from 'lucide-react';
 import Card from '../common/Card';
 import { formatDate, formatMonth } from '../utils/dateFormatters';
 
-export default function AttendanceDocMobileView({ documents, onDelete }) {
+export default function AttendanceDocMobileView({ documents, onDelete, canDelete = true }) {
   return (
     <div className="grid grid-cols-1 gap-4">
       {documents.map((doc) => (
@@ -55,12 +55,14 @@ export default function AttendanceDocMobileView({ documents, onDelete }) {
               <Download className="w-4 h-4" />
               Download
             </a>
-            <button
-              onClick={() => onDelete(doc.id)}
-              className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            {canDelete && (
+              <button
+                onClick={() => onDelete(doc.id)}
+                className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </Card>
       ))}

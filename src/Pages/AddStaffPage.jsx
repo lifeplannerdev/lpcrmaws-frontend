@@ -17,26 +17,29 @@ export default function AddStaffPage() {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const hasDualAccess = hasPermission('system:access_flag');
+  const canEditStaff = hasPermission('staff:edit_any') || hasPermission('staff:edit_tenant');
 
   const [formData, setFormData] = useState(initialFormData);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
   const [branches, setBranches] = useState([]);
+  const [dbRolesList, setDbRolesList] = useState([]);
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    const fetchBranches = async () => {
+    const fetchBranchesAndRoles = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/branches/`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
-        const data = await res.json();
-        setBranches(data || []);
+        const [branchesRes, rolesRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/branches/`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+          fetch(`${API_BASE_URL}/accounts/roles/`, { headers: { Authorization: `Bearer ${accessToken}` } })
+        ]);
+        if (branchesRes.ok) setBranches(await branchesRes.json() || []);
+        if (rolesRes.ok) setDbRolesList(await rolesRes.json() || []);
       } catch (err) {
-        console.error('Failed to load branches', err);
+        console.error('Failed to load branches and roles', err);
       }
     };
-    if (accessToken) fetchBranches();
+    if (accessToken) fetchBranchesAndRoles();
   }, [accessToken, API_BASE_URL]);
 
   const handleInputChange = useCallback((e) => {
@@ -66,7 +69,7 @@ export default function AddStaffPage() {
     } else if (!/^\+?[\d\s\-()]+$/.test(formData.officePhone)) {
       newErrors.officePhone = 'Company Phone format is invalid';
     }
-    if (!formData.role) newErrors.role = 'Role is required';
+    if (!formData.db_roles || formData.db_roles.length === 0) newErrors.db_roles = 'At least one role is required';
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
@@ -94,7 +97,8 @@ export default function AddStaffPage() {
       personal_phone: formData.personalPhone,
       phone: formData.officePhone, // Keep mapping to phone to satisfy any backend expectations
       location: formData.location || '',
-      role: formData.role,
+      role: formData.role || '',
+      db_roles: formData.db_roles,
       team: formData.team || '',
       is_active: formData.isActive,
       salary: formData.salary ? parseFloat(formData.salary) : null,
@@ -204,6 +208,8 @@ export default function AddStaffPage() {
             onChange={handleInputChange}
             branches={branches}
             hasDualAccess={hasDualAccess}
+            dbRolesList={dbRolesList}
+            onDbRolesChange={(roles) => setFormData({...formData, db_roles: roles})}
           />
 
           <SecuritySection
@@ -212,10 +218,12 @@ export default function AddStaffPage() {
             onChange={handleInputChange}
           />
 
-          <StaffActionButtons
-            onSubmit={handleSubmit}
-            onCancel={handleBack}
-          />
+          {canEditStaff && (
+            <StaffActionButtons
+              onSubmit={handleSubmit}
+              onCancel={handleBack}
+            />
+          )}
         </Card>
 
         {/* Info Card */}
