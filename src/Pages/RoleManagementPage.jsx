@@ -23,10 +23,10 @@ export default function RoleManagementPage() {
     try {
       setLoading(true);
       const [rolesRes, permsRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/accounts/roles/`, {
+        axios.get(`${API_BASE_URL}/roles/`, {
           headers: { Authorization: `Bearer ${authTokens.access}` }
         }),
-        axios.get(`${API_BASE_URL}/api/accounts/permissions/`, {
+        axios.get(`${API_BASE_URL}/permissions/`, {
           headers: { Authorization: `Bearer ${authTokens.access}` }
         })
       ]);
@@ -74,11 +74,11 @@ export default function RoleManagementPage() {
     e.preventDefault();
     try {
       if (editingRole) {
-        await axios.put(`${API_BASE_URL}/api/accounts/roles/${editingRole.id}/`, formData, {
+        await axios.put(`${API_BASE_URL}/roles/${editingRole.id}/`, formData, {
           headers: { Authorization: `Bearer ${authTokens.access}` }
         });
       } else {
-        await axios.post(`${API_BASE_URL}/api/accounts/roles/`, formData, {
+        await axios.post(`${API_BASE_URL}/roles/`, formData, {
           headers: { Authorization: `Bearer ${authTokens.access}` }
         });
       }
@@ -93,7 +93,7 @@ export default function RoleManagementPage() {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this role?")) {
       try {
-        await axios.delete(`${API_BASE_URL}/api/accounts/roles/${id}/`, {
+        await axios.delete(`${API_BASE_URL}/roles/${id}/`, {
           headers: { Authorization: `Bearer ${authTokens.access}` }
         });
         fetchData();
