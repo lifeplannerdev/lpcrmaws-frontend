@@ -4,11 +4,13 @@ import { useApi } from '../../context/ApiContext';
 
 export function AddCredentialModal({ isOpen, onClose, onSuccess, editData }) {
   const { authFetch, apiBaseUrl } = useApi();
-  const [formData, setFormData] = useState({ title: '', username: '', password: '', url: '', notes: '', shared_users: [], shared_roles: [] });
+  const [formData, setFormData] = useState({ title: '', username: '', password: '', url: '', notes: '', category: '', shared_users: [], shared_roles: [] });
   const [saving, setSaving] = useState(false);
+  const [categories, setCategories] = useState([]);
   
   useEffect(() => {
     if (isOpen) {
+      fetchCategories();
       if (editData) {
         setFormData({
           title: editData.title || '',
@@ -16,14 +18,27 @@ export function AddCredentialModal({ isOpen, onClose, onSuccess, editData }) {
           password: '',
           url: editData.url || '',
           notes: editData.notes || '',
+          category: editData.category || '',
           shared_users: editData.shared_users || [],
           shared_roles: editData.shared_roles || []
         });
       } else {
-        setFormData({ title: '', username: '', password: '', url: '', notes: '', shared_users: [], shared_roles: [] });
+        setFormData({ title: '', username: '', password: '', url: '', notes: '', category: '', shared_users: [], shared_roles: [] });
       }
     }
   }, [isOpen, editData]);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await authFetch(`${apiBaseUrl}/credential-categories/`);
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data.results || data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -82,6 +97,15 @@ export function AddCredentialModal({ isOpen, onClose, onSuccess, editData }) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">URL (Optional)</label>
             <input type="url" value={formData.url} onChange={e => setFormData({...formData, url: e.target.value})} className="w-full px-4 py-2 border rounded-xl" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category (Optional)</label>
+            <select value={formData.category || ''} onChange={e => setFormData({...formData, category: e.target.value || null})} className="w-full px-4 py-2 border rounded-xl">
+              <option value="">-- No Category --</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
         </form>
         <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
