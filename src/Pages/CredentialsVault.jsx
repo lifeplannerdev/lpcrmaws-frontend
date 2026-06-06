@@ -42,7 +42,7 @@ export default function CredentialsVault() {
       const res = await authFetch(`${apiBaseUrl}/credentials/`);
       if (res.ok) {
         const data = await res.json();
-        setCredentials(data);
+        setCredentials(data.results || data);
       }
     } catch (err) {
       toast.error('Failed to load credentials');
@@ -56,7 +56,7 @@ export default function CredentialsVault() {
       const res = await authFetch(`${apiBaseUrl}/credential-requests/`);
       if (res.ok) {
         const data = await res.json();
-        setRequests(data);
+        setRequests(data.results || data);
       }
     } catch (err) {
       console.error(err);
