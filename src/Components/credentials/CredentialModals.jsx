@@ -7,10 +7,13 @@ export function AddCredentialModal({ isOpen, onClose, onSuccess, editData }) {
   const [formData, setFormData] = useState({ title: '', username: '', password: '', url: '', notes: '', category: '', shared_users: [], shared_roles: [] });
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [staffList, setStaffList] = useState([]);
+  const [rolesList, setRolesList] = useState([]);
   
   useEffect(() => {
     if (isOpen) {
       fetchCategories();
+      fetchStaffAndRoles();
       if (editData) {
         setFormData({
           title: editData.title || '',
@@ -34,6 +37,25 @@ export function AddCredentialModal({ isOpen, onClose, onSuccess, editData }) {
       if (res.ok) {
         const data = await res.json();
         setCategories(data.results || data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchStaffAndRoles = async () => {
+    try {
+      const [staffRes, rolesRes] = await Promise.all([
+        authFetch(`${apiBaseUrl}/staff/`),
+        authFetch(`${apiBaseUrl}/roles/`)
+      ]);
+      if (staffRes.ok) {
+        const data = await staffRes.json();
+        setStaffList(data.results || data);
+      }
+      if (rolesRes.ok) {
+        const data = await rolesRes.json();
+        setRolesList(data.results || data);
       }
     } catch (err) {
       console.error(err);
@@ -106,6 +128,50 @@ export function AddCredentialModal({ isOpen, onClose, onSuccess, editData }) {
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Share with Users</label>
+            <div className="border rounded-xl max-h-32 overflow-y-auto bg-gray-50 p-2 space-y-1">
+              {staffList.map(u => (
+                <label key={u.id} className="flex items-center gap-2 px-2 py-1 hover:bg-white rounded cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={formData.shared_users.includes(u.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormData({...formData, shared_users: [...formData.shared_users, u.id]});
+                      } else {
+                        setFormData({...formData, shared_users: formData.shared_users.filter(id => id !== u.id)});
+                      }
+                    }}
+                  />
+                  <span className="text-sm text-gray-700">{u.first_name} {u.last_name} ({u.email})</span>
+                </label>
+              ))}
+              {staffList.length === 0 && <p className="text-sm text-gray-500 px-2 py-1">No users found</p>}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Share with Roles</label>
+            <div className="border rounded-xl max-h-32 overflow-y-auto bg-gray-50 p-2 space-y-1">
+              {rolesList.map(r => (
+                <label key={r.id} className="flex items-center gap-2 px-2 py-1 hover:bg-white rounded cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={formData.shared_roles.includes(r.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormData({...formData, shared_roles: [...formData.shared_roles, r.id]});
+                      } else {
+                        setFormData({...formData, shared_roles: formData.shared_roles.filter(id => id !== r.id)});
+                      }
+                    }}
+                  />
+                  <span className="text-sm text-gray-700">{r.name}</span>
+                </label>
+              ))}
+              {rolesList.length === 0 && <p className="text-sm text-gray-500 px-2 py-1">No roles found</p>}
+            </div>
           </div>
         </form>
         <div className="p-6 border-t border-gray-100 flex justify-end gap-3">

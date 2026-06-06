@@ -4,7 +4,7 @@ import { usePermissions, Can } from '../context/PermissionsContext';
 import { useApi } from '../context/ApiContext';
 import { 
   Key, Plus, Eye, EyeOff, Copy, Search, Shield, 
-  History, CheckCircle, XCircle, Clock, Lock
+  History, CheckCircle, XCircle, Clock, Lock, Edit2, Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -140,6 +140,23 @@ export default function CredentialsVault() {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to permanently delete this credential?")) return;
+    try {
+      const res = await authFetch(`${apiBaseUrl}/credentials/${id}/`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        toast.success("Credential deleted");
+        fetchCredentials();
+      } else {
+        toast.error("Failed to delete credential");
+      }
+    } catch (err) {
+      toast.error("Error deleting credential");
+    }
+  };
+
   const renderCredentialCard = (cred) => {
     const cat = cred.category_detail;
     return (
@@ -162,6 +179,24 @@ export default function CredentialsVault() {
           </div>
           
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {(hasPermission('credentials:manage') || cred.created_by === user.id) && (
+              <>
+                <button 
+                  onClick={() => { setSelectedCred(cred); setShowAddModal(true); }}
+                  className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md"
+                  title="Edit"
+                >
+                  <Edit2 size={16} />
+                </button>
+                <button 
+                  onClick={() => handleDelete(cred.id)}
+                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"
+                  title="Delete"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </>
+            )}
             <button 
               onClick={() => { setSelectedCred(cred); setShowHistoryModal(true); }}
               className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md"
@@ -440,8 +475,9 @@ export default function CredentialsVault() {
       {/* Modals */}
       <AddCredentialModal 
         isOpen={showAddModal} 
-        onClose={() => setShowAddModal(false)} 
-        onSuccess={fetchCredentials} 
+        onClose={() => { setShowAddModal(false); setSelectedCred(null); }} 
+        onSuccess={fetchCredentials}
+        editData={selectedCred}
       />
       
       <ProposeUpdateModal 
