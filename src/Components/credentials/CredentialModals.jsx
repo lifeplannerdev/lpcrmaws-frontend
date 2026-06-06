@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, AlertCircle, RefreshCw } from 'lucide-react';
-import { useApi } from '../context/ApiContext';
+import { useApi } from '../../context/ApiContext';
 
 export function AddCredentialModal({ isOpen, onClose, onSuccess, editData }) {
   const { authFetch, apiBaseUrl } = useApi();
