@@ -10,6 +10,7 @@ import Pagination from '../Components/common/Pagination';
 import { BATCH_CHOICES } from '../Components/utils/studentConstants';
 import { downloadCSV, downloadPDF } from '../utils/exportUtils';
 import { usePermissions } from '../context/PermissionsContext';
+import { useAuth } from '../context/AuthContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
