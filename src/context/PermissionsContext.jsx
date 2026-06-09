@@ -1,20 +1,12 @@
 // src/context/PermissionsContext.jsx
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext } from 'react';
 import { useAuth } from './AuthContext';
 
 const PermissionsContext = createContext(null);
 
 export const PermissionsProvider = ({ children }) => {
   const { user } = useAuth();
-  const [permissions, setPermissions] = useState({});
-
-  useEffect(() => {
-    if (user && user.permissions) {
-      setPermissions(user.permissions);
-    } else {
-      setPermissions({});
-    }
-  }, [user]);
+  const permissions = user?.permissions || {};
 
   // Generic permission check function
   const hasPermission = (resourceString) => {
