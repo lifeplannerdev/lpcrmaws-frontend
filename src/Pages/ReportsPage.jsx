@@ -23,7 +23,7 @@ const ReportRow = React.memo(({ report, isLate, getStatusBadge, navigate, downlo
         </div>
       </td>
       <td className="px-6 py-4">
-        <span className="text-gray-700 font-medium">{report.heading}</span>
+        <span className="text-gray-700 font-medium">{report.report_heading || report.agenda_heading || 'Daily Report'}</span>
       </td>
       <td className="px-6 py-4 text-sm font-medium text-gray-700">{report.user_name || 'N/A'}</td>
       <td className="px-6 py-4 text-sm text-gray-600 font-medium">{report.report_date}</td>
@@ -78,6 +78,7 @@ export default function ReportsPage() {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   const [selectedDate, setSelectedDate] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedLateness, setSelectedLateness] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [employees, setEmployees] = useState([]);
 
@@ -124,6 +125,7 @@ export default function ReportsPage() {
       if (selectedEmployee && selectedEmployee !== 'all') params.user = selectedEmployee;
       if (selectedDate && selectedDate !== 'all') params.date = selectedDate;
       if (selectedStatus && selectedStatus !== 'all') params.status = selectedStatus;
+      if (selectedLateness && selectedLateness !== 'all') params.lateness = selectedLateness;
       if (searchTerm) params.search = searchTerm;
       const res = await axios.get(`${API_BASE}/admin/reports/`, {
         params,
@@ -151,7 +153,7 @@ export default function ReportsPage() {
   useEffect(() => {
     setPage(1);
     fetchReports(1);
-  }, [companyFilter, selectedEmployee, selectedDate, selectedStatus, searchTerm]);
+  }, [companyFilter, selectedEmployee, selectedDate, selectedStatus, selectedLateness, searchTerm]);
 
   useEffect(() => {
     if (page !== 1) {
@@ -214,27 +216,16 @@ export default function ReportsPage() {
   }, []);
 
   const isLateReport = (report) => {
-    if (!report.created_at) return false;
-    const date = new Date(report.created_at);
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    
-    if (report.report_type === 'MORNING') {
-      // Late if submitted after 10:30 AM
-      return hours > 10 || (hours === 10 && minutes > 30);
-    } else if (report.report_type === 'EVENING') {
-      // Late if submitted after 6:00 PM (18:00)
-      return hours > 18 || (hours === 18 && minutes > 0);
-    }
-    return false;
+    return report.is_report_late || report.is_agenda_late;
   };
 
   const handleExportCSV = () => {
     const data = recentReports.map(r => ({
       ID: r.id,
       'Report Name': r.name,
-      Heading: r.heading,
-      'Report Type': r.report_type,
+      'Report Heading': r.report_heading || '',
+      'Agenda Heading': r.agenda_heading || '',
+      'Progress': `${r.completion_percentage}%`,
       'Submitted By': r.user_name || 'N/A',
       Date: r.report_date,
       Status: r.status,
@@ -323,7 +314,7 @@ export default function ReportsPage() {
           </div>
           
           {/* Filter Bar */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6 items-end">
             <div className="relative w-full">
               <label className="text-xs text-gray-500 font-medium mb-1 block">Search</label>
               <input
@@ -370,6 +361,21 @@ export default function ReportsPage() {
                 <option value="pending">Pending</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            
+            <div className="flex flex-col gap-1 w-full">
+              <label className="text-xs text-gray-500 font-medium">Lateness</label>
+              <select
+                value={selectedLateness}
+                onChange={(e) => setSelectedLateness(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+              >
+                <option value="all">All Reports</option>
+                <option value="late_agenda">Late Agenda</option>
+                <option value="late_report">Late Report</option>
+                <option value="incomplete">Incomplete</option>
+                <option value="on_time">100% On Time</option>
               </select>
             </div>
           </div>

@@ -24,6 +24,7 @@ import StudentViewPage from "./Pages/StudentViewPage.jsx";
 import AddStudentPage from "./Pages/AddStudentPage.jsx";
 import AcademicBatchesPage from "./Pages/AcademicBatchesPage.jsx";
 import MyReportsPage from "./Pages/MyReportsPage.jsx";
+import ReportTimingSettingsPage from "./Pages/ReportTimingSettingsPage.jsx";
 import AttendanceMarkingPage from './Pages/AttendanceMarkingPage';
 import StudentAttendanceRecordsPage from './Pages/StudentAttendanceRecordsPage';
 import AttendanceDocumentsPage from "./Pages/AttendanceDocumentsPage.jsx";
@@ -90,6 +91,7 @@ export default function App() {
         <Route path="/tasks/edit/:id" element={<PermissionRoute resources={['tasks']}><EditTaskPage /></PermissionRoute>} />
 
         <Route path="/daily/reports" element={<PermissionRoute resources={['reports']}><ReportsPage /></PermissionRoute>} />
+        <Route path="/admin/reports/settings" element={<PermissionRoute resources={['reports']}><ReportTimingSettingsPage /></PermissionRoute>} />
         <Route path="/reports/view/:id" element={<PermissionRoute resources={['reports']}><ReportViewPage /></PermissionRoute>} />
         <Route path="/myreports/" element={<PermissionRoute resources={['reports']}><MyReportsPage /></PermissionRoute>} />
 

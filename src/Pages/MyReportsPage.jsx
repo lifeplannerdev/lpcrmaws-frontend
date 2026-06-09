@@ -17,87 +17,92 @@ const ALLOWED_EXCEL_TYPES = [
 ];
 const ALLOWED_EXCEL_EXT = /\.(xls|xlsx)$/i;
 
-const FormFields = ({ formData, handleInputChange, errors }) => (
+const FormFields = ({ formData, handleInputChange, errors, user }) => {
+  const completionPercentage = (() => {
+    let score = 0;
+    if (formData.next_day_agenda) score += 50;
+    if (formData.report_text) score += 50;
+    return score;
+  })();
+
+  return (
   <div className="space-y-5">
-    <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">
-        Your Name <span className="text-red-500">*</span>
-      </label>
-      <input
-        type="text" name="name" value={formData.name}
-        onChange={handleInputChange} placeholder="Enter your name"
-        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
-      />
-      {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
-    </div>
-
-    <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">
-        Report Heading <span className="text-red-500">*</span>
-      </label>
-      <input
-        type="text" name="heading" value={formData.heading}
-        onChange={handleInputChange} placeholder="Brief heading for your report"
-        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.heading ? 'border-red-500' : 'border-gray-300'}`}
-      />
-      {errors.heading && <p className="mt-1 text-sm text-red-500">{errors.heading}</p>}
-    </div>
-
-    <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">
-        Report Date <span className="text-red-500">*</span>
-      </label>
-      <input
-        type="date" name="report_date" value={formData.report_date}
-        onChange={handleInputChange}
-        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.report_date ? 'border-red-500' : 'border-gray-300'}`}
-      />
-      {errors.report_date && <p className="mt-1 text-sm text-red-500">{errors.report_date}</p>}
-    </div>
-
-    <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">
-        Report Type <span className="text-red-500">*</span>
-      </label>
-      <select
-        name="report_type" value={formData.report_type}
-        onChange={handleInputChange}
-        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.report_type ? 'border-red-500' : 'border-gray-300'}`}
-      >
-        <option value="MORNING">Morning Agenda</option>
-        <option value="EVENING">Evening Report</option>
-      </select>
-      {errors.report_type && <p className="mt-1 text-sm text-red-500">{errors.report_type}</p>}
-    </div>
-
-    <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">
-        Report Details <span className="text-red-500">*</span>
-      </label>
-      <textarea
-        name="report_text" value={formData.report_text}
-        onChange={handleInputChange} rows={6}
-        placeholder="Describe your daily activities, accomplishments, and any issues encountered..."
-        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.report_text ? 'border-red-500' : 'border-gray-300'}`}
-      />
-      {errors.report_text && <p className="mt-1 text-sm text-red-500">{errors.report_text}</p>}
-    </div>
-
-    {formData.report_type === 'EVENING' && (
+    {/* Read-only Name and Date */}
+    <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Next Day's Agenda (Optional)
-        </label>
-        <textarea
-          name="next_day_agenda" value={formData.next_day_agenda || ''}
-          onChange={handleInputChange} rows={3}
-          placeholder="Plan for tomorrow..."
-          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
+        <label className="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
+        <div className="w-full px-4 py-2.5 border border-gray-200 bg-gray-50 rounded-lg text-gray-700 font-medium truncate">
+          {user?.name || user?.username || formData.name}
+        </div>
       </div>
-    )}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">Date & Time</label>
+        <div className="w-full px-4 py-2.5 border border-gray-200 bg-gray-50 rounded-lg text-gray-700 font-medium truncate">
+          {new Date().toLocaleString()}
+        </div>
+      </div>
+    </div>
+
+    {/* Progress Bar */}
+    <div>
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-sm font-semibold text-gray-700">Daily Completion Progress</span>
+        <span className="text-sm font-bold text-indigo-600">{completionPercentage}%</span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-2.5">
+        <div className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${completionPercentage}%` }}></div>
+      </div>
+    </div>
+
+    {/* Morning Agenda */}
+    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+      <h3 className="font-bold text-indigo-900 mb-3">Morning Agenda (50%)</h3>
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs font-semibold text-indigo-800 mb-1">Agenda Heading</label>
+          <input
+            type="text" name="agenda_heading" value={formData.agenda_heading || ''}
+            onChange={handleInputChange} placeholder="Brief heading for your agenda"
+            className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-indigo-800 mb-1">Agenda Details</label>
+          <textarea
+            name="next_day_agenda" value={formData.next_day_agenda || ''}
+            onChange={handleInputChange} rows={3}
+            placeholder="Plan for the day..."
+            className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+      </div>
+    </div>
+
+    {/* Evening Report */}
+    <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+      <h3 className="font-bold text-emerald-900 mb-3">Evening Report (+50%)</h3>
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs font-semibold text-emerald-800 mb-1">Report Heading</label>
+          <input
+            type="text" name="report_heading" value={formData.report_heading || ''}
+            onChange={handleInputChange} placeholder="Brief heading for your report"
+            className="w-full px-3 py-2 border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-emerald-800 mb-1">Report Details</label>
+          <textarea
+            name="report_text" value={formData.report_text || ''}
+            onChange={handleInputChange} rows={4}
+            placeholder="Describe your daily activities..."
+            className="w-full px-3 py-2 border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+      </div>
+    </div>
   </div>
-);
+)};
 
 const FileUploadSection = ({ label = 'Attach Excel File (Optional)', formData, errors, handleFileChange, removeFile, getFileIcon }) => (
   <div className="mt-5">
@@ -146,10 +151,10 @@ export default function MyReportsPage() {
   
   const [formData, setFormData] = useState({
     name: user?.name || user?.username || '',
-    heading: '',
+    report_heading: '',
     report_text: '',
+    agenda_heading: '',
     report_date: new Date().toISOString().split('T')[0],
-    report_type: 'EVENING',
     next_day_agenda: '',
     attached_files: []
   });
@@ -267,20 +272,6 @@ export default function MyReportsPage() {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
-    
-    if (name === 'report_type' && value === 'MORNING') {
-      try {
-        const data = await fetchWithAuth(`${API_BASE_URL}/reports/next-day-agenda/`);
-        if (data && data.next_day_agenda) {
-          setFormData(prev => ({ 
-            ...prev, 
-            report_text: data.next_day_agenda + (prev.report_text ? `\n\n${prev.report_text}` : '') 
-          }));
-        }
-      } catch (err) {
-        console.error('Failed to fetch next day agenda', err);
-      }
-    }
   };
 
   // ── Excel-only file validation ────────────────────────────────────────────
@@ -322,20 +313,20 @@ export default function MyReportsPage() {
 
   const resetForm = () => ({
     name: user?.name || user?.username || '',
-    heading: '',
+    report_heading: '',
     report_text: '',
+    agenda_heading: '',
     report_date: new Date().toISOString().split('T')[0],
-    report_type: 'EVENING',
     next_day_agenda: '',
     attached_files: []
   });
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.name.trim())        newErrors.name = 'Name is required';
-    if (!formData.heading.trim())     newErrors.heading = 'Heading is required';
-    if (!formData.report_text.trim()) newErrors.report_text = 'Report text is required';
-    if (!formData.report_date)        newErrors.report_date = 'Report date is required';
+    if (!formData.name?.trim())        newErrors.name = 'Name is required';
+    if (!formData.report_text?.trim() && !formData.next_day_agenda?.trim()) {
+      newErrors.submit = 'You must submit either an agenda or a report.';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -343,10 +334,10 @@ export default function MyReportsPage() {
   const buildFormData = () => {
     const submitData = new FormData();
     submitData.append('name', formData.name);
-    submitData.append('heading', formData.heading);
-    submitData.append('report_text', formData.report_text);
     submitData.append('report_date', formData.report_date);
-    submitData.append('report_type', formData.report_type);
+    if (formData.report_heading) submitData.append('report_heading', formData.report_heading);
+    if (formData.report_text) submitData.append('report_text', formData.report_text);
+    if (formData.agenda_heading) submitData.append('agenda_heading', formData.agenda_heading);
     if (formData.next_day_agenda) submitData.append('next_day_agenda', formData.next_day_agenda);
     formData.attached_files.forEach((file) => submitData.append('attached_files', file));
     return submitData;
@@ -390,10 +381,10 @@ export default function MyReportsPage() {
     setEditingReport(report);
     setFormData({
       name: report.name,
-      heading: report.heading,
-      report_text: report.report_text,
+      report_heading: report.report_heading || '',
+      report_text: report.report_text || '',
+      agenda_heading: report.agenda_heading || '',
       report_date: report.report_date,
-      report_type: report.report_type || 'EVENING',
       next_day_agenda: report.next_day_agenda || '',
       attached_files: []
     });
@@ -462,19 +453,15 @@ export default function MyReportsPage() {
   };
 
   const isLate = (report) => {
-    if (!report.submission_time) return false;
-    const submitDate = new Date(report.submission_time);
-    const hour = submitDate.getHours();
-    if (report.report_type === 'MORNING' && hour >= 10) return true; // Late if after 10 AM
-    if (report.report_type === 'EVENING' && hour < 17 && submitDate.getDate() > new Date(report.report_date).getDate()) return true; 
-    return false;
+    return report.is_report_late || report.is_agenda_late;
   };
 
   const filteredReports = reports.filter(report => {
     const matchesFilter = filter === 'all' || report.status?.toLowerCase() === filter;
     const matchesSearch =
       report.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.heading?.toLowerCase().includes(searchTerm.toLowerCase());
+      (report.report_heading || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (report.agenda_heading || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
@@ -564,16 +551,16 @@ export default function MyReportsPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3 flex-wrap">
                       <h3 className="text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                        {report.heading}
+                        {report.report_heading || report.agenda_heading || 'Daily Report'}
                       </h3>
                       {getStatusBadge(report.status)}
                     </div>
-                    <p className="text-gray-600 mb-4 line-clamp-2">{report.report_text}</p>
+                    <p className="text-gray-600 mb-4 line-clamp-2">{report.report_text || report.next_day_agenda}</p>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
                       <div className="flex items-center gap-1.5"><User className="w-4 h-4" /><span>{report.name}</span></div>
                       <div className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /><span>{formatDate(report.report_date)}</span></div>
                       <div className="flex items-center gap-1.5 px-2 py-0.5 bg-gray-100 rounded text-xs font-semibold">
-                        {report.report_type}
+                        Progress: {report.completion_percentage}%
                       </div>
                       <div className="flex items-center gap-1.5"><Clock className="w-4 h-4" /><span>Submitted {formatDate(report.created_at)}</span></div>
                       {isLate(report) && (
@@ -617,7 +604,7 @@ export default function MyReportsPage() {
               </div>
               <div className="p-6">
                 {errors.submit && <div className="mb-6 p4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{errors.submit}</div>}
-                <FormFields formData={formData} handleInputChange={handleInputChange} errors={errors} />
+                <FormFields formData={formData} handleInputChange={handleInputChange} errors={errors} user={user} />
                 <FileUploadSection 
                   formData={formData} 
                   errors={errors} 
@@ -650,7 +637,7 @@ export default function MyReportsPage() {
               </div>
               <div className="p-6">
                 {errors.submit && <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{errors.submit}</div>}
-                <FormFields formData={formData} handleInputChange={handleInputChange} errors={errors} />
+                <FormFields formData={formData} handleInputChange={handleInputChange} errors={errors} user={user} />
 
                 {editingReport?.attachments?.length > 0 && (
                   <div className="mt-5">
@@ -720,24 +707,27 @@ export default function MyReportsPage() {
               <div className="p-6">
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                    <h3 className="text-2xl font-bold text-gray-900">{selectedReport.heading}</h3>
+                    <h3 className="text-2xl font-bold text-gray-900">{selectedReport.report_heading || selectedReport.agenda_heading || 'Daily Report'}</h3>
                     {getStatusBadge(selectedReport.status)}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                     <div className="flex items-center gap-2 text-gray-600"><User className="w-5 h-5" /><span className="font-medium">{selectedReport.name}</span></div>
                     <div className="flex items-center gap-2 text-gray-600"><Calendar className="w-5 h-5" /><span>{formatDate(selectedReport.report_date)}</span></div>
+                    <div className="flex items-center gap-2 text-indigo-600 font-semibold"><Clock className="w-5 h-5" /><span>Progress: {selectedReport.completion_percentage}%</span></div>
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Report Content</h4>
-                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedReport.report_text}</p>
-                </div>
-
-                {selectedReport.report_type === 'EVENING' && selectedReport.next_day_agenda && (
+                {selectedReport.next_day_agenda && (
                   <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-6 mb-6">
-                    <h4 className="text-sm font-semibold text-indigo-900 mb-3">Next Day's Agenda</h4>
+                    <h4 className="text-sm font-semibold text-indigo-900 mb-3">{selectedReport.agenda_heading || "Morning Agenda"}</h4>
                     <p className="text-indigo-800 whitespace-pre-wrap leading-relaxed">{selectedReport.next_day_agenda}</p>
+                  </div>
+                )}
+
+                {selectedReport.report_text && (
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-6 mb-6">
+                    <h4 className="text-sm font-semibold text-emerald-900 mb-3">{selectedReport.report_heading || "Evening Report"}</h4>
+                    <p className="text-emerald-800 whitespace-pre-wrap leading-relaxed">{selectedReport.report_text}</p>
                   </div>
                 )}
 
