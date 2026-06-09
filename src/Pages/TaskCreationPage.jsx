@@ -14,7 +14,7 @@ export default function TaskCreationPage() {
   const { hasPermission } = usePermissions();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   
-  const hasDualAccess = hasPermission('system:access_flag');
+  const hasDualAccess = hasPermission('staff:access_flag');
   const canAssignTasks = hasPermission('tasks:edit_any') || hasPermission('tasks:edit_tenant') || hasPermission('tasks:edit_own');
 
   const [teamMembers, setTeamMembers] = useState([]);
@@ -303,3 +303,4 @@ export default function TaskCreationPage() {
     </div>
   );
 }
+

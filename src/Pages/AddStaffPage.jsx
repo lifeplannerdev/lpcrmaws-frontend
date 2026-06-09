@@ -16,7 +16,7 @@ export default function AddStaffPage() {
   const { hasPermission } = usePermissions();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-  const hasDualAccess = hasPermission('system:access_flag');
+  const hasDualAccess = hasPermission('staff:access_flag');
   const canEditStaff = hasPermission('staff:edit_any') || hasPermission('staff:edit_tenant');
 
   const [formData, setFormData] = useState(initialFormData);

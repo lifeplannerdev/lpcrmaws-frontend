@@ -139,7 +139,7 @@ export default function EditStaffPage() {
       authFetch={authFetch}
       apiBaseUrl={API_BASE_URL}
       navigate={navigate}
-      hasDualAccess={hasPermission('system:access_flag')}
+      hasDualAccess={hasPermission('staff:access_flag')}
       dbRolesList={dbRolesList}
     />
   );

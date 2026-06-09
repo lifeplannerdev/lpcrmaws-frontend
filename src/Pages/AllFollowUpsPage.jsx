@@ -259,7 +259,7 @@ export default function AllFollowUpsPage() {
   const tokenRef  = useRef(accessToken);
   useEffect(() => { tokenRef.current = accessToken; }, [accessToken]);
 
-  const isAdmin = hasPermission('staff:view_any') || hasPermission('system:access_flag');
+  const isAdmin = hasPermission('staff:view_any') || hasPermission('staff:access_flag');
 
   const today    = toLocalISO(new Date());
   const tomorrow = toLocalISO(new Date(Date.now() + 86400000));
@@ -664,3 +664,4 @@ export default function AllFollowUpsPage() {
     </div>
   );
 }
+

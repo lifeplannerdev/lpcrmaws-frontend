@@ -45,7 +45,7 @@ export default function DashboardOverview() {
   const userName = user?.name || user?.username || 'User';
   
   // Replace role check with actual capabilities
-  const isAdmin  = hasPermission('staff:view_any') || hasPermission('system:access_flag');
+  const isAdmin  = hasPermission('staff:view_any') || hasPermission('staff:access_flag');
 
   const fetchWithAuth = async (url, options = {}) => {
     let token = accessToken;
@@ -190,3 +190,4 @@ export default function DashboardOverview() {
     </div>
   );
 }
+

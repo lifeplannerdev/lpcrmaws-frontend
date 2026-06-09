@@ -114,7 +114,7 @@ const PAGE_SIZE = 20;
 export default function RecentActivities() {
   const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
-  const isAdmin = hasPermission('staff:view_any') || hasPermission('system:access_flag');
+  const isAdmin = hasPermission('staff:view_any') || hasPermission('staff:access_flag');
 
   const [activities, setActivities]     = useState([]);
   const [loading, setLoading]           = useState(true);
@@ -448,3 +448,4 @@ export default function RecentActivities() {
     </div>
   );
 }
+
