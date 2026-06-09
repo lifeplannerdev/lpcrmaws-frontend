@@ -100,7 +100,6 @@ export default function AddStaffPage() {
       personal_phone: formData.personalPhone,
       phone: formData.officePhone, // Keep mapping to phone to satisfy any backend expectations
       location: formData.location || '',
-      role: formData.role || '',
       db_roles: formData.db_roles,
       team: formData.team || '',
       is_active: formData.isActive,

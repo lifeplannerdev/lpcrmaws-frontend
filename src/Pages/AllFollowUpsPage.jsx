@@ -311,7 +311,10 @@ export default function AllFollowUpsPage() {
       .then(data => {
         const arr = Array.isArray(data) ? data : (data.results || data.employees || []);
         setStaffList(
-          arr.filter(u => !EXCLUDED_STAFF_ROLES.includes((u.role || '').toUpperCase()))
+          arr.filter(u => {
+            const hasExcludedRole = u.role_names?.some(r => EXCLUDED_STAFF_ROLES.includes(r.toUpperCase()));
+            return !hasExcludedRole;
+          })
         );
       })
       .catch(console.error);

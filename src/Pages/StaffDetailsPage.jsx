@@ -164,7 +164,7 @@ export default function StaffDetailsPage() {
                 </div>
                 <div className="mb-2">
                   <h1 className="text-3xl font-extrabold text-slate-900">{fullName}</h1>
-                  <p className="text-indigo-600 font-semibold mt-1">{(staff.role || '').replace(/_/g, ' ').toUpperCase()}</p>
+                  <p className="text-indigo-600 font-semibold mt-1">{(staff.role_names?.join(', ') || '').replace(/_/g, ' ').toUpperCase()}</p>
                 </div>
               </div>
               

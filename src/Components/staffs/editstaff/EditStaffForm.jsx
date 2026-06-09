@@ -75,7 +75,6 @@ export default function EditStaffForm({
       personal_phone: formData.personalPhone,
       phone: formData.officePhone, // keep mapping to phone as fallback
       location: formData.location,
-      role: formData.role || '',
       db_roles: formData.db_roles,
       team: formData.team,
       salary: formData.salary, 
