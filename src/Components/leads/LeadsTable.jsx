@@ -45,7 +45,8 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead }) => {
           <tbody className="divide-y divide-gray-100">
             {leads.map((lead, index) => (
               <tr key={lead.id}
-                className="group hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200"
+                onClick={() => navigate(`/leads/${lead.id}`)}
+                className="group cursor-pointer hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 {/* Lead Info */}
@@ -176,7 +177,7 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead }) => {
                     {/* Call History — permitted roles only */}
                     {allowHistory && (
                       <button
-                        onClick={() => handleCallHistory(lead.id)}
+                        onClick={(e) => { e.stopPropagation(); handleCallHistory(lead.id); }}
                         className="group/btn p-2.5 text-purple-600 hover:bg-purple-100 rounded-xl transition-all duration-200 hover:shadow-md hover:scale-110"
                         title="Call history"
                       >
@@ -186,7 +187,7 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead }) => {
 
                     {/* Edit */}
                     {allowEdit && (
-                      <button onClick={() => navigate(`/leads/edit/${lead.id}`)}
+                      <button onClick={(e) => { e.stopPropagation(); navigate(`/leads/edit/${lead.id}`); }}
                         className="group/btn p-2.5 text-blue-600 hover:bg-blue-100 rounded-xl transition-all duration-200 hover:shadow-md hover:scale-110" title="Edit lead">
                         <Edit size={18} className="group-hover/btn:rotate-12 transition-transform" />
                       </button>
@@ -194,7 +195,7 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead }) => {
 
                     {/* Delete */}
                     {allowDelete && (
-                      <button onClick={() => onDeleteLead(lead.id)}
+                      <button onClick={(e) => { e.stopPropagation(); onDeleteLead(lead.id); }}
                         className="group/btn p-2.5 text-red-600 hover:bg-red-100 rounded-xl transition-all duration-200 hover:shadow-md hover:scale-110" title="Delete lead">
                         <Trash2 size={18} className="group-hover/btn:rotate-12 transition-transform" />
                       </button>

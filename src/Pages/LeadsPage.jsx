@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../Components/layouts/Navbar';
 import LeadsPageHeader from '../Components/leads/LeadsPageHeader';
 import LeadsStatsCards from '../Components/leads/LeadsStatsCards';
 import LeadsFilters from '../Components/leads/LeadsFilters';
 import LeadsTable from '../Components/leads/LeadsTable';
 import LeadsKanbanBoard from '../Components/leads/LeadsKanbanBoard';
+import LeadSidePanel from '../Components/leads/LeadSidePanel';
 import { Users, UserPlus, CheckCircle, TrendingUp, LayoutList, LayoutGrid } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Pagination from '../Components/common/Pagination';
@@ -50,6 +51,7 @@ const TableSkeleton = () => (
 
 export default function LeadsPage() {
   const navigate = useNavigate();
+  const { leadId } = useParams();
   const { accessToken, refreshAccessToken, loading: authLoading, user } = useAuth();
 
   const tokenRef = useRef(accessToken);
@@ -348,57 +350,72 @@ export default function LeadsPage() {
         {initialLoad && loading ? (
           <TableSkeleton />
         ) : (
-          <>
-            {loading && (
-              <div className="text-center py-2 text-sm text-blue-600 font-medium animate-pulse mb-2">
-                Updating results…
-              </div>
-            )}
+          <div className="flex relative">
+            <div className={`transition-all duration-300 ease-in-out ${leadId ? 'w-full lg:w-[calc(100%-400px)] lg:pr-6 hidden lg:block' : 'w-full'}`}>
+              {loading && (
+                <div className="text-center py-2 text-sm text-blue-600 font-medium animate-pulse mb-2">
+                  Updating results…
+                </div>
+              )}
 
-            {viewMode === 'list' ? (
-              <LeadsTable
-                leads={leads}
-                statusColors={statusColors}
-                onDeleteLead={handleDeleteLead}
-              />
-            ) : (
-              <LeadsKanbanBoard
-                leads={leads}
-                statusColors={statusColors}
-                onLeadClick={(lead) => navigate(`/leads/edit/${lead.id}`)}
-                onDragEnd={async (result) => {
-                  const { destination, source, draggableId } = result;
-                  if (!destination || (destination.droppableId === source.droppableId)) return;
-                  
-                  const newStatus = destination.droppableId;
-                  // Optimistically update
-                  setLeads(prev => prev.map(l => l.id.toString() === draggableId ? { ...l, status: newStatus } : l));
-                  
-                  try {
-                    const res = await authFetch(`${API_BASE_URL}/leads/${draggableId}/`, {
-                      method: 'PATCH',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ status: newStatus.toUpperCase() })
-                    });
-                    if (!res.ok) throw new Error('Status update failed');
-                  } catch (e) {
-                    // Revert on error
-                    setLeads(prev => prev.map(l => l.id.toString() === draggableId ? { ...l, status: source.droppableId } : l));
-                    alert('Failed to update lead status');
-                  }
-                }}
-              />
-            )}
+              {viewMode === 'list' ? (
+                <LeadsTable
+                  leads={leads}
+                  statusColors={statusColors}
+                  onDeleteLead={handleDeleteLead}
+                />
+              ) : (
+                <LeadsKanbanBoard
+                  leads={leads}
+                  statusColors={statusColors}
+                  onLeadClick={(lead) => navigate(`/leads/${lead.id}`)}
+                  onDragEnd={async (result) => {
+                    const { destination, source, draggableId } = result;
+                    if (!destination || (destination.droppableId === source.droppableId)) return;
+                    
+                    const newStatus = destination.droppableId;
+                    // Optimistically update
+                    setLeads(prev => prev.map(l => l.id.toString() === draggableId ? { ...l, status: newStatus } : l));
+                    
+                    try {
+                      const res = await authFetch(`${API_BASE_URL}/leads/${draggableId}/`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: newStatus.toUpperCase() })
+                      });
+                      if (!res.ok) throw new Error('Status update failed');
+                    } catch (e) {
+                      // Revert on error
+                      setLeads(prev => prev.map(l => l.id.toString() === draggableId ? { ...l, status: source.droppableId } : l));
+                      alert('Failed to update lead status');
+                    }
+                  }}
+                />
+              )}
 
-            {viewMode === 'list' && totalPages > 1 && (
-              <Pagination
-                currentPage={page}
-                totalPages={totalPages}
-                onPageChange={setPage}
-                className="mt-8"
-              />
+              {viewMode === 'list' && totalPages > 1 && (
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  onPageChange={setPage}
+                  className="mt-8"
+                />
+              )}
+            </div>
+
+            {/* Side Panel Overlay / Split */}
+            {leadId && (
+              <>
+                {/* Mobile Backdrop */}
+                <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => navigate('/leads')} />
+                
+                {/* Side Panel */}
+                <div className="fixed inset-y-0 right-0 z-50 w-[400px] max-w-[90vw] lg:static lg:w-[400px] lg:z-auto bg-white shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-in-out translate-x-0 overflow-hidden rounded-l-2xl lg:rounded-2xl border border-gray-200">
+                  <LeadSidePanel leadId={leadId} authFetch={authFetch} onClose={() => navigate('/leads')} />
+                </div>
+              </>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>

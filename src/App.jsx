@@ -73,9 +73,10 @@ export default function App() {
         <Route path="/" element={<ProtectedRoute><DashboardOverview /></ProtectedRoute>} />
 
         <Route path="/leads" element={<PermissionRoute resources={['leads']}><LeadsPage /></PermissionRoute>} />
+        <Route path="/leads/:leadId" element={<PermissionRoute resources={['leads']}><LeadsPage /></PermissionRoute>} />
         <Route path="/leads/edit/:id" element={<PermissionRoute resources={['leads']}><EditLeadPage /></PermissionRoute>} />
         <Route path="/addnewlead" element={<PermissionRoute resources={['leads']}><AddLeadPage /></PermissionRoute>} />
-        <Route path="/leads/:id" element={<PermissionRoute resources={['leads']}><LeadDetailPage /></PermissionRoute>} />
+        <Route path="/leads/view/:id" element={<PermissionRoute resources={['leads']}><LeadDetailPage /></PermissionRoute>} />
         <Route path="/followups"element={<PermissionRoute resources={['leads']}><AllFollowUpsPage /></PermissionRoute>} />
 
 
