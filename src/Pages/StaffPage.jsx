@@ -113,7 +113,7 @@ export default function StaffPage() {
             office_phone: staff.office_phone,
             personal_phone: staff.personal_phone,
             location: staff.location,
-            status: staff.is_active ? 'active' : 'inactive',
+            status: staff.is_on_leave ? 'on_leave' : (staff.is_active ? 'active' : 'inactive'),
             joinDate: new Date(staff.date_joined).toLocaleDateString('en-US', {
               month: 'short',
               day: '2-digit',
@@ -186,11 +186,12 @@ export default function StaffPage() {
   const stats = useMemo(() => {
     const activeCount = staffMembers.filter((s) => s.status === 'active').length;
     const inactiveCount = staffMembers.filter((s) => s.status === 'inactive').length;
+    const onLeaveCount = staffMembers.filter((s) => s.status === 'on_leave').length;
 
     return [
       { label: 'Total Staff', value: pagination.count.toString(), color: 'from-violet-500 to-purple-600', icon: Users, bgIcon: 'bg-violet-100', iconColor: 'text-violet-600' },
       { label: 'Active', value: activeCount.toString(), color: 'from-emerald-500 to-green-600', icon: CheckCircle, bgIcon: 'bg-emerald-100', iconColor: 'text-emerald-600' },
-      { label: 'On Leave', value: '0', color: 'from-amber-500 to-orange-600', icon: Clock, bgIcon: 'bg-amber-100', iconColor: 'text-amber-600' },
+      { label: 'On Leave', value: onLeaveCount.toString(), color: 'from-amber-500 to-orange-600', icon: Clock, bgIcon: 'bg-amber-100', iconColor: 'text-amber-600' },
       { label: 'Inactive', value: inactiveCount.toString(), color: 'from-rose-500 to-red-600', icon: XCircle, bgIcon: 'bg-rose-100', iconColor: 'text-rose-600' },
     ];
   }, [staffMembers, pagination.count]);
@@ -310,6 +311,7 @@ export default function StaffPage() {
             {[
               { id: 'all', label: 'All Staff' },
               { id: 'active', label: 'Active' },
+              { id: 'on_leave', label: 'On Leave' },
               { id: 'inactive', label: 'Inactive' }
             ].map(tab => (
               <button
@@ -415,6 +417,10 @@ export default function StaffPage() {
                       {staff.status === 'active' ? (
                         <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
                           <UserCheck size={12} /> Active
+                        </span>
+                      ) : staff.status === 'on_leave' ? (
+                        <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                          <Clock size={12} /> On Leave
                         </span>
                       ) : (
                         <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
