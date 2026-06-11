@@ -36,6 +36,7 @@ export default function FeesManagementPage() {
   const [templates, setTemplates] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [students, setStudents] = useState([]);
+  const [summaryData, setSummaryData] = useState([]);
   const [selectedAccountId, setSelectedAccountId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -129,7 +130,7 @@ export default function FeesManagementPage() {
       const token = await getToken();
       if (!token) return;
 
-      const [templatesRes, accountsRes, studentsRes] = await Promise.all([
+      const [templatesRes, accountsRes, studentsRes, summaryRes] = await Promise.all([
         fetch(`${API_BASE_URL}/fees/catalog/?company=${company}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
@@ -139,15 +140,20 @@ export default function FeesManagementPage() {
         fetch(`${API_BASE_URL}/fees/students/?company=${company}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
+        fetch(`${API_BASE_URL}/fees/summary/?company=${company}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
       const templatesData = await templatesRes.json();
       const accountsData = await accountsRes.json();
       const studentsData = await studentsRes.json();
+      const summaryJson = await summaryRes.json();
 
       setTemplates(Array.isArray(templatesData) ? templatesData : []);
       setAccounts(Array.isArray(accountsData) ? accountsData : []);
       setStudents(Array.isArray(studentsData) ? studentsData : []);
+      setSummaryData(Array.isArray(summaryJson) ? summaryJson : []);
       if (!selectedAccountId && Array.isArray(accountsData) && accountsData.length > 0) {
         setSelectedAccountId(accountsData[0].id);
       }
@@ -158,6 +164,19 @@ export default function FeesManagementPage() {
       setLoading(false);
     }
   };
+
+  const dashboardStats = useMemo(() => {
+    return summaryData.reduce(
+      (acc, curr) => {
+        acc.totalDue += Number(curr.total_due || 0);
+        acc.totalPaid += Number(curr.total_paid || 0);
+        acc.balanceDue += Number(curr.balance_due || 0);
+        acc.overdueAmount += Number(curr.overdue_amount || 0);
+        return acc;
+      },
+      { totalDue: 0, totalPaid: 0, balanceDue: 0, overdueAmount: 0 }
+    );
+  }, [summaryData]);
 
   useEffect(() => {
     if (canViewFees) {
@@ -397,6 +416,25 @@ export default function FeesManagementPage() {
             {message.text}
           </div>
         )}
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <p className="text-sm text-gray-500 font-medium mb-1">Total Due</p>
+            <p className="text-2xl font-bold text-gray-900">{currency(dashboardStats.totalDue)}</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <p className="text-sm text-gray-500 font-medium mb-1">Total Paid</p>
+            <p className="text-2xl font-bold text-green-600">{currency(dashboardStats.totalPaid)}</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <p className="text-sm text-gray-500 font-medium mb-1">Balance Due</p>
+            <p className="text-2xl font-bold text-indigo-600">{currency(dashboardStats.balanceDue)}</p>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <p className="text-sm text-gray-500 font-medium mb-1">Overdue</p>
+            <p className="text-2xl font-bold text-red-600">{currency(dashboardStats.overdueAmount)}</p>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <div className="xl:col-span-2 space-y-6">

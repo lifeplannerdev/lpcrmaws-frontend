@@ -10,6 +10,7 @@ export default function AcademicBatchesPage() {
   const { accessToken, refreshAccessToken } = useAuth();
   
   const [batches, setBatches] = useState([]);
+  const [feeTemplates, setFeeTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingBatch, setEditingBatch] = useState(null);
@@ -30,6 +31,7 @@ export default function AcademicBatchesPage() {
     admission_date: '',
     model_exam_date: '',
     final_exam_date: '',
+    default_fee_template: '',
   });
 
   const fetchBatches = async () => {
@@ -49,8 +51,24 @@ export default function AcademicBatchesPage() {
     }
   };
 
+  const fetchFeeTemplates = async () => {
+    try {
+      let token = accessToken || await refreshAccessToken();
+      const res = await fetch(`${API_BASE_URL}/fees/templates/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFeeTemplates(data.results || data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchBatches();
+    fetchFeeTemplates();
   }, [accessToken]);
 
   const handleInputChange = (e) => {
@@ -66,6 +84,7 @@ export default function AcademicBatchesPage() {
       admission_date: '',
       model_exam_date: '',
       final_exam_date: '',
+      default_fee_template: '',
     });
     setShowModal(true);
   };
@@ -79,6 +98,7 @@ export default function AcademicBatchesPage() {
       admission_date: batch.admission_date || '',
       model_exam_date: batch.model_exam_date || '',
       final_exam_date: batch.final_exam_date || '',
+      default_fee_template: batch.default_fee_template || '',
     });
     setShowModal(true);
   };
@@ -92,13 +112,18 @@ export default function AcademicBatchesPage() {
         : `${API_BASE_URL}/trainers/academic-batches/`;
       const method = editingBatch ? 'PUT' : 'POST';
 
+      const payload = { ...formData };
+      if (!payload.default_fee_template) {
+        payload.default_fee_template = null;
+      }
+
       const res = await fetch(url, {
         method,
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       if (!res.ok) throw new Error('Failed to save batch');
@@ -352,6 +377,20 @@ export default function AcademicBatchesPage() {
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Final Exams Date</label>
                     <input type="date" name="final_exam_date" value={formData.final_exam_date} onChange={handleInputChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Default Fee Template</label>
+                    <select 
+                      name="default_fee_template" 
+                      value={formData.default_fee_template || ''} 
+                      onChange={handleInputChange} 
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">-- No Default Fee Template --</option>
+                      {feeTemplates.filter(t => t.is_active).map(t => (
+                        <option key={t.id} value={t.id}>{t.name} ({t.company})</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div className="flex gap-3 justify-end mt-8">

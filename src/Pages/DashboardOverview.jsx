@@ -30,7 +30,8 @@ export default function DashboardOverview() {
   const [activeTab, setActiveTab] = useState('overview');
 
   const [stats, setStats] = useState({
-    total_leads: 0, active_staff: 0, total_students: 0,
+    total_leads: null, active_staff: null, total_students: null,
+    staff_on_leave: null, pending_candidates: null,
     leads_change: 0, staff_change: 0, students_change: 0,
   });
 
@@ -98,9 +99,11 @@ export default function DashboardOverview() {
         fetchPromises.push(
           fetchData('/stats/', (data) => {
             setStats({
-              total_leads:     data.total_leads     || 0,
-              active_staff:    data.active_staff    || 0,
-              total_students:  data.total_students  || 0,
+              total_leads:     data.total_leads !== undefined ? data.total_leads : null,
+              active_staff:    data.active_staff !== undefined ? data.active_staff : null,
+              total_students:  data.total_students !== undefined ? data.total_students : null,
+              staff_on_leave:  data.staff_on_leave !== undefined ? data.staff_on_leave : null,
+              pending_candidates: data.pending_candidates !== undefined ? data.pending_candidates : null,
               leads_change:    data.leads_change    || 0,
               staff_change:    data.staff_change    || 0,
               students_change: data.students_change || 0,

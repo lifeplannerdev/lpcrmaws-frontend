@@ -49,12 +49,21 @@ export function useStudentForm(studentId = null) {
 
   useEffect(() => {
     if (!feeTemplateTouched) {
+      if (formData.academic_batch) {
+        const selectedBatch = academicBatches.find(b => b.id === Number(formData.academic_batch));
+        if (selectedBatch && selectedBatch.default_fee_template) {
+          setFormData(prev => ({ ...prev, fee_template: String(selectedBatch.default_fee_template) }));
+          return;
+        }
+      }
+
+      // Fallback to heuristic
       const suggestedTemplate = suggestFeeTemplate(formData.batch, feeTemplates);
       if (suggestedTemplate) {
         setFormData(prev => ({ ...prev, fee_template: String(suggestedTemplate.id) }));
       }
     }
-  }, [formData.batch, feeTemplates, feeTemplateTouched]);
+  }, [formData.academic_batch, formData.batch, feeTemplates, academicBatches, feeTemplateTouched]);
 
   const suggestFeeTemplate = (batchValue, templates) => {
     if (!batchValue || !Array.isArray(templates) || templates.length === 0) {
