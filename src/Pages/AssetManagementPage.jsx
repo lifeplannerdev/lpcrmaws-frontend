@@ -25,6 +25,9 @@ export default function AssetManagementPage() {
   const [showModal, setShowModal] = useState(false);
   const [assets, setAssets] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [assetCategories, setAssetCategories] = useState([]);
+  const [locationSummaries, setLocationSummaries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [editingAsset, setEditingAsset] = useState(null);
@@ -34,13 +37,18 @@ export default function AssetManagementPage() {
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [companyFilter, setCompanyFilter] = useState(user?.company || 'LP');
+  const [viewMode, setViewMode] = useState('list');
+  const [selectedLocationId, setSelectedLocationId] = useState(null);
 
   const [formData, setFormData] = useState({
     name: '',
-    asset_type: 'Mobiles',
+    category: '',
     serial_number: '',
     status: 'AVAILABLE',
     assigned_to: '',
+    assigned_location: '',
+    primary_phone_number: '',
+    secondary_phone_number: '',
     parent_asset: '',
     purchase_date: '',
     notes: '',
@@ -121,6 +129,37 @@ export default function AssetManagementPage() {
     }
   };
 
+  const fetchLocations = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (companyFilter) params.set('company', companyFilter);
+      const token = accessToken || await refreshAccessToken();
+      const response = await fetch(`${API_BASE_URL}/locations/?${params}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await response.json();
+      setLocations(data.results || data || []);
+    } catch (err) { console.error('Error fetching locations:', err); setLocations([]); }
+  };
+
+  const fetchLocationSummaries = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (companyFilter) params.set('company', companyFilter);
+      const token = accessToken || await refreshAccessToken();
+      const response = await fetch(`${API_BASE_URL}/locations/summary/?${params}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await response.json();
+      setLocationSummaries(data || []);
+    } catch (err) { console.error('Error fetching location summaries:', err); setLocationSummaries([]); }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const token = accessToken || await refreshAccessToken();
+      const response = await fetch(`${API_BASE_URL}/asset-categories/`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await response.json();
+      setAssetCategories(data.results || data || []);
+    } catch (err) { console.error('Error fetching categories:', err); setAssetCategories([]); }
+  };
+
   const fetchAssets = async () => {
     try {
       setLoading(true);
@@ -147,6 +186,9 @@ export default function AssetManagementPage() {
     if (accessToken) {
       fetchAssets();
       fetchEmployees();
+      fetchLocations();
+      fetchLocationSummaries();
+      fetchCategories();
     }
   }, [accessToken, companyFilter]);
 
@@ -168,9 +210,9 @@ export default function AssetManagementPage() {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Asset Name is required';
-    if (!formData.asset_type.trim()) newErrors.asset_type = 'Asset Type is required';
-    if (formData.status === 'ASSIGNED' && !formData.assigned_to && !formData.parent_asset) {
-      newErrors.assigned_to = 'Must assign an employee or parent asset if status is ASSIGNED';
+    if (!formData.category) newErrors.category = 'Asset Category is required';
+    if (formData.status === 'ASSIGNED' && !formData.assigned_to && !formData.assigned_location && !formData.parent_asset) {
+      newErrors.assigned_to = 'Must assign an employee, location, or parent asset if status is ASSIGNED';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -192,10 +234,14 @@ export default function AssetManagementPage() {
 
       const formDataObj = new FormData();
       formDataObj.append('name', formData.name);
-      formDataObj.append('asset_type', formData.asset_type);
+      formDataObj.append('category', formData.category);
       if (formData.serial_number) formDataObj.append('serial_number', formData.serial_number);
       formDataObj.append('status', formData.status);
       formDataObj.append('company', companyFilter);
+
+      if (formData.primary_phone_number) formDataObj.append('primary_phone_number', formData.primary_phone_number);
+      if (formData.secondary_phone_number) formDataObj.append('secondary_phone_number', formData.secondary_phone_number);
+
       if (formData.parent_asset) {
         formDataObj.append('parent_asset', formData.parent_asset);
       } else {
@@ -206,6 +252,11 @@ export default function AssetManagementPage() {
             formDataObj.append('assigned_to', formData.assigned_to);
         } else if (editingAsset && editingAsset.assigned_to) {
             formDataObj.append('assigned_to', '');
+        }
+        if (formData.assigned_location) {
+            formDataObj.append('assigned_location', formData.assigned_location);
+        } else if (editingAsset && editingAsset.assigned_location) {
+            formDataObj.append('assigned_location', '');
         }
       }
 
@@ -234,10 +285,13 @@ export default function AssetManagementPage() {
       setFileToUpload(null);
       setFormData({
         name: '',
-        asset_type: 'Mobiles',
+        category: '',
         serial_number: '',
         status: 'AVAILABLE',
         assigned_to: '',
+        assigned_location: '',
+        primary_phone_number: '',
+        secondary_phone_number: '',
         parent_asset: '',
         purchase_date: '',
         notes: '',
@@ -256,10 +310,13 @@ export default function AssetManagementPage() {
     setEditingAsset(asset);
     setFormData({
       name: asset.name,
-      asset_type: asset.asset_type || 'Mobiles',
+      category: asset.category || '',
       serial_number: asset.serial_number || '',
       status: asset.status,
       assigned_to: asset.assigned_to || '',
+      assigned_location: asset.assigned_location || '',
+      primary_phone_number: asset.primary_phone_number || '',
+      secondary_phone_number: asset.secondary_phone_number || '',
       parent_asset: asset.parent_asset || '',
       purchase_date: asset.purchase_date || '',
       notes: asset.notes || '',
@@ -338,10 +395,13 @@ export default function AssetManagementPage() {
                   setEditingAsset(null);
                   setFormData({
                     name: '',
-                    asset_type: 'Mobiles',
+                    category: '',
                     serial_number: '',
                     status: 'AVAILABLE',
                     assigned_to: '',
+                    assigned_location: '',
+                    primary_phone_number: '',
+                    secondary_phone_number: '',
                     parent_asset: '',
                     purchase_date: '',
                     notes: '',
@@ -359,8 +419,20 @@ export default function AssetManagementPage() {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
+        {/* View Mode Toggle */}
+        <div className="flex space-x-4 mb-6">
+          <button onClick={() => setViewMode('list')} className={`px-4 py-2 rounded-xl font-medium transition-colors ${viewMode === 'list' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}>
+            Asset List
+          </button>
+          <button onClick={() => setViewMode('space')} className={`px-4 py-2 rounded-xl font-medium transition-colors ${viewMode === 'space' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}>
+            Space Inventory
+          </button>
+        </div>
+
+        {viewMode === 'list' && (
+          <>
+            {/* Filters */}
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <Filter className="w-5 h-5 text-gray-500" />
             <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
@@ -447,7 +519,7 @@ export default function AssetManagementPage() {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="font-bold text-lg text-gray-900">{asset.name}</h3>
-                    <p className="text-sm text-gray-500">{asset.asset_type}</p>
+                    <p className="text-sm text-gray-500">{asset.category_details?.name || 'Uncategorized'}</p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${asset.status === 'AVAILABLE' ? 'bg-emerald-100 text-emerald-700' : asset.status === 'ASSIGNED' ? 'bg-blue-100 text-blue-700' : asset.status === 'MAINTENANCE' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>
                     {statusOptions.find(s => s.value === asset.status)?.label || asset.status}
@@ -491,6 +563,90 @@ export default function AssetManagementPage() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+        </>
+        )}
+
+        {viewMode === 'space' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {locationSummaries.map(loc => (
+              <div key={loc.id} onClick={() => setSelectedLocationId(loc.id)} className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{loc.name}</h3>
+                <p className="text-sm text-gray-500 mb-4">{loc.total_assets} Total Assets</p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(loc.asset_counts).map(([cat, count]) => (
+                    <span key={cat} className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold">
+                      {cat}: {count}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {locationSummaries.length === 0 && (
+              <div className="col-span-full py-12 text-center text-gray-500">
+                No locations found. Add locations in Space Management.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Location Detail Modal */}
+        {selectedLocationId && (
+          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-4xl w-full shadow-2xl my-8 relative p-6">
+              <button onClick={() => setSelectedLocationId(null)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100">
+                <X className="w-5 h-5" />
+              </button>
+              <h2 className="text-2xl font-bold mb-4">{locations.find(l => l.id === selectedLocationId)?.name} Details</h2>
+              
+              <h3 className="text-lg font-semibold mt-4 mb-2 text-indigo-800 border-b pb-2">Room Fixtures & General Assets</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {assets.filter(a => a.assigned_location === selectedLocationId).map(a => (
+                  <div key={a.id} className="border border-gray-200 p-4 rounded-xl bg-gray-50 flex justify-between items-center shadow-sm">
+                    <div>
+                      <p className="font-bold text-gray-900">{a.name}</p>
+                      <p className="text-sm text-gray-500">{a.category_details?.name || 'Uncategorized'}</p>
+                    </div>
+                    {a.serial_number && <span className="text-xs text-gray-400 font-mono bg-white px-2 py-1 rounded">SN: {a.serial_number}</span>}
+                  </div>
+                ))}
+                {assets.filter(a => a.assigned_location === selectedLocationId).length === 0 && (
+                  <p className="text-sm text-gray-400 col-span-2">No room fixtures assigned to this location.</p>
+                )}
+              </div>
+
+              <h3 className="text-lg font-semibold mt-8 mb-2 text-indigo-800 border-b pb-2">Assigned People & Personal Assets</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {employees.filter(e => e.location === locations.find(l => l.id === selectedLocationId)?.name).map(emp => (
+                  <div key={emp.id} className="border border-indigo-100 p-4 rounded-xl bg-white shadow-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-inner">
+                        {emp.first_name?.[0] || emp.username?.[0]}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900">{emp.full_name || emp.username}</p>
+                        <p className="text-xs text-gray-500">{emp.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {assets.filter(a => a.assigned_to === emp.id).map(a => (
+                        <span key={a.id} className="px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-sm flex flex-col gap-0.5 shadow-sm">
+                          <span className="font-medium text-indigo-900">{a.name}</span>
+                          <span className="text-xs text-indigo-600">{a.category_details?.name}</span>
+                        </span>
+                      ))}
+                      {assets.filter(a => a.assigned_to === emp.id).length === 0 && (
+                        <span className="text-xs text-gray-400 italic">No assets assigned</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {employees.filter(e => e.location === locations.find(l => l.id === selectedLocationId)?.name).length === 0 && (
+                  <p className="text-sm text-gray-400 col-span-2">No employees seated in this location.</p>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -537,34 +693,48 @@ export default function AssetManagementPage() {
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Asset Type <span className="text-red-500">*</span>
+                        Asset Category <span className="text-red-500">*</span>
                       </label>
                       <select
-                        name="asset_type"
-                        value={formData.asset_type}
+                        name="category"
+                        value={formData.category}
                         onChange={handleInputChange}
-                        className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.asset_type ? 'border-red-500' : 'border-gray-200'}`}
+                        className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.category ? 'border-red-500' : 'border-gray-200'}`}
                       >
-                        {assetTypeOptions.map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
+                        <option value="">-- Select Category --</option>
+                        {assetCategories.map(opt => (
+                          <option key={opt.id} value={opt.id}>{opt.name}</option>
                         ))}
                       </select>
-                      {errors.asset_type && <p className="mt-1 text-sm text-red-500">{errors.asset_type}</p>}
+                      {errors.category && <p className="mt-1 text-sm text-red-500">{errors.category}</p>}
                     </div>
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        {formData.asset_type === 'Mobiles' ? 'IMEI Number' : 'Serial Number'}
+                        {assetCategories.find(c => c.id == formData.category)?.name === 'Mobiles' ? 'IMEI Number' : 'Serial Number'}
                       </label>
                       <input
                         type="text"
                         name="serial_number"
                         value={formData.serial_number}
                         onChange={handleInputChange}
-                        placeholder={formData.asset_type === 'Mobiles' ? "e.g. 351234567890123" : "ABC123XYZ"}
+                        placeholder={assetCategories.find(c => c.id == formData.category)?.name === 'Mobiles' ? "e.g. 351234567890123" : "ABC123XYZ"}
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                       />
                     </div>
+
+                    {assetCategories.find(c => c.id == formData.category)?.name === 'Mobiles' && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Primary Phone Number</label>
+                          <input type="text" name="primary_phone_number" value={formData.primary_phone_number} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Secondary Phone Number</label>
+                          <input type="text" name="secondary_phone_number" value={formData.secondary_phone_number} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                        </div>
+                      </>
+                    )}
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -600,25 +770,52 @@ export default function AssetManagementPage() {
                     </div>
 
                     {!formData.parent_asset && (
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                          Assigned To
-                        </label>
-                        <select
-                          name="assigned_to"
-                          value={formData.assigned_to}
-                          onChange={handleInputChange}
-                          className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.assigned_to ? 'border-red-500' : 'border-gray-200'}`}
-                        >
-                          <option value="">-- Unassigned --</option>
-                          {nonAdminEmployees.map(emp => (
-                            <option key={emp.id} value={emp.id}>
-                              {emp.full_name || emp.username || `Employee #${emp.id}`}
-                            </option>
-                          ))}
-                        </select>
-                        {errors.assigned_to && <p className="mt-1 text-sm text-red-500">{errors.assigned_to}</p>}
-                      </div>
+                      <>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                            Assigned To (User)
+                          </label>
+                          <select
+                            name="assigned_to"
+                            value={formData.assigned_to}
+                            onChange={(e) => {
+                              handleInputChange(e);
+                              if (e.target.value) setFormData(prev => ({ ...prev, assigned_location: '' }));
+                            }}
+                            className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.assigned_to ? 'border-red-500' : 'border-gray-200'}`}
+                          >
+                            <option value="">-- Unassigned --</option>
+                            {nonAdminEmployees.map(emp => (
+                              <option key={emp.id} value={emp.id}>
+                                {emp.full_name || emp.username || `Employee #${emp.id}`}
+                              </option>
+                            ))}
+                          </select>
+                          {errors.assigned_to && <p className="mt-1 text-sm text-red-500">{errors.assigned_to}</p>}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                            Assigned To (Location)
+                          </label>
+                          <select
+                            name="assigned_location"
+                            value={formData.assigned_location}
+                            onChange={(e) => {
+                              handleInputChange(e);
+                              if (e.target.value) setFormData(prev => ({ ...prev, assigned_to: '' }));
+                            }}
+                            className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.assigned_to ? 'border-red-500' : 'border-gray-200'}`}
+                          >
+                            <option value="">-- Unassigned --</option>
+                            {locations.map(loc => (
+                              <option key={loc.id} value={loc.id}>
+                                {loc.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </>
                     )}
 
                     <div>
