@@ -23,6 +23,8 @@ export default function AssetManagementPage() {
   const { accessToken, refreshAccessToken, user } = useAuth();
 
   const [showModal, setShowModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [assets, setAssets] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -53,6 +55,9 @@ export default function AssetManagementPage() {
     purchase_date: '',
     notes: '',
   });
+
+  const [locationFormData, setLocationFormData] = useState({ name: '' });
+  const [categoryFormData, setCategoryFormData] = useState({ name: '' });
   const [fileToUpload, setFileToUpload] = useState(null);
 
   const [errors, setErrors] = useState({});
@@ -306,6 +311,60 @@ export default function AssetManagementPage() {
     }
   };
 
+  const handleLocationSubmit = async () => {
+    if (!locationFormData.name.trim()) return;
+    setSubmitting(true);
+    try {
+      const token = accessToken || await refreshAccessToken();
+      const response = await fetch(`${API_BASE_URL}/locations/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: locationFormData.name,
+          company: companyFilter
+        })
+      });
+      if (!response.ok) throw new Error('Failed to save location');
+      setShowLocationModal(false);
+      setLocationFormData({ name: '' });
+      fetchLocations();
+      fetchLocationSummaries();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save location');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCategorySubmit = async () => {
+    if (!categoryFormData.name.trim()) return;
+    setSubmitting(true);
+    try {
+      const token = accessToken || await refreshAccessToken();
+      const response = await fetch(`${API_BASE_URL}/asset-categories/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: categoryFormData.name })
+      });
+      if (!response.ok) throw new Error('Failed to save category');
+      setShowCategoryModal(false);
+      setCategoryFormData({ name: '' });
+      fetchCategories();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save category');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleEdit = (asset) => {
     setEditingAsset(asset);
     setFormData({
@@ -420,13 +479,35 @@ export default function AssetManagementPage() {
         </div>
 
         {/* View Mode Toggle */}
-        <div className="flex space-x-4 mb-6">
-          <button onClick={() => setViewMode('list')} className={`px-4 py-2 rounded-xl font-medium transition-colors ${viewMode === 'list' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}>
-            Asset List
-          </button>
-          <button onClick={() => setViewMode('space')} className={`px-4 py-2 rounded-xl font-medium transition-colors ${viewMode === 'space' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}>
-            Space Inventory
-          </button>
+        <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
+          <div className="flex space-x-4">
+            <button onClick={() => setViewMode('list')} className={`px-4 py-2 rounded-xl font-medium transition-colors ${viewMode === 'list' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}>
+              Asset List
+            </button>
+            <button onClick={() => setViewMode('space')} className={`px-4 py-2 rounded-xl font-medium transition-colors ${viewMode === 'space' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}>
+              Space Inventory
+            </button>
+          </div>
+          <div className="flex gap-2">
+            {canManageAssets && (
+              <>
+                <button
+                  onClick={() => setShowCategoryModal(true)}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 transition-colors"
+                >
+                  Manage Categories
+                </button>
+                {viewMode === 'space' && (
+                  <button
+                    onClick={() => setShowLocationModal(true)}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors flex items-center gap-1"
+                  >
+                    <Plus className="w-4 h-4" /> Add Location
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         {viewMode === 'list' && (
@@ -884,6 +965,60 @@ export default function AssetManagementPage() {
             </div>
           </div>
         )}
+        {/* Location Add Modal */}
+        {showLocationModal && (
+          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl relative">
+              <button onClick={() => setShowLocationModal(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100"><X className="w-5 h-5 text-gray-500" /></button>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Add Location</h2>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Location Name</label>
+              <input
+                type="text"
+                placeholder="e.g. Server Room A"
+                value={locationFormData.name}
+                onChange={(e) => setLocationFormData({ name: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-6"
+              />
+              <button onClick={handleLocationSubmit} disabled={submitting || !locationFormData.name.trim()} className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+                {submitting ? 'Saving...' : 'Save Location'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Category Add Modal */}
+        {showCategoryModal && (
+          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl relative">
+              <button onClick={() => setShowCategoryModal(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100"><X className="w-5 h-5 text-gray-500" /></button>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Manage Categories</h2>
+              
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-gray-500 mb-2">Existing Categories:</h3>
+                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                  {assetCategories.map(c => (
+                    <span key={c.id} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm">{c.name}</span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">New Category Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Keyboards"
+                  value={categoryFormData.name}
+                  onChange={(e) => setCategoryFormData({ name: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-4"
+                />
+                <button onClick={handleCategorySubmit} disabled={submitting || !categoryFormData.name.trim()} className="w-full py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                  {submitting ? 'Adding...' : 'Add Category'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
     </div>
   );
