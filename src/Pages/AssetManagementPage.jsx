@@ -29,6 +29,7 @@ export default function AssetManagementPage() {
   const [employees, setEmployees] = useState([]);
   const [locations, setLocations] = useState([]);
   const [assetCategories, setAssetCategories] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [locationSummaries, setLocationSummaries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -41,6 +42,7 @@ export default function AssetManagementPage() {
   const [companyFilter, setCompanyFilter] = useState(user?.company || 'LP');
   const [viewMode, setViewMode] = useState('list');
   const [selectedLocationId, setSelectedLocationId] = useState(null);
+  const [selectedBranchId, setSelectedBranchId] = useState('all');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -165,6 +167,17 @@ export default function AssetManagementPage() {
     } catch (err) { console.error('Error fetching categories:', err); setAssetCategories([]); }
   };
 
+  const fetchBranches = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (companyFilter) params.set('company', companyFilter);
+      const token = accessToken || await refreshAccessToken();
+      const response = await fetch(`${API_BASE_URL}/branches/?${params}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await response.json();
+      setBranches(data.results || data || []);
+    } catch (err) { console.error('Error fetching branches:', err); setBranches([]); }
+  };
+
   const fetchAssets = async () => {
     try {
       setLoading(true);
@@ -194,6 +207,7 @@ export default function AssetManagementPage() {
       fetchLocations();
       fetchLocationSummaries();
       fetchCategories();
+      fetchBranches();
     }
   }, [accessToken, companyFilter]);
 
@@ -650,9 +664,38 @@ export default function AssetManagementPage() {
         )}
 
         {viewMode === 'space' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {locationSummaries.map(loc => (
-              <div key={loc.id} onClick={() => setSelectedLocationId(loc.id)} className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer">
+          <>
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+              <button
+                onClick={() => setSelectedBranchId('all')}
+                className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
+                  selectedBranchId === 'all'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                All Branches
+              </button>
+              {branches.map(branch => (
+                <button
+                  key={branch.id}
+                  onClick={() => setSelectedBranchId(branch.id)}
+                  className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
+                    selectedBranchId === branch.id
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {branch.name}
+                </button>
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {locationSummaries
+                .filter(loc => selectedBranchId === 'all' || loc.branch_id === selectedBranchId)
+                .map(loc => (
+                <div key={loc.id} onClick={() => setSelectedLocationId(loc.id)} className="bg-white/80 backdrop-blur-lg rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer">
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{loc.name}</h3>
                 <p className="text-sm text-gray-500 mb-4">{loc.total_assets} Total Assets</p>
                 <div className="flex flex-wrap gap-2">
@@ -666,10 +709,11 @@ export default function AssetManagementPage() {
             ))}
             {locationSummaries.length === 0 && (
               <div className="col-span-full py-12 text-center text-gray-500">
-                No locations found. Add locations in Space Management.
+                No locations found for this branch. Add locations in Space Management.
               </div>
             )}
           </div>
+          </>
         )}
 
         {/* Location Detail Modal */}
@@ -733,9 +777,9 @@ export default function AssetManagementPage() {
 
         {/* Add/Edit Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl my-8 relative">
-              <div className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-hidden">
+            <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] shadow-2xl flex flex-col relative">
+              <div className="shrink-0 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
                 <h2 className="text-2xl font-bold text-gray-900">
                   {editingAsset ? 'Edit Asset' : 'Add New Asset'}
                 </h2>
@@ -747,7 +791,7 @@ export default function AssetManagementPage() {
                 </button>
               </div>
 
-              <div className="p-6">
+              <div className="p-5 overflow-y-auto flex-1">
                 {errors.submit && (
                   <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex gap-3">
                     <AlertCircle className="w-5 h-5 shrink-0" />
@@ -767,7 +811,7 @@ export default function AssetManagementPage() {
                         value={formData.name}
                         onChange={handleInputChange}
                         placeholder="e.g. MacBook Pro M2"
-                        className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.name ? 'border-red-500' : 'border-gray-200'}`}
+                        className={`w-full px-4 py-2 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.name ? 'border-red-500' : 'border-gray-200'}`}
                       />
                       {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
                     </div>
@@ -780,7 +824,7 @@ export default function AssetManagementPage() {
                         name="category"
                         value={formData.category}
                         onChange={handleInputChange}
-                        className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.category ? 'border-red-500' : 'border-gray-200'}`}
+                        className={`w-full px-4 py-2 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.category ? 'border-red-500' : 'border-gray-200'}`}
                       >
                         <option value="">-- Select Category --</option>
                         {assetCategories.map(opt => (
@@ -800,7 +844,7 @@ export default function AssetManagementPage() {
                         value={formData.serial_number}
                         onChange={handleInputChange}
                         placeholder={assetCategories.find(c => c.id == formData.category)?.name === 'Mobiles' ? "e.g. 351234567890123" : "ABC123XYZ"}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                       />
                     </div>
 
@@ -808,11 +852,11 @@ export default function AssetManagementPage() {
                       <>
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Primary Phone Number</label>
-                          <input type="text" name="primary_phone_number" value={formData.primary_phone_number} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                          <input type="text" name="primary_phone_number" value={formData.primary_phone_number} onChange={handleInputChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
                         </div>
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Secondary Phone Number</label>
-                          <input type="text" name="secondary_phone_number" value={formData.secondary_phone_number} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                          <input type="text" name="secondary_phone_number" value={formData.secondary_phone_number} onChange={handleInputChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
                         </div>
                       </>
                     )}
@@ -825,7 +869,7 @@ export default function AssetManagementPage() {
                         name="status"
                         value={formData.status}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                       >
                         {statusOptions.map(option => (
                           <option key={option.value} value={option.value}>{option.label}</option>
@@ -841,7 +885,7 @@ export default function AssetManagementPage() {
                         name="parent_asset"
                         value={formData.parent_asset}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                       >
                         <option value="">-- No Parent (Standalone) --</option>
                         {potentialParents.map(a => (
@@ -863,7 +907,7 @@ export default function AssetManagementPage() {
                               handleInputChange(e);
                               if (e.target.value) setFormData(prev => ({ ...prev, assigned_location: '' }));
                             }}
-                            className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.assigned_to ? 'border-red-500' : 'border-gray-200'}`}
+                            className={`w-full px-4 py-2 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.assigned_to ? 'border-red-500' : 'border-gray-200'}`}
                           >
                             <option value="">-- Unassigned --</option>
                             {nonAdminEmployees.map(emp => (
@@ -886,7 +930,7 @@ export default function AssetManagementPage() {
                               handleInputChange(e);
                               if (e.target.value) setFormData(prev => ({ ...prev, assigned_to: '' }));
                             }}
-                            className={`w-full px-4 py-2.5 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.assigned_to ? 'border-red-500' : 'border-gray-200'}`}
+                            className={`w-full px-4 py-2 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.assigned_to ? 'border-red-500' : 'border-gray-200'}`}
                           >
                             <option value="">-- Unassigned --</option>
                             {locations.map(loc => (
@@ -908,7 +952,7 @@ export default function AssetManagementPage() {
                         name="purchase_date"
                         value={formData.purchase_date}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                       />
                     </div>
 
@@ -936,13 +980,13 @@ export default function AssetManagementPage() {
                         onChange={handleInputChange}
                         rows={3}
                         placeholder="Additional details..."
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                       />
                     </div>
                   </div>
                 </div>
-
-                <div className="mt-8 flex justify-end gap-3 pt-6 border-t border-gray-100">
+              </div>
+              <div className="shrink-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-3 rounded-b-2xl">
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
@@ -961,7 +1005,6 @@ export default function AssetManagementPage() {
                     {editingAsset ? 'Save Changes' : 'Add Asset'}
                   </button>
                 </div>
-              </div>
             </div>
           </div>
         )}

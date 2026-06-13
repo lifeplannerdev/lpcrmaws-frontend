@@ -752,13 +752,13 @@ export default function FeesManagementPage() {
       {/* Template Creation Modal */}
       {isTemplateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Create Fee Template</h2>
-                <button onClick={() => setIsTemplateModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
-              </div>
-              <form onSubmit={handleCreateTemplate} className="space-y-4">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="shrink-0 p-6 border-b border-gray-100 flex items-center justify-between bg-white">
+              <h2 className="text-2xl font-bold text-gray-900">Create Fee Template</h2>
+              <button onClick={() => setIsTemplateModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <form onSubmit={handleCreateTemplate} className="space-y-4" id="fee-template-form">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
@@ -845,13 +845,13 @@ export default function FeesManagementPage() {
                   <textarea value={newTemplateForm.notes} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, notes: e.target.value })} placeholder="Template notes..." className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 min-h-20" />
                 </div>
 
-                <div className="flex items-center justify-end gap-3 pt-4">
-                  <button type="button" onClick={() => setIsTemplateModalOpen(false)} className="px-5 py-3 rounded-xl font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
-                  <button type="submit" disabled={saving} className="px-5 py-3 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-50">
-                    {saving ? 'Creating...' : 'Create Template'}
-                  </button>
-                </div>
               </form>
+            </div>
+            <div className="shrink-0 p-6 border-t border-gray-100 bg-white flex items-center justify-end gap-3 rounded-b-3xl">
+              <button type="button" onClick={() => setIsTemplateModalOpen(false)} className="px-5 py-3 rounded-xl font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+              <button type="submit" form="fee-template-form" disabled={saving} className="px-5 py-3 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-50">
+                {saving ? 'Creating...' : 'Create Template'}
+              </button>
             </div>
           </div>
         </div>
