@@ -25,6 +25,7 @@ export default function AssetManagementPage() {
   const [showModal, setShowModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showBranchModal, setShowBranchModal] = useState(false);
   const [assets, setAssets] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -58,7 +59,8 @@ export default function AssetManagementPage() {
     notes: '',
   });
 
-  const [locationFormData, setLocationFormData] = useState({ name: '' });
+  const [locationFormData, setLocationFormData] = useState({ name: '', branch: '' });
+  const [branchFormData, setBranchFormData] = useState({ name: '' });
   const [categoryFormData, setCategoryFormData] = useState({ name: '' });
   const [fileToUpload, setFileToUpload] = useState(null);
 
@@ -338,17 +340,46 @@ export default function AssetManagementPage() {
         },
         body: JSON.stringify({
           name: locationFormData.name,
-          company: companyFilter
+          company: companyFilter,
+          branch: locationFormData.branch || null
         })
       });
       if (!response.ok) throw new Error('Failed to save location');
       setShowLocationModal(false);
-      setLocationFormData({ name: '' });
+      setLocationFormData({ name: '', branch: '' });
       fetchLocations();
       fetchLocationSummaries();
     } catch (err) {
       console.error(err);
       alert('Failed to save location');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleBranchSubmit = async () => {
+    if (!branchFormData.name.trim()) return;
+    setSubmitting(true);
+    try {
+      const token = accessToken || await refreshAccessToken();
+      const response = await fetch(`${API_BASE_URL}/branches/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: branchFormData.name,
+          company: companyFilter
+        })
+      });
+      if (!response.ok) throw new Error('Failed to save branch');
+      setShowBranchModal(false);
+      setBranchFormData({ name: '' });
+      fetchBranches();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save branch');
     } finally {
       setSubmitting(false);
     }
@@ -512,12 +543,20 @@ export default function AssetManagementPage() {
                   Manage Categories
                 </button>
                 {viewMode === 'space' && (
-                  <button
-                    onClick={() => setShowLocationModal(true)}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors flex items-center gap-1"
-                  >
-                    <Plus className="w-4 h-4" /> Add Location
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setShowBranchModal(true)}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors flex items-center gap-1"
+                    >
+                      <Plus className="w-4 h-4" /> Add Branch
+                    </button>
+                    <button
+                      onClick={() => setShowLocationModal(true)}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors flex items-center gap-1"
+                    >
+                      <Plus className="w-4 h-4" /> Add Location
+                    </button>
+                  </>
                 )}
               </>
             )}
@@ -1019,9 +1058,21 @@ export default function AssetManagementPage() {
                 type="text"
                 placeholder="e.g. Server Room A"
                 value={locationFormData.name}
-                onChange={(e) => setLocationFormData({ name: e.target.value })}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-6"
+                onChange={(e) => setLocationFormData({ ...locationFormData, name: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-4"
               />
+              
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Branch</label>
+              <select
+                value={locationFormData.branch}
+                onChange={(e) => setLocationFormData({ ...locationFormData, branch: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-6"
+              >
+                <option value="">-- No Branch (Floating) --</option>
+                {branches.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
               <button onClick={handleLocationSubmit} disabled={submitting || !locationFormData.name.trim()} className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors">
                 {submitting ? 'Saving...' : 'Save Location'}
               </button>
@@ -1056,6 +1107,49 @@ export default function AssetManagementPage() {
                 />
                 <button onClick={handleCategorySubmit} disabled={submitting || !categoryFormData.name.trim()} className="w-full py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors">
                   {submitting ? 'Adding...' : 'Add Category'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Branch Add Modal */}
+        {showBranchModal && (
+          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+              <div className="shrink-0 p-6 border-b border-gray-100 flex items-center justify-between bg-white rounded-t-3xl">
+                <h2 className="text-xl font-bold text-gray-900">Add Branch</h2>
+                <button onClick={() => setShowBranchModal(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Branch Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Kochi Office"
+                  value={branchFormData.name}
+                  onChange={(e) => setBranchFormData({ name: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  This branch will be created under the currently selected company filter: <span className="font-semibold text-gray-800">{companyFilter}</span>.
+                </p>
+              </div>
+              <div className="shrink-0 p-6 border-t border-gray-100 bg-white rounded-b-3xl flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowBranchModal(false)}
+                  className="px-5 py-2.5 rounded-xl font-medium text-gray-700 hover:bg-gray-50 border border-transparent"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBranchSubmit}
+                  disabled={submitting || !branchFormData.name.trim()}
+                  className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-sm"
+                >
+                  {submitting ? 'Saving...' : 'Save Branch'}
                 </button>
               </div>
             </div>
