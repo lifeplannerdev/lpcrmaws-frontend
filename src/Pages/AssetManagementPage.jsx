@@ -37,7 +37,7 @@ export default function AssetManagementPage() {
   const [editingAsset, setEditingAsset] = useState(null);
 
   // Filters
-  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [companyFilter, setCompanyFilter] = useState(user?.company || 'LP');
@@ -49,12 +49,11 @@ export default function AssetManagementPage() {
     name: '',
     category: '',
     serial_number: '',
-    status: 'AVAILABLE',
+    provider: '',
+    primary_sim: '',
+    secondary_sim: '',
     assigned_to: '',
     assigned_location: '',
-    primary_phone_number: '',
-    secondary_phone_number: '',
-    parent_asset: '',
     branch: '',
     purchase_date: '',
     notes: '',
@@ -69,14 +68,10 @@ export default function AssetManagementPage() {
   const { hasPermission } = usePermissions();
   const canManageAssets = hasPermission('assets:create') || hasPermission('assets:edit_any') || hasPermission('assets:edit_tenant') || hasPermission('assets:edit_own');
 
-  const statusOptions = [
-    { value: 'AVAILABLE', label: 'Available' },
-    { value: 'ASSIGNED', label: 'Assigned' },
-    { value: 'MAINTENANCE', label: 'In Maintenance' },
-    { value: 'RETIRED', label: 'Retired' }
-  ];
+  const { hasPermission } = usePermissions();
+  const canManageAssets = hasPermission('assets:create') || hasPermission('assets:edit_any') || hasPermission('assets:edit_tenant') || hasPermission('assets:edit_own');
 
-  const assetTypeOptions = ['Mobiles', 'Monitors', 'PC', 'Keyboard', 'Mouse', 'Laptops', 'SIM'];
+  const assetTypeOptions = ['Mobiles', 'Monitors', 'PC', 'Keyboard', 'Mouse', 'Laptops', 'SIM Card'];
 
   const fetchWithAuth = async (url, options = {}) => {
     try {
@@ -222,6 +217,19 @@ export default function AssetManagementPage() {
     }
   };
 
+  const handleSIMChange = (e) => {
+    const { name, value } = e.target;
+    if (value) {
+      const otherMobile = assets.find(a => (a.primary_sim === parseInt(value) || a.secondary_sim === parseInt(value)) && a.id !== editingAsset?.id);
+      if (otherMobile) {
+        if (!window.confirm(`This SIM is currently in '${otherMobile.name}'. Do you want to move it?`)) {
+          return;
+        }
+      }
+    }
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -233,9 +241,6 @@ export default function AssetManagementPage() {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Asset Name is required';
     if (!formData.category) newErrors.category = 'Asset Category is required';
-    if (formData.status === 'ASSIGNED' && !formData.assigned_to && !formData.assigned_location && !formData.parent_asset) {
-      newErrors.assigned_to = 'Must assign an employee, location, or parent asset if status is ASSIGNED';
-    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -258,28 +263,24 @@ export default function AssetManagementPage() {
       formDataObj.append('name', formData.name);
       formDataObj.append('category', formData.category);
       if (formData.serial_number) formDataObj.append('serial_number', formData.serial_number);
-      formDataObj.append('status', formData.status);
       formDataObj.append('company', companyFilter);
 
-      if (formData.primary_phone_number) formDataObj.append('primary_phone_number', formData.primary_phone_number);
-      if (formData.secondary_phone_number) formDataObj.append('secondary_phone_number', formData.secondary_phone_number);
+      if (formData.provider) formDataObj.append('provider', formData.provider);
+      if (formData.primary_sim) formDataObj.append('primary_sim', formData.primary_sim);
+      else if (editingAsset && editingAsset.primary_sim) formDataObj.append('primary_sim', '');
+      
+      if (formData.secondary_sim) formDataObj.append('secondary_sim', formData.secondary_sim);
+      else if (editingAsset && editingAsset.secondary_sim) formDataObj.append('secondary_sim', '');
 
-      if (formData.parent_asset) {
-        formDataObj.append('parent_asset', formData.parent_asset);
-      } else {
-        if (editingAsset && editingAsset.parent_asset) {
-            formDataObj.append('parent_asset', '');
-        }
-        if (formData.assigned_to) {
-            formDataObj.append('assigned_to', formData.assigned_to);
-        } else if (editingAsset && editingAsset.assigned_to) {
-            formDataObj.append('assigned_to', '');
-        }
-        if (formData.assigned_location) {
-            formDataObj.append('assigned_location', formData.assigned_location);
-        } else if (editingAsset && editingAsset.assigned_location) {
-            formDataObj.append('assigned_location', '');
-        }
+      if (formData.assigned_to) {
+          formDataObj.append('assigned_to', formData.assigned_to);
+      } else if (editingAsset && editingAsset.assigned_to) {
+          formDataObj.append('assigned_to', '');
+      }
+      if (formData.assigned_location) {
+          formDataObj.append('assigned_location', formData.assigned_location);
+      } else if (editingAsset && editingAsset.assigned_location) {
+          formDataObj.append('assigned_location', '');
       }
 
       if (formData.purchase_date) formDataObj.append('purchase_date', formData.purchase_date);
@@ -309,12 +310,11 @@ export default function AssetManagementPage() {
         name: '',
         category: '',
         serial_number: '',
-        status: 'AVAILABLE',
+        provider: '',
+        primary_sim: '',
+        secondary_sim: '',
         assigned_to: '',
         assigned_location: '',
-        primary_phone_number: '',
-        secondary_phone_number: '',
-        parent_asset: '',
         branch: '',
         purchase_date: '',
         notes: '',
@@ -418,12 +418,11 @@ export default function AssetManagementPage() {
       name: asset.name,
       category: asset.category || '',
       serial_number: asset.serial_number || '',
-      status: asset.status,
+      provider: asset.provider || '',
+      primary_sim: asset.primary_sim || '',
+      secondary_sim: asset.secondary_sim || '',
       assigned_to: asset.assigned_to || '',
       assigned_location: asset.assigned_location || '',
-      primary_phone_number: asset.primary_phone_number || '',
-      secondary_phone_number: asset.secondary_phone_number || '',
-      parent_asset: asset.parent_asset || '',
       branch: asset.branch || '',
       purchase_date: asset.purchase_date || '',
       notes: asset.notes || '',
@@ -466,14 +465,16 @@ export default function AssetManagementPage() {
   };
 
   const filteredAssets = assets.filter(asset => {
-    const matchesStatus = !selectedStatus || asset.status === selectedStatus;
     const matchesEmployee = !selectedEmployee || asset.assigned_to === parseInt(selectedEmployee);
+    const matchesCategory = !selectedCategory || asset.category === parseInt(selectedCategory);
     const matchesSearch =
       !searchTerm ||
       asset.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.asset_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.serial_number?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesEmployee && matchesSearch;
+      asset.serial_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.primary_sim_details?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.secondary_sim_details?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.provider?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesEmployee && matchesCategory && matchesSearch;
   });
 
   const nonAdminEmployees = employees.filter(emp => !emp.role_names?.some(r => r.toLowerCase() === 'admin'));
@@ -504,12 +505,11 @@ export default function AssetManagementPage() {
                     name: '',
                     category: '',
                     serial_number: '',
-                    status: 'AVAILABLE',
+                    provider: '',
+                    primary_sim: '',
+                    secondary_sim: '',
                     assigned_to: '',
                     assigned_location: '',
-                    primary_phone_number: '',
-                    secondary_phone_number: '',
-                    parent_asset: '',
                     branch: '',
                     purchase_date: '',
                     notes: '',
@@ -579,17 +579,17 @@ export default function AssetManagementPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                Status
+                Category
               </label>
               <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-shadow"
               >
-                <option value="">All Statuses</option>
-                {statusOptions.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                <option value="">All Categories</option>
+                {assetCategories.map(cat => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
                   </option>
                 ))}
               </select>
@@ -643,7 +643,7 @@ export default function AssetManagementPage() {
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">No Assets Found</h3>
             <p className="text-gray-500">
-              {searchTerm || selectedStatus || selectedEmployee
+              {searchTerm || selectedCategory || selectedEmployee
                 ? 'Try adjusting your filters.'
                 : 'No assets have been added to this company yet.'}
             </p>
@@ -652,15 +652,15 @@ export default function AssetManagementPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredAssets.map((asset) => (
               <div key={asset.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg transition-all group relative overflow-hidden">
-                <div className={`absolute top-0 left-0 w-1.5 h-full ${asset.status === 'AVAILABLE' ? 'bg-emerald-500' : asset.status === 'ASSIGNED' ? 'bg-blue-500' : asset.status === 'MAINTENANCE' ? 'bg-amber-500' : 'bg-gray-400'}`}></div>
+                <div className={`absolute top-0 left-0 w-1.5 h-full ${asset.assigned_to ? 'bg-blue-500' : 'bg-emerald-500'}`}></div>
                 
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="font-bold text-lg text-gray-900">{asset.name}</h3>
                     <p className="text-sm text-gray-500">{asset.category_details?.name || 'Uncategorized'}</p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${asset.status === 'AVAILABLE' ? 'bg-emerald-100 text-emerald-700' : asset.status === 'ASSIGNED' ? 'bg-blue-100 text-blue-700' : asset.status === 'MAINTENANCE' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>
-                    {statusOptions.find(s => s.value === asset.status)?.label || asset.status}
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${asset.assigned_to ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                    {asset.assigned_to ? 'Assigned' : 'Available'}
                   </span>
                 </div>
 
@@ -786,14 +786,14 @@ export default function AssetManagementPage() {
 
               <h3 className="text-lg font-semibold mt-8 mb-2 text-indigo-800 border-b pb-2">Assigned People & Personal Assets</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {employees.filter(e => e.location === locations.find(l => l.id === selectedLocationId)?.name).map(emp => (
+                {locations.find(l => l.id === selectedLocationId)?.assigned_staff?.map(emp => (
                   <div key={emp.id} className="border border-indigo-100 p-4 rounded-xl bg-white shadow-sm">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-inner">
                         {emp.first_name?.[0] || emp.username?.[0]}
                       </div>
                       <div>
-                        <p className="font-bold text-gray-900">{emp.full_name || emp.username}</p>
+                        <p className="font-bold text-gray-900">{emp.first_name ? `${emp.first_name} ${emp.last_name || ''}` : emp.username}</p>
                         <p className="text-xs text-gray-500">{emp.email}</p>
                       </div>
                     </div>
@@ -801,7 +801,7 @@ export default function AssetManagementPage() {
                       {assets.filter(a => a.assigned_to === emp.id).map(a => (
                         <span key={a.id} className="px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-sm flex flex-col gap-0.5 shadow-sm">
                           <span className="font-medium text-indigo-900">{a.name}</span>
-                          <span className="text-xs text-indigo-600">{a.category_details?.name}</span>
+                          <span className="text-xs text-indigo-600">{a.category_details?.name} {a.primary_sim_details ? `(${a.primary_sim_details.name})` : ''}</span>
                         </span>
                       ))}
                       {assets.filter(a => a.assigned_to === emp.id).length === 0 && (
@@ -810,7 +810,7 @@ export default function AssetManagementPage() {
                     </div>
                   </div>
                 ))}
-                {employees.filter(e => e.location === locations.find(l => l.id === selectedLocationId)?.name).length === 0 && (
+                {locations.find(l => l.id === selectedLocationId)?.assigned_staff?.length === 0 && (
                   <p className="text-sm text-gray-400 col-span-2">No employees seated in this location.</p>
                 )}
               </div>
@@ -891,53 +891,35 @@ export default function AssetManagementPage() {
                       />
                     </div>
 
+                    {assetCategories.find(c => c.id == formData.category)?.name === 'SIM Card' && (
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Telecom Provider</label>
+                        <input type="text" name="provider" value={formData.provider} onChange={handleInputChange} placeholder="e.g. Airtel, Jio" className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                      </div>
+                    )}
+
                     {assetCategories.find(c => c.id == formData.category)?.name === 'Mobiles' && (
                       <>
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Primary Phone Number</label>
-                          <input type="text" name="primary_phone_number" value={formData.primary_phone_number} onChange={handleInputChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Primary SIM</label>
+                          <select name="primary_sim" value={formData.primary_sim} onChange={handleSIMChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+                            <option value="">-- No SIM --</option>
+                            {assets.filter(a => a.category_details?.name === 'SIM Card' && a.id !== editingAsset?.id).map(a => (
+                              <option key={a.id} value={a.id}>{a.name} ({a.provider || 'Unknown'})</option>
+                            ))}
+                          </select>
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Secondary Phone Number</label>
-                          <input type="text" name="secondary_phone_number" value={formData.secondary_phone_number} onChange={handleInputChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Secondary SIM</label>
+                          <select name="secondary_sim" value={formData.secondary_sim} onChange={handleSIMChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+                            <option value="">-- No SIM --</option>
+                            {assets.filter(a => a.category_details?.name === 'SIM Card' && a.id !== editingAsset?.id).map(a => (
+                              <option key={a.id} value={a.id}>{a.name} ({a.provider || 'Unknown'})</option>
+                            ))}
+                          </select>
                         </div>
                       </>
                     )}
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Status <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        name="status"
-                        value={formData.status}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                      >
-                        {statusOptions.map(option => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Attach to Parent Asset
-                      </label>
-                      <select
-                        name="parent_asset"
-                        value={formData.parent_asset}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                      >
-                        <option value="">-- No Parent (Standalone) --</option>
-                        {potentialParents.map(a => (
-                          <option key={a.id} value={a.id}>{a.name} ({a.asset_type})</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {!formData.parent_asset && (
                       <>
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -1005,7 +987,6 @@ export default function AssetManagementPage() {
                           </select>
                         </div>
                       </>
-                    )}
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">

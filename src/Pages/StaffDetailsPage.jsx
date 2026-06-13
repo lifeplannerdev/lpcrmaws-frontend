@@ -250,6 +250,18 @@ export default function StaffDetailsPage() {
                     <div>
                       <p className="text-sm font-medium text-slate-500">Location</p>
                       <p className="text-slate-900 font-semibold">{staff.location || 'N/A'}</p>
+                      {staff.responsible_locations?.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs font-medium text-slate-500 mb-1">Responsible Areas:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {staff.responsible_locations.map(loc => (
+                              <span key={loc.id} className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium uppercase tracking-wide">
+                                {loc.name} {loc.branch ? `(${loc.branch})` : ''}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -340,7 +352,15 @@ export default function StaffDetailsPage() {
                             {asset.serial_number && (
                               <p className="text-sm text-slate-600">S/N: <span className="font-medium text-slate-900">{asset.serial_number}</span></p>
                             )}
-                            <p className="text-sm text-slate-600">Status: <span className="font-medium text-emerald-600">{asset.status}</span></p>
+                            {asset.provider && (
+                              <p className="text-sm text-slate-600">Provider: <span className="font-medium text-slate-900">{asset.provider}</span></p>
+                            )}
+                            {asset.primary_sim_details && (
+                              <p className="text-sm text-slate-600">Primary SIM: <span className="font-medium text-slate-900">{asset.primary_sim_details.name}</span></p>
+                            )}
+                            {asset.secondary_sim_details && (
+                              <p className="text-sm text-slate-600">Secondary SIM: <span className="font-medium text-slate-900">{asset.secondary_sim_details.name}</span></p>
+                            )}
                           </div>
                         </div>
                       ))}
