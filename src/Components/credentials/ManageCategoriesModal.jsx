@@ -85,11 +85,11 @@ export function ManageCategoriesModal({ isOpen, onClose, onCategoryUpdate }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative">
+        <div className="shrink-0 p-6 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-3xl z-10">
           <h2 className="text-xl font-bold">Manage Categories</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X size={20}/></button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20}/></button>
         </div>
         
         <div className="p-6 overflow-y-auto flex-1">

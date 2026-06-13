@@ -391,45 +391,48 @@ export default function TaskViewPage() {
 
         {/* ── Completion Modal ──────────────────────────────────────────────── */}
         {showCompletionModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8">
-              <div className="flex items-center gap-3 mb-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative">
+              
+              <div className="shrink-0 p-6 border-b border-gray-100 flex items-center gap-3 bg-white rounded-t-3xl z-10">
                 <CheckCircle className="w-8 h-8 text-emerald-600" />
-                <h2 className="text-3xl font-bold text-slateate-800">Complete Task</h2>
+                <h2 className="text-3xl font-bold text-slate-800">Complete Task</h2>
               </div>
 
-              <p className="text-slate-600 mb-6">
-                Provide details about the completion. This will be saved in the activity history.
-              </p>
-
-              <div className="mb-6">
-                <label className="block text-slate-700 font-semibold mb-2">
-                  Completion Notes <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={completionNotes}
-                  onChange={(e) => setCompletionNotes(e.target.value)}
-                  placeholder="Describe what was completed, challenges faced, results achieved…"
-                  rows="6"
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all resize-none"
-                />
-                <p className="text-xs text-slate-500 mt-2">
-                  Minimum 10 characters. Current: {completionNotes.trim().length}
+              <div className="p-6 overflow-y-auto flex-1">
+                <p className="text-slate-600 mb-6">
+                  Provide details about the completion. This will be saved in the activity history.
                 </p>
+
+                <div className="mb-6">
+                  <label className="block text-slate-700 font-semibold mb-2">
+                    Completion Notes <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={completionNotes}
+                    onChange={(e) => setCompletionNotes(e.target.value)}
+                    placeholder="Describe what was completed, challenges faced, results achieved…"
+                    rows="6"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all resize-none bg-slate-50"
+                  />
+                  <p className="text-xs text-slate-500 mt-2">
+                    Minimum 10 characters. Current: {completionNotes.trim().length}
+                  </p>
+                </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="shrink-0 p-6 border-t border-gray-100 bg-white flex items-center justify-end gap-3 rounded-b-3xl z-10">
                 <button
                   onClick={handleCloseCompletionModal}
                   disabled={submittingCompletion}
-                  className="flex-1 px-6 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2.5 rounded-xl font-medium text-slate-700 hover:bg-slate-50 border border-slate-200 transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSubmitCompletion}
                   disabled={submittingCompletion || completionNotes.trim().length < 10}
-                  className="flex-1 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-200 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {submittingCompletion ? (
                     <><Loader className="w-4 h-4 animate-spin" /> Submitting…</>
@@ -438,6 +441,7 @@ export default function TaskViewPage() {
                   )}
                 </button>
               </div>
+              
             </div>
           </div>
         )}

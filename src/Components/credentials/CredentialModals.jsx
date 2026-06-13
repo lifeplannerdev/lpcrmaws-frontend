@@ -94,13 +94,14 @@ export function AddCredentialModal({ isOpen, onClose, onSuccess, editData }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col relative">
+        <div className="shrink-0 p-6 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-3xl z-10">
           <h2 className="text-xl font-bold">{editData ? 'Edit Credential' : 'Add Credential'}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X size={20}/></button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20}/></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="p-6 overflow-y-auto flex-1 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
             <input required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full px-4 py-2 border rounded-xl" />
@@ -173,13 +174,14 @@ export function AddCredentialModal({ isOpen, onClose, onSuccess, editData }) {
               {rolesList.length === 0 && <p className="text-sm text-gray-500 px-2 py-1">No roles found</p>}
             </div>
           </div>
+          </div>
+          <div className="shrink-0 p-6 border-t border-gray-100 bg-white flex justify-end gap-3 rounded-b-3xl z-10">
+            <button onClick={onClose} type="button" className="px-5 py-2.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-xl font-medium transition-colors">Cancel</button>
+            <button onClick={handleSubmit} disabled={saving} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl flex items-center gap-2 transition-colors disabled:opacity-50">
+              <Save size={18}/> {saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
         </form>
-        <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
-          <button onClick={onClose} type="button" className="px-4 py-2 bg-gray-100 rounded-xl">Cancel</button>
-          <button onClick={handleSubmit} disabled={saving} className="px-4 py-2 bg-indigo-600 text-white rounded-xl flex items-center gap-2">
-            <Save size={18}/> {saving ? 'Saving...' : 'Save'}
-          </button>
-        </div>
       </div>
     </div>
   );
@@ -213,25 +215,27 @@ export function ProposeUpdateModal({ isOpen, onClose, credentialId, onSuccess })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm max-h-[90vh] flex flex-col">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm max-h-[90vh] flex flex-col relative">
+        <div className="shrink-0 p-6 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-3xl z-10">
           <h2 className="text-xl font-bold">Propose New Password</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X size={20}/></button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20}/></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="p-6 overflow-y-auto flex-1 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
             <input required value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-2 border rounded-xl" />
             <p className="text-xs text-gray-500 mt-2">An admin must approve this update before it becomes active.</p>
           </div>
+          </div>
+          <div className="shrink-0 p-6 border-t border-gray-100 bg-white flex justify-end gap-3 rounded-b-3xl z-10">
+            <button onClick={onClose} type="button" className="px-5 py-2.5 bg-gray-50 border border-gray-200 hover:bg-gray-100 font-medium rounded-xl transition-colors">Cancel</button>
+            <button onClick={handleSubmit} disabled={saving} className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50">
+              {saving ? 'Submitting...' : 'Submit Request'}
+            </button>
+          </div>
         </form>
-        <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
-          <button onClick={onClose} type="button" className="px-4 py-2 bg-gray-100 rounded-xl">Cancel</button>
-          <button onClick={handleSubmit} disabled={saving} className="px-4 py-2 bg-indigo-600 text-white rounded-xl">
-            {saving ? 'Submitting...' : 'Submit Request'}
-          </button>
-        </div>
       </div>
     </div>
   );
@@ -252,13 +256,13 @@ export function HistoryModal({ isOpen, onClose, credentialId }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col relative">
+        <div className="shrink-0 p-6 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-3xl z-10">
           <h2 className="text-xl font-bold">Password History</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X size={20}/></button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={20}/></button>
         </div>
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
+        <div className="p-6 overflow-y-auto flex-1">
           {history.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No history available.</p>
           ) : (

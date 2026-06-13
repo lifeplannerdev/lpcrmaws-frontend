@@ -1074,10 +1074,15 @@ export default function AssetManagementPage() {
         )}
         {/* Location Add Modal */}
         {showLocationModal && (
-          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl relative">
-              <button onClick={() => setShowLocationModal(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100"><X className="w-5 h-5 text-gray-500" /></button>
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Add Location</h2>
+          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-hidden">
+            <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] shadow-2xl flex flex-col relative">
+              <div className="shrink-0 bg-white border-b border-gray-100 p-6 flex items-center justify-between rounded-t-2xl z-10">
+                <h2 className="text-xl font-bold text-gray-900">Add Location</h2>
+                <button onClick={() => setShowLocationModal(false)} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Location Name</label>
               <input
                 type="text"
@@ -1098,19 +1103,39 @@ export default function AssetManagementPage() {
                   <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
               </select>
-              <button onClick={handleLocationSubmit} disabled={submitting || !locationFormData.name.trim()} className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors">
-                {submitting ? 'Saving...' : 'Save Location'}
-              </button>
+              </div>
+              <div className="shrink-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-3 rounded-b-2xl z-10">
+                <button
+                  type="button"
+                  onClick={() => setShowLocationModal(false)}
+                  disabled={submitting}
+                  className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleLocationSubmit} 
+                  disabled={submitting || !locationFormData.name.trim()} 
+                  className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                >
+                  {submitting ? 'Saving...' : 'Save Location'}
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {/* Category Add Modal */}
         {showCategoryModal && (
-          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl relative">
-              <button onClick={() => setShowCategoryModal(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100"><X className="w-5 h-5 text-gray-500" /></button>
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Manage Categories</h2>
+          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-hidden">
+            <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] shadow-2xl flex flex-col relative">
+              <div className="shrink-0 bg-white border-b border-gray-100 p-6 flex items-center justify-between rounded-t-2xl z-10">
+                <h2 className="text-xl font-bold text-gray-900">Manage Categories</h2>
+                <button onClick={() => setShowCategoryModal(false)} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto flex-1">
               
               <div className="mb-4">
                 <h3 className="text-sm font-semibold text-gray-500 mb-2">Existing Categories:</h3>
@@ -1128,9 +1153,24 @@ export default function AssetManagementPage() {
                   placeholder="e.g. Keyboards"
                   value={categoryFormData.name}
                   onChange={(e) => setCategoryFormData({ name: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 mb-4"
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 />
-                <button onClick={handleCategorySubmit} disabled={submitting || !categoryFormData.name.trim()} className="w-full py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              </div>
+              </div>
+              <div className="shrink-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-3 rounded-b-2xl z-10">
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(false)}
+                  disabled={submitting}
+                  className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleCategorySubmit} 
+                  disabled={submitting || !categoryFormData.name.trim()} 
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
                   {submitting ? 'Adding...' : 'Add Category'}
                 </button>
               </div>

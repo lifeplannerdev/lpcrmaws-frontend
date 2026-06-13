@@ -156,17 +156,18 @@ export default function RoleManagementPage() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true" onClick={handleCloseModal}>
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-            <div className="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full max-h-[90vh] flex flex-col">
-              <form onSubmit={handleSave}>
-                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                    {editingRole ? 'Edit Role' : 'Create Role'}
-                  </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-hidden">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col relative">
+            <form onSubmit={handleSave} className="flex flex-col h-full overflow-hidden">
+              <div className="shrink-0 p-6 border-b border-gray-100 flex items-center justify-between bg-white rounded-t-3xl z-10">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  {editingRole ? 'Edit Role' : 'Create Role'}
+                </h3>
+                <button type="button" onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 transition-colors">
+                  ✕
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto flex-1">
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700">Role Name</label>
                     <input 
@@ -189,7 +190,7 @@ export default function RoleManagementPage() {
                   
                   <div className="mb-2">
                     <label className="block text-sm font-medium text-gray-700">Permissions</label>
-                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto border border-gray-200 p-2 rounded-md">
+                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 border border-gray-200 p-3 rounded-xl bg-slate-50">
                       {permissions.map(perm => (
                         <div key={perm.id} className="flex items-start">
                           <div className="flex items-center h-5">
@@ -210,17 +211,16 @@ export default function RoleManagementPage() {
                       ))}
                     </div>
                   </div>
-                </div>
-                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                  <button type="submit" className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
-                    Save
-                  </button>
-                  <button type="button" onClick={handleCloseModal} className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
+              </div>
+              <div className="shrink-0 p-6 border-t border-gray-100 bg-white flex items-center justify-end gap-3 rounded-b-3xl z-10">
+                <button type="button" onClick={handleCloseModal} className="px-5 py-2.5 rounded-xl font-medium text-gray-700 hover:bg-gray-50 border border-gray-200 transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors shadow-sm">
+                  Save
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

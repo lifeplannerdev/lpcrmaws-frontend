@@ -753,7 +753,7 @@ export default function FeesManagementPage() {
       {isTemplateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="shrink-0 p-6 border-b border-gray-100 flex items-center justify-between bg-white">
+            <div className="shrink-0 p-6 border-b border-gray-100 flex items-center justify-between bg-white rounded-t-3xl z-10">
               <h2 className="text-2xl font-bold text-gray-900">Create Fee Template</h2>
               <button onClick={() => setIsTemplateModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
@@ -762,14 +762,14 @@ export default function FeesManagementPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
-                    <select value={newTemplateForm.company} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, company: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" required>
+                    <select value={newTemplateForm.company} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, company: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 bg-slate-50" required>
                       <option value="FLAG">FLAG</option>
                       <option value="LP">LP</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Plan Type</label>
-                    <select value={newTemplateForm.plan_type} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, plan_type: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" required>
+                    <select value={newTemplateForm.plan_type} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, plan_type: e.target.value })} className="w-full px-4 py-2 rounded-xl border border-gray-200 bg-slate-50" required>
                       <option value="PACKAGE">Package</option>
                       <option value="ONE_TIME">One Time</option>
                       <option value="INSTALLMENT">Installment</option>
@@ -782,17 +782,17 @@ export default function FeesManagementPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
-                    <input value={newTemplateForm.code} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, code: e.target.value })} placeholder="e.g. FLAG-A1-B2" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" required />
+                    <input value={newTemplateForm.code} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, code: e.target.value })} placeholder="e.g. FLAG-A1-B2" className="w-full px-4 py-2 rounded-xl border border-gray-200 bg-slate-50" required />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                    <input value={newTemplateForm.name} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, name: e.target.value })} placeholder="e.g. FLAG A1-B2 Package" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" required />
+                    <input value={newTemplateForm.name} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, name: e.target.value })} placeholder="e.g. FLAG A1-B2 Package" className="w-full px-4 py-2 rounded-xl border border-gray-200 bg-slate-50" required />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Course Label</label>
-                  <input value={newTemplateForm.course_label} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, course_label: e.target.value })} placeholder="e.g. A1-B2" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
+                  <input value={newTemplateForm.course_label} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, course_label: e.target.value })} placeholder="e.g. A1-B2" className="w-full px-4 py-2 rounded-xl border border-gray-200 bg-slate-50" />
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-2xl border border-gray-100 space-y-4">
@@ -842,14 +842,14 @@ export default function FeesManagementPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                  <textarea value={newTemplateForm.notes} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, notes: e.target.value })} placeholder="Template notes..." className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 min-h-20" />
+                  <textarea value={newTemplateForm.notes} onChange={(e) => setNewTemplateForm({ ...newTemplateForm, notes: e.target.value })} placeholder="Template notes..." className="w-full px-4 py-2 rounded-xl border border-gray-200 bg-slate-50 min-h-20" />
                 </div>
 
               </form>
             </div>
-            <div className="shrink-0 p-6 border-t border-gray-100 bg-white flex items-center justify-end gap-3 rounded-b-3xl">
-              <button type="button" onClick={() => setIsTemplateModalOpen(false)} className="px-5 py-3 rounded-xl font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
-              <button type="submit" form="fee-template-form" disabled={saving} className="px-5 py-3 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-50">
+            <div className="shrink-0 p-6 border-t border-gray-100 bg-white flex items-center justify-end gap-3 rounded-b-3xl z-10">
+              <button type="button" onClick={() => setIsTemplateModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-gray-700 hover:bg-gray-50 border border-gray-200">Cancel</button>
+              <button type="submit" form="fee-template-form" disabled={saving} className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-50">
                 {saving ? 'Creating...' : 'Create Template'}
               </button>
             </div>

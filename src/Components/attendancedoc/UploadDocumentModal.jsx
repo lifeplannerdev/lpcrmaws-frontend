@@ -129,9 +129,9 @@ export default function UploadDocumentModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-hidden">
+      <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] shadow-xl flex flex-col relative">
+        <div className="shrink-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-3xl z-10">
           <h2 className="text-2xl font-bold text-gray-900">Upload Attendance Document</h2>
           <button
             onClick={handleClose}
@@ -141,7 +141,7 @@ export default function UploadDocumentModal({
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto flex-1">
           {errors.submit && (
             <Alert
               type="error"
@@ -234,26 +234,25 @@ export default function UploadDocumentModal({
               )}
             </div>
           </div>
+        </div>
 
-          {/* Form Actions */}
-          <div className="mt-8 flex gap-3 justify-end">
-            <Button
-              onClick={handleClose}
-              disabled={uploading}
-              variant="outline"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={uploading}
-              variant="primary"
-              icon={uploading ? Loader2 : Upload}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600"
-            >
-              {uploading ? 'Uploading...' : 'Upload Document'}
-            </Button>
-          </div>
+        <div className="shrink-0 p-6 border-t border-gray-100 bg-white flex items-center justify-end gap-3 rounded-b-3xl z-10">
+          <Button
+            onClick={handleClose}
+            disabled={uploading}
+            variant="outline"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={uploading}
+            variant="primary"
+            icon={uploading ? Loader2 : Upload}
+            className="bg-gradient-to-r from-indigo-600 to-purple-600"
+          >
+            {uploading ? 'Uploading...' : 'Upload Document'}
+          </Button>
         </div>
       </div>
     </div>

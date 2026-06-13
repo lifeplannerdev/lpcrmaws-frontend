@@ -78,11 +78,11 @@ const BulkUploadModal = ({ onClose, authFetch }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col relative">
 
         {/* ── Header ── */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white flex items-center justify-between">
+        <div className="shrink-0 bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white flex items-center justify-between rounded-t-3xl z-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
               <FileSpreadsheet size={22} />
@@ -98,7 +98,7 @@ const BulkUploadModal = ({ onClose, authFetch }) => {
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-5 overflow-y-auto flex-1">
 
           {/* ── Column reference card ── */}
           <div className="rounded-xl border border-gray-200 overflow-hidden">
@@ -278,9 +278,12 @@ const BulkUploadModal = ({ onClose, authFetch }) => {
             </div>
           )}
 
-          {/* ── Actions ── */}
-          {!result && (
-            <div className="flex gap-3 pt-1">
+        </div>
+
+        {/* ── Fixed Footer Actions ── */}
+        <div className="shrink-0 bg-white border-t border-gray-100 p-6 flex items-center justify-end rounded-b-3xl z-10">
+          {!result ? (
+            <div className="flex gap-3 w-full">
               <button onClick={onClose}
                 className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
                 Cancel
@@ -301,9 +304,7 @@ const BulkUploadModal = ({ onClose, authFetch }) => {
                 )}
               </button>
             </div>
-          )}
-
-          {result && (
+          ) : (
             <button onClick={onClose}
               className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
               Done

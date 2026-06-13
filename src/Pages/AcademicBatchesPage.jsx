@@ -349,10 +349,14 @@ export default function AcademicBatchesPage() {
 
         {/* Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-              <h2 className="text-2xl font-bold mb-6">{editingBatch ? 'Edit Batch' : 'Create Batch'}</h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-hidden">
+            <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] shadow-xl flex flex-col relative">
+              <div className="shrink-0 p-6 border-b border-gray-100 flex items-center justify-between bg-white rounded-t-3xl z-10">
+                <h2 className="text-2xl font-bold">{editingBatch ? 'Edit Batch' : 'Create Batch'}</h2>
+                <button type="button" onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 transition-colors">✕</button>
+              </div>
+              <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                <div className="p-6 overflow-y-auto flex-1 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Batch Name *</label>
                   <input type="text" name="name" required value={formData.name} onChange={handleInputChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="e.g. 2024 Science A" />
@@ -393,9 +397,10 @@ export default function AcademicBatchesPage() {
                     </select>
                   </div>
                 </div>
-                <div className="flex gap-3 justify-end mt-8">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                  <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Save Batch</button>
+                </div>
+                <div className="shrink-0 p-6 border-t border-gray-100 bg-white flex justify-end gap-3 rounded-b-3xl z-10">
+                  <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2.5 text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-xl font-medium transition-colors">Cancel</button>
+                  <button type="submit" className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold transition-colors">Save Batch</button>
                 </div>
               </form>
             </div>
@@ -404,9 +409,9 @@ export default function AcademicBatchesPage() {
 
         {/* Marks Management Modal */}
         {showMarksModal && selectedBatchMarks && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl p-6 max-w-4xl w-full shadow-2xl max-h-[90vh] flex flex-col">
-              <div className="flex justify-between items-center mb-6">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-hidden">
+            <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] shadow-xl flex flex-col relative">
+              <div className="shrink-0 p-6 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-3xl z-10">
                 <h2 className="text-2xl font-bold">Manage Marks: {selectedBatchMarks.name}</h2>
                 <select 
                   value={examType} 
@@ -418,7 +423,7 @@ export default function AcademicBatchesPage() {
                 </select>
               </div>
               
-              <div className="flex-1 overflow-y-auto pr-2">
+              <div className="p-6 overflow-y-auto flex-1">
                 {marksLoading ? (
                   <div className="text-center py-10 text-gray-500">Loading student data...</div>
                 ) : studentsInBatch.length === 0 ? (
@@ -462,9 +467,9 @@ export default function AcademicBatchesPage() {
                 )}
               </div>
               
-              <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setShowMarksModal(false)} className="px-6 py-2.5 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition-colors">Cancel</button>
-                <button type="button" onClick={saveMarks} disabled={marksLoading} className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors flex items-center gap-2">
+              <div className="shrink-0 p-6 border-t border-gray-100 bg-white flex justify-end gap-3 rounded-b-3xl z-10">
+                <button type="button" onClick={() => setShowMarksModal(false)} className="px-6 py-2.5 text-gray-700 hover:bg-gray-50 bg-gray-50 border border-gray-200 rounded-xl font-medium transition-colors">Cancel</button>
+                <button type="button" onClick={saveMarks} disabled={marksLoading} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold transition-colors flex items-center gap-2">
                   {marksLoading ? 'Saving...' : 'Save Marks'}
                 </button>
               </div>

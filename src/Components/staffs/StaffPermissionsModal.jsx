@@ -90,10 +90,10 @@ export default function StaffPermissionsModal({ isOpen, onClose, staffId, curren
   }, {});
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative">
         {/* Header */}
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+        <div className="shrink-0 p-6 border-b border-gray-100 flex items-center justify-between bg-white rounded-t-3xl z-10">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Manage Granular Permissions</h2>
             <p className="text-sm text-gray-500 mt-1">Customize specific access rights for this staff member.</p>
@@ -147,7 +147,7 @@ export default function StaffPermissionsModal({ isOpen, onClose, staffId, curren
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-3 rounded-b-2xl">
+        <div className="shrink-0 p-6 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-3 rounded-b-3xl z-10">
           <button
             onClick={onClose}
             className="px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-200 bg-gray-100 rounded-xl transition-colors"
