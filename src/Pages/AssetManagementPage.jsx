@@ -175,7 +175,7 @@ export default function AssetManagementPage() {
       const params = new URLSearchParams();
       if (companyFilter) params.set('company', companyFilter);
       const token = accessToken || await refreshAccessToken();
-      const response = await fetch(`${API_BASE_URL}/branches/?${params}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`${API_BASE_URL}/hr-branches/?${params}`, { headers: { 'Authorization': `Bearer ${token}` } });
       const data = await response.json();
       setBranches(data.results || data || []);
     } catch (err) { console.error('Error fetching branches:', err); setBranches([]); }
@@ -364,7 +364,7 @@ export default function AssetManagementPage() {
     setSubmitting(true);
     try {
       const token = accessToken || await refreshAccessToken();
-      const response = await fetch(`${API_BASE_URL}/branches/`, {
+      const response = await fetch(`${API_BASE_URL}/hr-branches/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
