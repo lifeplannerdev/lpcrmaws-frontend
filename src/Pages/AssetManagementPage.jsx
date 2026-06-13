@@ -55,6 +55,7 @@ export default function AssetManagementPage() {
     primary_phone_number: '',
     secondary_phone_number: '',
     parent_asset: '',
+    branch: '',
     purchase_date: '',
     notes: '',
   });
@@ -314,6 +315,7 @@ export default function AssetManagementPage() {
         primary_phone_number: '',
         secondary_phone_number: '',
         parent_asset: '',
+        branch: '',
         purchase_date: '',
         notes: '',
       });
@@ -422,6 +424,7 @@ export default function AssetManagementPage() {
       primary_phone_number: asset.primary_phone_number || '',
       secondary_phone_number: asset.secondary_phone_number || '',
       parent_asset: asset.parent_asset || '',
+      branch: asset.branch || '',
       purchase_date: asset.purchase_date || '',
       notes: asset.notes || '',
     });
@@ -507,6 +510,7 @@ export default function AssetManagementPage() {
                     primary_phone_number: '',
                     secondary_phone_number: '',
                     parent_asset: '',
+                    branch: '',
                     purchase_date: '',
                     notes: '',
                   });
@@ -956,6 +960,27 @@ export default function AssetManagementPage() {
                             ))}
                           </select>
                           {errors.assigned_to && <p className="mt-1 text-sm text-red-500">{errors.assigned_to}</p>}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                            Assigned To (Branch)
+                          </label>
+                          <select
+                            name="branch"
+                            value={formData.branch}
+                            onChange={(e) => {
+                              handleInputChange(e);
+                            }}
+                            className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                          >
+                            <option value="">-- Unassigned --</option>
+                            {branches.map(b => (
+                              <option key={b.id} value={b.id}>
+                                {b.name}
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
                         <div>
