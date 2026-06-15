@@ -220,6 +220,18 @@ export default function CredentialsVault() {
             </div>
           </div>
 
+          {cred.web_mail && (
+            <div>
+              <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Web Mail</p>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-sm font-medium text-gray-900">{cred.web_mail}</p>
+                <button onClick={() => handleCopy(cred.web_mail)} className="text-gray-400 hover:text-indigo-600">
+                  <Copy size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
           <div>
             <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Password</p>
             <div className="flex items-center justify-between mt-1 bg-gray-50 p-2 rounded-lg border border-gray-100">

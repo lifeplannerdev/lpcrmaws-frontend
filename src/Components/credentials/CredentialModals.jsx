@@ -4,7 +4,7 @@ import { useApi } from '../../context/ApiContext';
 
 export function AddCredentialModal({ isOpen, onClose, onSuccess, editData }) {
   const { authFetch, apiBaseUrl } = useApi();
-  const [formData, setFormData] = useState({ title: '', username: '', password: '', url: '', notes: '', category: '', shared_users: [], shared_roles: [] });
+  const [formData, setFormData] = useState({ title: '', username: '', web_mail: '', password: '', url: '', notes: '', category: '', shared_users: [], shared_roles: [] });
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState([]);
   const [staffList, setStaffList] = useState([]);
@@ -18,6 +18,7 @@ export function AddCredentialModal({ isOpen, onClose, onSuccess, editData }) {
         setFormData({
           title: editData.title || '',
           username: editData.username || '',
+          web_mail: editData.web_mail || '',
           password: '',
           url: editData.url || '',
           notes: editData.notes || '',
@@ -26,7 +27,7 @@ export function AddCredentialModal({ isOpen, onClose, onSuccess, editData }) {
           shared_roles: editData.shared_roles || []
         });
       } else {
-        setFormData({ title: '', username: '', password: '', url: '', notes: '', category: '', shared_users: [], shared_roles: [] });
+        setFormData({ title: '', username: '', web_mail: '', password: '', url: '', notes: '', category: '', shared_users: [], shared_roles: [] });
       }
     }
   }, [isOpen, editData]);
@@ -109,6 +110,10 @@ export function AddCredentialModal({ isOpen, onClose, onSuccess, editData }) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
             <input value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})} className="w-full px-4 py-2 border rounded-xl" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Web Mail (Optional)</label>
+            <input value={formData.web_mail} onChange={e => setFormData({...formData, web_mail: e.target.value})} className="w-full px-4 py-2 border rounded-xl" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password {editData ? '(Leave blank to keep unchanged)' : ''}</label>
