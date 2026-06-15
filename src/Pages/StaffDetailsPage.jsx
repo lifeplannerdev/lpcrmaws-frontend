@@ -358,10 +358,18 @@ export default function StaffDetailsPage() {
                                     <p className="text-sm text-slate-600">S/N: <span className="font-medium text-slate-900">{asset.serial_number}</span></p>
                                   )}
                                   {asset.primary_sim_details && (
-                                    <p className="text-sm text-slate-600">Primary SIM: <span className="font-medium text-slate-900">{asset.primary_sim_details.name}</span></p>
+                                    <div className="text-sm text-slate-600 border-t border-slate-100 pt-2 mt-2">
+                                      <p className="font-semibold text-slate-800 flex items-center gap-1">Primary SIM</p>
+                                      <p>Number: <span className="font-medium text-slate-900">{asset.primary_sim_details.serial_number || asset.primary_sim_details.name}</span></p>
+                                      {asset.primary_sim_details.provider && <p>Provider: <span className="font-medium text-slate-900">{asset.primary_sim_details.provider}</span></p>}
+                                    </div>
                                   )}
                                   {asset.secondary_sim_details && (
-                                    <p className="text-sm text-slate-600">Secondary SIM: <span className="font-medium text-slate-900">{asset.secondary_sim_details.name}</span></p>
+                                    <div className="text-sm text-slate-600 border-t border-slate-100 pt-2 mt-2">
+                                      <p className="font-semibold text-slate-800 flex items-center gap-1">Secondary SIM</p>
+                                      <p>Number: <span className="font-medium text-slate-900">{asset.secondary_sim_details.serial_number || asset.secondary_sim_details.name}</span></p>
+                                      {asset.secondary_sim_details.provider && <p>Provider: <span className="font-medium text-slate-900">{asset.secondary_sim_details.provider}</span></p>}
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -439,6 +447,51 @@ export default function StaffDetailsPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Space Inventory */}
+                {staff.responsible_locations?.length > 0 && (
+                  <div className="bg-white rounded-3xl shadow-lg p-8 border border-slate-100">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                        <MapPin size={22} className="text-indigo-500" />
+                        Space Inventory
+                      </h3>
+                      <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-sm font-bold">
+                        {staff.responsible_locations.length} Locations
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {staff.responsible_locations.map(loc => {
+                        const assets = loc.assigned_assets || [];
+                        const categoryCounts = assets.reduce((acc, a) => {
+                          const cat = a.category || 'Other';
+                          acc[cat] = (acc[cat] || 0) + 1;
+                          return acc;
+                        }, {});
+                        
+                        return (
+                          <div key={loc.id} className="bg-slate-50 rounded-2xl p-6 border border-slate-100 hover:border-indigo-200 transition-colors">
+                            <h4 className="font-extrabold text-slate-900 text-lg uppercase tracking-wide mb-1">{loc.name} {loc.branch_details ? `(${loc.branch_details.name})` : ''}</h4>
+                            <p className="text-sm text-slate-500 font-medium mb-4">{assets.length} Total Assets</p>
+                            
+                            {assets.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {Object.entries(categoryCounts).map(([cat, count]) => (
+                                  <span key={cat} className="px-3 py-1 bg-white border border-slate-200 text-indigo-700 text-xs font-bold rounded-full uppercase tracking-wider shadow-sm">
+                                    {cat}: {count}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-slate-400 italic">No assets assigned here.</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Asset Timeline */}
