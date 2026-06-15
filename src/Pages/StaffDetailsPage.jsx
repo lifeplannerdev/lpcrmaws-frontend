@@ -379,11 +379,11 @@ export default function StaffDetailsPage() {
                       )}
 
                       {/* Standalone SIMs */}
-                      {staff.assets?.filter(a => a.category_details?.name === 'SIM Card' || a.provider).length > 0 && (
+                      {staff.assets?.filter(a => ['SIM Card', 'SIM'].includes(a.category_details?.name) || a.provider).length > 0 && (
                         <div>
                           <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Standalone SIMs</h4>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {staff.assets.filter(a => a.category_details?.name === 'SIM Card' || a.provider).map(asset => (
+                            {staff.assets.filter(a => ['SIM Card', 'SIM'].includes(a.category_details?.name) || a.provider).map(asset => (
                               <div key={asset.id} className="bg-slate-50 rounded-2xl p-5 border border-slate-100 hover:border-indigo-200 transition-colors">
                                 <div className="flex justify-between items-start mb-3">
                                   <div className="flex items-center gap-3">
@@ -414,11 +414,11 @@ export default function StaffDetailsPage() {
                       )}
 
                       {/* Other Assets */}
-                      {staff.assets?.filter(a => a.category_details?.name !== 'Mobiles' && a.category_details?.name !== 'SIM Card' && !a.provider).length > 0 && (
+                      {staff.assets?.filter(a => a.category_details?.name !== 'Mobiles' && !['SIM Card', 'SIM'].includes(a.category_details?.name) && !a.provider).length > 0 && (
                         <div>
                           <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Other Assets</h4>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {staff.assets.filter(a => a.category_details?.name !== 'Mobiles' && a.category_details?.name !== 'SIM Card' && !a.provider).map(asset => (
+                            {staff.assets.filter(a => a.category_details?.name !== 'Mobiles' && !['SIM Card', 'SIM'].includes(a.category_details?.name) && !a.provider).map(asset => (
                               <div key={asset.id} className="bg-slate-50 rounded-2xl p-5 border border-slate-100 hover:border-indigo-200 transition-colors">
                                 <div className="flex justify-between items-start mb-3">
                                   <div className="flex items-center gap-3">

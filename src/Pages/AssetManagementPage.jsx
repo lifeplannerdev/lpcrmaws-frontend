@@ -905,7 +905,7 @@ export default function AssetManagementPage() {
                       />
                     </div>
 
-                    {assetCategories.find(c => c.id == formData.category)?.name === 'SIM Card' && (
+                    {['SIM Card', 'SIM'].includes(assetCategories.find(c => c.id == formData.category)?.name) && (
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">Telecom Provider</label>
                         <input type="text" name="provider" value={formData.provider} onChange={handleInputChange} placeholder="e.g. Airtel, Jio" className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
@@ -918,7 +918,7 @@ export default function AssetManagementPage() {
                           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Primary SIM</label>
                           <select name="primary_sim" value={formData.primary_sim} onChange={handleSIMChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50">
                             <option value="">-- No SIM --</option>
-                            {assets.filter(a => a.category_details?.name === 'SIM Card' && a.id !== editingAsset?.id).map(a => (
+                            {assets.filter(a => ['SIM Card', 'SIM'].includes(a.category_details?.name) && a.id !== editingAsset?.id).map(a => (
                               <option key={a.id} value={a.id}>{a.name} ({a.provider || 'Unknown'})</option>
                             ))}
                           </select>
@@ -927,7 +927,7 @@ export default function AssetManagementPage() {
                           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Secondary SIM</label>
                           <select name="secondary_sim" value={formData.secondary_sim} onChange={handleSIMChange} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50">
                             <option value="">-- No SIM --</option>
-                            {assets.filter(a => a.category_details?.name === 'SIM Card' && a.id !== editingAsset?.id).map(a => (
+                            {assets.filter(a => ['SIM Card', 'SIM'].includes(a.category_details?.name) && a.id !== editingAsset?.id).map(a => (
                               <option key={a.id} value={a.id}>{a.name} ({a.provider || 'Unknown'})</option>
                             ))}
                           </select>
