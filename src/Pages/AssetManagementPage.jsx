@@ -927,10 +927,7 @@ export default function AssetManagementPage() {
                           <select
                             name="assigned_to"
                             value={formData.assigned_to}
-                            onChange={(e) => {
-                              handleInputChange(e);
-                              if (e.target.value) setFormData(prev => ({ ...prev, assigned_location: '' }));
-                            }}
+                            onChange={handleInputChange}
                             className={`w-full px-4 py-2 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.assigned_to ? 'border-red-500' : 'border-gray-200'}`}
                           >
                             <option value="">-- Unassigned --</option>
@@ -971,10 +968,7 @@ export default function AssetManagementPage() {
                           <select
                             name="assigned_location"
                             value={formData.assigned_location}
-                            onChange={(e) => {
-                              handleInputChange(e);
-                              if (e.target.value) setFormData(prev => ({ ...prev, assigned_to: '' }));
-                            }}
+                            onChange={handleInputChange}
                             className={`w-full px-4 py-2 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.assigned_to ? 'border-red-500' : 'border-gray-200'}`}
                           >
                             <option value="">-- Unassigned --</option>
