@@ -282,6 +282,12 @@ export default function AssetManagementPage() {
           formDataObj.append('assigned_location', '');
       }
 
+      if (formData.branch) {
+          formDataObj.append('branch', formData.branch);
+      } else if (editingAsset && editingAsset.branch) {
+          formDataObj.append('branch', '');
+      }
+
       if (formData.purchase_date) formDataObj.append('purchase_date', formData.purchase_date);
       if (formData.notes) formDataObj.append('notes', formData.notes);
       
@@ -785,33 +791,42 @@ export default function AssetManagementPage() {
 
               <h3 className="text-lg font-semibold mt-8 mb-2 text-indigo-800 border-b pb-2">Assigned People & Personal Assets</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {locations.find(l => l.id === selectedLocationId)?.assigned_staff?.map(emp => (
-                  <div key={emp.id} className="border border-indigo-100 p-4 rounded-xl bg-white shadow-sm">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-inner">
-                        {emp.first_name?.[0] || emp.username?.[0]}
+                {(() => {
+                  const locationPersonalAssets = assets.filter(a => a.assigned_location === selectedLocationId && a.assigned_to);
+                  const occupantUserIds = [...new Set(locationPersonalAssets.map(a => a.assigned_to))];
+
+                  if (occupantUserIds.length === 0) {
+                    return <p className="text-sm text-gray-400 col-span-2">No employees assigned to assets in this location.</p>;
+                  }
+
+                  return occupantUserIds.map(userId => {
+                    // Try to find employee details from the asset itself or the employees state
+                    const sampleAsset = locationPersonalAssets.find(a => a.assigned_to === userId);
+                    const emp = sampleAsset?.assigned_to_details || employees.find(e => e.id === userId) || { id: userId, username: `User #${userId}`, email: '' };
+                    
+                    return (
+                      <div key={emp.id} className="border border-indigo-100 p-4 rounded-xl bg-white shadow-sm">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-inner">
+                            {emp.first_name?.[0] || emp.username?.[0] || '?'}
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900">{emp.first_name ? `${emp.first_name} ${emp.last_name || ''}` : emp.username}</p>
+                            <p className="text-xs text-gray-500">{emp.email}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {locationPersonalAssets.filter(a => a.assigned_to === emp.id).map(a => (
+                            <span key={a.id} className="px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-sm flex flex-col gap-0.5 shadow-sm">
+                              <span className="font-medium text-indigo-900">{a.name}</span>
+                              <span className="text-xs text-indigo-600">{a.category_details?.name} {a.primary_sim_details ? `(${a.primary_sim_details.name})` : ''}</span>
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-gray-900">{emp.first_name ? `${emp.first_name} ${emp.last_name || ''}` : emp.username}</p>
-                        <p className="text-xs text-gray-500">{emp.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {assets.filter(a => a.assigned_to === emp.id).map(a => (
-                        <span key={a.id} className="px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-sm flex flex-col gap-0.5 shadow-sm">
-                          <span className="font-medium text-indigo-900">{a.name}</span>
-                          <span className="text-xs text-indigo-600">{a.category_details?.name} {a.primary_sim_details ? `(${a.primary_sim_details.name})` : ''}</span>
-                        </span>
-                      ))}
-                      {assets.filter(a => a.assigned_to === emp.id).length === 0 && (
-                        <span className="text-xs text-gray-400 italic">No assets assigned</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {locations.find(l => l.id === selectedLocationId)?.assigned_staff?.length === 0 && (
-                  <p className="text-sm text-gray-400 col-span-2">No employees seated in this location.</p>
-                )}
+                    );
+                  });
+                })()}
               </div>
             </div>
           </div>
@@ -949,6 +964,7 @@ export default function AssetManagementPage() {
                             value={formData.branch}
                             onChange={(e) => {
                               handleInputChange(e);
+                              setFormData(prev => ({ ...prev, assigned_location: '' }));
                             }}
                             className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                           >
@@ -961,24 +977,26 @@ export default function AssetManagementPage() {
                           </select>
                         </div>
 
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                            Assigned To (Location)
-                          </label>
-                          <select
-                            name="assigned_location"
-                            value={formData.assigned_location}
-                            onChange={handleInputChange}
-                            className={`w-full px-4 py-2 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.assigned_to ? 'border-red-500' : 'border-gray-200'}`}
-                          >
-                            <option value="">-- Unassigned --</option>
-                            {locations.map(loc => (
-                              <option key={loc.id} value={loc.id}>
-                                {loc.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                        {formData.branch && (
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                              Assigned To (Location)
+                            </label>
+                            <select
+                              name="assigned_location"
+                              value={formData.assigned_location}
+                              onChange={handleInputChange}
+                              className={`w-full px-4 py-2 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${errors.assigned_to ? 'border-red-500' : 'border-gray-200'}`}
+                            >
+                              <option value="">-- Unassigned --</option>
+                              {locations.filter(loc => loc.branch === parseInt(formData.branch)).map(loc => (
+                                <option key={loc.id} value={loc.id}>
+                                  {loc.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </>
 
                     <div>
