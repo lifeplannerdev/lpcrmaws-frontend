@@ -68,8 +68,7 @@ export default function AssetManagementPage() {
   const { hasPermission } = usePermissions();
   const canManageAssets = hasPermission('assets:create') || hasPermission('assets:edit_any') || hasPermission('assets:edit_tenant') || hasPermission('assets:edit_own');
 
-  const { hasPermission } = usePermissions();
-  const canManageAssets = hasPermission('assets:create') || hasPermission('assets:edit_any') || hasPermission('assets:edit_tenant') || hasPermission('assets:edit_own');
+
 
   const assetTypeOptions = ['Mobiles', 'Monitors', 'PC', 'Keyboard', 'Mouse', 'Laptops', 'SIM Card'];
 
@@ -770,7 +769,7 @@ export default function AssetManagementPage() {
               
               <h3 className="text-lg font-semibold mt-4 mb-2 text-indigo-800 border-b pb-2">Room Fixtures & General Assets</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {assets.filter(a => a.assigned_location === selectedLocationId).map(a => (
+                {assets.filter(a => a.assigned_location === selectedLocationId && !a.assigned_to).map(a => (
                   <div key={a.id} className="border border-gray-200 p-4 rounded-xl bg-gray-50 flex justify-between items-center shadow-sm">
                     <div>
                       <p className="font-bold text-gray-900">{a.name}</p>
@@ -779,7 +778,7 @@ export default function AssetManagementPage() {
                     {a.serial_number && <span className="text-xs text-gray-400 font-mono bg-white px-2 py-1 rounded">SN: {a.serial_number}</span>}
                   </div>
                 ))}
-                {assets.filter(a => a.assigned_location === selectedLocationId).length === 0 && (
+                {assets.filter(a => a.assigned_location === selectedLocationId && !a.assigned_to).length === 0 && (
                   <p className="text-sm text-gray-400 col-span-2">No room fixtures assigned to this location.</p>
                 )}
               </div>

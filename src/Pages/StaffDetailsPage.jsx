@@ -331,39 +331,111 @@ export default function StaffDetailsPage() {
                       <p className="text-slate-500 font-medium">No assets currently assigned to this staff member.</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {staff.assets?.map(asset => (
-                        <div key={asset.id} className="bg-slate-50 rounded-2xl p-5 border border-slate-100 hover:border-indigo-200 transition-colors">
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-indigo-500">
-                                {asset.asset_type === 'SIM' || asset.asset_type === 'Mobiles' ? <Smartphone size={20} /> : <Laptop size={20} />}
+                    <div className="space-y-6">
+                      {/* Mobile Phones */}
+                      {staff.assets?.filter(a => a.category_details?.name === 'Mobiles').length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Mobile Phones</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {staff.assets.filter(a => a.category_details?.name === 'Mobiles').map(asset => (
+                              <div key={asset.id} className="bg-slate-50 rounded-2xl p-5 border border-slate-100 hover:border-indigo-200 transition-colors">
+                                <div className="flex justify-between items-start mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-indigo-500">
+                                      <Smartphone size={20} />
+                                    </div>
+                                    <div>
+                                      <h4 className="font-bold text-slate-900">{asset.name}</h4>
+                                      <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{asset.category_details?.name}</p>
+                                    </div>
+                                  </div>
+                                  <span className="bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded-lg text-xs font-bold">
+                                    {asset.company}
+                                  </span>
+                                </div>
+                                <div className="space-y-1">
+                                  {asset.serial_number && (
+                                    <p className="text-sm text-slate-600">S/N: <span className="font-medium text-slate-900">{asset.serial_number}</span></p>
+                                  )}
+                                  {asset.primary_sim_details && (
+                                    <p className="text-sm text-slate-600">Primary SIM: <span className="font-medium text-slate-900">{asset.primary_sim_details.name}</span></p>
+                                  )}
+                                  {asset.secondary_sim_details && (
+                                    <p className="text-sm text-slate-600">Secondary SIM: <span className="font-medium text-slate-900">{asset.secondary_sim_details.name}</span></p>
+                                  )}
+                                </div>
                               </div>
-                              <div>
-                                <h4 className="font-bold text-slate-900">{asset.name}</h4>
-                                <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{asset.asset_type}</p>
-                              </div>
-                            </div>
-                            <span className="bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded-lg text-xs font-bold">
-                              {asset.company}
-                            </span>
-                          </div>
-                          <div className="space-y-1">
-                            {asset.serial_number && (
-                              <p className="text-sm text-slate-600">S/N: <span className="font-medium text-slate-900">{asset.serial_number}</span></p>
-                            )}
-                            {asset.provider && (
-                              <p className="text-sm text-slate-600">Provider: <span className="font-medium text-slate-900">{asset.provider}</span></p>
-                            )}
-                            {asset.primary_sim_details && (
-                              <p className="text-sm text-slate-600">Primary SIM: <span className="font-medium text-slate-900">{asset.primary_sim_details.name}</span></p>
-                            )}
-                            {asset.secondary_sim_details && (
-                              <p className="text-sm text-slate-600">Secondary SIM: <span className="font-medium text-slate-900">{asset.secondary_sim_details.name}</span></p>
-                            )}
+                            ))}
                           </div>
                         </div>
-                      ))}
+                      )}
+
+                      {/* Standalone SIMs */}
+                      {staff.assets?.filter(a => a.category_details?.name === 'SIM Card' || a.provider).length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Standalone SIMs</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {staff.assets.filter(a => a.category_details?.name === 'SIM Card' || a.provider).map(asset => (
+                              <div key={asset.id} className="bg-slate-50 rounded-2xl p-5 border border-slate-100 hover:border-indigo-200 transition-colors">
+                                <div className="flex justify-between items-start mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-indigo-500">
+                                      <Smartphone size={20} />
+                                    </div>
+                                    <div>
+                                      <h4 className="font-bold text-slate-900">{asset.name}</h4>
+                                      <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{asset.category_details?.name || 'SIM Card'}</p>
+                                    </div>
+                                  </div>
+                                  <span className="bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded-lg text-xs font-bold">
+                                    {asset.company}
+                                  </span>
+                                </div>
+                                <div className="space-y-1">
+                                  {asset.provider && (
+                                    <p className="text-sm text-slate-600">Provider: <span className="font-medium text-slate-900">{asset.provider}</span></p>
+                                  )}
+                                  {asset.serial_number && (
+                                    <p className="text-sm text-slate-600">Number: <span className="font-medium text-slate-900">{asset.serial_number}</span></p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Other Assets */}
+                      {staff.assets?.filter(a => a.category_details?.name !== 'Mobiles' && a.category_details?.name !== 'SIM Card' && !a.provider).length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Other Assets</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {staff.assets.filter(a => a.category_details?.name !== 'Mobiles' && a.category_details?.name !== 'SIM Card' && !a.provider).map(asset => (
+                              <div key={asset.id} className="bg-slate-50 rounded-2xl p-5 border border-slate-100 hover:border-indigo-200 transition-colors">
+                                <div className="flex justify-between items-start mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-indigo-500">
+                                      <Laptop size={20} />
+                                    </div>
+                                    <div>
+                                      <h4 className="font-bold text-slate-900">{asset.name}</h4>
+                                      <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{asset.category_details?.name || 'Asset'}</p>
+                                    </div>
+                                  </div>
+                                  <span className="bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded-lg text-xs font-bold">
+                                    {asset.company}
+                                  </span>
+                                </div>
+                                <div className="space-y-1">
+                                  {asset.serial_number && (
+                                    <p className="text-sm text-slate-600">S/N: <span className="font-medium text-slate-900">{asset.serial_number}</span></p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
