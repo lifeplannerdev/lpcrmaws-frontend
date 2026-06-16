@@ -32,8 +32,11 @@ const PERMISSION_OPTIONS = [
   { id: 'credentials:view', label: 'View Credentials', group: 'Credentials' },
   { id: 'credentials:manage', label: 'Manage Credentials', group: 'Credentials' },
   { id: 'credentials:share', label: 'Share Credentials', group: 'Credentials' },
+  { id: 'report_settings:manage', label: 'Manage Report Settings', group: 'Reports' },
+  { id: 'roles:manage', label: 'Manage Roles', group: 'System' },
   { id: 'staff:access_flag', label: 'Cross-Company Access (FLAG)', group: 'System' },
 ];
+
 
 export default function StaffPermissionsModal({ isOpen, onClose, staffId, currentPermissions, onSave, authFetch, apiBaseUrl }) {
   const [permissions, setPermissions] = useState([]);

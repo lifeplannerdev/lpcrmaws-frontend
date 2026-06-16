@@ -19,8 +19,8 @@ export const masterNavigation = [
   { id: "overview", label: "Overview", icon: FileText, path: "/", requiredResource: "dashboard" },
   { id: "leads", label: "Leads", icon: Users, path: "/leads", requiredResource: "leads" },
   { id: "staff", label: "Staff", icon: UserCheck, path: "/staff", requiredResource: "staff" },
-  { id: "myTasks", label: "My Tasks", icon: ListTodo, path: "/mytasks", requiredResource: "tasks" },
-  { id: "allTasks", label: "Tasks", icon: ListTodo, path: "/staff/tasks", requiredResource: "tasks" },
+  { id: "myTasks", label: "My Tasks", icon: ListTodo, path: "/mytasks", requiredResource: "tasks", requiredSpecificPermission: "tasks:read_own" },
+  { id: "allTasks", label: "Tasks", icon: ListTodo, path: "/staff/tasks", requiredResource: "tasks", requiredSpecificPermission: "tasks:read_all" },
   { id: "students", label: "Students", icon: GraduationCap, path: "/students", requiredResource: "students" },
   { id: "fees", label: "Fees", icon: IndianRupee, path: "/fees", requiredResource: "fees" },
   { id: "markAttendance", label: "Mark Attendance", icon: CalendarCheck, path: "/attendance/mark", requiredResource: "attendance" },
@@ -36,9 +36,15 @@ export const masterNavigation = [
   { id: "call", label: "Voxbay", icon: PhoneCall, path: "/call-analytics", requiredResource: "voxbay" },
 ];
 
-export const getFilteredMenu = (hasAnyPermission) => {
+export const getFilteredMenu = (hasAnyPermission, hasPermission) => {
   if (typeof hasAnyPermission !== 'function') return [];
-  return masterNavigation.filter((item) => hasAnyPermission(item.requiredResource));
+  return masterNavigation.filter((item) => {
+    if (!hasAnyPermission(item.requiredResource)) return false;
+    if (item.requiredSpecificPermission && typeof hasPermission === 'function') {
+      return hasPermission(item.requiredSpecificPermission);
+    }
+    return true;
+  });
 };
 
 // Fallback for legacy imports until fully removed

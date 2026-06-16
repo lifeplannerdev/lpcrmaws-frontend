@@ -190,22 +190,37 @@ export default function RoleManagementPage() {
                   
                   <div className="mb-2">
                     <label className="block text-sm font-medium text-gray-700">Permissions</label>
-                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 border border-gray-200 p-3 rounded-xl bg-slate-50">
-                      {permissions.map(perm => (
-                        <div key={perm.id} className="flex items-start">
-                          <div className="flex items-center h-5">
-                            <input
-                              id={`perm-${perm.id}`}
-                              type="checkbox"
-                              checked={formData.permission_ids.includes(perm.id)}
-                              onChange={() => handleTogglePermission(perm.id)}
-                              className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
-                            />
-                          </div>
-                          <div className="ml-2 text-sm">
-                            <label htmlFor={`perm-${perm.id}`} className="font-medium text-gray-700">
-                              {perm.name}
-                            </label>
+                    <div className="mt-2 space-y-4">
+                      {Object.entries(
+                        permissions.reduce((acc, perm) => {
+                          const prefix = perm.name.split(':')[0] || 'other';
+                          const groupName = prefix.charAt(0).toUpperCase() + prefix.slice(1);
+                          if (!acc[groupName]) acc[groupName] = [];
+                          acc[groupName].push(perm);
+                          return acc;
+                        }, {})
+                      ).map(([groupName, groupPerms]) => (
+                        <div key={groupName} className="border border-gray-200 p-4 rounded-xl bg-slate-50">
+                          <h4 className="text-md font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">{groupName}</h4>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            {groupPerms.map(perm => (
+                              <div key={perm.id} className="flex items-start">
+                                <div className="flex items-center h-5">
+                                  <input
+                                    id={`perm-${perm.id}`}
+                                    type="checkbox"
+                                    checked={formData.permission_ids.includes(perm.id)}
+                                    onChange={() => handleTogglePermission(perm.id)}
+                                    className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                                  />
+                                </div>
+                                <div className="ml-2 text-sm">
+                                  <label htmlFor={`perm-${perm.id}`} className="font-medium text-gray-700">
+                                    {perm.name}
+                                  </label>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       ))}

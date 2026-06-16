@@ -13,7 +13,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, accessToken, refreshAccessToken } = useAuth();
-  const { hasAnyPermission } = usePermissions();
+  const { hasAnyPermission, hasPermission } = usePermissions();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -101,7 +101,7 @@ const Navbar = () => {
     }),
   });
 
-  const navItems = getFilteredMenu(hasAnyPermission);
+  const navItems = getFilteredMenu(hasAnyPermission, hasPermission);
   const handleNavigation = (path) => { navigate(path); setIsMobileMenuOpen(false); };
   const handleLogout = async () => { await logout(); navigate('/login'); };
   const handleChatOpen = () => { navigate('/chat'); setIsMobileMenuOpen(false); };
