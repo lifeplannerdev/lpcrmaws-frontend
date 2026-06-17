@@ -42,6 +42,21 @@ export default function StudentFormFields({
     label: `${template.name} ${template.total_amount ? `- ₹${template.total_amount}` : ''}`,
   }));
 
+  const modeOfStudyOptions = [
+    { value: 'OFFLINE', label: 'Offline' },
+    { value: 'ONLINE', label: 'Online' },
+    { value: 'HYBRID', label: 'Hybrid' },
+  ];
+
+  const preferredLevelOptions = [
+    { value: 'A1', label: 'A1' },
+    { value: 'A2', label: 'A2' },
+    { value: 'B1', label: 'B1' },
+    { value: 'B2', label: 'B2' },
+    { value: 'A1-B2', label: 'A1 to B2' },
+    { value: 'OTHER', label: 'Other' },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Basic Information Section */}
@@ -95,6 +110,29 @@ export default function StudentFormFields({
         </div>
       </div>
 
+      {/* Parent Information Section */}
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Parent Information</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            label="Parent Name"
+            name="parent_name"
+            value={formData.parent_name}
+            onChange={onChange}
+            error={errors.parent_name}
+          />
+          <FormField
+            label="Parent Phone"
+            name="parent_phone"
+            type="tel"
+            value={formData.parent_phone}
+            onChange={onChange}
+            icon={Phone}
+            error={errors.parent_phone}
+          />
+        </div>
+      </div>
+
       {/* Academic Information Section */}
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Academic Information</h2>
@@ -135,6 +173,26 @@ export default function StudentFormFields({
             name="student_class"
             value={formData.student_class}
             onChange={onChange}
+          />
+
+          {/* Mode of Study */}
+          <FormField
+            label="Mode of Study"
+            name="mode_of_study"
+            type="select"
+            value={formData.mode_of_study}
+            onChange={onChange}
+            options={modeOfStudyOptions}
+          />
+
+          {/* Preferred Level */}
+          <FormField
+            label="Preferred Level"
+            name="preferred_level"
+            type="select"
+            value={formData.preferred_level}
+            onChange={onChange}
+            options={preferredLevelOptions}
           />
 
           {/* Trainer */}

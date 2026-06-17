@@ -32,10 +32,16 @@ export default function StudentAttendanceRow({
               <span>{student.student_class}</span>
             </div>
             {student.fee_summary && (
-              <div className={`mt-2 inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold ${student.fee_summary.status === 'OVERDUE' ? 'bg-red-50 text-red-700' : 'bg-indigo-50 text-indigo-700'}`}>
+              <div 
+                className={`mt-2 inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold ${student.fee_summary.status === 'OVERDUE' ? 'bg-orange-100 text-orange-800' : 'bg-indigo-50 text-indigo-700'}`}
+                title={student.fee_summary.status === 'OVERDUE' ? 'Fee is OVERDUE. Attendance will require approval.' : ''}
+              >
                 <span>Fee {student.fee_summary.status}</span>
                 <span>•</span>
                 <span>Balance ₹{student.fee_summary.balance_due}</span>
+                {student.fee_summary.status === 'OVERDUE' && (
+                  <span className="ml-1 text-orange-600">(Needs Approval)</span>
+                )}
               </div>
             )}
           </div>

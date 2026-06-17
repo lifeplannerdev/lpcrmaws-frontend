@@ -90,12 +90,16 @@ const StudentCard = React.memo(({ student, onDelete }) => {
             ? `${student.academic_batch_details.name} (${student.academic_batch_details.academic_year})` 
             : `Batch ${student.batch || 'N/A'}`}
         </div>
-        {student.fee_summary && (
+        {student.fee_summary ? (
           <div className="mt-2 inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold">
             <span>Fee</span>
             <span>{student.fee_summary.status}</span>
             <span>•</span>
             <span>₹{student.fee_summary.balance_due}</span>
+          </div>
+        ) : (
+          <div className="mt-2 inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-red-50 text-red-700 text-xs font-semibold">
+            <span>Pending Fee Setup</span>
           </div>
         )}
       </div>

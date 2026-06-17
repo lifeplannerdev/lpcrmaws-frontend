@@ -34,5 +34,9 @@ export const initialStudentFormData = {
   drive_link: '',
   notes: '',
   fee_template: '',
+  parent_name: '',
+  parent_phone: '',
+  mode_of_study: 'OFFLINE',
+  preferred_level: '',
   company: 'LP',
 };

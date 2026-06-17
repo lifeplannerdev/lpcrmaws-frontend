@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
-import { RefreshCw, Plus, Receipt, AlertTriangle, Repeat, IndianRupee } from 'lucide-react';
+import { RefreshCw, Plus, Receipt, AlertTriangle, Repeat, IndianRupee, Download, CheckCircle } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -37,6 +37,7 @@ export default function FeesManagementPage() {
   const [accounts, setAccounts] = useState([]);
   const [students, setStudents] = useState([]);
   const [summaryData, setSummaryData] = useState([]);
+  const [pendingAttendances, setPendingAttendances] = useState([]);
   const [selectedAccountId, setSelectedAccountId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -143,17 +144,22 @@ export default function FeesManagementPage() {
         fetch(`${API_BASE_URL}/fees/summary/?company=${company}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
+        fetch(`${API_BASE_URL}/attendance/detail/?approval_status=PENDING_FEE_APPROVAL&company=${company}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
       const templatesData = await templatesRes.json();
       const accountsData = await accountsRes.json();
       const studentsData = await studentsRes.json();
       const summaryJson = await summaryRes.json();
+      const pendingData = await pendingRes.json();
 
       setTemplates(Array.isArray(templatesData) ? templatesData : []);
       setAccounts(Array.isArray(accountsData) ? accountsData : []);
       setStudents(Array.isArray(studentsData) ? studentsData : []);
       setSummaryData(Array.isArray(summaryJson) ? summaryJson : []);
+      setPendingAttendances(pendingData.results || pendingData || []);
       if (!selectedAccountId && Array.isArray(accountsData) && accountsData.length > 0) {
         setSelectedAccountId(accountsData[0].id);
       }
@@ -351,6 +357,42 @@ export default function FeesManagementPage() {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE_URL}/fees/export/admissions/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Failed to export');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'admissions_report.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Export failed' });
+    }
+  };
+
+  const handleApproveAttendance = async (attendanceId) => {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE_URL}/attendance/${attendanceId}/approve/`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approval_notes: 'Approved from Fees Dashboard' })
+      });
+      if (!res.ok) throw new Error('Approval failed');
+      setMessage({ type: 'success', text: 'Attendance approved' });
+      fetchData();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Approval failed' });
+    }
+  };
+
   const selectedInstallments = selectedAccount?.installments || [];
   const selectedPayments = selectedAccount?.payments || [];
   const selectedAdjustments = selectedAccount?.adjustments || [];
@@ -402,6 +444,14 @@ export default function FeesManagementPage() {
             </select>
             <button
               type="button"
+              onClick={handleExport}
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 shadow-sm"
+            >
+              <Download size={16} />
+              Export
+            </button>
+            <button
+              type="button"
               onClick={fetchData}
               className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 shadow-sm"
             >
@@ -435,6 +485,35 @@ export default function FeesManagementPage() {
             <p className="text-2xl font-bold text-red-600">{currency(dashboardStats.overdueAmount)}</p>
           </div>
         </div>
+
+        {pendingAttendances.length > 0 && (
+          <div className="bg-orange-50 border border-orange-200 rounded-3xl p-6 shadow-sm">
+            <h2 className="text-xl font-bold text-orange-900 mb-4 flex items-center gap-2">
+              <AlertTriangle size={24} /> Pending Attendance Approvals ({pendingAttendances.length})
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {pendingAttendances.map(record => (
+                <div key={record.id} className="bg-white rounded-xl p-4 border border-orange-100 shadow-sm">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="font-semibold text-gray-900">{record.student_name}</div>
+                      <div className="text-xs text-gray-500">{record.trainer_name}</div>
+                    </div>
+                    <div className="text-xs text-orange-600 font-medium bg-orange-100 px-2 py-1 rounded-full">
+                      {record.date}
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handleApproveAttendance(record.id)}
+                    className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-800 rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    <CheckCircle size={16} /> Approve
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <div className="xl:col-span-2 space-y-6">
