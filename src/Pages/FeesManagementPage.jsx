@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
-import { RefreshCw, Plus, Receipt, AlertTriangle, Repeat, IndianRupee, Download, CheckCircle } from 'lucide-react';
+import { RefreshCw, Plus, Receipt, AlertTriangle, Repeat, IndianRupee, Download, CheckCircle, Edit2, Trash2 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -59,6 +59,7 @@ export default function FeesManagementPage() {
     source_label: 'manual',
   });
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [newTemplateForm, setNewTemplateForm] = useState({
     company: user?.company || 'FLAG',
     code: '',
@@ -242,12 +243,13 @@ export default function FeesManagementPage() {
     }
   };
 
-  const handleCreateTemplate = async (e) => {
+  const handleSaveTemplate = async (e) => {
     e.preventDefault();
     setSaving(true);
     setMessage(null);
     try {
-      await postJson(`${API_BASE_URL}/fees/catalog/`, {
+      const token = await getToken();
+      const payload = {
         ...newTemplateForm,
         total_amount: newTemplateForm.total_amount || '0.00',
         registration_amount: newTemplateForm.registration_amount || '0.00',
@@ -256,7 +258,25 @@ export default function FeesManagementPage() {
         installment_count: newTemplateForm.installment_count ? Number(newTemplateForm.installment_count) : null,
         duration_months: newTemplateForm.duration_months ? Number(newTemplateForm.duration_months) : null,
         due_day: newTemplateForm.due_day ? Number(newTemplateForm.due_day) : 10,
-      });
+      };
+
+      let res;
+      if (editingTemplateId) {
+        res = await fetch(`${API_BASE_URL}/fees/catalog/${editingTemplateId}/`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await fetch(`${API_BASE_URL}/fees/catalog/`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      if (!res.ok) throw new Error('Failed to save template');
+
       setNewTemplateForm({
         company: user?.company || 'FLAG',
         code: '',
@@ -272,13 +292,50 @@ export default function FeesManagementPage() {
         due_day: 10,
         notes: '',
       });
+      setEditingTemplateId(null);
       setIsTemplateModalOpen(false);
-      setMessage({ type: 'success', text: 'Template created successfully.' });
+      setMessage({ type: 'success', text: editingTemplateId ? 'Template updated successfully.' : 'Template created successfully.' });
       await fetchData();
     } catch (err) {
       setMessage({ type: 'error', text: err.message });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleEditTemplateClick = (template) => {
+    setNewTemplateForm({
+      company: template.company,
+      code: template.code,
+      name: template.name,
+      plan_type: template.plan_type,
+      course_label: template.course_label || '',
+      total_amount: template.total_amount || '',
+      registration_amount: template.registration_amount || '',
+      installment_amount: template.installment_amount || '',
+      installment_count: template.installment_count || '',
+      monthly_amount: template.monthly_amount || '',
+      duration_months: template.duration_months || '',
+      due_day: template.due_day || 10,
+      notes: template.notes || '',
+    });
+    setEditingTemplateId(template.id);
+    setIsTemplateModalOpen(true);
+  };
+
+  const handleDeleteTemplate = async (templateId) => {
+    if (!window.confirm('Are you sure you want to delete this template?')) return;
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE_URL}/fees/catalog/${templateId}/`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Failed to delete template');
+      setMessage({ type: 'success', text: 'Template deleted successfully.' });
+      await fetchData();
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
     }
   };
 
@@ -527,7 +584,25 @@ export default function FeesManagementPage() {
                   <span className="text-sm text-gray-500">{templates.length} templates</span>
                   {canManageFees && (
                     <button
-                      onClick={() => setIsTemplateModalOpen(true)}
+                      onClick={() => {
+                        setEditingTemplateId(null);
+                        setNewTemplateForm({
+                          company: user?.company || 'FLAG',
+                          code: '',
+                          name: '',
+                          plan_type: 'PACKAGE',
+                          course_label: '',
+                          total_amount: '',
+                          registration_amount: '',
+                          installment_amount: '',
+                          installment_count: '',
+                          monthly_amount: '',
+                          duration_months: '',
+                          due_day: 10,
+                          notes: '',
+                        });
+                        setIsTemplateModalOpen(true);
+                      }}
                       className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-sm font-medium"
                     >
                       <Plus size={16} className="inline mr-1" />
@@ -538,9 +613,19 @@ export default function FeesManagementPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {templates.map((template) => (
-                  <div key={template.id} className="rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-slate-50 p-4">
+                  <div key={template.id} className="rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-slate-50 p-4 relative group">
+                    {canManageFees && (
+                      <div className="absolute top-4 right-4 hidden group-hover:flex items-center gap-2 bg-white/90 px-2 py-1 rounded shadow-sm">
+                        <button onClick={() => handleEditTemplateClick(template)} className="text-gray-500 hover:text-indigo-600 transition-colors">
+                          <Edit2 size={16} />
+                        </button>
+                        <button onClick={() => handleDeleteTemplate(template.id)} className="text-gray-500 hover:text-red-600 transition-colors">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )}
                     <div className="flex items-start justify-between">
-                      <div>
+                      <div className="pr-12">
                         <p className="text-sm text-gray-500">{template.code}</p>
                         <h3 className="font-semibold text-gray-900">{template.name}</h3>
                         <p className="text-sm text-gray-500 mt-1">{template.plan_type} {template.course_label ? `• ${template.course_label}` : ''}</p>
@@ -833,11 +918,11 @@ export default function FeesManagementPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
             <div className="shrink-0 p-6 border-b border-gray-100 flex items-center justify-between bg-white rounded-t-3xl z-10">
-              <h2 className="text-2xl font-bold text-gray-900">Create Fee Template</h2>
+              <h2 className="text-2xl font-bold text-gray-900">{editingTemplateId ? 'Edit Fee Template' : 'Create Fee Template'}</h2>
               <button onClick={() => setIsTemplateModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <div className="p-6 overflow-y-auto flex-1">
-              <form onSubmit={handleCreateTemplate} className="space-y-4" id="fee-template-form">
+              <form onSubmit={handleSaveTemplate} className="space-y-4" id="fee-template-form">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
@@ -929,7 +1014,7 @@ export default function FeesManagementPage() {
             <div className="shrink-0 p-6 border-t border-gray-100 bg-white flex items-center justify-end gap-3 rounded-b-3xl z-10">
               <button type="button" onClick={() => setIsTemplateModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-gray-700 hover:bg-gray-50 border border-gray-200">Cancel</button>
               <button type="submit" form="fee-template-form" disabled={saving} className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-50">
-                {saving ? 'Creating...' : 'Create Template'}
+                {saving ? 'Saving...' : editingTemplateId ? 'Update Template' : 'Create Template'}
               </button>
             </div>
           </div>
