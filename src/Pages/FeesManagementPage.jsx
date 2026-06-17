@@ -75,6 +75,7 @@ export default function FeesManagementPage() {
     due_day: 10,
     notes: '',
   });
+  const [editingEntity, setEditingEntity] = useState(null);
 
   const canManageFees = hasPermission('fees:edit_any') || hasPermission('fees:edit_tenant');
   const canRestructureFees = canManageFees;
@@ -207,6 +208,81 @@ export default function FeesManagementPage() {
       throw new Error(data.detail || 'Request failed');
     }
     return data;
+  };
+
+  const patchJson = async (url, body) => {
+    const token = await getToken();
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || 'Request failed');
+    return data;
+  };
+
+  const fetchDelete = async (url) => {
+    const token = await getToken();
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.detail || 'Delete failed');
+    }
+  };
+
+  const handleDeleteEntity = async (type, accountId, id) => {
+    if (!window.confirm('Are you sure you want to delete this record? This action cannot be undone.')) return;
+    try {
+      if (type === 'ACCOUNT') {
+        await fetchDelete(`${API_BASE_URL}/fees/accounts/${accountId}/`);
+        setSelectedAccountId(null);
+      } else if (type === 'INSTALLMENT') {
+        await fetchDelete(`${API_BASE_URL}/fees/accounts/${accountId}/installments/${id}/`);
+      } else if (type === 'PAYMENT') {
+        await fetchDelete(`${API_BASE_URL}/fees/accounts/${accountId}/payments/${id}/`);
+      }
+      setMessage({ type: 'success', text: `${type} deleted successfully.` });
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: 'error', text: err.message });
+    }
+  };
+
+  const handleEditEntity = (type, entity) => {
+    setEditingEntity({ type, data: { ...entity } });
+  };
+
+  const handleSaveEditEntity = async (e) => {
+    e.preventDefault();
+    if (!editingEntity) return;
+    setSaving(true);
+    try {
+      let url = '';
+      if (editingEntity.type === 'ACCOUNT') {
+        url = `${API_BASE_URL}/fees/accounts/${editingEntity.data.id}/`;
+      } else if (editingEntity.type === 'INSTALLMENT') {
+        url = `${API_BASE_URL}/fees/accounts/${selectedAccountId}/installments/${editingEntity.data.id}/`;
+      } else if (editingEntity.type === 'PAYMENT') {
+        url = `${API_BASE_URL}/fees/accounts/${selectedAccountId}/payments/${editingEntity.data.id}/`;
+      }
+      await patchJson(url, editingEntity.data);
+      setMessage({ type: 'success', text: `${editingEntity.type} updated successfully.` });
+      setEditingEntity(null);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCreateAccount = async (e) => {
@@ -351,9 +427,9 @@ export default function FeesManagementPage() {
 
   const handleRestructureTemplateChange = (e) => {
     const templateId = e.target.value;
-    if (!templateId) {
+    if (!templateId || templateId === 'custom') {
       applyTemplateToFeeForm(null, setRestructureForm);
-      setRestructureForm((prev) => ({ ...prev, template_id: '' }));
+      setRestructureForm((prev) => ({ ...prev, template_id: '', plan_type: 'CUSTOM' }));
       return;
     }
     const template = templates.find((item) => String(item.id) === String(templateId));
@@ -676,6 +752,7 @@ export default function FeesManagementPage() {
                         <th className="px-4 py-3">Status</th>
                         <th className="px-4 py-3">Balance</th>
                         <th className="px-4 py-3">Overdue</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
@@ -698,6 +775,18 @@ export default function FeesManagementPage() {
                           </td>
                           <td className="px-4 py-4 font-semibold text-indigo-700">{currency(account.balance_due)}</td>
                           <td className="px-4 py-4 font-semibold text-red-600">{currency(account.overdue_amount)}</td>
+                          <td className="px-4 py-4 text-right">
+                            {canManageFees && (
+                              <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                                <button onClick={() => handleEditEntity('ACCOUNT', account)} className="p-1.5 text-gray-400 hover:text-indigo-600 rounded bg-white shadow-sm border border-gray-200">
+                                  <Edit2 size={14} />
+                                </button>
+                                <button onClick={() => handleDeleteEntity('ACCOUNT', account.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded bg-white shadow-sm border border-gray-200">
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -814,15 +903,10 @@ export default function FeesManagementPage() {
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">Restructure Plan</h3>
                     <form className="space-y-3" onSubmit={handleRestructureSubmit}>
-                      <div className="grid grid-cols-2 gap-3">
-                        <select value={restructureForm.plan_type} onChange={(e) => setRestructureForm((p) => ({ ...p, plan_type: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
-                          <option value="INSTALLMENT">Installment</option>
-                          <option value="MONTHLY">Monthly</option>
-                          <option value="CUSTOM">Custom</option>
-                          <option value="ONE_TIME">One Time</option>
-                        </select>
-                        <select value={restructureForm.template_id} onChange={handleRestructureTemplateChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
-                          <option value="">Choose template</option>
+                      <div className="grid grid-cols-1 gap-3">
+                        <select value={restructureForm.template_id || (restructureForm.plan_type === 'CUSTOM' ? 'custom' : '')} onChange={handleRestructureTemplateChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
+                          <option value="">Choose template...</option>
+                          <option value="custom">Custom (No Template)</option>
                           {templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
                         </select>
                       </div>
@@ -859,9 +943,21 @@ export default function FeesManagementPage() {
                               <div className="font-medium text-gray-900">#{installment.sequence_number} {installment.label}</div>
                               <div className="text-xs text-gray-500">{installment.due_date} • {installment.status}</div>
                             </div>
-                            <div className="text-right">
-                              <div className="text-sm font-semibold text-gray-900">{currency(installment.scheduled_amount)}</div>
-                              <div className="text-xs text-gray-500">{currency(installment.balance_amount)} left</div>
+                            <div className="text-right flex flex-col items-end gap-2">
+                              <div>
+                                <div className="text-sm font-semibold text-gray-900">{currency(installment.scheduled_amount)}</div>
+                                <div className="text-xs text-gray-500">{currency(installment.balance_amount)} left</div>
+                              </div>
+                              {canManageFees && (
+                                <div className="flex items-center gap-2">
+                                  <button onClick={() => handleEditEntity('INSTALLMENT', installment)} className="p-1 text-gray-400 hover:text-indigo-600 rounded bg-white border border-gray-200">
+                                    <Edit2 size={14} />
+                                  </button>
+                                  <button onClick={() => handleDeleteEntity('INSTALLMENT', selectedAccount.id, installment.id)} className="p-1 text-gray-400 hover:text-red-600 rounded bg-white border border-gray-200">
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -881,7 +977,19 @@ export default function FeesManagementPage() {
                               <div className="font-medium text-gray-900">{payment.receipt_number}</div>
                               <div className="text-xs text-gray-500">{payment.payment_method} • {new Date(payment.payment_date).toLocaleString()}</div>
                             </div>
-                            <div className="font-bold text-green-700">{currency(payment.amount)}</div>
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="font-bold text-green-700">{currency(payment.amount)}</div>
+                              {canManageFees && (
+                                <div className="flex items-center gap-2">
+                                  <button onClick={() => handleEditEntity('PAYMENT', payment)} className="p-1 text-gray-400 hover:text-indigo-600 rounded bg-gray-50 border border-gray-200">
+                                    <Edit2 size={14} />
+                                  </button>
+                                  <button onClick={() => handleDeleteEntity('PAYMENT', selectedAccount.id, payment.id)} className="p-1 text-gray-400 hover:text-red-600 rounded bg-gray-50 border border-gray-200">
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -1017,6 +1125,70 @@ export default function FeesManagementPage() {
                 {saving ? 'Saving...' : editingTemplateId ? 'Update Template' : 'Create Template'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {editingEntity && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="mb-4 text-xl font-bold text-gray-900">
+              Edit {editingEntity.type}
+            </h2>
+            <form onSubmit={handleSaveEditEntity} className="space-y-4">
+              {editingEntity.type === 'ACCOUNT' && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Total Due</label>
+                    <input value={editingEntity.data.total_due} onChange={(e) => setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, total_due: e.target.value } })} className="w-full mt-1 px-4 py-2 rounded-xl border border-gray-200" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Registration Amount</label>
+                    <input value={editingEntity.data.registration_amount} onChange={(e) => setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, registration_amount: e.target.value } })} className="w-full mt-1 px-4 py-2 rounded-xl border border-gray-200" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Status</label>
+                    <select value={editingEntity.data.status} onChange={(e) => setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, status: e.target.value } })} className="w-full mt-1 px-4 py-2 rounded-xl border border-gray-200">
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="COMPLETED">COMPLETED</option>
+                      <option value="DROPPED">DROPPED</option>
+                      <option value="PARTIAL">PARTIAL</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {editingEntity.type === 'INSTALLMENT' && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Scheduled Amount</label>
+                    <input value={editingEntity.data.scheduled_amount} onChange={(e) => setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, scheduled_amount: e.target.value } })} className="w-full mt-1 px-4 py-2 rounded-xl border border-gray-200" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Due Date</label>
+                    <input type="date" value={editingEntity.data.due_date} onChange={(e) => setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, due_date: e.target.value } })} className="w-full mt-1 px-4 py-2 rounded-xl border border-gray-200" />
+                  </div>
+                </>
+              )}
+
+              {editingEntity.type === 'PAYMENT' && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Amount</label>
+                    <input value={editingEntity.data.amount} onChange={(e) => setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, amount: e.target.value } })} className="w-full mt-1 px-4 py-2 rounded-xl border border-gray-200" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Payment Date</label>
+                    <input type="datetime-local" value={editingEntity.data.payment_date?.slice(0, 16) || ''} onChange={(e) => setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, payment_date: e.target.value } })} className="w-full mt-1 px-4 py-2 rounded-xl border border-gray-200" />
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" onClick={() => setEditingEntity(null)} className="px-4 py-2 rounded-xl bg-gray-100 font-semibold text-gray-700">Cancel</button>
+                <button type="submit" disabled={saving} className="px-4 py-2 rounded-xl bg-purple-600 font-semibold text-white">Save Changes</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
