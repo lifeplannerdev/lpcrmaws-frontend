@@ -131,7 +131,7 @@ export default function FeesManagementPage() {
       const token = await getToken();
       if (!token) return;
 
-      const [templatesRes, accountsRes, studentsRes, summaryRes] = await Promise.all([
+      const [templatesRes, accountsRes, studentsRes, summaryRes, pendingRes] = await Promise.all([
         fetch(`${API_BASE_URL}/fees/catalog/?company=${company}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
