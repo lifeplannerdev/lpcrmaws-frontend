@@ -43,7 +43,6 @@ export default function FeesManagementPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [search, setSearch] = useState('');
-  const [company, setCompany] = useState(user?.company || 'FLAG');
   const [paymentForm, setPaymentForm] = useState(emptyPayment);
   const [restructureForm, setRestructureForm] = useState(emptyRestructure);
   const [createForm, setCreateForm] = useState({
@@ -136,19 +135,19 @@ export default function FeesManagementPage() {
       if (!token) return;
 
       const [templatesRes, accountsRes, studentsRes, summaryRes, pendingRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/fees/catalog/?company=${company}`, {
+        fetch(`${API_BASE_URL}/fees/catalog/`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`${API_BASE_URL}/fees/accounts/?company=${company}${search ? `&search=${encodeURIComponent(search)}` : ''}`, {
+        fetch(`${API_BASE_URL}/fees/accounts/?${search ? `search=${encodeURIComponent(search)}` : ''}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`${API_BASE_URL}/fees/students/?company=${company}`, {
+        fetch(`${API_BASE_URL}/fees/students/`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`${API_BASE_URL}/fees/summary/?company=${company}`, {
+        fetch(`${API_BASE_URL}/fees/summary/`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`${API_BASE_URL}/attendance/detail/?approval_status=PENDING_FEE_APPROVAL&company=${company}`, {
+        fetch(`${API_BASE_URL}/attendance/detail/?approval_status=PENDING_FEE_APPROVAL`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -193,7 +192,7 @@ export default function FeesManagementPage() {
       fetchData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [company, search, canViewFees]);
+  }, [search, canViewFees]);
 
   const postJson = async (url, body) => {
     const token = await getToken();
@@ -294,7 +293,6 @@ export default function FeesManagementPage() {
     try {
       await postJson(`${API_BASE_URL}/fees/accounts/`, {
         ...createForm,
-        company,
         student: Number(createForm.student),
         template: createForm.template ? Number(createForm.template) : null,
         total_due: createForm.total_due ? createForm.total_due : '0.00',
@@ -569,14 +567,6 @@ export default function FeesManagementPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <select
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              className="px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 shadow-sm"
-            >
-              <option value="FLAG">FLAG</option>
-              <option value="LP">LP</option>
-            </select>
             <button
               type="button"
               onClick={handleExport}
