@@ -59,6 +59,8 @@ export default function FeesManagementPage() {
     source_label: 'manual',
   });
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('recordPayment');
   const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [newTemplateForm, setNewTemplateForm] = useState({
     company: user?.company || 'FLAG',
@@ -648,9 +650,8 @@ export default function FeesManagementPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2 space-y-6">
-            <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
+        {/* Fee Catalog Section */}
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6 mb-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">Fee Catalog</h2>
@@ -719,19 +720,34 @@ export default function FeesManagementPage() {
                   </div>
                 ))}
               </div>
-            </div>
+        </div>
 
+        {/* Master Detail Section */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Left Column (Master - Fee Accounts) */}
+          <div className="xl:col-span-1 space-y-6">
             <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">Fee Accounts</h2>
-                  <p className="text-sm text-gray-500">Balance, overdue, and plan status by student.</p>
+              <div className="flex flex-col gap-4 mb-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Fee Accounts</h2>
+                    <p className="text-sm text-gray-500">Select to view details</p>
+                  </div>
+                  {canManageFees && (
+                    <button
+                      onClick={() => setIsCreateModalOpen(true)}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-sm font-medium"
+                    >
+                      <Plus size={16} className="inline mr-1" />
+                      New
+                    </button>
+                  )}
                 </div>
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search student or plan..."
-                  className="w-full md:w-80 px-4 py-3 rounded-xl border border-gray-200 bg-slate-50"
+                  className="w-full px-4 py-2 rounded-xl border border-gray-200 bg-slate-50 text-sm"
                 />
               </div>
 
@@ -796,53 +812,14 @@ export default function FeesManagementPage() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Create Fee Account</h2>
-              <form className="space-y-3" onSubmit={handleCreateAccount}>
-                <select value={createForm.student} onChange={(e) => setCreateForm((p) => ({ ...p, student: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
-                  <option value="">Select student</option>
-                  {students.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name} {s.branch_name ? `(${s.branch_name})` : ''}</option>
-                  ))}
-                </select>
-                <select value={createForm.template} onChange={handleCreateTemplateChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
-                  <option value="">Select template</option>
-                  {templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
-                </select>
-                <input value={createForm.plan_name} onChange={(e) => setCreateForm((p) => ({ ...p, plan_name: e.target.value }))} placeholder="Plan name" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
-                <select value={createForm.plan_type} onChange={(e) => setCreateForm((p) => ({ ...p, plan_type: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
-                  <option value="CUSTOM">Custom</option>
-                  <option value="ONE_TIME">One Time</option>
-                  <option value="INSTALLMENT">Installment</option>
-                  <option value="MONTHLY">Monthly</option>
-                  <option value="PACKAGE">Package</option>
-                </select>
-                <div className="grid grid-cols-2 gap-3">
-                  <input value={createForm.total_due} onChange={(e) => setCreateForm((p) => ({ ...p, total_due: e.target.value }))} placeholder="Total due" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
-                  <input value={createForm.registration_amount} onChange={(e) => setCreateForm((p) => ({ ...p, registration_amount: e.target.value }))} placeholder="Registration" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
-                </div>
-                <input value={createForm.plan_code} onChange={(e) => setCreateForm((p) => ({ ...p, plan_code: e.target.value }))} placeholder="Plan code" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
-                <input value={createForm.due_day} onChange={(e) => setCreateForm((p) => ({ ...p, due_day: e.target.value }))} placeholder="Due day" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
-                <textarea value={createForm.notes} onChange={(e) => setCreateForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 min-h-24" />
-                {selectedCreateTemplate ? (
-                  <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
-                    Template selected: <span className="font-semibold">{selectedCreateTemplate.name}</span>. Standard fields are auto-filled; switch to Custom to override.
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                    No template selected yet. Choose one from the catalog to auto-fill the fee plan.
-                  </div>
-                )}
-                <button disabled={saving || !canManageFees} type="submit" className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold disabled:opacity-50">
-                  <Plus size={16} />
-                  Create Account
-                </button>
-              </form>
-            </div>
+          {/* Right Column (Detail - Selected Account) */}
+          <div className="xl:col-span-2 space-y-6">
 
-            <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Selected Account</h2>
+
+            <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6 min-h-[500px]">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">Selected Account Details</h2>
+              </div>
               {!selectedAccount ? (
                 <p className="text-gray-500">Select an account to view balance, payment history, and restructure controls.</p>
               ) : (
@@ -870,14 +847,23 @@ export default function FeesManagementPage() {
                     </div>
                   </div>
 
+                  <div className="flex flex-wrap border-b border-gray-200 mb-6 gap-2">
+                    <button onClick={() => setActiveTab('recordPayment')} className={`px-4 py-2 font-medium text-sm border-b-2 ${activeTab === 'recordPayment' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Record Payment</button>
+                    <button onClick={() => setActiveTab('restructure')} className={`px-4 py-2 font-medium text-sm border-b-2 ${activeTab === 'restructure' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Restructure</button>
+                    <button onClick={() => setActiveTab('installments')} className={`px-4 py-2 font-medium text-sm border-b-2 ${activeTab === 'installments' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Installments</button>
+                    <button onClick={() => setActiveTab('payments')} className={`px-4 py-2 font-medium text-sm border-b-2 ${activeTab === 'payments' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Payments</button>
+                    <button onClick={() => setActiveTab('adjustments')} className={`px-4 py-2 font-medium text-sm border-b-2 ${activeTab === 'adjustments' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Adjustments</button>
+                  </div>
+
+                  {activeTab === 'recordPayment' && (
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Record Payment</h3>
+                    <h3 className="font-semibold text-gray-900 mb-4 hidden">Record Payment</h3>
                     <form className="space-y-3" onSubmit={handlePaymentSubmit}>
                       <div className="grid grid-cols-2 gap-3">
                         <input value={paymentForm.amount} onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))} placeholder="Amount" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
                         <select value={paymentForm.installment} onChange={(e) => setPaymentForm((p) => ({ ...p, installment: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
                           <option value="">No installment</option>
-                          {selectedInstallments.map((item) => <option key={item.id} value={item.id}>#{item.sequence_number} - {currency(item.balance_amount)} left</option>)}
+                          {selectedInstallments.map((item) => <option key={item.id} value={item.id}>#{item.sequence_number} {item.label ? `- ${item.label}` : ''} - {currency(item.balance_amount)} left</option>)}
                         </select>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
@@ -900,8 +886,10 @@ export default function FeesManagementPage() {
                     </form>
                   </div>
 
+                  )}
+                  {activeTab === 'restructure' && (
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Restructure Plan</h3>
+                    <h3 className="font-semibold text-gray-900 mb-4 hidden">Restructure Plan</h3>
                     <form className="space-y-3" onSubmit={handleRestructureSubmit}>
                       <div className="grid grid-cols-1 gap-3">
                         <select value={restructureForm.template_id || (restructureForm.plan_type === 'CUSTOM' ? 'custom' : '')} onChange={handleRestructureTemplateChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
@@ -931,8 +919,10 @@ export default function FeesManagementPage() {
                     </form>
                   </div>
 
+                  )}
+                  {activeTab === 'installments' && (
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Installments</h3>
+                    <h3 className="font-semibold text-gray-900 mb-4 hidden">Installments</h3>
                     <div className="space-y-2">
                       {selectedInstallments.length === 0 ? (
                         <p className="text-sm text-gray-500">No installments configured.</p>
@@ -965,8 +955,10 @@ export default function FeesManagementPage() {
                     </div>
                   </div>
 
+                  )}
+                  {activeTab === 'payments' && (
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Payments</h3>
+                    <h3 className="font-semibold text-gray-900 mb-4 hidden">Payments</h3>
                     <div className="space-y-2">
                       {selectedPayments.length === 0 ? (
                         <p className="text-sm text-gray-500">No payments recorded.</p>
@@ -996,8 +988,10 @@ export default function FeesManagementPage() {
                     </div>
                   </div>
 
+                  )}
+                  {activeTab === 'adjustments' && (
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Adjustments</h3>
+                    <h3 className="font-semibold text-gray-900 mb-4 hidden">Adjustments</h3>
                     <div className="space-y-2">
                       {selectedAdjustments.length === 0 ? (
                         <p className="text-sm text-gray-500">No adjustments recorded.</p>
@@ -1014,6 +1008,7 @@ export default function FeesManagementPage() {
                       ))}
                     </div>
                   </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1022,7 +1017,62 @@ export default function FeesManagementPage() {
       </div>
 
       {/* Template Creation Modal */}
-      {isTemplateModalOpen && (
+              {isCreateModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+              <div className="shrink-0 p-6 border-b border-gray-100 flex items-center justify-between bg-white rounded-t-3xl z-10">
+                <h2 className="text-2xl font-bold text-gray-900">Create Fee Account</h2>
+                <button onClick={() => setIsCreateModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+              <div className="p-6 overflow-y-auto flex-1">
+                <form className="space-y-4" onSubmit={handleCreateAccount} id="create-fee-form">
+                  <select value={createForm.student} onChange={(e) => setCreateForm((p) => ({ ...p, student: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
+                    <option value="">Select student</option>
+                    {students.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name} {s.branch_name ? `(${s.branch_name})` : ''}</option>
+                    ))}
+                  </select>
+                  <select value={createForm.template} onChange={handleCreateTemplateChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
+                    <option value="">Select template</option>
+                    {templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
+                  </select>
+                  <input value={createForm.plan_name} onChange={(e) => setCreateForm((p) => ({ ...p, plan_name: e.target.value }))} placeholder="Plan name" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
+                  <select value={createForm.plan_type} onChange={(e) => setCreateForm((p) => ({ ...p, plan_type: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
+                    <option value="CUSTOM">Custom</option>
+                    <option value="ONE_TIME">One Time</option>
+                    <option value="INSTALLMENT">Installment</option>
+                    <option value="MONTHLY">Monthly</option>
+                    <option value="PACKAGE">Package</option>
+                  </select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input value={createForm.total_due} onChange={(e) => setCreateForm((p) => ({ ...p, total_due: e.target.value }))} placeholder="Total due" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
+                    <input value={createForm.registration_amount} onChange={(e) => setCreateForm((p) => ({ ...p, registration_amount: e.target.value }))} placeholder="Registration" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
+                  </div>
+                  <input value={createForm.plan_code} onChange={(e) => setCreateForm((p) => ({ ...p, plan_code: e.target.value }))} placeholder="Plan code" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
+                  <input value={createForm.due_day} onChange={(e) => setCreateForm((p) => ({ ...p, due_day: e.target.value }))} placeholder="Due day" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
+                  <textarea value={createForm.notes} onChange={(e) => setCreateForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 min-h-24" />
+                  {selectedCreateTemplate ? (
+                    <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
+                      Template selected: <span className="font-semibold">{selectedCreateTemplate.name}</span>. Standard fields are auto-filled; switch to Custom to override.
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                      No template selected yet. Choose one from the catalog to auto-fill the fee plan.
+                    </div>
+                  )}
+                </form>
+              </div>
+              <div className="shrink-0 p-6 border-t border-gray-100 bg-white flex items-center justify-end gap-3 rounded-b-3xl z-10">
+                <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-gray-700 hover:bg-gray-50 border border-gray-200">Cancel</button>
+                <button type="submit" form="create-fee-form" disabled={saving || !canManageFees} className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-50">
+                  {saving ? 'Creating...' : 'Create Account'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isTemplateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
             <div className="shrink-0 p-6 border-b border-gray-100 flex items-center justify-between bg-white rounded-t-3xl z-10">
