@@ -60,11 +60,13 @@ export default function TeamMemberSelector({
     ).join(' ');
   };
 
-  const getRoleInfo = (role) =>
-    roleConfig[role] || {
+  const getRoleInfo = (role) => {
+    if (!role) return { label: 'Unknown Role', color: 'bg-gray-100 text-gray-700' };
+    return roleConfig[role] || {
       label: role.replace(/_/g, ' '),
       color: 'bg-gray-100 text-gray-700',
     };
+  };
 
   // Search filter
   const filteredMembers = teamMembers.filter((member) => {

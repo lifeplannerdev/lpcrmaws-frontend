@@ -35,7 +35,7 @@ export default function ReportTimingSettingsPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/staffs/`, {
+      const res = await axios.get(`${API_BASE_URL}/staffs/?is_active=true`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       setUsers(res.data.results || res.data || []);

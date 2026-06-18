@@ -107,7 +107,7 @@ export default function ReportsPage() {
   const fetchEmployees = async () => {
     if (!accessToken) return;
     try {
-      const res = await axios.get(`${API_BASE}/staffs/`, {
+      const res = await axios.get(`${API_BASE}/staffs/?is_active=true`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       setEmployees(res.data.results || res.data || []);

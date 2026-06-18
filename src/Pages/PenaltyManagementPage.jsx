@@ -106,8 +106,8 @@ export default function PenaltyManagementPage() {
   // Fetch all employees (handle pagination)
   const fetchEmployees = async () => {
     try {
-      console.log('🔍 Fetching employees from:', `${API_BASE_URL}/staffs/`);
-      const data = await fetchWithAuth(`${API_BASE_URL}/staffs/`);
+      console.log('🔍 Fetching employees from:', `${API_BASE_URL}/staffs/?is_active=true`);
+      const data = await fetchWithAuth(`${API_BASE_URL}/staffs/?is_active=true`);
       
       console.log('📦 Raw API response:', data);
       

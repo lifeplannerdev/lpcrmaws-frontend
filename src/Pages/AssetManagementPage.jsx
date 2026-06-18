@@ -120,7 +120,7 @@ export default function AssetManagementPage() {
   const fetchEmployees = async () => {
     try {
       const token = accessToken || await refreshAccessToken();
-      const response = await fetch(`${API_BASE_URL}/staffs/`, {
+      const response = await fetch(`${API_BASE_URL}/staffs/?is_active=true`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
