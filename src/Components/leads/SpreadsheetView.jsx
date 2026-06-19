@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import DataGrid, { textEditor } from 'react-data-grid';
+import { DataGrid, renderTextEditor as textEditor } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
 import { format, isToday, parseISO } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';

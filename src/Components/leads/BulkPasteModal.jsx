@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import DataGrid from 'react-data-grid';
+import { DataGrid } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
 import { X, Upload, AlertCircle } from 'lucide-react';
-import api from '../../services/api'; // Adjust according to actual api import
 
 const columns = [
   { key: 'date', name: 'Date' },
@@ -19,7 +18,7 @@ const columns = [
   { key: 'status', name: 'Status of Interest' },
 ];
 
-export default function BulkPasteModal({ isOpen, onClose, onSuccess }) {
+export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }) {
   const [rows, setRows] = useState([]);
   const [assigneeId, setAssigneeId] = useState('');
   const [availableUsers, setAvailableUsers] = useState([]);
@@ -37,8 +36,9 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess }) {
 
   const fetchUsers = async () => {
     try {
-      const response = await api.get('/leads/available-users/');
-      setAvailableUsers(response.data);
+      const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/leads/available-users/`);
+      const data = await response.json();
+      setAvailableUsers(data);
     } catch (err) {
       console.error('Failed to fetch users', err);
     }
@@ -92,14 +92,22 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess }) {
     setLoading(true);
     setError('');
     try {
-      await api.post('/leads/bulk-paste/', {
-        assignee_id: assigneeId,
-        leads: rows
+      const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/leads/bulk-paste/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignee_id: assigneeId,
+          leads: rows
+        })
       });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to submit leads.');
+      }
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to submit leads.');
+      setError(err.message || 'Failed to submit leads.');
     } finally {
       setLoading(false);
     }
