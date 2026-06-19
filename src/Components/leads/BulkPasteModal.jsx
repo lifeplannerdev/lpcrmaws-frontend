@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataGrid } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
 import { X, Upload, AlertCircle } from 'lucide-react';
+import { Combobox } from '../common/Combobox';
 
 const columns = [
   { key: 'date', name: 'Date' },
@@ -122,6 +123,25 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
     }
   };
 
+  const getRoleDisplayName = (role) => {
+    const roleMap = {
+      'ADMIN': 'General Manager',
+      'OPS': 'Operations Manager',
+      'ADM_MANAGER': 'Admission Manager',
+      'ADM_COUNSELLOR': 'Admission Counsellor',
+      'ADM_EXEC': 'Admission Executive',
+      'CM': 'Center Manager',
+      'BDM': 'Business Development Manager',
+      'FOE': 'FOE Cum TC',
+    };
+    return roleMap[role] || role;
+  };
+
+  const staffOptions = availableUsers.map(staff => ({
+    id: staff.id,
+    label: `${staff.first_name || staff.last_name ? (staff.first_name + ' ' + staff.last_name).trim() : staff.username || staff.email} - ${getRoleDisplayName(staff.role)}`,
+  }));
+
   if (!isOpen) return null;
 
   return (
@@ -141,18 +161,15 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
         {/* Body */}
         <div className="p-6 flex-1 overflow-auto flex flex-col gap-4">
           <div className="flex gap-4 items-center">
-            <select
-              value={assigneeId}
-              onChange={(e) => setAssigneeId(e.target.value)}
-              className="px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-            >
-              <option value="">Select Assignee</option>
-              {availableUsers.map(u => (
-                <option key={u.id} value={u.id}>
-                  {(u.first_name || u.last_name) ? `${u.first_name} ${u.last_name}`.trim() : u.username || u.email}
-                </option>
-              ))}
-            </select>
+            <div className="w-64">
+              <Combobox
+                options={staffOptions}
+                value={staffOptions.find(o => String(o.id) === String(assigneeId)) || null}
+                onChange={(opt) => setAssigneeId(opt ? opt.id : '')}
+                placeholder="Select Assignee"
+                displayValue={(opt) => opt?.label || ''}
+              />
+            </div>
             
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Click in the grid below and press <strong>Ctrl+V</strong> to paste from Excel. Ensure columns match the headers exactly.
@@ -166,7 +183,7 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
             </div>
           )}
 
-          <div className="flex-1 border rounded-lg overflow-hidden relative" onPaste={handlePaste} tabIndex={0}>
+          <div className="flex-1 border rounded-lg overflow-hidden relative min-h-[400px]" onPaste={handlePaste} tabIndex={0}>
             {rows.length === 0 ? (
               <div className="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-900/50 text-gray-400 italic">
                 Paste Excel data here...
