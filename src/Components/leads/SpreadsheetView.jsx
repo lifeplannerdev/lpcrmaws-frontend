@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import DataGrid, { textEditor } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
 import { format, isToday, parseISO } from 'date-fns';
-import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 const STATUS_OPTIONS = [
@@ -40,7 +39,7 @@ const columns = [
   { key: 'status', name: 'Status', width: 150, renderEditCell: statusEditor },
 ];
 
-export default function SpreadsheetView({ leads, onUpdateLead }) {
+export default function SpreadsheetView({ leads, onUpdateLead, authFetch }) {
   const { user } = useAuth();
   
   // Track updates to push to backend
@@ -50,11 +49,15 @@ export default function SpreadsheetView({ leads, onUpdateLead }) {
     
     // Auto-save logic
     try {
-      const response = await api.patch(`/leads/${updatedRow.id}/update/`, {
-        [column.key]: updatedRow[column.key]
+      const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/leads/${updatedRow.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [column.key]: updatedRow[column.key] })
       });
+      if (!response.ok) throw new Error('Update failed');
+      const data = await response.json();
       // Notify parent to update its state
-      if (onUpdateLead) onUpdateLead(response.data);
+      if (onUpdateLead) onUpdateLead(data.lead || data);
     } catch (err) {
       console.error('Failed to update lead:', err);
       // In a real app we'd show a toast here
