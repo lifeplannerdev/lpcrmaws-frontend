@@ -6,8 +6,9 @@ import LeadsStatsCards from '../Components/leads/LeadsStatsCards';
 import LeadsFilters from '../Components/leads/LeadsFilters';
 import LeadsTable from '../Components/leads/LeadsTable';
 import LeadsKanbanBoard from '../Components/leads/LeadsKanbanBoard';
+import SpreadsheetView from '../Components/leads/SpreadsheetView';
 import LeadSidePanel from '../Components/leads/LeadSidePanel';
-import { Users, UserPlus, CheckCircle, TrendingUp, LayoutList, LayoutGrid } from 'lucide-react';
+import { Users, UserPlus, CheckCircle, TrendingUp, LayoutList, LayoutGrid, FileSpreadsheet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Pagination from '../Components/common/Pagination';
 import CompanySwitcher from '../Components/common/CompanySwitcher';
@@ -313,6 +314,17 @@ export default function LeadsPage() {
               <LayoutGrid size={18} />
               Kanban
             </button>
+            <button
+              onClick={() => setViewMode('spreadsheet')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
+                viewMode === 'spreadsheet' 
+                  ? 'bg-indigo-50 text-indigo-700 shadow-sm' 
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <FileSpreadsheet size={18} />
+              Spreadsheet
+            </button>
           </div>
           
           <Can perform="leads:view_any">
@@ -364,6 +376,12 @@ export default function LeadsPage() {
                   statusColors={statusColors}
                   onDeleteLead={handleDeleteLead}
                 />
+              ) : viewMode === 'spreadsheet' ? (
+                <div className="h-[75vh] w-full border border-gray-200 rounded-xl overflow-hidden bg-white">
+                  <SpreadsheetView leads={leads} onUpdateLead={(updatedLead) => {
+                    setLeads(prev => prev.map(l => l.id === updatedLead.id ? {...l, ...updatedLead} : l));
+                  }} />
+                </div>
               ) : (
                 <LeadsKanbanBoard
                   leads={leads}

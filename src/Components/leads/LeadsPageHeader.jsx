@@ -4,6 +4,7 @@ import { Plus, Sparkles, Upload, X, CheckCircle, AlertCircle, FileSpreadsheet, L
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Can } from '../../context/PermissionsContext';
+import BulkPasteModal from './BulkPasteModal';
 
 const TEMPLATE_URL = '/leads_bulk_upload_template.xlsx';
 
@@ -323,6 +324,7 @@ const LeadsPageHeader = () => {
   const navigate = useNavigate();
   const { accessToken, refreshAccessToken } = useAuth();
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showPasteModal, setShowPasteModal] = useState(false);
 
   const authFetch = async (url, options = {}, retry = true) => {
     if (!accessToken) throw new Error('No access token');
@@ -358,6 +360,16 @@ const LeadsPageHeader = () => {
           <div className="flex items-center gap-3">
             <Can perform="leads:edit_any">
               <button
+                onClick={() => setShowPasteModal(true)}
+                className="group relative bg-white border-2 border-green-300 hover:border-green-500 text-green-600 hover:text-green-700 px-5 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+              >
+                <FileSpreadsheet size={18} className="group-hover:-translate-y-0.5 transition-transform duration-300" />
+                <span>Bulk Paste</span>
+              </button>
+            </Can>
+
+            <Can perform="leads:edit_any">
+              <button
                 onClick={() => setShowBulkModal(true)}
                 className="group relative bg-white border-2 border-indigo-300 hover:border-indigo-500 text-indigo-600 hover:text-indigo-700 px-5 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
               >
@@ -383,6 +395,17 @@ const LeadsPageHeader = () => {
 
       {showBulkModal && (
         <BulkUploadModal onClose={() => setShowBulkModal(false)} authFetch={authFetch} />
+      )}
+      
+      {showPasteModal && (
+        <BulkPasteModal 
+          isOpen={showPasteModal} 
+          onClose={() => setShowPasteModal(false)} 
+          onSuccess={() => {
+            setShowPasteModal(false);
+            window.location.reload();
+          }} 
+        />
       )}
     </>
   );
