@@ -137,10 +137,12 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
     return roleMap[role] || role;
   };
 
-  const staffOptions = availableUsers.map(staff => ({
-    id: staff.id,
-    label: `${staff.first_name || staff.last_name ? (staff.first_name + ' ' + staff.last_name).trim() : staff.username || staff.email} - ${getRoleDisplayName(staff.role)}`,
-  }));
+  const staffOptions = availableUsers
+    .filter(staff => staff.role === 'ADM_MANAGER' || staff.role === 'ADM_COUNSELLOR')
+    .map(staff => ({
+      id: staff.id,
+      label: `${staff.first_name || staff.last_name ? (staff.first_name + ' ' + staff.last_name).trim() : staff.username || staff.email} - ${getRoleDisplayName(staff.role)}`,
+    }));
 
   if (!isOpen) return null;
 
