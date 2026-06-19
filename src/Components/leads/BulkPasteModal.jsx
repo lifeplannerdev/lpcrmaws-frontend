@@ -161,18 +161,19 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
         {/* Body */}
         <div className="p-6 flex-1 overflow-auto flex flex-col gap-4">
           <div className="flex gap-4 items-center">
-            <div className="w-64">
-              <Combobox
-                options={staffOptions}
-                value={staffOptions.find(o => String(o.id) === String(assigneeId)) || null}
-                onChange={(opt) => setAssigneeId(opt ? opt.id : '')}
-                placeholder="Select Assignee"
-                displayValue={(opt) => opt?.label || ''}
-              />
-            </div>
+            <select
+              value={assigneeId}
+              onChange={(e) => setAssigneeId(e.target.value)}
+              className="w-64 px-4 py-2 border border-gray-300 rounded-lg shadow-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            >
+              <option value="">Select Assignee</option>
+              {staffOptions.map(opt => (
+                <option key={opt.id} value={opt.id}>{opt.label}</option>
+              ))}
+            </select>
             
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Click in the grid below and press <strong>Ctrl+V</strong> to paste from Excel. Ensure columns match the headers exactly.
+              Click in the box below and press <strong>Ctrl+V</strong> to paste from Excel. Ensure columns match the headers exactly.
             </p>
           </div>
 
@@ -183,18 +184,24 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
             </div>
           )}
 
-          <div className="flex-1 border rounded-lg overflow-hidden relative min-h-[400px]" onPaste={handlePaste} tabIndex={0}>
+          <div className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden relative min-h-[400px]">
             {rows.length === 0 ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-900/50 text-gray-400 italic">
-                Paste Excel data here...
-              </div>
-            ) : (
-              <DataGrid
-                columns={columns}
-                rows={rows}
-                className="h-full w-full custom-data-grid"
-                style={{ height: '100%', minHeight: '400px' }}
+              <textarea
+                className="absolute inset-0 w-full h-full p-8 text-center bg-gray-50 dark:bg-gray-900/50 text-gray-500 italic resize-none outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-gray-800 transition-colors flex items-center justify-center leading-[300px]"
+                placeholder="Click here and press Ctrl+V to paste Excel data..."
+                onPaste={handlePaste}
+                onChange={() => {}}
+                value=""
               />
+            ) : (
+              <div className="h-full w-full" onPaste={handlePaste}>
+                <DataGrid
+                  columns={columns}
+                  rows={rows}
+                  className="h-full w-full custom-data-grid"
+                  style={{ height: '100%', minHeight: '400px' }}
+                />
+              </div>
             )}
           </div>
         </div>
