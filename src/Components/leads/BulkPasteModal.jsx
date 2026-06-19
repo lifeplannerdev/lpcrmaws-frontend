@@ -37,10 +37,19 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
   const fetchUsers = async () => {
     try {
       const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/leads/available-users/`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
-      setAvailableUsers(data);
+      if (Array.isArray(data)) {
+        setAvailableUsers(data);
+      } else {
+        console.error('Expected array of users but got:', data);
+        setAvailableUsers([]);
+      }
     } catch (err) {
-      console.error('Failed to fetch users', err);
+      console.error('Failed to fetch users:', err);
+      setAvailableUsers([]);
     }
   };
 
@@ -139,7 +148,9 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
             >
               <option value="">Select Assignee</option>
               {availableUsers.map(u => (
-                <option key={u.id} value={u.id}>{u.get_full_name || u.email}</option>
+                <option key={u.id} value={u.id}>
+                  {(u.first_name || u.last_name) ? `${u.first_name} ${u.last_name}`.trim() : u.username || u.email}
+                </option>
               ))}
             </select>
             
