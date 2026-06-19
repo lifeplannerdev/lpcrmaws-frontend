@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { DataGrid, renderTextEditor as textEditor } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
-import { format, isToday, parseISO } from 'date-fns';
+import { format, isToday, parseISO, isSameDay, subDays } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
 
 const STATUS_OPTIONS = [
@@ -41,6 +41,7 @@ const columns = [
 
 export default function SpreadsheetView({ leads, onUpdateLead, authFetch }) {
   const { user } = useAuth();
+  const [selectedDate, setSelectedDate] = useState(() => subDays(new Date(), 1));
   
   // Track updates to push to backend
   const handleRowsChange = async (newRows, { indexes, column }) => {
@@ -99,9 +100,9 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch }) {
         </div>
       );
     } else {
-      // Employee View: Today's Assigned vs Older Leads
+      // Employee View: Today's Assigned vs Selected Date Leads
       const todaysAssigned = leads.filter(l => l.assigned_date && isToday(parseISO(l.assigned_date)));
-      const olderLeads = leads.filter(l => !(l.assigned_date && isToday(parseISO(l.assigned_date))));
+      const selectedDateLeads = leads.filter(l => l.assigned_date && isSameDay(parseISO(l.assigned_date), selectedDate));
 
       return (
         <div className="flex flex-col gap-8 h-full overflow-y-auto w-full">
@@ -120,13 +121,25 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch }) {
           </div>
 
           <div className="flex flex-col gap-2 w-full">
-            <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded">
-              Older Leads ({olderLeads.length})
-            </h2>
-            <div style={{ height: Math.min(olderLeads.length * 35 + 40, 600) }} className="w-full">
+            <div className="flex items-center gap-4 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded">
+              <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300">
+                Previous Leads ({selectedDateLeads.length})
+              </h2>
+              <input 
+                type="date"
+                value={format(selectedDate, 'yyyy-MM-dd')}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setSelectedDate(parseISO(e.target.value));
+                  }
+                }}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-sm shadow-sm outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div style={{ height: Math.max(selectedDateLeads.length * 35 + 40, 200) }} className="w-full">
               <DataGrid 
                 columns={columns} 
-                rows={olderLeads} 
+                rows={selectedDateLeads} 
                 onRowsChange={handleRowsChange} 
                 className="custom-data-grid h-full"
               />
