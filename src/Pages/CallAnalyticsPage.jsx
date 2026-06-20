@@ -179,8 +179,18 @@ function StatusBadge({ status }) {
 }
 
 // Agent cell — shows name + number when available
-function AgentCell({ agentMap, number }) {
-  if (!number) return <span className="text-gray-300">—</span>;
+function AgentCell({ agentMap, number, name }) {
+  if (!number && !name) return <span className="text-gray-300">—</span>;
+  
+  if (name) {
+    return (
+      <div>
+        <p className="font-semibold text-gray-800 text-xs">{name}</p>
+        {number && <p className="font-mono text-gray-400 text-[10px]">{number}</p>}
+      </div>
+    );
+  }
+
   const result = agentLabel(agentMap, number);
   if (!result || typeof result === 'string') {
     return <span className="font-mono text-gray-600">{number}</span>;
@@ -620,7 +630,7 @@ export default function CallAnalyticsPage() {
                       <td className="px-4 py-3 font-mono text-gray-700">{log.caller_number || '—'}</td>
                       <td className="px-4 py-3 font-mono text-gray-600">{log.called_number || log.destination || '—'}</td>
                       <td className="px-4 py-3">
-                        <AgentCell agentMap={agentMap} number={log.agent_number || log.extension} />
+                        <AgentCell agentMap={agentMap} number={log.agent_number || log.extension} name={log.agent_name} />
                       </td>
                       <td className="px-4 py-3"><StatusBadge status={log.call_status} /></td>
                       <td className="px-4 py-3 font-mono text-gray-500">{log.duration_display || fmtSec(log.duration)}</td>
