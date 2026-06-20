@@ -592,18 +592,18 @@ export default function CallAnalyticsPage() {
 
           <div className="flex-1 min-w-0 flex flex-col">
             {activeTab === 'Missed Call Report' && (
-              <CallLogsTable dateRange={dateRange} agentMap={agentMap} defaultCallType="incoming" defaultCallStatus="MISSED" title="Missed Call Report" onLogsFetched={handleLogsFetched} hideTypeFilter hideStatusFilter />
+              <CallLogsTable dateRange={dateRange} globalCallType={callType} agentMap={agentMap} defaultCallType="incoming" defaultCallStatus="MISSED" title="Missed Call Report" onLogsFetched={handleLogsFetched} hideTypeFilter hideStatusFilter />
             )}
             {activeTab === 'Unique Missed Calls' && (
               <Can perform="voxbay:admin">
-                <UniqueMissedCallsTable />
+                <UniqueMissedCallsTable dateRange={dateRange} />
               </Can>
             )}
             {activeTab === 'Incoming Call Report' && (
-              <CallLogsTable dateRange={dateRange} agentMap={agentMap} defaultCallType="incoming" title="Incoming Call Report" onLogsFetched={handleLogsFetched} hideTypeFilter />
+              <CallLogsTable dateRange={dateRange} globalCallType={callType} agentMap={agentMap} defaultCallType="incoming" title="Incoming Call Report" onLogsFetched={handleLogsFetched} hideTypeFilter />
             )}
             {activeTab === 'Outgoing Call Report' && (
-              <CallLogsTable dateRange={dateRange} agentMap={agentMap} defaultCallType="outgoing" title="Outgoing Call Report" onLogsFetched={handleLogsFetched} hideTypeFilter />
+              <CallLogsTable dateRange={dateRange} globalCallType={callType} agentMap={agentMap} defaultCallType="outgoing" title="Outgoing Call Report" onLogsFetched={handleLogsFetched} hideTypeFilter />
             )}
           </div>
         </div>

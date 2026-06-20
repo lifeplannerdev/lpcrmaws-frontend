@@ -115,7 +115,7 @@ function useCallLogs({ dateRange, callType, callStatus, search, ordering, page, 
   return { data, loading, error, refetch: fetch_ };
 }
 
-export default function CallLogsTable({ dateRange, agentMap, defaultCallType = 'all', defaultCallStatus = 'all', title = "Call Logs", hideStatusFilter = false, hideTypeFilter = false, onLogsFetched }) {
+export default function CallLogsTable({ dateRange, agentMap, globalCallType, defaultCallType = 'all', defaultCallStatus = 'all', title = "Call Logs", hideStatusFilter = false, hideTypeFilter = false, onLogsFetched }) {
   const navigate = useNavigate();
   const { user, accessToken } = useAuth();
 
@@ -135,8 +135,10 @@ export default function CallLogsTable({ dateRange, agentMap, defaultCallType = '
     setSearchInput('');
   }, [defaultCallType, defaultCallStatus]);
 
+  const effectiveCallType = (globalCallType && globalCallType !== 'all') ? globalCallType : callType;
+
   const { data: logsData, loading: lLoading, error: lError } = useCallLogs({
-    dateRange, callType, callStatus, search, ordering, page, pageSize: PAGE_SIZE, accessToken
+    dateRange, callType: effectiveCallType, callStatus, search, ordering, page, pageSize: PAGE_SIZE, accessToken
   });
 
   const logs       = logsData.results || [];

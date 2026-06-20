@@ -2,7 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { PhoneMissed, Check, Clock, UserPlus } from 'lucide-react';
 
-export default function UniqueMissedCallsTable() {
+function buildDateParams(dateRange) {
+  const now = new Date(), from = new Date();
+  if (dateRange === 'today')  from.setHours(0, 0, 0, 0);
+  if (dateRange === '7days')  from.setDate(now.getDate() - 7);
+  if (dateRange === '30days') from.setDate(now.getDate() - 30);
+  if (dateRange === '90days') from.setDate(now.getDate() - 90);
+  return { from: from.toISOString(), to: now.toISOString() };
+}
+
+export default function UniqueMissedCallsTable({ dateRange = 'today' }) {
   const { accessToken } = useAuth();
   const [calls, setCalls] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +26,8 @@ export default function UniqueMissedCallsTable() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/voxbay/unassigned-missed/`, {
+      const { from, to } = buildDateParams(dateRange);
+      const res = await fetch(`${API_BASE_URL}/voxbay/unassigned-missed/?from=${from}&to=${to}`, {
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
       if (!res.ok) throw new Error('Failed to fetch unassigned missed calls');
@@ -46,6 +56,9 @@ export default function UniqueMissedCallsTable() {
 
   useEffect(() => {
     fetchCalls();
+  }, [accessToken, dateRange]);
+
+  useEffect(() => {
     fetchStaff();
   }, [accessToken]);
 
