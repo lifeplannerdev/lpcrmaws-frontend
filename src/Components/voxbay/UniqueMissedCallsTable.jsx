@@ -17,7 +17,7 @@ export default function UniqueMissedCallsTable() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/telephony/voxbay/unassigned-missed/`, {
+      const res = await fetch(`${API_BASE_URL}/telephony/voxbay/unassigned-missed/`, {
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
       if (!res.ok) throw new Error('Failed to fetch unassigned missed calls');
@@ -32,7 +32,7 @@ export default function UniqueMissedCallsTable() {
 
   const fetchStaff = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/accounts/staff/?limit=100`, {
+      const res = await fetch(`${API_BASE_URL}/accounts/staff/?limit=100`, {
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
       if (res.ok) {
@@ -53,7 +53,7 @@ export default function UniqueMissedCallsTable() {
     if (!selectedAgent) return;
     setAssigningUuid(call_uuid);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/telephony/voxbay/unassigned-missed/${call_uuid}/assign/`, {
+      const res = await fetch(`${API_BASE_URL}/telephony/voxbay/unassigned-missed/${call_uuid}/assign/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
