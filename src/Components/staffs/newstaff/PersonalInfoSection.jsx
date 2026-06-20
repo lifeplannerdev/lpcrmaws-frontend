@@ -103,6 +103,18 @@ const PersonalInfoSection = React.memo(({ formData, errors, onChange }) => {
           icon={MapPin}
           className="px-4 py-3 border-2 rounded-xl font-medium"
         />
+
+        <FormField
+          label="Voxbay Number"
+          name="voxbayNumber"
+          type="tel"
+          value={formData.voxbayNumber}
+          onChange={onChange}
+          error={errors.voxbayNumber}
+          placeholder="e.g. 918593050107"
+          icon={Phone}
+          className="px-4 py-3 border-2 rounded-xl font-medium"
+        />
       </div>
     </div>
   );
