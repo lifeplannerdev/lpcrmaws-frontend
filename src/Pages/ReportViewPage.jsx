@@ -283,6 +283,21 @@ export default function ReportViewPage() {
           </div>
         </div>
 
+        {/* Agenda Content */}
+        {report.next_day_agenda && (
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <FileText size={20} className="text-amber-600" />
+              Agenda Content
+            </h2>
+            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl p-6">
+              <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                {report.next_day_agenda}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Report Content */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
