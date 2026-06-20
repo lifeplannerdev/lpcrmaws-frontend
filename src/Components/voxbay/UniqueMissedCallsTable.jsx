@@ -108,7 +108,7 @@ export default function UniqueMissedCallsTable() {
                     {log.caller_number}
                   </td>
                   <td className="px-4 py-3 text-gray-500">
-                    UUID: {log.call_uuid.substring(0, 8)}...
+                    UUID: {log.call_uuid ? log.call_uuid.substring(0, 8) : 'N/A'}...
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
