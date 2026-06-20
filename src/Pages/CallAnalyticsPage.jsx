@@ -5,7 +5,8 @@ import {
   PhoneOutgoing, Search, ChevronLeft, ChevronRight, Wifi, WifiOff,
   Clock, TrendingUp, BarChart3, Filter, UserPlus, ExternalLink, PhoneCall
 } from 'lucide-react';
-import { useAuth, Can } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
+import { Can } from '../context/PermissionsContext';
 import { getRoleLabel } from '../Components/utils/callPermissions';
 import { useNavigate } from 'react-router-dom';
 import UniqueMissedCallsTable from '../Components/voxbay/UniqueMissedCallsTable';
