@@ -3,10 +3,11 @@ import Navbar from '../Components/layouts/Navbar';
 import {
   RefreshCw, Download, Phone, PhoneIncoming, PhoneMissed,
   PhoneOutgoing, Search, ChevronLeft, ChevronRight, Wifi, WifiOff,
-  Clock, TrendingUp, BarChart3, Filter
+  Clock, TrendingUp, BarChart3, Filter, UserPlus, ExternalLink, PhoneCall
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getRoleLabel } from '../Components/utils/callPermissions';
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -29,35 +30,40 @@ function fmtSec(sec) {
 
 // ─── Data hooks ───────────────────────────────────────────────────────────────
 
-function useCallStats(dateRange, callType) {
+function useCallStats(dateRange, callType, accessToken) {
   const [stats, setStats]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
 
   const fetch_ = useCallback(async () => {
+    if (!accessToken) return;
     setLoading(true); setError(null);
     try {
       const { from, to } = buildDateParams(dateRange);
       const p = new URLSearchParams({ from, to });
       if (callType && callType !== 'all') p.set('call_type', callType);
-      const res = await fetch(`${API_BASE}/voxbay/stats/?${p}`, { credentials: 'include' });
+      const res = await fetch(`${API_BASE}/voxbay/stats/?${p}`, { 
+        headers: { Authorization: `Bearer ${accessToken}` },
+        credentials: 'omit' 
+      });
       if (!res.ok) throw new Error(`${res.status}`);
       setStats(await res.json());
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
-  }, [dateRange, callType]);
+  }, [dateRange, callType, accessToken]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
   return { stats, loading, error, refetch: fetch_ };
 }
 
-function useCallLogs({ dateRange, callType, callStatus, search, ordering, page, pageSize }) {
+function useCallLogs({ dateRange, callType, callStatus, search, ordering, page, pageSize, accessToken }) {
   const [data, setData]       = useState({ results: [], count: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const [lastSync, setLastSync] = useState(null);
 
   const fetch_ = useCallback(async () => {
+    if (!accessToken) return;
     setLoading(true); setError(null);
     try {
       const { from, to } = buildDateParams(dateRange);
@@ -66,14 +72,17 @@ function useCallLogs({ dateRange, callType, callStatus, search, ordering, page, 
       if (callStatus && callStatus !== 'all') p.set('call_status', callStatus);
       if (search)   p.set('search',   search);
       if (ordering) p.set('ordering', ordering);
-      const res = await fetch(`${API_BASE}/voxbay/call-logs/?${p}`, { credentials: 'include' });
+      const res = await fetch(`${API_BASE}/voxbay/call-logs/?${p}`, { 
+        headers: { Authorization: `Bearer ${accessToken}` },
+        credentials: 'omit' 
+      });
       if (!res.ok) throw new Error(`${res.status}`);
       const json = await res.json();
       setData({ results: json.results || [], count: json.count || 0 });
       setLastSync(new Date());
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
-  }, [dateRange, callType, callStatus, search, ordering, page, pageSize]);
+  }, [dateRange, callType, callStatus, search, ordering, page, pageSize, accessToken]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
   return { data, loading, error, refetch: fetch_, lastSync };
@@ -110,15 +119,19 @@ function buildCharts(logs) {
 
 // ─── Agent name lookup hook ───────────────────────────────────────────────────
 
-function useAgentMap() {
+function useAgentMap(accessToken) {
   const [agentMap, setAgentMap] = useState({});
 
   useEffect(() => {
-    fetch(`${API_BASE}/voxbay/agents/?format=map`, { credentials: 'include' })
+    if (!accessToken) return;
+    fetch(`${API_BASE}/voxbay/agents/?output=map`, { 
+      headers: { Authorization: `Bearer ${accessToken}` },
+      credentials: 'omit' 
+    })
       .then(r => r.ok ? r.json() : {})
       .then(data => setAgentMap(data || {}))
       .catch(() => {});
-  }, []);
+  }, [accessToken]);
 
   return agentMap;
 }
@@ -240,10 +253,11 @@ function Empty({ msg = 'No data' }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CallAnalyticsPage() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, accessToken } = useAuth();
   const userRole = user?.role_names?.length ? user.role_names.join(', ') : (user?.user_role || '');
 
-  const agentMap = useAgentMap();
+  const agentMap = useAgentMap(accessToken);
   const [dateRange,   setDateRange]   = useState('today');
   const [callType,    setCallType]    = useState('all');
   const [callStatus,  setCallStatus]  = useState('all');
@@ -254,10 +268,10 @@ export default function CallAnalyticsPage() {
   const PAGE_SIZE = 20;
 
   const { stats, loading: sLoading, error: sError, refetch: refetchStats } =
-    useCallStats(dateRange, callType);
+    useCallStats(dateRange, callType, accessToken);
 
   const { data: logsData, loading: lLoading, error: lError, refetch: refetchLogs, lastSync } =
-    useCallLogs({ dateRange, callType, callStatus, search, ordering, page, pageSize: PAGE_SIZE });
+    useCallLogs({ dateRange, callType, callStatus, search, ordering, page, pageSize: PAGE_SIZE, accessToken });
 
   const logs       = logsData.results;
   const totalLogs  = logsData.count;
@@ -276,17 +290,42 @@ export default function CallAnalyticsPage() {
   const handleSearch = (e) => { e.preventDefault(); setSearch(searchInput.trim()); };
 
   const handleExport = () => {
-    const headers = ['UUID','Type','Caller','Called','Agent','Ext','Destination','Status','Duration(s)','Conv(s)','Start','End','Recording'];
+    const headers = ['UUID','Type','Caller','Called','Agent','Ext','Destination','Status','Duration(s)','Conv(s)','Start','Recording'];
     const rows = logs.map(l => [
       l.call_uuid,l.call_type,l.caller_number,l.called_number,
       l.agent_number,l.extension,l.destination,l.call_status,
-      l.duration,l.conversation_duration,l.call_start,l.call_end,l.recording_url
+      l.duration,l.conversation_duration,l.call_start,l.recording_url
     ]);
     const csv = [headers,...rows].map(r => r.map(v => `"${v||''}"`).join(',')).join('\n');
     Object.assign(document.createElement('a'), {
       href: URL.createObjectURL(new Blob([csv], { type:'text/csv' })),
       download: `call-logs-${dateRange}.csv`,
     }).click();
+  };
+
+  const handleCall = async (destination) => {
+    if (!destination) return alert('No number to call');
+    try {
+      const res = await fetch(`${API_BASE}/voxbay/click-to-call/`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          uid: 'demo_uid',
+          upin: 'demo_upin',
+          user_no: user?.phone || '0000',
+          destination: destination,
+          callerid: '0000'
+        }),
+        credentials: 'omit'
+      });
+      if (!res.ok) alert('Failed to initiate call. Ensure Voxbay API is configured.');
+      else alert('Call initiated successfully! Your device should ring.');
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
   };
 
   return (
@@ -565,7 +604,7 @@ export default function CallAnalyticsPage() {
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 text-[10px] text-gray-400 uppercase tracking-widest font-bold border-b border-gray-100">
                   <tr>
-                    {['Type','Caller','Called / Dest','Agent / Ext','Status','Duration','Conv. Duration','Start','Recording'].map(h => (
+                    {['Type','Caller','Called / Dest','Agent / Ext','Status','Duration','Conv. Duration','Start','Recording','Actions'].map(h => (
                       <th key={h} className="px-4 py-3 text-left">{h}</th>
                     ))}
                   </tr>
@@ -592,6 +631,27 @@ export default function CallAnalyticsPage() {
                           ? <a href={log.recording_url} target="_blank" rel="noopener noreferrer"
                               className="text-indigo-500 hover:text-indigo-700 font-bold flex items-center gap-1">▶ Play</a>
                           : <span className="text-gray-200">—</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => handleCall(log.caller_number || log.destination)}
+                            className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="Click to Call">
+                            <PhoneCall size={13} />
+                          </button>
+                          {log.call_type === 'incoming' && (
+                            log.is_lead ? (
+                              <button onClick={() => navigate(`/leads/${log.lead_id}`)}
+                                className="px-2 py-1 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 flex items-center gap-1 text-[10px] font-bold border border-gray-200 transition-colors">
+                                <ExternalLink size={11} /> View
+                              </button>
+                            ) : (
+                              <button onClick={() => navigate(`/leads/new?phone=${log.caller_number}`)}
+                                className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 flex items-center gap-1 text-[10px] font-bold border border-indigo-200 transition-colors">
+                                <UserPlus size={11} /> Convert
+                              </button>
+                            )
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
