@@ -563,7 +563,17 @@ export default function MyReportsPage() {
                         Progress: {report.completion_percentage}%
                       </div>
                       <div className="flex items-center gap-1.5"><Clock className="w-4 h-4" /><span>Submitted {formatDate(report.created_at)}</span></div>
-                      {isLate(report) && (
+                      {report.agenda_late_by && (
+                        <div className="flex items-center gap-1 text-yellow-700 font-semibold px-2 py-0.5 bg-yellow-100 rounded-full text-xs border border-yellow-200">
+                          <AlertCircle size={12} /> Late Agenda ({report.agenda_late_by})
+                        </div>
+                      )}
+                      {report.report_late_by && (
+                        <div className="flex items-center gap-1 text-red-700 font-semibold px-2 py-0.5 bg-red-100 rounded-full text-xs border border-red-200">
+                          <AlertCircle size={12} /> Late Report ({report.report_late_by})
+                        </div>
+                      )}
+                      {isLate(report) && !report.agenda_late_by && !report.report_late_by && (
                         <div className="flex items-center gap-1 text-red-600 font-semibold px-2 py-0.5 bg-red-100 rounded-full text-xs border border-red-200">
                           <AlertCircle size={12} /> Late Entry
                         </div>
@@ -714,6 +724,12 @@ export default function MyReportsPage() {
                     <div className="flex items-center gap-2 text-gray-600"><User className="w-5 h-5" /><span className="font-medium">{selectedReport.name}</span></div>
                     <div className="flex items-center gap-2 text-gray-600"><Calendar className="w-5 h-5" /><span>{formatDate(selectedReport.report_date)}</span></div>
                     <div className="flex items-center gap-2 text-indigo-600 font-semibold"><Clock className="w-5 h-5" /><span>Progress: {selectedReport.completion_percentage}%</span></div>
+                    {selectedReport.agenda_late_by && (
+                      <div className="flex items-center gap-2 text-yellow-700 font-semibold bg-yellow-50 px-3 py-1 rounded-full w-max border border-yellow-200"><AlertCircle className="w-4 h-4" /><span>Late Agenda: {selectedReport.agenda_late_by}</span></div>
+                    )}
+                    {selectedReport.report_late_by && (
+                      <div className="flex items-center gap-2 text-red-700 font-semibold bg-red-50 px-3 py-1 rounded-full w-max border border-red-200"><AlertCircle className="w-4 h-4" /><span>Late Report: {selectedReport.report_late_by}</span></div>
+                    )}
                   </div>
                 </div>
 

@@ -233,7 +233,19 @@ export default function ReportViewPage() {
                 </div>
               </div>
             </div>
-            <div>{getStatusBadge()}</div>
+            <div className="flex flex-col items-end gap-2">
+              {getStatusBadge()}
+              {report.agenda_late_by && (
+                <span className="bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded-full text-xs font-bold border border-yellow-200 whitespace-nowrap">
+                  Late Agenda ({report.agenda_late_by})
+                </span>
+              )}
+              {report.report_late_by && (
+                <span className="bg-red-100 text-red-700 px-3 py-1.5 rounded-full text-xs font-bold border border-red-200 whitespace-nowrap">
+                  Late Report ({report.report_late_by})
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Action Buttons */}

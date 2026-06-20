@@ -18,7 +18,11 @@ const ReportRow = React.memo(({ report, isLate, getStatusBadge, navigate, downlo
           </div>
           <div className="flex flex-col">
             <span className="font-semibold text-gray-900">{report.name}</span>
-            {isLate && <span className="text-xs text-red-600 font-bold">Late Submission</span>}
+            <div className="flex flex-col items-start gap-1 mt-1">
+              {report.agenda_late_by && <span className="text-[10px] text-yellow-700 font-bold bg-yellow-100 px-2 py-0.5 rounded-md border border-yellow-200">Late Agenda ({report.agenda_late_by})</span>}
+              {report.report_late_by && <span className="text-[10px] text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded-md border border-red-200">Late Report ({report.report_late_by})</span>}
+              {isLate && !report.agenda_late_by && !report.report_late_by && <span className="text-[10px] text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded-md border border-red-200">Late Submission</span>}
+            </div>
           </div>
         </div>
       </td>
