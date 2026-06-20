@@ -10,6 +10,7 @@ import { Can } from '../context/PermissionsContext';
 import { getRoleLabel } from '../Components/utils/callPermissions';
 import { useNavigate } from 'react-router-dom';
 import UniqueMissedCallsTable from '../Components/voxbay/UniqueMissedCallsTable';
+import CallLogsTable from '../Components/voxbay/CallLogsTable';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -272,38 +273,32 @@ export default function CallAnalyticsPage() {
   const agentMap = useAgentMap(accessToken);
   const [dateRange,   setDateRange]   = useState('today');
   const [callType,    setCallType]    = useState('all');
-  const [callStatus,  setCallStatus]  = useState('all');
-  const [search,      setSearch]      = useState('');
-  const [searchInput, setSearchInput] = useState('');
-  const [ordering,    setOrdering]    = useState('-created_at');
-  const [page,        setPage]        = useState(1);
-  const PAGE_SIZE = 20;
+
+  const [activeTab, setActiveTab] = useState('Missed Call Report');
+  const [chartLogs, setChartLogs] = useState([]);
+  const [chartLoading, setChartLoading] = useState(true);
 
   const { stats, loading: sLoading, error: sError, refetch: refetchStats } =
     useCallStats(dateRange, callType, accessToken);
 
-  const { data: logsData, loading: lLoading, error: lError, refetch: refetchLogs, lastSync } =
-    useCallLogs({ dateRange, callType, callStatus, search, ordering, page, pageSize: PAGE_SIZE, accessToken });
-
-  const logs       = logsData.results;
-  const totalLogs  = logsData.count;
-  const totalPages = Math.ceil(totalLogs / PAGE_SIZE);
   const s          = stats || {};
-  const anyLoading = sLoading || lLoading;
-  const anyError   = sError || lError;
+  const totalLogs  = s.total || 0;
+  const anyLoading = sLoading || chartLoading;
+  const anyError   = sError;
 
-  useEffect(() => setPage(1), [dateRange, callType, callStatus, search, ordering]);
+  const refetchAll = () => { refetchStats(); };
 
-  const refetchAll = () => { refetchStats(); refetchLogs(); };
+  const handleLogsFetched = useCallback((logs, loading) => {
+    setChartLogs(logs);
+    setChartLoading(loading);
+  }, []);
 
-  const { callsByHour, topAgents } = buildCharts(logs);
+  const { callsByHour, topAgents } = buildCharts(chartLogs);
   const maxHour = Math.max(...callsByHour.map(h => h.calls), 1);
-
-  const handleSearch = (e) => { e.preventDefault(); setSearch(searchInput.trim()); };
 
   const handleExport = () => {
     const headers = ['UUID','Type','Caller','Called','Agent','Ext','Destination','Status','Duration(s)','Conv(s)','Start','Recording'];
-    const rows = logs.map(l => [
+    const rows = chartLogs.map(l => [
       l.call_uuid,l.call_type,l.caller_number,l.called_number,
       l.agent_number,l.extension,l.destination,l.call_status,
       l.duration,l.conversation_duration,l.call_start,l.recording_url
@@ -562,149 +557,56 @@ export default function CallAnalyticsPage() {
           <p className="text-xs text-gray-400 mt-1.5">{s.answered ?? 0} of {s.total ?? 0} calls answered</p>
         </div>
 
-        {/* ── Call Logs Table ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-
-          {/* Table header */}
-          <div className="p-5 border-b border-gray-100">
-            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-              <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">
-                <Filter size={14} className="text-gray-400" />
-                Call Logs
-                <span className="text-xs text-gray-400 font-normal">({totalLogs.toLocaleString()} total)</span>
-              </h3>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <form onSubmit={handleSearch} className="flex gap-1.5 flex-1 min-w-[180px] max-w-xs">
-                <input value={searchInput} onChange={e => setSearchInput(e.target.value)}
-                  placeholder="Search number, agent, UUID…"
-                  className="flex-1 px-3 py-2 text-xs border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-400 font-medium bg-gray-50" />
-                <button type="submit" className="px-3 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors">
-                  <Search size={13}/>
+        {/* ── Call Logs Table Section ── */}
+        <div className="flex flex-col lg:flex-row gap-4 mb-6">
+          <div className="w-full lg:w-64 shrink-0 flex flex-col gap-2">
+            {[
+              { id: 'Missed Call Report', icon: PhoneMissed, label: 'Missed Call Report' },
+              { id: 'Unique Missed Calls', icon: PhoneMissed, label: 'Unique Missed Calls', adminOnly: true },
+              { id: 'Incoming Call Report', icon: PhoneIncoming, label: 'Incoming Call Report' },
+              { id: 'Outgoing Call Report', icon: PhoneOutgoing, label: 'Outgoing Call Report' },
+            ].map(tab => {
+              const TabButton = () => (
+                <button
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 font-bold text-sm transition-all ${
+                    activeTab === tab.id
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-100'
+                  }`}
+                >
+                  <tab.icon size={16} className={activeTab === tab.id ? 'text-white/80' : 'text-gray-400'} />
+                  {tab.label}
                 </button>
-              </form>
+              );
 
-              <select value={callStatus} onChange={e => setCallStatus(e.target.value)}
-                className="px-3 py-2 border-2 border-gray-200 rounded-xl text-xs font-bold text-gray-600 bg-white focus:outline-none focus:border-indigo-400">
-                <option value="all">All Statuses</option>
-                <option value="ANSWERED">Answered</option>
-                <option value="NOANSWER">No Answer</option>
-                <option value="BUSY">Busy</option>
-                <option value="CANCEL">Cancelled</option>
-                <option value="CONGESTION">Congestion</option>
-                <option value="CHANUNAVAIL">Unavailable</option>
-              </select>
-
-              <select value={ordering} onChange={e => setOrdering(e.target.value)}
-                className="px-3 py-2 border-2 border-gray-200 rounded-xl text-xs font-bold text-gray-600 bg-white focus:outline-none focus:border-indigo-400">
-                <option value="-created_at">Newest First</option>
-                <option value="created_at">Oldest First</option>
-                <option value="-duration">Longest Duration</option>
-                <option value="duration">Shortest Duration</option>
-                <option value="call_status">Status A–Z</option>
-              </select>
-            </div>
+              if (tab.adminOnly) {
+                return (
+                  <Can key={tab.id} perform="voxbay:admin">
+                    <TabButton />
+                  </Can>
+                );
+              }
+              return <TabButton key={tab.id} />;
+            })}
           </div>
 
-          {/* Table body */}
-          {lLoading ? (
-            <div className="p-6"><Skeleton rows={6} h="h-10" /></div>
-          ) : logs.length === 0 ? (
-            <Empty msg="No call logs for this filter" />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead className="bg-gray-50 text-[10px] text-gray-400 uppercase tracking-widest font-bold border-b border-gray-100">
-                  <tr>
-                    {['Type','Caller','Called / Dest','Agent / Ext','Status','Duration','Conv. Duration','Start','Recording','Actions'].map(h => (
-                      <th key={h} className="px-4 py-3 text-left">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {logs.map((log, i) => (
-                    <tr key={log.call_uuid || i} className="hover:bg-indigo-50/40 transition-colors">
-                      <td className="px-4 py-3">
-                        {log.call_type === 'incoming'
-                          ? <span className="flex items-center gap-1 text-indigo-600 font-bold"><PhoneIncoming size={11}/> IN</span>
-                          : <span className="flex items-center gap-1 text-violet-600 font-bold"><PhoneOutgoing size={11}/> OUT</span>}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-gray-700">{log.caller_number || '—'}</td>
-                      <td className="px-4 py-3 font-mono text-gray-600">{log.called_number || log.destination || '—'}</td>
-                      <td className="px-4 py-3">
-                        <AgentCell agentMap={agentMap} number={log.agent_number || log.extension} name={log.agent_name} />
-                      </td>
-                      <td className="px-4 py-3"><StatusBadge status={log.call_status} /></td>
-                      <td className="px-4 py-3 font-mono text-gray-500">{log.duration_display || fmtSec(log.duration)}</td>
-                      <td className="px-4 py-3 font-mono text-gray-500">{log.conversation_duration_display || fmtSec(log.conversation_duration)}</td>
-                      <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{log.call_start ? new Date(log.call_start).toLocaleString() : '—'}</td>
-                      <td className="px-4 py-3">
-                        {log.recording_url
-                          ? <a href={log.recording_url} target="_blank" rel="noopener noreferrer"
-                              className="text-indigo-500 hover:text-indigo-700 font-bold flex items-center gap-1">▶ Play</a>
-                          : <span className="text-gray-200">—</span>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => handleCall(log.caller_number || log.destination)}
-                            className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="Click to Call">
-                            <PhoneCall size={13} />
-                          </button>
-                          {log.call_type === 'incoming' && (
-                            log.is_lead ? (
-                              <button onClick={() => navigate(`/leads/${log.lead_id}`)}
-                                className="px-2 py-1 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 flex items-center gap-1 text-[10px] font-bold border border-gray-200 transition-colors">
-                                <ExternalLink size={11} /> View
-                              </button>
-                            ) : (
-                              <button onClick={() => navigate(`/addnewlead?phone=${log.caller_number}`)}
-                                className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 flex items-center gap-1 text-[10px] font-bold border border-indigo-200 transition-colors">
-                                <UserPlus size={11} /> Convert
-                              </button>
-                            )
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <Can perform="voxbay:admin">
-            <UniqueMissedCallsTable />
-          </Can>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
-              <p className="text-[11px] text-gray-400">Page {page} of {totalPages} · {totalLogs.toLocaleString()} records</p>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setPage(1)} disabled={page === 1}
-                  className="px-2 py-1 text-xs border border-gray-200 rounded-lg disabled:opacity-30 hover:border-indigo-400 hover:text-indigo-600 transition-all font-bold">«</button>
-                <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page === 1}
-                  className="p-1.5 border border-gray-200 rounded-lg disabled:opacity-30 hover:border-indigo-400 hover:text-indigo-600 transition-all">
-                  <ChevronLeft size={13}/>
-                </button>
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pg = Math.max(1, Math.min(totalPages-4, page-2)) + i;
-                  return (
-                    <button key={pg} onClick={() => setPage(pg)}
-                      className={`w-7 h-7 text-xs rounded-lg border font-bold transition-all ${pg === page ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-200 text-gray-500 hover:border-indigo-400 hover:text-indigo-600'}`}>
-                      {pg}
-                    </button>
-                  );
-                })}
-                <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page === totalPages}
-                  className="p-1.5 border border-gray-200 rounded-lg disabled:opacity-30 hover:border-indigo-400 hover:text-indigo-600 transition-all">
-                  <ChevronRight size={13}/>
-                </button>
-                <button onClick={() => setPage(totalPages)} disabled={page === totalPages}
-                  className="px-2 py-1 text-xs border border-gray-200 rounded-lg disabled:opacity-30 hover:border-indigo-400 hover:text-indigo-600 transition-all font-bold">»</button>
-              </div>
-            </div>
-          )}
+          <div className="flex-1 min-w-0 flex flex-col">
+            {activeTab === 'Missed Call Report' && (
+              <CallLogsTable dateRange={dateRange} agentMap={agentMap} defaultCallType="incoming" defaultCallStatus="MISSED" title="Missed Call Report" onLogsFetched={handleLogsFetched} hideTypeFilter hideStatusFilter />
+            )}
+            {activeTab === 'Unique Missed Calls' && (
+              <Can perform="voxbay:admin">
+                <UniqueMissedCallsTable />
+              </Can>
+            )}
+            {activeTab === 'Incoming Call Report' && (
+              <CallLogsTable dateRange={dateRange} agentMap={agentMap} defaultCallType="incoming" title="Incoming Call Report" onLogsFetched={handleLogsFetched} hideTypeFilter />
+            )}
+            {activeTab === 'Outgoing Call Report' && (
+              <CallLogsTable dateRange={dateRange} agentMap={agentMap} defaultCallType="outgoing" title="Outgoing Call Report" onLogsFetched={handleLogsFetched} hideTypeFilter />
+            )}
+          </div>
         </div>
 
       </div>
