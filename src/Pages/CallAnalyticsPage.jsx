@@ -486,7 +486,7 @@ export default function CallAnalyticsPage() {
             <h3 className="text-xs font-black text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-1.5">
               <BarChart3 size={13} className="text-indigo-500" /> Calls by Hour
             </h3>
-            {lLoading ? <Skeleton rows={6} h="h-5" /> : callsByHour.every(h => h.calls === 0)
+            {chartLoading ? <Skeleton rows={6} h="h-5" /> : callsByHour.every(h => h.calls === 0)
               ? <Empty msg="No hourly data" />
               : (
                 <>
@@ -508,7 +508,7 @@ export default function CallAnalyticsPage() {
             <h3 className="text-xs font-black text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-1.5">
               <TrendingUp size={13} className="text-emerald-500" /> Score Card
             </h3>
-            {lLoading ? <Skeleton rows={3} h="h-14" /> : topAgents.length === 0
+            {chartLoading ? <Skeleton rows={3} h="h-14" /> : topAgents.length === 0
               ? <Empty msg="No agent data" />
               : (
                 <div className="space-y-2">
