@@ -5,9 +5,10 @@ import {
   PhoneOutgoing, Search, ChevronLeft, ChevronRight, Wifi, WifiOff,
   Clock, TrendingUp, BarChart3, Filter, UserPlus, ExternalLink, PhoneCall
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, Can } from '../context/AuthContext';
 import { getRoleLabel } from '../Components/utils/callPermissions';
 import { useNavigate } from 'react-router-dom';
+import UniqueMissedCallsTable from '../Components/voxbay/UniqueMissedCallsTable';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -655,7 +656,7 @@ export default function CallAnalyticsPage() {
                                 <ExternalLink size={11} /> View
                               </button>
                             ) : (
-                              <button onClick={() => navigate(`/leads/new?phone=${log.caller_number}`)}
+                              <button onClick={() => navigate(`/addnewlead?phone=${log.caller_number}`)}
                                 className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 flex items-center gap-1 text-[10px] font-bold border border-indigo-200 transition-colors">
                                 <UserPlus size={11} /> Convert
                               </button>
@@ -669,6 +670,10 @@ export default function CallAnalyticsPage() {
               </table>
             </div>
           )}
+
+          <Can perform="voxbay:admin">
+            <UniqueMissedCallsTable />
+          </Can>
 
           {/* Pagination */}
           {totalPages > 1 && (

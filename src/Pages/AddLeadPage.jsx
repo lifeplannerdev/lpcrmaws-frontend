@@ -1,6 +1,6 @@
 // Pages/AddLeadPage.jsx - UPDATED WITH MANDATORY ASSIGNMENT
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PageHeader from '../Components/common/PageHeader'; // Use common PageHeader
 import ContactInfoSection from '../Components/leads/newlead/ContactSection';
@@ -32,6 +32,19 @@ export default function AddLeadPage() {
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const initialPhone = params.get('phone');
+    if (initialPhone) {
+      setFormData(prev => ({
+        ...prev,
+        phone: initialPhone,
+        source: 'VOXBAY CALL'
+      }));
+    }
+  }, [location.search]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
