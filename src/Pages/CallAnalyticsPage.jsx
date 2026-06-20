@@ -349,7 +349,6 @@ export default function CallAnalyticsPage() {
             </h1>
             <p className="text-xs text-gray-400 mt-0.5">
               Role: <span className="font-bold text-indigo-600">{getRoleLabel(userRole)}</span>
-              {lastSync && <span className="ml-2 text-gray-300">· Synced {lastSync.toLocaleTimeString()}</span>}
             </p>
           </div>
 
