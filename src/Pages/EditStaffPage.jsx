@@ -89,6 +89,7 @@ export default function EditStaffPage() {
           officePhone: data.office_phone || data.phone || '',
           personalPhone: data.personal_phone || '',
           voxbayNumber: data.voxbay_number || '',
+          voxbayExtension: data.voxbay_extension || '',
           location: data.location || '',
           db_roles: data.db_roles || [],
           salary: data.salary || '',

@@ -100,6 +100,7 @@ export default function AddStaffPage() {
       personal_phone: formData.personalPhone,
       phone: formData.officePhone, // Keep mapping to phone to satisfy any backend expectations
       voxbay_number: formData.voxbayNumber,
+      voxbay_extension: formData.voxbayExtension,
       location: formData.location || '',
       db_roles: formData.db_roles,
       team: formData.team || '',

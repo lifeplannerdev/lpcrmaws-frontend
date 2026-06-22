@@ -43,4 +43,6 @@ export const initialFormData = {
   confirmPassword: '',
   salary: '',
   db_roles: [],
+  voxbayNumber: '',
+  voxbayExtension: '',
 };

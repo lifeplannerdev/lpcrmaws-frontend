@@ -76,6 +76,30 @@ const ProfessionalInfoSection = React.memo(({ formData, errors, onChange, branch
           className="px-4 py-3 border-2 rounded-xl font-medium"
         />
 
+        <FormField
+          label="Voxbay Agent Number"
+          name="voxbayNumber"
+          type="text"
+          value={formData.voxbayNumber || ''}
+          onChange={onChange}
+          error={errors.voxbayNumber}
+          placeholder="e.g. 918593050107"
+          icon={CheckSquare}
+          className="px-4 py-3 border-2 rounded-xl font-medium"
+        />
+
+        <FormField
+          label="Voxbay Extension"
+          name="voxbayExtension"
+          type="text"
+          value={formData.voxbayExtension || ''}
+          onChange={onChange}
+          error={errors.voxbayExtension}
+          placeholder="e.g. 259"
+          icon={CheckSquare}
+          className="px-4 py-3 border-2 rounded-xl font-medium"
+        />
+
         {formData.db_roles?.some(roleId => {
           const roleObj = dbRolesList.find(r => r.id === roleId);
           return roleObj?.name.toUpperCase() === 'TRAINER';

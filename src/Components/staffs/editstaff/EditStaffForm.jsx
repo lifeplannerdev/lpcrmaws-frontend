@@ -75,6 +75,7 @@ export default function EditStaffForm({
       personal_phone: formData.personalPhone,
       phone: formData.officePhone, // keep mapping to phone as fallback
       voxbay_number: formData.voxbayNumber,
+      voxbay_extension: formData.voxbayExtension,
       location: formData.location,
       db_roles: formData.db_roles,
       team: formData.team,

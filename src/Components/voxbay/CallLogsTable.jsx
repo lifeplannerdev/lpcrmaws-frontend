@@ -165,11 +165,7 @@ export default function CallLogsTable({ dateRange, agentMap, globalCallType, def
           'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
-          uid: 'demo_uid',
-          upin: 'demo_upin',
-          user_no: user?.phone || '0000',
-          destination: destination,
-          callerid: '0000'
+          destination: destination
         }),
         credentials: 'omit'
       });
