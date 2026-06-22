@@ -265,15 +265,17 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
       return (
         <div className="flex flex-col gap-8 h-full overflow-y-auto w-full pb-20">
           <div className="flex flex-col gap-2 w-full">
-            <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded">
-                <h2 className="text-lg font-bold text-indigo-600">
-                  Daily Agenda Leads ({localLeads.length})
-                </h2>
-                <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
-                  + Add Row
-                </button>
-            </div>
-            <div style={{ height: Math.max(localLeads.length * 35 + 40, 400) }} className="w-full">
+            {isReportMode && (
+              <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded">
+                  <h2 className="text-lg font-bold text-indigo-600">
+                    Daily Agenda Leads ({localLeads.length})
+                  </h2>
+                  <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
+                    + Add Row
+                  </button>
+              </div>
+            )}
+            <div className="rounded-lg border shadow-sm bg-white overflow-hidden" style={{ minHeight: '300px', height: '600px' }}>
               <DataGrid 
                 columns={columns} 
                 rows={localLeads} 
