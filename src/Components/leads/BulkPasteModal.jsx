@@ -186,23 +186,24 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
             </div>
           )}
 
-          <div className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden relative min-h-[400px]">
-            {rows.length === 0 ? (
-              <textarea
-                className="absolute inset-0 w-full h-full p-8 text-center bg-gray-50 dark:bg-gray-900/50 text-gray-500 italic resize-none outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white dark:focus:bg-gray-800 transition-colors flex items-center justify-center leading-[300px]"
-                placeholder="Click here and press Ctrl+V to paste Excel data..."
-                onPaste={handlePaste}
-                onChange={() => {}}
-                value=""
-              />
-            ) : (
-              <div className="h-full w-full" onPaste={handlePaste}>
-                <DataGrid
-                  columns={columns}
-                  rows={rows}
-                  className="h-full w-full custom-data-grid"
-                  style={{ height: '100%', minHeight: '400px' }}
-                />
+          <div 
+            className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden relative min-h-[400px] outline-none focus-within:ring-2 focus-within:ring-indigo-500"
+            tabIndex={0}
+            onPaste={handlePaste}
+          >
+            <DataGrid
+              columns={columns}
+              rows={rows}
+              className="h-full w-full custom-data-grid"
+              style={{ height: '100%', minHeight: '400px' }}
+            />
+            {rows.length === 0 && (
+              <div className="absolute inset-0 top-[40px] flex items-center justify-center bg-white/50 dark:bg-gray-900/50 pointer-events-none">
+                <div className="text-center">
+                  <span className="inline-block text-gray-600 dark:text-gray-300 font-medium bg-white dark:bg-gray-800 px-6 py-3 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+                    Click anywhere inside this grid and press <strong>Ctrl+V</strong> to paste data
+                  </span>
+                </div>
               </div>
             )}
           </div>
