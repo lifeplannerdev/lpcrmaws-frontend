@@ -18,8 +18,6 @@ const ALLOWED_EXCEL_TYPES = [
 ];
 const ALLOWED_EXCEL_EXT = /\.(xls|xlsx)$/i;
 
-const ALLOWED_EXCEL_EXT = /\.(xls|xlsx)$/i;
-
 const SalesDailyAgendaGrid = ({ formData, setFormData, authFetch }) => {
   const [leads, setLeads] = useState([]);
 
