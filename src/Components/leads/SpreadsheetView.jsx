@@ -13,12 +13,12 @@ function statusEditor({ row, onRowChange }) {
   return (
     <select
       autoFocus
-      className="w-full h-full border-none outline-none bg-white text-gray-900"
-      value={row.status}
+      className="w-full h-full border-none outline-none bg-white text-gray-900 px-2"
+      value={row.status?.toUpperCase() || 'ENQUIRY'}
       onChange={(e) => onRowChange({ ...row, status: e.target.value }, true)}
     >
       {STATUS_OPTIONS.map(opt => (
-        <option key={opt} value={opt}>{opt}</option>
+        <option key={opt} value={opt}>{opt.replace('_', ' ')}</option>
       ))}
     </select>
   );
@@ -36,7 +36,17 @@ const columns = [
   { key: 'work_experience', name: 'Work Experience', width: 150, renderEditCell: textEditor },
   { key: 'location', name: 'Location', width: 150, renderEditCell: textEditor },
   { key: 'budget', name: 'Budget', width: 120, renderEditCell: textEditor },
-  { key: 'status', name: 'Status', width: 150, renderEditCell: statusEditor },
+  { 
+    key: 'status', 
+    name: 'Status', 
+    width: 150, 
+    renderEditCell: statusEditor,
+    renderCell: (p) => (
+      <span className="font-semibold text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
+        {p.row.status?.toUpperCase().replace('_', ' ')}
+      </span>
+    )
+  },
 ];
 
 export default function SpreadsheetView({ leads, onUpdateLead, authFetch }) {
