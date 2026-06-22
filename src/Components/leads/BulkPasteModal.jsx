@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { DataGrid } from 'react-data-grid';
+import { DataGrid, renderTextEditor as textEditor } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
-import { X, Upload, AlertCircle } from 'lucide-react';
+import { X, Upload, AlertCircle, Plus } from 'lucide-react';
 import { Combobox } from '../common/Combobox';
 
 const columns = [
-  { key: 'date', name: 'Date' },
-  { key: 'serial_number', name: 'Serial Number' },
-  { key: 'name', name: 'Name' },
-  { key: 'phone', name: 'Phone Number' },
-  { key: 'email', name: 'Email Address' },
-  { key: 'interested_country', name: 'Interested Country' },
-  { key: 'interested_course', name: 'Interested Course' },
-  { key: 'previous_qualification', name: 'Previous Qual.' },
-  { key: 'work_experience', name: 'Work Experience' },
-  { key: 'location', name: 'Location' },
-  { key: 'budget', name: 'Budget' },
-  { key: 'status', name: 'Status of Interest' },
+  { key: 'date', name: 'Date', renderEditCell: textEditor },
+  { key: 'serial_number', name: 'Serial Number', renderEditCell: textEditor },
+  { key: 'name', name: 'Name', renderEditCell: textEditor },
+  { key: 'phone', name: 'Phone Number', renderEditCell: textEditor },
+  { key: 'email', name: 'Email Address', renderEditCell: textEditor },
+  { key: 'interested_country', name: 'Interested Country', renderEditCell: textEditor },
+  { key: 'interested_course', name: 'Interested Course', renderEditCell: textEditor },
+  { key: 'previous_qualification', name: 'Previous Qual.', renderEditCell: textEditor },
+  { key: 'work_experience', name: 'Work Experience', renderEditCell: textEditor },
+  { key: 'location', name: 'Location', renderEditCell: textEditor },
+  { key: 'budget', name: 'Budget', renderEditCell: textEditor },
+  { key: 'status', name: 'Status of Interest', renderEditCell: textEditor },
 ];
 
 export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }) {
@@ -87,7 +87,28 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
       setError(`Ignored ${parsedRows.length - validRows.length} rows missing phone numbers.`);
     }
 
-    setRows(validRows);
+    setRows(prev => [...prev, ...validRows]);
+  };
+
+  const handleAddRow = () => {
+    setRows(prev => [
+      ...prev,
+      {
+        id: prev.length > 0 ? Math.max(...prev.map(r => r.id)) + 1 : 0,
+        date: '',
+        serial_number: '',
+        name: '',
+        phone: '',
+        email: '',
+        interested_country: '',
+        interested_course: '',
+        previous_qualification: '',
+        work_experience: '',
+        location: '',
+        budget: '',
+        status: 'ENQUIRY',
+      }
+    ]);
   };
 
   const handleSubmit = async () => {
@@ -194,6 +215,7 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
             <DataGrid
               columns={columns}
               rows={rows}
+              onRowsChange={setRows}
               className="h-full w-full custom-data-grid"
               style={{ height: '100%', minHeight: '400px' }}
             />
@@ -201,7 +223,7 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
               <div className="absolute inset-0 top-[40px] flex items-center justify-center bg-white/50 dark:bg-gray-900/50 pointer-events-none">
                 <div className="text-center">
                   <span className="inline-block text-gray-600 dark:text-gray-300 font-medium bg-white dark:bg-gray-800 px-6 py-3 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-                    Click anywhere inside this grid and press <strong>Ctrl+V</strong> to paste data
+                    Click anywhere inside this grid and press <strong>Ctrl+V</strong> to paste data, or click "Add Row" below to enter manually.
                   </span>
                 </div>
               </div>
@@ -210,20 +232,30 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
           <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+            onClick={handleAddRow}
+            className="flex items-center gap-2 px-4 py-2 text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-900/50 transition-colors font-medium"
           >
-            Cancel
+            <Plus className="w-4 h-4" />
+            Add Row
           </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading || rows.length === 0 || !assigneeId}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-500/50 transition-colors disabled:opacity-50 flex items-center gap-2"
-          >
-            {loading ? 'Processing...' : 'Save & Assign'}
-          </button>
+          
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading || rows.length === 0 || !assigneeId || rows.some(r => !r.phone || r.phone.trim() === '')}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-500/50 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {loading ? 'Processing...' : 'Save & Assign'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
