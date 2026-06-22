@@ -48,40 +48,39 @@ function PhoneEditor({ row, column, onRowChange, onClose }) {
     }
   }, [value, accessToken]);
 
-  const handleSelect = (lead) => {
-    onRowChange({ 
-      ...row, 
-      ...lead, 
-      agenda_type: 'Follow-up', // Default explicitly to follow up if selected
-      isNew: true // Keep it marked as new so we know to save it
-    }, true);
-    setSuggestions([]);
-  };
+  const listId = `phone-suggestions-${row.id}`;
 
   return (
-    <div className="relative w-full h-full flex flex-col justify-center">
+    <div className="w-full h-full">
       <input
         autoFocus
+        list={listId}
         className="w-full h-full border-none outline-none px-2 bg-transparent"
         value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={() => {
-          setTimeout(() => onRowChange({ ...row, [column.key]: value }, true), 200);
+        onChange={(e) => {
+          const val = e.target.value;
+          setValue(val);
+          const match = suggestions.find(s => s.phone === val);
+          if (match) {
+            onRowChange({ 
+              ...row, 
+              ...match, 
+              agenda_type: 'Follow-up', 
+              isNew: true 
+            }, true);
+            setSuggestions([]);
+          }
         }}
+        onBlur={() => onRowChange({ ...row, [column.key]: value }, true)}
       />
       {suggestions.length > 0 && (
-        <div className="absolute top-full left-0 w-64 bg-white border shadow-xl z-50 max-h-48 overflow-y-auto rounded-b-md">
+        <datalist id={listId}>
           {suggestions.map(s => (
-            <div 
-              key={s.id} 
-              className="p-2 border-b cursor-pointer hover:bg-indigo-50"
-              onMouseDown={() => handleSelect(s)}
-            >
-              <div className="font-semibold text-sm">{s.name || 'No Name'}</div>
-              <div className="text-xs text-gray-500">{s.phone}</div>
-            </div>
+            <option key={s.id} value={s.phone}>
+              {s.name || 'No Name'}
+            </option>
           ))}
-        </div>
+        </datalist>
       )}
     </div>
   );
@@ -205,7 +204,7 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
     setLocalLeads([newRow, ...localLeads]);
   };
 
-  const isManager = user?.roles?.some(r => ['SUPERADMIN', 'COMPANY_ADMIN', 'MD', 'DIRECTOR', 'GENERAL_MANAGER'].includes(r));
+  const isManager = user?.role_names?.some(r => ['SUPERADMIN', 'COMPANY_ADMIN', 'MD', 'DIRECTOR', 'GENERAL_MANAGER'].includes(r));
 
   // Split into Management View vs Employee View
   const renderGrid = () => {

@@ -61,7 +61,7 @@ const SalesDailyAgendaGrid = ({ formData, setFormData, authFetch }) => {
 };
 
 const FormFields = ({ formData, handleInputChange, errors, user, setFormData, authFetch }) => {
-  const isSales = user?.roles?.some(r => ['ADM_COUNSELLOR', 'ADM_MANAGER'].includes(r));
+  const isSales = user?.role_names?.some(r => ['ADM_COUNSELLOR', 'ADM_MANAGER'].includes(r));
 
   const completionPercentage = (() => {
     let score = 0;
