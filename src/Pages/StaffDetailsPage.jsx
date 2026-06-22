@@ -233,6 +233,24 @@ export default function StaffDetailsPage() {
                     </div>
                   </div>
                   
+                  {/* Voxbay Information */}
+                  {(staff.voxbay_number || staff.voxbay_extension) && (
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                        <Phone size={18} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-500">Voxbay Integration</p>
+                        <p className="text-slate-900 font-semibold">
+                          {staff.voxbay_extension ? `Ext: ${staff.voxbay_extension}` : 'No Extension'}
+                        </p>
+                        <div className="flex gap-2 mt-1">
+                          {staff.voxbay_number && <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium tracking-wide uppercase">Number: {staff.voxbay_number}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
                       <Mail size={18} />
