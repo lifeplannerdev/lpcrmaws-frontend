@@ -22,12 +22,24 @@ const AssignedToSection = ({ formData, errors, onChange }) => {
       if (!token) token = await refreshAccessToken();
       if (!token) throw new Error('Authentication required');
 
-      const response = await fetch(`${API_BASE_URL}/leads/available-users/`, {
+      let response = await fetch(`${API_BASE_URL}/leads/available-users/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
         credentials: 'include',
       });
+
+      if (response.status === 401) {
+        token = await refreshAccessToken();
+        if (!token) throw new Error('Authentication required after refresh');
+        
+        response = await fetch(`${API_BASE_URL}/leads/available-users/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          credentials: 'include',
+        });
+      }
 
       if (!response.ok) {
         throw new Error('Failed to fetch users');
