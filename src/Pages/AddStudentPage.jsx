@@ -14,6 +14,9 @@ export default function AddStudentPage() {
   const { hasPermission } = usePermissions();
   const canEditStudents = hasPermission('students:edit_any') || hasPermission('students:edit_tenant') || hasPermission('students:edit_own');
   
+  const [searchParams] = window.location.search ? [new URLSearchParams(window.location.search)] : [new URLSearchParams()];
+  const sourceLeadId = searchParams.get('lead_id');
+
   const {
     formData,
     trainers,
@@ -28,7 +31,7 @@ export default function AddStudentPage() {
     errors,
     handleChange,
     submitStudent,
-  } = useStudentForm();
+  } = useStudentForm(null, sourceLeadId);
 
   const handleSubmit = (e) => {
     e.preventDefault();

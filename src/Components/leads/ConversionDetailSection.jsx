@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { GraduationCap, Save, Edit2, Lock } from 'lucide-react';
+import { GraduationCap, Save, Edit2, Lock, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 
@@ -7,6 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const CONVERSION_ROLES = ['ADMIN', 'OPS', 'CM', 'CEO', 'BUSINESS_HEAD'];
 
 export default function ConversionDetailSection({ lead }) {
+  const navigate = useNavigate();
   const { accessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
   const [detail,  setDetail]  = useState(null);
@@ -17,6 +19,7 @@ export default function ConversionDetailSection({ lead }) {
   const [form,    setForm]    = useState({});
 
   const canEdit = hasPermission('leads:edit_any') || hasPermission('leads:edit_tenant');
+  const canAddStudent = hasPermission('students:edit_any') || hasPermission('students:edit_tenant') || hasPermission('students:edit_own');
 
   // ── Fetch existing conversion detail
   useEffect(() => {
@@ -101,20 +104,31 @@ export default function ConversionDetailSection({ lead }) {
           )}
         </div>
 
-        {canEdit ? (
-          <button
-            onClick={() => { setEditing(e => !e); setError(null); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-            {editing ? 'Cancel' : detail ? 'Edit' : 'Fill Details'}
-          </button>
-        ) : (
-          <span className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
-            <Lock className="w-3.5 h-3.5" />
-            View only
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {detail && canAddStudent && !editing && (
+            <button
+              onClick={() => navigate(`/students/add?lead_id=${lead.id}`)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg shadow-sm hover:from-emerald-600 hover:to-teal-700 transition transform hover:-translate-y-0.5"
+            >
+              <UserPlus className="w-4 h-4" />
+              Enroll as Student
+            </button>
+          )}
+          {canEdit ? (
+            <button
+              onClick={() => { setEditing(e => !e); setError(null); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              {editing ? 'Cancel' : detail ? 'Edit Details' : 'Fill Details'}
+            </button>
+          ) : (
+            <span className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
+              <Lock className="w-3.5 h-3.5" />
+              View only
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── Error */}

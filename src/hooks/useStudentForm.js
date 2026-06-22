@@ -6,7 +6,7 @@ import { initialStudentFormData } from '../Components/utils/studentConstants';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-export function useStudentForm(studentId = null) {
+export function useStudentForm(studentId = null, sourceLeadId = null) {
   const { accessToken, refreshAccessToken, user } = useAuth();
   
   const [formData, setFormData] = useState(initialStudentFormData);
@@ -32,12 +32,14 @@ export function useStudentForm(studentId = null) {
     }));
   }, [company]);
 
-  // Fetch student data if editing
+  // Fetch student data if editing, or fetch lead data if converting
   useEffect(() => {
     if (studentId) {
       fetchStudent();
+    } else if (sourceLeadId) {
+      fetchLeadDataForConversion();
     }
-  }, [studentId]);
+  }, [studentId, sourceLeadId]);
 
   // Fetch trainers, batches, branches
   useEffect(() => {
@@ -108,6 +110,50 @@ export function useStudentForm(studentId = null) {
     } catch (err) {
       console.error('Failed to fetch student:', err);
       setErrors({ submit: 'Failed to load student details' });
+    } finally {
+      setFetchLoading(false);
+    }
+  };
+
+  const fetchLeadDataForConversion = async () => {
+    try {
+      setFetchLoading(true);
+      let token = accessToken || await refreshAccessToken();
+      if (!token) return;
+
+      // Fetch basic lead data
+      const leadRes = await axios.get(`${API_BASE_URL}/leads/${sourceLeadId}/`, {
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
+      });
+
+      // Fetch conversion details
+      let conversionData = {};
+      try {
+        const convRes = await axios.get(`${API_BASE_URL}/leads/${sourceLeadId}/conversion/`, {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        });
+        if (convRes.status === 200) {
+          conversionData = convRes.data;
+        }
+      } catch (e) {
+        console.log("No conversion details found for lead");
+      }
+
+      const lead = leadRes.data;
+      
+      setFormData(prev => ({
+        ...prev,
+        name: conversionData.student_name || lead.name || '',
+        phone_number: lead.phone || '',
+        email: lead.email || '',
+        branch: lead.branch_id || lead.branch || prev.branch,
+        company: lead.company || prev.company,
+        admission_date: conversionData.joining_date || new Date().toISOString().split('T')[0],
+      }));
+    } catch (err) {
+      console.error('Failed to load lead details for conversion:', err);
     } finally {
       setFetchLoading(false);
     }
