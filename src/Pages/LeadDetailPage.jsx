@@ -13,6 +13,7 @@ import ConversionDetailSection from '../Components/leads/ConversionDetailSection
 import UnifiedTimeline from '../Components/leads/UnifiedTimeline';
 import CustomerJourney from '../Components/leads/CustomerJourney';
 import LeadDocuments from '../Components/leads/LeadDocuments';
+import LeadQuickActions from '../Components/leads/LeadQuickActions';
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -28,6 +29,7 @@ export default function LeadDetailPage() {
   const [followUps, setFollowUps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('details');
+  const [refreshTimelineTrigger, setRefreshTimelineTrigger] = useState(0);
 
   // Keep token in a ref so authFetch stays stable across re-renders
   const tokenRef = useRef(accessToken);
@@ -546,8 +548,16 @@ export default function LeadDetailPage() {
           </div>
 
           {/* Right Column: Unified Timeline (Command Center) */}
-          <div className="lg:col-span-1">
-            <UnifiedTimeline authFetch={authFetch} />
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Quick Actions</h3>
+              <LeadQuickActions 
+                leadId={leadId} 
+                authFetch={authFetch} 
+                onActionComplete={() => setRefreshTimelineTrigger(prev => prev + 1)} 
+              />
+            </div>
+            <UnifiedTimeline authFetch={authFetch} refreshTrigger={refreshTimelineTrigger} />
           </div>
         </div>
       </div>

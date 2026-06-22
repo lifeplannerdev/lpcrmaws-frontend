@@ -5,6 +5,7 @@ import {
   ChevronRight, Award, CheckCircle, FileText, Clock, Users, ExternalLink, Loader2, AlertCircle
 } from 'lucide-react';
 import UnifiedTimeline from './UnifiedTimeline';
+import LeadQuickActions from './LeadQuickActions';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -14,6 +15,7 @@ export default function LeadSidePanel({ leadId, authFetch, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('timeline'); // 'info', 'timeline', 'assignment'
+  const [refreshTimelineTrigger, setRefreshTimelineTrigger] = useState(0);
 
   useEffect(() => {
     if (!leadId || !authFetch) return;
@@ -209,6 +211,12 @@ export default function LeadSidePanel({ leadId, authFetch, onClose }) {
                   <Mail size={16} /> Email
                 </a>
               </div>
+              
+              <LeadQuickActions 
+                leadId={leadId} 
+                authFetch={authFetch} 
+                onActionComplete={() => setRefreshTimelineTrigger(prev => prev + 1)} 
+              />
             </div>
 
             {/* Mini-Tabs Navigation */}
@@ -230,7 +238,7 @@ export default function LeadSidePanel({ leadId, authFetch, onClose }) {
               {activeTab === 'assignment' && renderAssignmentTab()}
               {activeTab === 'timeline' && (
                 <div className="p-0">
-                  <UnifiedTimeline authFetch={authFetch} leadIdOverride={leadId} isSidePanel={true} />
+                  <UnifiedTimeline authFetch={authFetch} leadIdOverride={leadId} isSidePanel={true} refreshTrigger={refreshTimelineTrigger} />
                 </div>
               )}
             </div>

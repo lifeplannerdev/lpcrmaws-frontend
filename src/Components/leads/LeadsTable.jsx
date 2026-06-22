@@ -6,7 +6,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '../../context/PermissionsContext';
 
-const LeadsTable = ({ leads, statusColors, onDeleteLead }) => {
+const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
 
@@ -46,7 +46,11 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead }) => {
             {leads.map((lead, index) => (
               <tr key={lead.id}
                 onClick={() => navigate(`/leads/${lead.id}`)}
-                className="group cursor-pointer hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200"
+                className={`group cursor-pointer transition-all duration-200 ${
+                  activeLeadId && activeLeadId.toString() === lead.id.toString()
+                    ? 'bg-blue-50/80 border-l-4 border-blue-500 shadow-inner'
+                    : 'hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 border-l-4 border-transparent'
+                }`}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 {/* Lead Info */}

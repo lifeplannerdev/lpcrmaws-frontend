@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   CalendarClock, Phone, MessageSquare,
   Mail, Users, AlertTriangle,
@@ -43,6 +44,7 @@ function formatTime(t) {
 }
 
 export default function TodayFollowUps({ followUps = [], onViewAll }) {
+  const navigate = useNavigate();
   return (
     <Card className="h-full">
        <SectionHeader title="Today's Follow-Ups" onActionClick={onViewAll} />
@@ -63,7 +65,14 @@ export default function TodayFollowUps({ followUps = [], onViewAll }) {
             return (
               <div
                 key={item.id || index}
+                onClick={() => {
+                  if (item.lead) {
+                    navigate(`/leads/${item.lead}`);
+                  }
+                }}
                 className={`group flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 ${
+                  item.lead ? 'cursor-pointer' : ''
+                } ${
                   item.is_overdue
                     ? 'bg-red-50 border-red-200'
                     : 'bg-white border-gray-200 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50 hover:border-emerald-300 hover:shadow-md'
@@ -77,7 +86,7 @@ export default function TodayFollowUps({ followUps = [], onViewAll }) {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
-                    {item.name || item.phone_number}
+                    {item.name || item.phone_number} {item.lead_program && <span className="text-xs font-normal text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md ml-1">{item.lead_program}</span>}
                   </p>
                   {item.name && (
                     <p className="text-xs text-gray-400 truncate">{item.phone_number}</p>

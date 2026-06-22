@@ -375,6 +375,7 @@ export default function LeadsPage() {
                   leads={leads}
                   statusColors={statusColors}
                   onDeleteLead={handleDeleteLead}
+                  activeLeadId={leadId}
                 />
               ) : viewMode === 'spreadsheet' ? (
                 <div className="h-[75vh] w-full border border-gray-200 rounded-xl overflow-hidden bg-white">

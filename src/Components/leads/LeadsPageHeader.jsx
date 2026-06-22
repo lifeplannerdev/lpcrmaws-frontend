@@ -401,6 +401,7 @@ const LeadsPageHeader = () => {
         <BulkPasteModal 
           isOpen={showPasteModal} 
           onClose={() => setShowPasteModal(false)} 
+          authFetch={authFetch}
           onSuccess={() => {
             setShowPasteModal(false);
             window.location.reload();

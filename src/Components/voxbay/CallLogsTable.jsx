@@ -252,8 +252,38 @@ export default function CallLogsTable({ dateRange, agentMap, globalCallType, def
                       ? <span className="flex items-center gap-1 text-indigo-600 font-bold"><PhoneIncoming size={11}/> IN</span>
                       : <span className="flex items-center gap-1 text-violet-600 font-bold"><PhoneOutgoing size={11}/> OUT</span>}
                   </td>
-                  <td className="px-4 py-3 font-mono text-gray-700">{log.caller_number || '—'}</td>
-                  <td className="px-4 py-3 font-mono text-gray-600">{log.called_number || log.destination || '—'}</td>
+                  <td className="px-4 py-3">
+                    {log.call_type === 'incoming' ? (
+                      log.is_lead && log.lead_name ? (
+                        <div>
+                          <button onClick={() => navigate(`/leads/${log.lead_id}`)} className="text-indigo-600 font-bold hover:underline text-left">
+                            {log.lead_name}
+                          </button>
+                          <div className="font-mono text-gray-500 text-[10px] mt-0.5">{log.caller_number || '—'}</div>
+                        </div>
+                      ) : (
+                        <span className="font-mono text-gray-700">{log.caller_number || '—'}</span>
+                      )
+                    ) : (
+                      <span className="font-mono text-gray-700">{log.caller_number || '—'}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {log.call_type === 'outgoing' ? (
+                      log.is_lead && log.lead_name ? (
+                        <div>
+                          <button onClick={() => navigate(`/leads/${log.lead_id}`)} className="text-indigo-600 font-bold hover:underline text-left">
+                            {log.lead_name}
+                          </button>
+                          <div className="font-mono text-gray-500 text-[10px] mt-0.5">{log.called_number || log.destination || '—'}</div>
+                        </div>
+                      ) : (
+                        <span className="font-mono text-gray-600">{log.called_number || log.destination || '—'}</span>
+                      )
+                    ) : (
+                      <span className="font-mono text-gray-600">{log.called_number || log.destination || '—'}</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <AgentCell agentMap={agentMap} number={log.agent_number || log.extension} name={log.agent_name} />
                   </td>
@@ -273,14 +303,14 @@ export default function CallLogsTable({ dateRange, agentMap, globalCallType, def
                         className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="Click to Call">
                         <PhoneCall size={13} />
                       </button>
-                      {log.call_type === 'incoming' && (
+                      {(log.call_type === 'incoming' || log.call_type === 'outgoing') && (
                         log.is_lead ? (
                           <button onClick={() => navigate(`/leads/${log.lead_id}`)}
                             className="px-2 py-1 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 flex items-center gap-1 text-[10px] font-bold border border-gray-200 transition-colors">
                             <ExternalLink size={11} /> View
                           </button>
                         ) : (
-                          <button onClick={() => navigate(`/addnewlead?phone=${log.caller_number}`)}
+                          <button onClick={() => navigate(`/addnewlead?phone=${log.call_type === 'outgoing' ? (log.destination || log.called_number) : log.caller_number}`)}
                             className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 flex items-center gap-1 text-[10px] font-bold border border-indigo-200 transition-colors">
                             <UserPlus size={11} /> Convert
                           </button>
