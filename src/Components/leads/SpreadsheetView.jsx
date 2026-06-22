@@ -70,10 +70,8 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch }) {
   // Split into Management View vs Employee View
   const renderGrid = () => {
     if (isManager) {
-      // Management View: Today's Leads grouped by Counsellor
-      const todaysLeads = leads.filter(l => l.assigned_date && isToday(parseISO(l.assigned_date)));
-      
-      const grouped = todaysLeads.reduce((acc, lead) => {
+      // Management View: All filtered leads grouped by Counsellor/Handler
+      const grouped = leads.reduce((acc, lead) => {
         const handlerName = lead.current_handler ? (lead.current_handler.first_name + ' ' + lead.current_handler.last_name).trim() || lead.current_handler.email : 'Unassigned';
         if (!acc[handlerName]) acc[handlerName] = [];
         acc[handlerName].push(lead);
@@ -82,7 +80,7 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch }) {
 
       return (
         <div className="flex flex-col gap-8 h-full overflow-y-auto w-full">
-          <h2 className="text-xl font-bold px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded">Today's Leads Overview</h2>
+          <h2 className="text-xl font-bold px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded">Filtered Leads Overview</h2>
           {Object.entries(grouped).map(([counsellor, cLeads]) => (
             <div key={counsellor} className="flex flex-col gap-2">
               <h3 className="text-lg font-semibold text-indigo-600 px-2">{counsellor} ({cLeads.length})</h3>
@@ -96,50 +94,40 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch }) {
               </div>
             </div>
           ))}
-          {Object.keys(grouped).length === 0 && <p className="p-4 text-gray-500">No leads assigned today.</p>}
+          {Object.keys(grouped).length === 0 && <p className="p-4 text-gray-500">No leads found for these filters.</p>}
         </div>
       );
     } else {
-      // Employee View: Today's Assigned vs Selected Date Leads
+      // Employee View: Today's Assigned vs Other Filtered Leads
       const todaysAssigned = leads.filter(l => l.assigned_date && isToday(parseISO(l.assigned_date)));
-      const selectedDateLeads = leads.filter(l => l.assigned_date && isSameDay(parseISO(l.assigned_date), selectedDate));
+      const otherLeads = leads.filter(l => !l.assigned_date || !isToday(parseISO(l.assigned_date)));
 
       return (
         <div className="flex flex-col gap-8 h-full overflow-y-auto w-full">
-          <div className="flex flex-col gap-2 w-full">
-            <h2 className="text-lg font-bold text-orange-600 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 rounded">
-              🔥 Today's Assigned ({todaysAssigned.length})
-            </h2>
-            <div style={{ height: Math.max(todaysAssigned.length * 35 + 40, 200) }} className="w-full">
-              <DataGrid 
-                columns={columns} 
-                rows={todaysAssigned} 
-                onRowsChange={handleRowsChange} 
-                className="custom-data-grid h-full"
-              />
+          {todaysAssigned.length > 0 && (
+            <div className="flex flex-col gap-2 w-full">
+              <h2 className="text-lg font-bold text-orange-600 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 rounded">
+                🔥 Today's Assigned ({todaysAssigned.length})
+              </h2>
+              <div style={{ height: Math.max(todaysAssigned.length * 35 + 40, 200) }} className="w-full">
+                <DataGrid 
+                  columns={columns} 
+                  rows={todaysAssigned} 
+                  onRowsChange={handleRowsChange} 
+                  className="custom-data-grid h-full"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex flex-col gap-2 w-full">
-            <div className="flex items-center gap-4 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded">
-              <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300">
-                Previous Leads ({selectedDateLeads.length})
-              </h2>
-              <input 
-                type="date"
-                value={format(selectedDate, 'yyyy-MM-dd')}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    setSelectedDate(parseISO(e.target.value));
-                  }
-                }}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-sm shadow-sm outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div style={{ height: Math.max(selectedDateLeads.length * 35 + 40, 200) }} className="w-full">
+            <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded">
+              Other Filtered Leads ({otherLeads.length})
+            </h2>
+            <div style={{ height: Math.max(otherLeads.length * 35 + 40, 200) }} className="w-full">
               <DataGrid 
                 columns={columns} 
-                rows={selectedDateLeads} 
+                rows={otherLeads} 
                 onRowsChange={handleRowsChange} 
                 className="custom-data-grid h-full"
               />

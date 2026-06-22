@@ -61,7 +61,8 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
     
     if (!pastedData) return;
 
-    const parsedRows = pastedData.split('\n').filter(r => r.trim()).map((line, idx) => {
+    // Split using \r?\n to cleanly remove hidden carriage returns from Excel
+    const parsedRows = pastedData.split(/\r?\n/).filter(r => r.trim()).map((line, idx) => {
       const cols = line.split('\t');
       return {
         id: idx,
@@ -137,12 +138,11 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
     return roleMap[role] || role;
   };
 
-  const staffOptions = availableUsers
-    .filter(staff => staff.role === 'ADM_MANAGER' || staff.role === 'ADM_COUNSELLOR')
-    .map(staff => ({
-      id: staff.id,
-      label: `${staff.first_name || staff.last_name ? (staff.first_name + ' ' + staff.last_name).trim() : staff.username || staff.email} - ${getRoleDisplayName(staff.role)}`,
-    }));
+  // The backend already filters availableUsers to only those with assignable roles
+  const staffOptions = availableUsers.map(staff => ({
+    id: staff.id,
+    label: `${staff.first_name || staff.last_name ? (staff.first_name + ' ' + staff.last_name).trim() : staff.username || staff.email} - ${getRoleDisplayName(staff.role)}`,
+  }));
 
   if (!isOpen) return null;
 
