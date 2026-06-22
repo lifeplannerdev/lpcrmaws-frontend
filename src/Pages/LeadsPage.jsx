@@ -18,6 +18,12 @@ import { Can } from '../context/PermissionsContext';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const PAGE_SIZE = 20; 
 
+const getLocalDateString = () => {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().split('T')[0];
+};
+
 const EXCLUDED_STAFF_ROLES = ['TRAINER', 'ACCOUNTS', 'HR', 'MEDIA', 'ADMIN', 'CEO','PROCESSING','DOCUMENTATION'];
 
 const SkeletonRow = () => (
@@ -151,7 +157,7 @@ export default function LeadsPage() {
         else                              paramsObj.assigned_to          = filterStaff;
       }
       if (filterCampaign)           paramsObj.campaign_name__icontains = filterCampaign;
-      if (filterToday)              paramsObj.created_at__date = new Date().toISOString().split('T')[0];
+      if (filterToday)              paramsObj.created_at__date = getLocalDateString();
 
       const res = await authFetch(`${API_BASE_URL}/leads/export/?${new URLSearchParams(paramsObj)}`);
       if (!res.ok) throw new Error('Export failed');
@@ -160,7 +166,7 @@ export default function LeadsPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Leads_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = `Leads_Export_${getLocalDateString()}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -192,7 +198,7 @@ export default function LeadsPage() {
           else                              paramsObj.assigned_to          = filterStaff;
         }
         if (filterCampaign)           paramsObj.campaign_name__icontains = filterCampaign;
-        if (filterToday)              paramsObj.created_at__date = new Date().toISOString().split('T')[0];
+        if (filterToday)              paramsObj.created_at__date = getLocalDateString();
 
         //  Parallel: staff only on first load, leads every time
         const [leadsRes, staffRes] = await Promise.all([
