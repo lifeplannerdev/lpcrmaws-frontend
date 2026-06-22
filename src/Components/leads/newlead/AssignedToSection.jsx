@@ -8,6 +8,7 @@ import { Combobox } from '../../common/Combobox';
 const AssignedToSection = ({ formData, errors, onChange }) => {
   const [availableUsers, setAvailableUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errorText, setErrorText] = useState(null);
   const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -47,10 +48,12 @@ const AssignedToSection = ({ formData, errors, onChange }) => {
 
       const data = await response.json();
       
-      const filteredUsers = filterUsersByPermissions(data);
-      setAvailableUsers(filteredUsers);
+      // Temporarily bypass filter to diagnose if filtering is the cause
+      setAvailableUsers(Array.isArray(data) ? data : []);
+      setErrorText(null);
     } catch (error) {
       console.error('Error fetching users:', error);
+      setErrorText(error.message);
       setAvailableUsers([]);
     } finally {
       setLoading(false);
@@ -116,12 +119,17 @@ const AssignedToSection = ({ formData, errors, onChange }) => {
           />
 
           {!loading && availableUsers.length === 0 && (
-            <p className="mt-2 text-sm text-red-600 flex items-start gap-2">
-              <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
-              <span>
-                No staff members available for assignment.
-              </span>
-            </p>
+            <div className="mt-2 text-sm text-red-600 flex flex-col gap-1">
+              <div className="flex items-start gap-2">
+                <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                <span>No staff members available for assignment.</span>
+              </div>
+              {errorText && (
+                <div className="text-xs ml-6 mt-1 font-mono text-red-500">
+                  Error: {errorText}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
