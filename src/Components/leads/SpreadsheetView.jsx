@@ -38,7 +38,12 @@ function PhoneEditor({ row, column, onRowChange, onClose }) {
           });
           if (res.ok) {
             const data = await res.json();
-            const fetchedSuggestions = data.results || [];
+            let fetchedSuggestions = [];
+            if (data && Array.isArray(data.results)) {
+              fetchedSuggestions = data.results;
+            } else if (Array.isArray(data)) {
+              fetchedSuggestions = data;
+            }
             
             // Auto-select if there's an exact match immediately after fetch
             const exactMatch = fetchedSuggestions.find(s => s.phone === value);
@@ -74,7 +79,8 @@ function PhoneEditor({ row, column, onRowChange, onClose }) {
         onChange={(e) => {
           const val = e.target.value;
           setValue(val);
-          const match = suggestions.find(s => s.phone === val);
+          const safeSuggestions = Array.isArray(suggestions) ? suggestions : [];
+          const match = safeSuggestions.find(s => s.phone === val);
           if (match) {
             onRowChange({ 
               ...row, 
