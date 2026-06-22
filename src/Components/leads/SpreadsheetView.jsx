@@ -38,7 +38,21 @@ function PhoneEditor({ row, column, onRowChange, onClose }) {
           });
           if (res.ok) {
             const data = await res.json();
-            setSuggestions(data.results || []);
+            const fetchedSuggestions = data.results || [];
+            
+            // Auto-select if there's an exact match immediately after fetch
+            const exactMatch = fetchedSuggestions.find(s => s.phone === value);
+            if (exactMatch && row.isNew) {
+              onRowChange({ 
+                ...row, 
+                ...exactMatch, 
+                agenda_type: 'Follow-up', 
+                isNew: true 
+              }, true);
+              setSuggestions([]);
+            } else {
+              setSuggestions(fetchedSuggestions);
+            }
           }
         } catch (e) { console.error(e); }
       }, 500);
