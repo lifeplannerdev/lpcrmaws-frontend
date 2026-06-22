@@ -21,6 +21,7 @@ import {
   Image,
   Eye
 } from 'lucide-react';
+import SpreadsheetView from '../Components/leads/SpreadsheetView';
 
 export default function ReportViewPage() {
   const { id } = useParams();
@@ -305,9 +306,15 @@ export default function ReportViewPage() {
             Report Content
           </h2>
           <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6">
-            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-              {report.report_text || 'No content provided'}
-            </p>
+            {(report.report_text || '').trim().startsWith('[') ? (
+               <div className="h-[500px] w-full rounded-lg overflow-hidden border border-indigo-200 bg-white">
+                  <SpreadsheetView leads={JSON.parse(report.report_text)} isReportMode={true} authFetch={()=>{}} />
+               </div>
+            ) : (
+               <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                 {report.report_text || 'No content provided'}
+               </p>
+            )}
           </div>
         </div>
 

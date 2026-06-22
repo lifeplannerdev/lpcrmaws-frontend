@@ -7,6 +7,7 @@ import {
   CheckCircle2, XCircle, AlertCircle, Download, Eye,
   Search, Loader2, Edit, FileSpreadsheet, Paperclip
 } from 'lucide-react';
+import SpreadsheetView from '../Components/leads/SpreadsheetView';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -17,7 +18,53 @@ const ALLOWED_EXCEL_TYPES = [
 ];
 const ALLOWED_EXCEL_EXT = /\.(xls|xlsx)$/i;
 
-const FormFields = ({ formData, handleInputChange, errors, user }) => {
+const ALLOWED_EXCEL_EXT = /\.(xls|xlsx)$/i;
+
+const SalesDailyAgendaGrid = ({ formData, setFormData, authFetch }) => {
+  const [leads, setLeads] = useState([]);
+
+  useEffect(() => {
+    if (formData.report_text && formData.report_text.trim().startsWith('[')) {
+      try {
+        setLeads(JSON.parse(formData.report_text));
+      } catch (e) {
+        fetchFresh();
+      }
+    } else {
+      fetchFresh();
+    }
+  }, []);
+
+  const fetchFresh = async () => {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/leads/?daily_agenda=true&page_size=200`);
+      const data = await res.json();
+      const fetchedLeads = data.results || data || [];
+      setLeads(fetchedLeads);
+      // Initialize report_text with current fetched leads
+      setFormData(prev => ({ ...prev, report_text: JSON.stringify(fetchedLeads) }));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleLeadsChange = (updatedLeads) => {
+    setFormData(prev => ({
+      ...prev,
+      report_text: JSON.stringify(updatedLeads)
+    }));
+  };
+
+  return (
+    <div className="h-96 w-full mt-3 rounded-lg overflow-hidden border border-emerald-200">
+      <SpreadsheetView leads={leads} authFetch={authFetch} isReportMode={true} onLeadsChange={handleLeadsChange} />
+    </div>
+  );
+};
+
+const FormFields = ({ formData, handleInputChange, errors, user, setFormData, authFetch }) => {
+  const isSales = user?.roles?.some(r => ['ADM_COUNSELLOR', 'ADM_MANAGER'].includes(r));
+
   const completionPercentage = (() => {
     let score = 0;
     if (formData.next_day_agenda) score += 50;
@@ -90,15 +137,22 @@ const FormFields = ({ formData, handleInputChange, errors, user }) => {
             className="w-full px-3 py-2 border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
-        <div>
-          <label className="block text-xs font-semibold text-emerald-800 mb-1">Report Details</label>
-          <textarea
-            name="report_text" value={formData.report_text || ''}
-            onChange={handleInputChange} rows={4}
-            placeholder="Describe your daily activities..."
-            className="w-full px-3 py-2 border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-        </div>
+        {isSales ? (
+          <div>
+            <label className="block text-xs font-semibold text-emerald-800 mb-1">Daily Leads Snapshot</label>
+            <SalesDailyAgendaGrid formData={formData} setFormData={setFormData} authFetch={authFetch} />
+          </div>
+        ) : (
+          <div>
+            <label className="block text-xs font-semibold text-emerald-800 mb-1">Report Details</label>
+            <textarea
+              name="report_text" value={formData.report_text || ''}
+              onChange={handleInputChange} rows={4}
+              placeholder="Describe your daily activities..."
+              className="w-full px-3 py-2 border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+        )}
       </div>
     </div>
   </div>
@@ -614,7 +668,7 @@ export default function MyReportsPage() {
               </div>
               <div className="p-6">
                 {errors.submit && <div className="mb-6 p4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{errors.submit}</div>}
-                <FormFields formData={formData} handleInputChange={handleInputChange} errors={errors} user={user} />
+                <FormFields formData={formData} handleInputChange={handleInputChange} errors={errors} user={user} setFormData={setFormData} authFetch={fetchWithAuth} />
                 <FileUploadSection 
                   formData={formData} 
                   errors={errors} 
@@ -647,7 +701,7 @@ export default function MyReportsPage() {
               </div>
               <div className="p-6">
                 {errors.submit && <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{errors.submit}</div>}
-                <FormFields formData={formData} handleInputChange={handleInputChange} errors={errors} user={user} />
+                <FormFields formData={formData} handleInputChange={handleInputChange} errors={errors} user={user} setFormData={setFormData} authFetch={fetchWithAuth} />
 
                 {editingReport?.attachments?.length > 0 && (
                   <div className="mt-5">
@@ -743,7 +797,13 @@ export default function MyReportsPage() {
                 {selectedReport.report_text && (
                   <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-6 mb-6">
                     <h4 className="text-sm font-semibold text-emerald-900 mb-3">{selectedReport.report_heading || "Evening Report"}</h4>
-                    <p className="text-emerald-800 whitespace-pre-wrap leading-relaxed">{selectedReport.report_text}</p>
+                    {selectedReport.report_text.trim().startsWith('[') ? (
+                       <div className="h-[400px] w-full rounded-lg overflow-hidden border border-emerald-200 bg-white">
+                          <SpreadsheetView leads={JSON.parse(selectedReport.report_text)} isReportMode={true} authFetch={()=>{}} />
+                       </div>
+                    ) : (
+                       <p className="text-emerald-800 whitespace-pre-wrap leading-relaxed">{selectedReport.report_text}</p>
+                    )}
                   </div>
                 )}
 

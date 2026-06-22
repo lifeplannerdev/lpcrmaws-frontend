@@ -24,11 +24,79 @@ function statusEditor({ row, onRowChange }) {
   );
 }
 
+function PhoneEditor({ row, column, onRowChange, onClose }) {
+  const [value, setValue] = useState(row[column.key] || '');
+  const [suggestions, setSuggestions] = useState([]);
+  const { accessToken } = useAuth();
+
+  useEffect(() => {
+    if (value && value.length >= 4) {
+      const timer = setTimeout(async () => {
+        try {
+          const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/leads/?search=${value}`, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setSuggestions(data.results || []);
+          }
+        } catch (e) { console.error(e); }
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      setSuggestions([]);
+    }
+  }, [value, accessToken]);
+
+  const handleSelect = (lead) => {
+    onRowChange({ 
+      ...row, 
+      ...lead, 
+      agenda_type: 'Follow-up', // Default explicitly to follow up if selected
+      isNew: true // Keep it marked as new so we know to save it
+    }, true);
+    setSuggestions([]);
+  };
+
+  return (
+    <div className="relative w-full h-full flex flex-col justify-center">
+      <input
+        autoFocus
+        className="w-full h-full border-none outline-none px-2 bg-transparent"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => {
+          setTimeout(() => onRowChange({ ...row, [column.key]: value }, true), 200);
+        }}
+      />
+      {suggestions.length > 0 && (
+        <div className="absolute top-full left-0 w-64 bg-white border shadow-xl z-50 max-h-48 overflow-y-auto rounded-b-md">
+          {suggestions.map(s => (
+            <div 
+              key={s.id} 
+              className="p-2 border-b cursor-pointer hover:bg-indigo-50"
+              onMouseDown={() => handleSelect(s)}
+            >
+              <div className="font-semibold text-sm">{s.name || 'No Name'}</div>
+              <div className="text-xs text-gray-500">{s.phone}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const columns = [
-  { key: 'created_at', name: 'Date', width: 120, renderCell: (p) => format(parseISO(p.row.created_at), 'dd/MM/yyyy') },
+  { key: 'agenda_type', name: 'Type', width: 100, renderEditCell: textEditor, renderCell: (p) => (
+    <span className={`font-semibold text-xs px-2 py-1 rounded ${p.row.agenda_type === 'Follow-up' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
+      {p.row.agenda_type || 'Fresh'}
+    </span>
+  )},
+  { key: 'created_at', name: 'Date', width: 120, renderCell: (p) => p.row.created_at ? format(parseISO(p.row.created_at), 'dd/MM/yyyy') : '' },
   { key: 'id', name: 'Serial Number', width: 80 },
   { key: 'name', name: 'Name', width: 150, renderEditCell: textEditor },
-  { key: 'phone', name: 'Phone Number', width: 150, renderEditCell: textEditor },
+  { key: 'phone', name: 'Phone Number', width: 150, renderEditCell: PhoneEditor },
   { key: 'email', name: 'Email Address', width: 200, renderEditCell: textEditor },
   { key: 'interested_country', name: 'Interested Country', width: 150, renderEditCell: textEditor },
   { key: 'interested_course', name: 'Interested Course', width: 200, renderEditCell: textEditor },
@@ -49,16 +117,66 @@ const columns = [
   },
 ];
 
-export default function SpreadsheetView({ leads, onUpdateLead, authFetch }) {
+export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isReportMode = false, onLeadsChange }) {
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState(() => subDays(new Date(), 1));
+  const [localLeads, setLocalLeads] = useState(leads || []);
+
+  useEffect(() => {
+    setLocalLeads(leads || []);
+  }, [leads]);
+
+  // Push updates upwards if in report mode
+  useEffect(() => {
+    if (isReportMode && onLeadsChange) {
+      onLeadsChange(localLeads);
+    }
+  }, [localLeads, isReportMode]);
   
   // Track updates to push to backend
   const handleRowsChange = async (newRows, { indexes, column }) => {
     const rowIndex = indexes[0];
     const updatedRow = newRows[rowIndex];
     
-    // Auto-save logic
+    // Update local state immediately
+    setLocalLeads(newRows);
+
+    if (updatedRow.isNew && !isReportMode) {
+        // If it's a new row in LeadsPage, maybe wait for a manual save button?
+        // Or if we want to save immediately when they edit:
+        if (updatedRow.phone && updatedRow.name && column.key !== 'phone') {
+            try {
+                // If it has an ID, it means it was auto-filled from an existing lead, we should just update it
+                if (updatedRow.id && !String(updatedRow.id).startsWith('temp-')) {
+                     const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/leads/${updatedRow.id}/`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ [column.key]: updatedRow[column.key] })
+                     });
+                     if (response.ok) {
+                         const data = await response.json();
+                         if (onUpdateLead) onUpdateLead(data.lead || data);
+                     }
+                } else {
+                     // Create new lead
+                     const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/leads/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updatedRow)
+                     });
+                     if (response.ok) {
+                         const data = await response.json();
+                         setLocalLeads(prev => prev.map((l, i) => i === rowIndex ? data.lead || data : l));
+                         if (onUpdateLead) onUpdateLead(data.lead || data);
+                     }
+                }
+            } catch(err) { console.error(err); }
+        }
+        return;
+    }
+
+    if (isReportMode) return; // In report mode, we don't auto-save to backend, we just update localLeads
+
+    // Auto-save logic for existing leads
     try {
       const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/leads/${updatedRow.id}/`, {
         method: 'PATCH',
@@ -71,8 +189,20 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch }) {
       if (onUpdateLead) onUpdateLead(data.lead || data);
     } catch (err) {
       console.error('Failed to update lead:', err);
-      // In a real app we'd show a toast here
     }
+  };
+
+  const handleAddRow = () => {
+    const newRow = {
+      id: `temp-${Date.now()}`,
+      agenda_type: 'Follow-up',
+      name: '',
+      phone: '',
+      email: '',
+      status: 'ENQUIRY',
+      isNew: true
+    };
+    setLocalLeads([newRow, ...localLeads]);
   };
 
   const isManager = user?.roles?.some(r => ['SUPERADMIN', 'COMPANY_ADMIN', 'MD', 'DIRECTOR', 'GENERAL_MANAGER'].includes(r));
@@ -109,35 +239,25 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch }) {
       );
     } else {
       // Employee View: Today's Assigned vs Other Filtered Leads
-      const todaysAssigned = leads.filter(l => l.assigned_date && isToday(parseISO(l.assigned_date)));
-      const otherLeads = leads.filter(l => !l.assigned_date || !isToday(parseISO(l.assigned_date)));
+      // If it's report mode, we might just show everything in one list or keep it split
+      const todaysAssigned = localLeads.filter(l => l.agenda_type === 'Fresh' || (l.assigned_date && isToday(parseISO(l.assigned_date))));
+      const otherLeads = localLeads.filter(l => l.agenda_type === 'Follow-up' || (!l.assigned_date || !isToday(parseISO(l.assigned_date))));
 
       return (
-        <div className="flex flex-col gap-8 h-full overflow-y-auto w-full">
-          {todaysAssigned.length > 0 && (
-            <div className="flex flex-col gap-2 w-full">
-              <h2 className="text-lg font-bold text-orange-600 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 rounded">
-                🔥 Today's Assigned ({todaysAssigned.length})
-              </h2>
-              <div style={{ height: Math.max(todaysAssigned.length * 35 + 40, 200) }} className="w-full">
-                <DataGrid 
-                  columns={columns} 
-                  rows={todaysAssigned} 
-                  onRowsChange={handleRowsChange} 
-                  className="custom-data-grid h-full"
-                />
-              </div>
-            </div>
-          )}
-
+        <div className="flex flex-col gap-8 h-full overflow-y-auto w-full pb-20">
           <div className="flex flex-col gap-2 w-full">
-            <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded">
-              Other Filtered Leads ({otherLeads.length})
-            </h2>
-            <div style={{ height: Math.max(otherLeads.length * 35 + 40, 200) }} className="w-full">
+            <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded">
+                <h2 className="text-lg font-bold text-indigo-600">
+                  Daily Agenda Leads ({localLeads.length})
+                </h2>
+                <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
+                  + Add Row
+                </button>
+            </div>
+            <div style={{ height: Math.max(localLeads.length * 35 + 40, 400) }} className="w-full">
               <DataGrid 
                 columns={columns} 
-                rows={otherLeads} 
+                rows={localLeads} 
                 onRowsChange={handleRowsChange} 
                 className="custom-data-grid h-full"
               />
