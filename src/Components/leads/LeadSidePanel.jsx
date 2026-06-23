@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import UnifiedTimeline from './UnifiedTimeline';
 import LeadQuickActions from './LeadQuickActions';
+import { useVoxbayCall } from '../../hooks/useVoxbayCall';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -16,6 +17,8 @@ export default function LeadSidePanel({ leadId, authFetch, onClose }) {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('timeline'); // 'info', 'timeline', 'assignment'
   const [refreshTimelineTrigger, setRefreshTimelineTrigger] = useState(0);
+
+  const { initiateCall, callingNumber } = useVoxbayCall();
 
   useEffect(() => {
     if (!leadId || !authFetch) return;
@@ -209,9 +212,14 @@ export default function LeadSidePanel({ leadId, authFetch, onClose }) {
               
               {/* Quick Actions */}
               <div className="flex gap-2 mt-4">
-                <a href={`tel:${lead.phone}`} className="flex-1 flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 text-gray-700 text-sm font-semibold py-2 rounded-lg transition-colors">
-                  <Phone size={16} /> Call
-                </a>
+                <button 
+                  onClick={() => initiateCall(lead.phone)}
+                  disabled={callingNumber === lead.phone}
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 text-gray-700 text-sm font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {callingNumber === lead.phone ? <Loader2 size={16} className="animate-spin" /> : <Phone size={16} />} 
+                  Call
+                </button>
                 <a href={`mailto:${lead.email}`} className="flex-1 flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-200 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 text-gray-700 text-sm font-semibold py-2 rounded-lg transition-colors">
                   <Mail size={16} /> Email
                 </a>

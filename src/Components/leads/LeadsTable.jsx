@@ -1,14 +1,16 @@
 import React from 'react';
 import {
   Mail, Phone, MapPin, Calendar, Edit, Trash2,
-  ExternalLink, UserCheck, Users, History,
+  ExternalLink, UserCheck, Users, History, Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useVoxbayCall } from '../../hooks/useVoxbayCall';
 
 const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
+  const { initiateCall, callingNumber } = useVoxbayCall();
 
   const allowHistory = hasPermission('leads:view_any') || hasPermission('calls:view_any');
   const allowEdit = hasPermission('leads:edit_any') || hasPermission('leads:edit_tenant') || hasPermission('leads:edit_own');
@@ -78,12 +80,17 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
                     </a>
 
                     {/* Phone */}
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <div className="w-7 h-7 bg-green-100 rounded-lg flex items-center justify-center">
-                        <Phone size={14} className="text-green-600" />
-                      </div>
-                      <span className="font-medium">{lead.phone}</span>
-                    </div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); initiateCall(lead.phone); }}
+                        disabled={callingNumber === lead.phone}
+                        className="group/phone flex items-center gap-2 text-sm text-gray-700 hover:text-green-700 transition-colors disabled:opacity-50"
+                        title="Click to Call"
+                      >
+                        <div className="w-7 h-7 bg-green-100 rounded-lg flex items-center justify-center group-hover/phone:bg-green-200 transition-colors">
+                          {callingNumber === lead.phone ? <Loader2 size={14} className="animate-spin text-green-700" /> : <Phone size={14} className="text-green-600 group-hover/phone:text-green-800" />}
+                        </div>
+                        <span className="font-medium group-hover/phone:underline">{lead.phone}</span>
+                      </button>
 
                     {/* Location */}
                     <div className="flex items-center gap-2 text-sm text-gray-700">

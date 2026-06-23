@@ -3,12 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Edit2, Trash2, Mail, Phone, Briefcase,
   Calendar, FileText, Star, AlertCircle, CheckCircle,
-  XCircle, Clock, UserCheck, Download, ExternalLink,
+  XCircle, Clock, UserCheck, Download, ExternalLink, Loader2
 } from 'lucide-react';
 
 import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
+import { useVoxbayCall } from '../hooks/useVoxbayCall';
 
 const STATUS_CONFIG = {
   applied: {
@@ -45,19 +46,23 @@ function initials(name = '') {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
-function InfoRow({ icon: Icon, label, value, link }) {
+function InfoRow({ icon: Icon, label, value, link, onClick, isCalling }) {
   if (!value) return null;
   return (
     <div className="flex items-start gap-3">
       <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <Icon size={16} className="text-indigo-600" />
+        {isCalling ? <Loader2 size={16} className="text-indigo-600 animate-spin" /> : <Icon size={16} className="text-indigo-600" />}
       </div>
       <div>
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</p>
-        {link ? (
+        {onClick ? (
+          <button onClick={onClick} disabled={isCalling} className="text-blue-600 hover:underline font-medium text-sm break-all text-left disabled:opacity-50">
+            {value}
+          </button>
+        ) : link ? (
           <a href={link} className="text-blue-600 hover:underline font-medium text-sm break-all">{value}</a>
         ) : (
-          <p className="text-gray-800 font-medium text-sm">{value}</p>
+          <p className="font-medium text-sm text-gray-800">{value}</p>
         )}
       </div>
     </div>
@@ -107,6 +112,7 @@ export default function CandidateDetailPage() {
   const navigate = useNavigate();
   const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
+  const { initiateCall, callingNumber } = useVoxbayCall();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const [candidate, setCandidate] = useState(null);
@@ -342,7 +348,13 @@ export default function CandidateDetailPage() {
               <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-5">Contact Information</h2>
               <div className="space-y-4">
                 <InfoRow icon={Mail} label="Email" value={candidate.email} link={`mailto:${candidate.email}`} />
-                <InfoRow icon={Phone} label="Phone" value={candidate.phone} link={candidate.phone ? `tel:${candidate.phone}` : null} />
+                <InfoRow 
+                  icon={Phone} 
+                  label="Phone" 
+                  value={candidate.phone} 
+                  onClick={candidate.phone ? () => initiateCall(candidate.phone) : null}
+                  isCalling={callingNumber === candidate.phone}
+                />
                 <InfoRow icon={Briefcase} label="Position Applied" value={candidate.position_applied} />
                 {candidate.interview_date && (
                   <InfoRow icon={Calendar} label="Interview Date" value={formatDate(candidate.interview_date)} />

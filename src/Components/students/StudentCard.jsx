@@ -1,9 +1,10 @@
 import React from 'react';
-import { Mail, Phone, BookOpen, Calendar, Edit, Trash2, Eye, User, ClipboardCheck } from 'lucide-react';
+import { Mail, Phone, BookOpen, Calendar, Edit, Trash2, Eye, User, ClipboardCheck, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useVoxbayCall } from '../../hooks/useVoxbayCall';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -25,6 +26,7 @@ const StudentCard = React.memo(({ student, onDelete }) => {
   const navigate = useNavigate();
   const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
+  const { initiateCall, callingNumber } = useVoxbayCall();
   const avatar = `https://api.dicebear.com/7.x/initials/svg?seed=${student.name}`;
   const canEditStudents = hasPermission('students:edit_any') || hasPermission('students:edit_tenant');
 
@@ -130,9 +132,16 @@ const StudentCard = React.memo(({ student, onDelete }) => {
           <Mail size={14} className="text-gray-400" />
           <span className="truncate">{student.email || 'No email'}</span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Phone size={14} className="text-gray-400" />
-          <span>{student.phone_number || 'No phone'}</span>
+        <div className="flex items-center gap-3 text-sm text-gray-600">
+          <button 
+            onClick={(e) => { e.stopPropagation(); initiateCall(student.phone_number); }}
+            disabled={callingNumber === student.phone_number}
+            className="group/phone flex items-center gap-3 text-sm text-gray-600 hover:text-green-700 transition-colors disabled:opacity-50"
+            title="Click to Call"
+          >
+            {callingNumber === student.phone_number ? <Loader2 size={14} className="text-green-700 animate-spin" /> : <Phone size={14} className="text-gray-400 group-hover/phone:text-green-600" />}
+            <span className="group-hover/phone:underline">{student.phone_number || 'No phone'}</span>
+          </button>
         </div>
       </div>
 
