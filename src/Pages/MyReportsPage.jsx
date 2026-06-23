@@ -25,11 +25,7 @@ const SalesDailyAgendaGrid = ({ formData, setFormData, authFetch }) => {
     if (formData.report_text && formData.report_text.trim().startsWith('[')) {
       try {
         const parsed = JSON.parse(formData.report_text);
-        if (Array.isArray(parsed) && parsed.length === 0) {
-          fetchFresh();
-        } else {
-          setLeads(parsed);
-        }
+        setLeads(parsed);
       } catch (e) {
         fetchFresh();
       }
@@ -521,6 +517,21 @@ export default function MyReportsPage() {
     return report.is_report_late || report.is_agenda_late;
   };
 
+  const renderReportSummary = (text) => {
+    if (!text) return '';
+    if (text.trim().startsWith('[')) {
+      try {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) {
+          return `Sales Daily Leads Snapshot (${parsed.length} leads)`;
+        }
+      } catch (e) {
+        // Ignore JSON parse errors
+      }
+    }
+    return text;
+  };
+
   const filteredReports = reports.filter(report => {
     const matchesFilter = filter === 'all' || report.status?.toLowerCase() === filter;
     const matchesSearch =
@@ -620,7 +631,7 @@ export default function MyReportsPage() {
                       </h3>
                       {getStatusBadge(report.status)}
                     </div>
-                    <p className="text-gray-600 mb-4 line-clamp-2">{report.report_text || report.next_day_agenda}</p>
+                    <p className="text-gray-600 mb-4 line-clamp-2">{renderReportSummary(report.report_text) || report.next_day_agenda}</p>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
                       <div className="flex items-center gap-1.5"><User className="w-4 h-4" /><span>{report.name}</span></div>
                       <div className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /><span>{formatDate(report.report_date)}</span></div>
