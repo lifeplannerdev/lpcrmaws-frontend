@@ -37,7 +37,16 @@ const SalesDailyAgendaGrid = ({ formData, setFormData, authFetch }) => {
     try {
       const res = await authFetch(`${API_BASE_URL}/leads/?daily_agenda=true&page_size=200`);
       const data = await res.json();
-      const fetchedLeads = data.results || data || [];
+      let fetchedLeads = [];
+      if (data.results && Array.isArray(data.results)) {
+        fetchedLeads = data.results;
+      } else if (data.results && data.results.leads) {
+        fetchedLeads = data.results.leads;
+      } else if (Array.isArray(data)) {
+        fetchedLeads = data;
+      } else if (data && data.leads) {
+        fetchedLeads = data.leads;
+      }
       setLeads(fetchedLeads);
       // Initialize report_text with current fetched leads
       setFormData(prev => ({ ...prev, report_text: JSON.stringify(fetchedLeads) }));
