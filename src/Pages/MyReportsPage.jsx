@@ -40,8 +40,7 @@ const SalesDailyAgendaGrid = ({ formData, setFormData, authFetch }) => {
 
   const fetchFresh = async () => {
     try {
-      const res = await authFetch(`${API_BASE_URL}/leads/?daily_agenda=true&page_size=200`);
-      const data = await res.json();
+      const data = await authFetch(`${API_BASE_URL}/leads/?daily_agenda=true&page_size=200`);
       let fetchedLeads = [];
       if (data.results && Array.isArray(data.results)) {
         fetchedLeads = data.results;
