@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import PageHeader from '../Components/common/PageHeader'; // Use common PageHeader
 import ContactInfoSection from '../Components/leads/newlead/ContactSection';
 import LeadDetailsSection from '../Components/leads/newlead/LeadDetailsSection';
@@ -27,6 +28,7 @@ export default function AddLeadPage() {
   });
 
   const { accessToken, refreshAccessToken } = useAuth();
+  const { hasPermission } = usePermissions();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const [submitted, setSubmitted] = useState(false);
@@ -69,8 +71,9 @@ export default function AddLeadPage() {
     if (formData.source === 'OTHER' && !formData.customSource.trim())
       newErrors.customSource = 'Please specify custom source';
 
-    // Assignment is now mandatory
-    if (!formData.assignedTo) newErrors.assignedTo = 'Please assign this lead to a staff member';
+    if ((hasPermission('leads:assign_any') || hasPermission('leads:assign_tenant')) && !formData.assignedTo) {
+      newErrors.assignedTo = 'Please assign this lead to a staff member';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -99,7 +102,7 @@ export default function AddLeadPage() {
       priority: formData.priority,
       status: formData.status,
       remarks: formData.remarks?.trim() || '',
-      assigned_to: parseInt(formData.assignedTo), // Now guaranteed to exist due to validation
+      assigned_to: formData.assignedTo ? parseInt(formData.assignedTo) : null,
     };
 
     try {

@@ -96,6 +96,10 @@ const AssignedToSection = ({ formData, errors, onChange }) => {
     label: `${staff.first_name} ${staff.last_name} - ${getRoleDisplayName(staff.role)}`,
   }));
 
+  if (!hasPermission('leads:assign_any') && !hasPermission('leads:assign_tenant')) {
+    return null;
+  }
+
   return (
     <div className="mb-8">
       <div className="flex items-center gap-2 mb-6">
