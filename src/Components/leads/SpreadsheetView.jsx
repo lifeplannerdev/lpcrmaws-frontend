@@ -3,6 +3,7 @@ import { DataGrid, renderTextEditor as textEditor } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
 import { format, isToday, parseISO, isSameDay, subDays } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
+import { Can } from '../../context/PermissionsContext';
 
 const STATUS_OPTIONS = [
   'ENQUIRY', 'CONTACTED', 'QUALIFIED', 'NOT_INTERESTED',
@@ -272,7 +273,7 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
       return (
         <div className="flex flex-col gap-8 h-full overflow-y-auto w-full pb-20">
           <div className="flex flex-col gap-2 w-full">
-            {isReportMode && (
+            {isReportMode ? (
               <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded">
                   <h2 className="text-lg font-bold text-indigo-600">
                     Daily Agenda Leads ({localLeads.length})
@@ -280,6 +281,14 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
                   <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
                     + Add Row
                   </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-end px-4 py-2">
+                <Can perform="leads:create">
+                  <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
+                    + Add Row
+                  </button>
+                </Can>
               </div>
             )}
             <div className="rounded-lg border shadow-sm bg-white overflow-hidden" style={{ minHeight: '300px', height: '600px' }}>
