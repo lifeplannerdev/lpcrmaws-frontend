@@ -18,14 +18,27 @@ const ALLOWED_EXCEL_TYPES = [
 ];
 const ALLOWED_EXCEL_EXT = /\.(xls|xlsx)$/i;
 
+const getLocalYYYYMMDD = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const SalesDailyAgendaGrid = ({ formData, setFormData, authFetch }) => {
   const [leads, setLeads] = useState([]);
 
   useEffect(() => {
+    const isToday = formData.report_date === getLocalYYYYMMDD();
     if (formData.report_text && formData.report_text.trim().startsWith('[')) {
       try {
         const parsed = JSON.parse(formData.report_text);
-        setLeads(parsed);
+        if (isToday) {
+          fetchFresh(parsed);
+        } else {
+          setLeads(parsed);
+        }
       } catch (e) {
         fetchFresh();
       }
@@ -34,7 +47,7 @@ const SalesDailyAgendaGrid = ({ formData, setFormData, authFetch }) => {
     }
   }, []);
 
-  const fetchFresh = async () => {
+  const fetchFresh = async (existingLeads = null) => {
     try {
       const data = await authFetch(`${API_BASE_URL}/leads/?daily_agenda=true&page_size=200`);
       let fetchedLeads = [];
@@ -47,6 +60,24 @@ const SalesDailyAgendaGrid = ({ formData, setFormData, authFetch }) => {
       } else if (data && data.leads) {
         fetchedLeads = data.leads;
       }
+      
+      if (existingLeads && Array.isArray(existingLeads)) {
+        const parsedMap = new Map(existingLeads.map(l => [l.id, l]));
+        const merged = fetchedLeads.map(freshLead => {
+          if (parsedMap.has(freshLead.id)) {
+            return { ...freshLead, ...parsedMap.get(freshLead.id) };
+          }
+          return freshLead;
+        });
+        const freshIds = new Set(fetchedLeads.map(l => l.id));
+        existingLeads.forEach(p => {
+          if (!freshIds.has(p.id)) {
+            merged.push(p);
+          }
+        });
+        fetchedLeads = merged;
+      }
+      
       setLeads(fetchedLeads);
       // Initialize report_text with current fetched leads
       setFormData(prev => ({ ...prev, report_text: JSON.stringify(fetchedLeads) }));
@@ -663,7 +694,7 @@ export default function MyReportsPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    {report.status === 'pending' && (
+                    {report.status === 'pending' && report.report_date === getLocalYYYYMMDD() && (
                       <button onClick={() => handleEdit(report)} className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-colors" title="Edit report">
                         <Edit className="w-5 h-5" />
                       </button>
