@@ -154,7 +154,10 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
   useEffect(() => {
     setLocalLeads(prev => {
       const tempRows = prev.filter(l => String(l.id).startsWith('temp-'));
-      const incoming = leads || [];
+      const incoming = [...(leads || [])];
+      // Sort incoming leads newest first chronologically
+      incoming.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      
       const incomingIds = new Set(incoming.map(l => l.id));
       const uniqueTempRows = tempRows.filter(l => !incomingIds.has(l.id));
       return [...uniqueTempRows, ...incoming];
@@ -171,10 +174,34 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
   // Track updates to push to backend
   const handleRowsChange = async (newRows, { indexes, column }) => {
     const rowIndex = indexes[0];
+    const oldRow = localLeads[rowIndex];
     const updatedRow = newRows[rowIndex];
     
+    // Detect if an existing lead was just selected from the NameEditor (isNew flips from true to false)
+    const justLinkedExistingLead = oldRow.isNew && !updatedRow.isNew && updatedRow.id && !String(updatedRow.id).startsWith('temp-');
+
     // Update local state immediately
     setLocalLeads(newRows);
+
+    // If an existing lead was selected, auto-create a Follow-up for today so it stays in the Daily Agenda
+    if (justLinkedExistingLead && !isReportMode) {
+      try {
+        const followupPayload = {
+          lead: updatedRow.id,
+          follow_up_date: new Date().toISOString().split('T')[0],
+          status: 'pending',
+          followup_type: 'call'
+        };
+        await authFetch(`${import.meta.env.VITE_API_BASE_URL}/followups/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(followupPayload)
+        });
+      } catch (err) {
+        console.error('Failed to auto-create follow-up:', err);
+      }
+      return; // Skip normal PATCH because we only linked the lead, not modified its core data
+    }
 
     if (updatedRow.isNew && !isReportMode) {
         // If it's a new row in LeadsPage, maybe wait for a manual save button?

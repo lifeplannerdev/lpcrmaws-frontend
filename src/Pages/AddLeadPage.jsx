@@ -24,7 +24,12 @@ export default function AddLeadPage() {
     source: '',
     customSource: '',
     remarks: '',
-    assignedTo: ''
+    assignedTo: '',
+    interestedCountry: '',
+    interestedCourse: '',
+    previousQualification: '',
+    workExperience: '',
+    budget: ''
   });
 
   const { accessToken, refreshAccessToken } = useAuth();
@@ -103,6 +108,11 @@ export default function AddLeadPage() {
       status: formData.status,
       remarks: formData.remarks?.trim() || '',
       assigned_to: formData.assignedTo ? parseInt(formData.assignedTo) : null,
+      interested_country: formData.interestedCountry?.trim() || null,
+      interested_course: formData.interestedCourse?.trim() || null,
+      previous_qualification: formData.previousQualification?.trim() || null,
+      work_experience: formData.workExperience?.trim() || null,
+      budget: formData.budget?.trim() || null,
     };
 
     try {
@@ -143,6 +153,11 @@ export default function AddLeadPage() {
           customSource: '',
           remarks: '',
           assignedTo: '',
+          interestedCountry: '',
+          interestedCourse: '',
+          previousQualification: '',
+          workExperience: '',
+          budget: ''
         });
         setSubmitted(false);
         navigate('/leads');

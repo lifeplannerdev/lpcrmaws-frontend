@@ -21,7 +21,12 @@ export default function EditLeadPage() {
     source: '',
     customSource: '',
     remarks: '',
-    assignedTo: ''
+    assignedTo: '',
+    interestedCountry: '',
+    interestedCourse: '',
+    previousQualification: '',
+    workExperience: '',
+    budget: ''
   });
 
   const [loading, setLoading] = useState(true);
@@ -89,7 +94,12 @@ export default function EditLeadPage() {
           source: lead.source || '',
           customSource: lead.custom_source || '',
           remarks: lead.remarks || '',
-          assignedTo: assignedToValue
+          assignedTo: assignedToValue,
+          interestedCountry: lead.interested_country || '',
+          interestedCourse: lead.interested_course || '',
+          previousQualification: lead.previous_qualification || '',
+          workExperience: lead.work_experience || '',
+          budget: lead.budget || ''
         });
       } catch (err) {
         setApiError('Failed to load lead data');

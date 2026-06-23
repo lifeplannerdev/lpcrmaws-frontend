@@ -94,6 +94,11 @@ export default function LeadSidePanel({ leadId, authFetch, onClose }) {
           <div><p className="text-xs text-gray-500">Source</p><p className="text-sm font-semibold text-gray-900">{lead.source === 'OTHER' && lead.custom_source ? lead.custom_source : lead.source}</p></div>
           <div><p className="text-xs text-gray-500">Created On</p><p className="text-sm font-semibold text-gray-900">{formatDate(lead.created_at)}</p></div>
           <div><p className="text-xs text-gray-500">Doc Status</p><p className="text-sm font-semibold text-gray-900">{lead.document_status || 'PENDING'}</p></div>
+          <div><p className="text-xs text-gray-500">Interested Country</p><p className="text-sm font-semibold text-gray-900">{lead.interested_country || 'N/A'}</p></div>
+          <div><p className="text-xs text-gray-500">Interested Course</p><p className="text-sm font-semibold text-gray-900">{lead.interested_course || 'N/A'}</p></div>
+          <div><p className="text-xs text-gray-500">Previous Qual.</p><p className="text-sm font-semibold text-gray-900">{lead.previous_qualification || 'N/A'}</p></div>
+          <div><p className="text-xs text-gray-500">Work Experience</p><p className="text-sm font-semibold text-gray-900">{lead.work_experience || 'N/A'}</p></div>
+          <div className="col-span-2"><p className="text-xs text-gray-500">Budget</p><p className="text-sm font-semibold text-gray-900">{lead.budget || 'N/A'}</p></div>
         </div>
       </div>
     </div>

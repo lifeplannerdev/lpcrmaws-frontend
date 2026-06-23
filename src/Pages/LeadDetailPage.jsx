@@ -340,6 +340,26 @@ export default function LeadDetailPage() {
                         <p className="font-semibold text-gray-900">{formatDate(lead.registration_date)}</p>
                       </div>
                     )}
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-600 mb-1">Interested Country</p>
+                      <p className="font-semibold text-gray-900">{lead.interested_country || 'Not specified'}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-600 mb-1">Interested Course</p>
+                      <p className="font-semibold text-gray-900">{lead.interested_course || 'Not specified'}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-600 mb-1">Previous Qualification</p>
+                      <p className="font-semibold text-gray-900">{lead.previous_qualification || 'Not specified'}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-600 mb-1">Work Experience</p>
+                      <p className="font-semibold text-gray-900">{lead.work_experience || 'Not specified'}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-lg md:col-span-2">
+                      <p className="text-sm text-gray-600 mb-1">Budget</p>
+                      <p className="font-semibold text-gray-900">{lead.budget || 'Not specified'}</p>
+                    </div>
                   </div>
                 </div>
 

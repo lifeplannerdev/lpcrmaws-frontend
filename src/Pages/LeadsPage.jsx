@@ -198,7 +198,12 @@ export default function LeadsPage() {
           else                              paramsObj.assigned_to          = filterStaff;
         }
         if (filterCampaign)           paramsObj.campaign_name__icontains = filterCampaign;
-        if (filterToday)              paramsObj.created_at__date = getLocalDateString();
+        
+        if (viewMode === 'spreadsheet') {
+          paramsObj.daily_agenda = 'true';
+        } else if (filterToday) {
+          paramsObj.created_at__date = getLocalDateString();
+        }
 
         //  Parallel: staff only on first load, leads every time
         const [leadsRes, staffRes] = await Promise.all([
@@ -274,7 +279,7 @@ export default function LeadsPage() {
     authLoading, authFetch,
     page, debouncedSearch,
     filterStatus, filterPriority, filterSource, filterStaff, companyFilter,
-    filterCampaign, filterToday,
+    filterCampaign, filterToday, viewMode,
   ]);
 
   const statsCards = useMemo(() => [

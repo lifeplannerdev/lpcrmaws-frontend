@@ -95,6 +95,11 @@ export default function EditLeadForm({
       source: formData.source,
       custom_source: formData.source === 'OTHER' ? formData.customSource.trim() : '',
       remarks: formData.remarks?.trim() || '',
+      interested_country: formData.interestedCountry?.trim() || null,
+      interested_course: formData.interestedCourse?.trim() || null,
+      previous_qualification: formData.previousQualification?.trim() || null,
+      work_experience: formData.workExperience?.trim() || null,
+      budget: formData.budget?.trim() || null,
     };
 
     try {
