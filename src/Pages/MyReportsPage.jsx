@@ -24,7 +24,12 @@ const SalesDailyAgendaGrid = ({ formData, setFormData, authFetch }) => {
   useEffect(() => {
     if (formData.report_text && formData.report_text.trim().startsWith('[')) {
       try {
-        setLeads(JSON.parse(formData.report_text));
+        const parsed = JSON.parse(formData.report_text);
+        if (Array.isArray(parsed) && parsed.length === 0) {
+          fetchFresh();
+        } else {
+          setLeads(parsed);
+        }
       } catch (e) {
         fetchFresh();
       }
