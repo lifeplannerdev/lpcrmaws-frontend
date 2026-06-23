@@ -24,16 +24,30 @@ function statusEditor({ row, onRowChange }) {
   );
 }
 
-function PhoneEditor({ row, column, onRowChange, onClose }) {
+function TypeEditor({ row, onRowChange }) {
+  return (
+    <select
+      autoFocus
+      className="w-full h-full border-none outline-none bg-white text-gray-900 px-2"
+      value={row.agenda_type || 'Fresh'}
+      onChange={(e) => onRowChange({ ...row, agenda_type: e.target.value }, true)}
+    >
+      <option value="Fresh">Fresh</option>
+      <option value="Follow-up">Follow-up</option>
+    </select>
+  );
+}
+
+function NameEditor({ row, column, onRowChange, onClose }) {
   const [value, setValue] = useState(row[column.key] || '');
   const [suggestions, setSuggestions] = useState([]);
   const { accessToken } = useAuth();
 
   useEffect(() => {
-    if (value && value.length >= 4) {
+    if (value && value.length >= 2) {
       const timer = setTimeout(async () => {
         try {
-          const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/leads/?search=${value}`, {
+          const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/leads/?search=${encodeURIComponent(value)}`, {
             headers: { Authorization: `Bearer ${accessToken}` }
           });
           if (res.ok) {
@@ -44,20 +58,7 @@ function PhoneEditor({ row, column, onRowChange, onClose }) {
             } else if (Array.isArray(data)) {
               fetchedSuggestions = data;
             }
-            
-            // Auto-select if there's an exact match immediately after fetch
-            const exactMatch = fetchedSuggestions.find(s => s.phone === value);
-            if (exactMatch && row.isNew) {
-              onRowChange({ 
-                ...row, 
-                ...exactMatch, 
-                agenda_type: 'Follow-up', 
-                isNew: true 
-              }, true);
-              setSuggestions([]);
-            } else {
-              setSuggestions(fetchedSuggestions);
-            }
+            setSuggestions(fetchedSuggestions);
           }
         } catch (e) { console.error(e); }
       }, 500);
@@ -67,7 +68,7 @@ function PhoneEditor({ row, column, onRowChange, onClose }) {
     }
   }, [value, accessToken]);
 
-  const listId = `phone-suggestions-${row.id}`;
+  const listId = `name-suggestions-${row.id}`;
 
   return (
     <div className="w-full h-full">
@@ -80,24 +81,30 @@ function PhoneEditor({ row, column, onRowChange, onClose }) {
           const val = e.target.value;
           setValue(val);
           const safeSuggestions = Array.isArray(suggestions) ? suggestions : [];
-          const match = safeSuggestions.find(s => s.phone === val);
+          const match = safeSuggestions.find(s => s.name === val);
           if (match) {
             onRowChange({ 
               ...row, 
               ...match, 
               agenda_type: 'Follow-up', 
-              isNew: true 
+              isNew: false 
             }, true);
             setSuggestions([]);
           }
         }}
-        onBlur={() => onRowChange({ ...row, [column.key]: value }, true)}
+        onBlur={() => {
+          if (row.isNew) {
+            onRowChange({ ...row, [column.key]: value, agenda_type: 'Fresh' }, true);
+          } else {
+            onRowChange({ ...row, [column.key]: value }, true);
+          }
+        }}
       />
       {suggestions.length > 0 && (
         <datalist id={listId}>
           {suggestions.map(s => (
-            <option key={s.id} value={s.phone}>
-              {s.name || 'No Name'}
+            <option key={s.id} value={s.name}>
+              {s.phone ? `(${s.phone})` : ''}
             </option>
           ))}
         </datalist>
@@ -107,15 +114,15 @@ function PhoneEditor({ row, column, onRowChange, onClose }) {
 }
 
 const columns = [
-  { key: 'agenda_type', name: 'Type', width: 100, renderEditCell: textEditor, renderCell: (p) => (
+  { key: 'agenda_type', name: 'Type', width: 100, renderEditCell: TypeEditor, renderCell: (p) => (
     <span className={`font-semibold text-xs px-2 py-1 rounded ${p.row.agenda_type === 'Follow-up' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
       {p.row.agenda_type || 'Fresh'}
     </span>
   )},
   { key: 'created_at', name: 'Date', width: 120, renderCell: (p) => p.row.created_at ? format(parseISO(p.row.created_at), 'dd/MM/yyyy') : '' },
   { key: 'id', name: 'Serial Number', width: 80 },
-  { key: 'name', name: 'Name', width: 150, renderEditCell: textEditor },
-  { key: 'phone', name: 'Phone Number', width: 150, renderEditCell: PhoneEditor },
+  { key: 'name', name: 'Name', width: 150, renderEditCell: NameEditor },
+  { key: 'phone', name: 'Phone Number', width: 150, renderEditCell: textEditor },
   { key: 'email', name: 'Email Address', width: 200, renderEditCell: textEditor },
   { key: 'interested_country', name: 'Interested Country', width: 150, renderEditCell: textEditor },
   { key: 'interested_course', name: 'Interested Course', width: 200, renderEditCell: textEditor },
@@ -225,6 +232,7 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
   };
 
   const isManager = user?.role_names?.some(r => ['SUPERADMIN', 'COMPANY_ADMIN', 'MD', 'DIRECTOR', 'GENERAL_MANAGER'].includes(r));
+  const canAddRow = !user?.role_names?.includes('ADM_MANAGER');
 
   // Split into Management View vs Employee View
   const renderGrid = () => {
@@ -270,9 +278,11 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
                   <h2 className="text-lg font-bold text-indigo-600">
                     Daily Agenda Leads ({localLeads.length})
                   </h2>
-                  <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
-                    + Add Row
-                  </button>
+                  {canAddRow && (
+                    <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
+                      + Add Row
+                    </button>
+                  )}
               </div>
             )}
             <div className="rounded-lg border shadow-sm bg-white overflow-hidden" style={{ minHeight: '300px', height: '600px' }}>
