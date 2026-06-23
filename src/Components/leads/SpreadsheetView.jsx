@@ -190,13 +190,22 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
           lead: updatedRow.id,
           follow_up_date: new Date().toISOString().split('T')[0],
           status: 'pending',
-          followup_type: 'call'
+          followup_type: 'call',
+          phone_number: updatedRow.phone || 'N/A',
+          name: updatedRow.name || ''
         };
-        await authFetch(`${import.meta.env.VITE_API_BASE_URL}/followups/`, {
+        const res = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/followups/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(followupPayload)
         });
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error('Failed to auto-create follow-up:', res.status, errText);
+        } else {
+          // Notify parent so the linked lead is added to the main leads array and doesn't disappear on re-renders
+          if (onUpdateLead) onUpdateLead(updatedRow);
+        }
       } catch (err) {
         console.error('Failed to auto-create follow-up:', err);
       }
