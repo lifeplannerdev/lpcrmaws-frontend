@@ -152,7 +152,13 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
   const [localLeads, setLocalLeads] = useState(leads || []);
 
   useEffect(() => {
-    setLocalLeads(leads || []);
+    setLocalLeads(prev => {
+      const tempRows = prev.filter(l => String(l.id).startsWith('temp-'));
+      const incoming = leads || [];
+      const incomingIds = new Set(incoming.map(l => l.id));
+      const uniqueTempRows = tempRows.filter(l => !incomingIds.has(l.id));
+      return [...uniqueTempRows, ...incoming];
+    });
   }, [leads]);
 
   // Push updates upwards if in report mode
