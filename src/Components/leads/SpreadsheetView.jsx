@@ -54,7 +54,9 @@ function NameEditor({ row, column, onRowChange, onClose }) {
           if (res.ok) {
             const data = await res.json();
             let fetchedSuggestions = [];
-            if (data && Array.isArray(data.results)) {
+            if (data && data.results && Array.isArray(data.results.leads)) {
+              fetchedSuggestions = data.results.leads;
+            } else if (data && Array.isArray(data.results)) {
               fetchedSuggestions = data.results;
             } else if (Array.isArray(data)) {
               fetchedSuggestions = data;
@@ -81,6 +83,7 @@ function NameEditor({ row, column, onRowChange, onClose }) {
         onChange={(e) => {
           const val = e.target.value;
           setValue(val);
+          onRowChange({ ...row, [column.key]: val });
           const safeSuggestions = Array.isArray(suggestions) ? suggestions : [];
           const match = safeSuggestions.find(s => s.name === val);
           if (match) {
@@ -170,7 +173,7 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
     if (updatedRow.isNew && !isReportMode) {
         // If it's a new row in LeadsPage, maybe wait for a manual save button?
         // Or if we want to save immediately when they edit:
-        if (updatedRow.phone && updatedRow.name && column.key !== 'phone') {
+        if (updatedRow.phone && updatedRow.name) {
             try {
                 // If it has an ID, it means it was auto-filled from an existing lead, we should just update it
                 if (updatedRow.id && !String(updatedRow.id).startsWith('temp-')) {
