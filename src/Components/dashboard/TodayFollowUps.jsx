@@ -61,6 +61,16 @@ export default function TodayFollowUps({ followUps = [], onViewAll }) {
             const typeColor = TYPE_COLOR[item.followup_type] || 'bg-gray-100 text-gray-600';
             const statusColor = STATUS_COLOR[item.status]    || 'bg-gray-100 text-gray-600';
             const statusLabel = STATUS_LABEL[item.status]    || item.status;
+            
+            const displayName = item.name || item.lead_name || item.phone_number || item.lead_phone || 'Unknown';
+            const displayPhone = item.phone_number || item.lead_phone || '';
+
+            // Extract a clean snippet of notes without the audio recording tag
+            let notesSnippet = '';
+            if (item.notes) {
+              const cleanNotes = item.notes.replace(/\[Audio Recording:\s*(https?:\/\/[^\]]+)\]/, '').trim();
+              notesSnippet = cleanNotes.length > 50 ? cleanNotes.substring(0, 50) + '...' : cleanNotes;
+            }
 
             return (
               <div
@@ -86,10 +96,13 @@ export default function TodayFollowUps({ followUps = [], onViewAll }) {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
-                    {item.name || item.phone_number} {item.lead_program && <span className="text-xs font-normal text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md ml-1">{item.lead_program}</span>}
+                    {displayName} {item.lead_program && <span className="text-xs font-normal text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md ml-1">{item.lead_program}</span>}
                   </p>
-                  {item.name && (
-                    <p className="text-xs text-gray-400 truncate">{item.phone_number}</p>
+                  {(displayName !== displayPhone && displayPhone) && (
+                    <p className="text-xs text-gray-400 truncate">{displayPhone}</p>
+                  )}
+                  {notesSnippet && (
+                    <p className="text-xs text-gray-500 truncate mt-0.5 mb-1 italic">"{notesSnippet}"</p>
                   )}
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {item.follow_up_time && (

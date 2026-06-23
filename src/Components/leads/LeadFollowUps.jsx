@@ -156,6 +156,20 @@ const FollowUpItem = ({ item, onEdit, onDelete, onStatusChange, canEdit }) => {
   const status   = STATUS_META[item.status]        || STATUS_META.pending;
   const TypeIcon = type.Icon;
 
+  const parseNotes = (notes) => {
+    if (!notes) return { text: '', audioUrl: null };
+    const match = notes.match(/\[Audio Recording:\s*(https?:\/\/[^\]]+)\]/);
+    if (match) {
+      return {
+        text: notes.replace(match[0], '').trim(),
+        audioUrl: match[1]
+      };
+    }
+    return { text: notes, audioUrl: null };
+  };
+
+  const { text: notesText, audioUrl } = parseNotes(item.notes);
+
   return (
     <div className={`rounded-xl border-2 p-4 transition-all ${
       item.is_overdue ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-white hover:border-indigo-200'
@@ -207,10 +221,16 @@ const FollowUpItem = ({ item, onEdit, onDelete, onStatusChange, canEdit }) => {
         </div>
       </div>
 
-      {item.notes && (
-        <p className="text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 mb-2 line-clamp-2">
-          {item.notes}
+      {notesText && (
+        <p className="text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 mb-2 whitespace-pre-wrap">
+          {notesText}
         </p>
+      )}
+
+      {audioUrl && (
+        <div className="mb-2">
+          <audio controls src={audioUrl} className="h-8 w-full max-w-sm rounded-lg" preload="metadata" />
+        </div>
       )}
 
       {item.status === 'pending' && canEdit && (
