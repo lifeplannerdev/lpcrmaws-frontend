@@ -232,7 +232,6 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
   };
 
   const isManager = user?.role_names?.some(r => ['SUPERADMIN', 'COMPANY_ADMIN', 'MD', 'DIRECTOR', 'GENERAL_MANAGER'].includes(r));
-  const canAddRow = !user?.role_names?.includes('ADM_MANAGER');
 
   // Split into Management View vs Employee View
   const renderGrid = () => {
@@ -278,11 +277,9 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
                   <h2 className="text-lg font-bold text-indigo-600">
                     Daily Agenda Leads ({localLeads.length})
                   </h2>
-                  {canAddRow && (
-                    <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
-                      + Add Row
-                    </button>
-                  )}
+                  <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
+                    + Add Row
+                  </button>
               </div>
             )}
             <div className="rounded-lg border shadow-sm bg-white overflow-hidden" style={{ minHeight: '300px', height: '600px' }}>

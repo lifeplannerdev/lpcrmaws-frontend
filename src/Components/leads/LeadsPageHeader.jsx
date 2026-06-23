@@ -322,9 +322,11 @@ const BulkUploadModal = ({ onClose, authFetch }) => {
 ───────────────────────────────────────────────────────────── */
 const LeadsPageHeader = () => {
   const navigate = useNavigate();
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [showPasteModal, setShowPasteModal] = useState(false);
+
+  const isAdmManager = user?.role_names?.includes('ADM_MANAGER');
 
   const authFetch = async (url, options = {}, retry = true) => {
     if (!accessToken) throw new Error('No access token');
@@ -358,37 +360,41 @@ const LeadsPageHeader = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <Can perform="leads:edit_any">
-              <button
-                onClick={() => setShowPasteModal(true)}
-                className="group relative bg-white border-2 border-green-300 hover:border-green-500 text-green-600 hover:text-green-700 px-5 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
-              >
-                <FileSpreadsheet size={18} className="group-hover:-translate-y-0.5 transition-transform duration-300" />
-                <span>Bulk Paste</span>
-              </button>
-            </Can>
+            {!isAdmManager && (
+              <>
+                <Can perform="leads:edit_any">
+                  <button
+                    onClick={() => setShowPasteModal(true)}
+                    className="group relative bg-white border-2 border-green-300 hover:border-green-500 text-green-600 hover:text-green-700 px-5 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+                  >
+                    <FileSpreadsheet size={18} className="group-hover:-translate-y-0.5 transition-transform duration-300" />
+                    <span>Bulk Paste</span>
+                  </button>
+                </Can>
 
-            <Can perform="leads:edit_any">
-              <button
-                onClick={() => setShowBulkModal(true)}
-                className="group relative bg-white border-2 border-indigo-300 hover:border-indigo-500 text-indigo-600 hover:text-indigo-700 px-5 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
-              >
-                <Upload size={18} className="group-hover:-translate-y-0.5 transition-transform duration-300" />
-                <span>Bulk Upload</span>
-              </button>
-            </Can>
+                <Can perform="leads:edit_any">
+                  <button
+                    onClick={() => setShowBulkModal(true)}
+                    className="group relative bg-white border-2 border-indigo-300 hover:border-indigo-500 text-indigo-600 hover:text-indigo-700 px-5 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+                  >
+                    <Upload size={18} className="group-hover:-translate-y-0.5 transition-transform duration-300" />
+                    <span>Bulk Upload</span>
+                  </button>
+                </Can>
 
-            <Can perform="leads:edit_any">
-              <button
-                onClick={() => navigate('/addnewlead')}
-                className="group relative bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5 overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                <Plus size={20} className="relative z-10 group-hover:rotate-90 transition-transform duration-300" />
-                <span className="relative z-10">Add New Lead</span>
-                <Sparkles size={16} className="relative z-10 opacity-70 group-hover:opacity-100 transition-opacity" />
-              </button>
-            </Can>
+                <Can perform="leads:edit_any">
+                  <button
+                    onClick={() => navigate('/addnewlead')}
+                    className="group relative bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5 overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                    <Plus size={20} className="relative z-10 group-hover:rotate-90 transition-transform duration-300" />
+                    <span className="relative z-10">Add New Lead</span>
+                    <Sparkles size={16} className="relative z-10 opacity-70 group-hover:opacity-100 transition-opacity" />
+                  </button>
+                </Can>
+              </>
+            )}
           </div>
         </div>
       </div>
