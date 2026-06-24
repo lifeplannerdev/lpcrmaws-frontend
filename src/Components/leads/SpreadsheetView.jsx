@@ -219,7 +219,7 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
                      }
                 } else {
                      // Create new lead
-                     const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/leads/`, {
+                     const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/leads/create/`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(updatedRow)

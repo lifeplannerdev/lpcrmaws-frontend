@@ -258,6 +258,7 @@ export default function LeadsPage() {
           date:            new Date(l.created_at).toLocaleDateString('en-IN'),
           created_at:      l.created_at,
           agenda_type:     l.agenda_type,
+          remarks:         l.remarks,
         })));
 
         setStats(statsData);
