@@ -96,6 +96,7 @@ export default function LeadsPage() {
 
   const statusColors = useMemo(() => ({
     enquiry:    'bg-blue-100   text-blue-700',
+    job_enquiry:'bg-indigo-100 text-indigo-700',
     contacted:  'bg-yellow-100 text-yellow-700',
     qualified:  'bg-purple-100 text-purple-700',
     converted:  'bg-green-100  text-green-700',

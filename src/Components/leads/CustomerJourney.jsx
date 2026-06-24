@@ -23,9 +23,9 @@ export default function CustomerJourney({ lead }) {
     {
       id: 'contacted',
       label: 'Contacted',
-      description: lead.status !== 'ENQUIRY' ? lead.status : 'Pending',
-      active: lead.status !== 'ENQUIRY',
-      completed: lead.status !== 'ENQUIRY',
+      description: (lead.status !== 'ENQUIRY' && lead.status !== 'JOB_ENQUIRY') ? lead.status : 'Pending',
+      active: (lead.status !== 'ENQUIRY' && lead.status !== 'JOB_ENQUIRY'),
+      completed: (lead.status !== 'ENQUIRY' && lead.status !== 'JOB_ENQUIRY'),
     },
     {
       id: 'converted',

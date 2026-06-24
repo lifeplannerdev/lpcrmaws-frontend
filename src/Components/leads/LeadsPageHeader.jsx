@@ -149,7 +149,7 @@ const BulkUploadModal = ({ onClose, authFetch }) => {
                 <Info size={13} className="shrink-0 mt-0.5" />
                 <span>
                   <strong>status</strong> — defaults to <code className="font-mono">ENQUIRY</code> if omitted. Accepted:{' '}
-                  {['ENQUIRY', 'CONTACTED', 'QUALIFIED', 'CONVERTED', 'LOST'].map((v, i, arr) => (
+                  {['ENQUIRY', 'JOB_ENQUIRY', 'CONTACTED', 'QUALIFIED', 'CONVERTED', 'LOST'].map((v, i, arr) => (
                     <span key={v}><code className="font-mono">{v}</code>{i < arr.length - 1 ? ', ' : ''}</span>
                   ))}
                 </span>

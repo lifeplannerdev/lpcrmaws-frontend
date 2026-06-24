@@ -1,5 +1,6 @@
 export const statusOptions = [
   { value: 'ENQUIRY', label: 'Enquiry' },
+  { value: 'JOB_ENQUIRY', label: 'Job Enquiry' },
   { value: 'QUALIFIED', label: 'Qualified' },
   { value: 'CONVERTED', label: 'Converted' },
   { value: 'NOT_INTERESTED', label: 'Not Interested' },

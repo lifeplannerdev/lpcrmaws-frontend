@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Can } from '../../context/PermissionsContext';
 
 const STATUS_OPTIONS = [
-  'ENQUIRY', 'CONTACTED', 'QUALIFIED', 'NOT_INTERESTED',
+  'ENQUIRY', 'JOB_ENQUIRY', 'CONTACTED', 'QUALIFIED', 'NOT_INTERESTED',
   'CONVERTED', 'CNR', 'REGISTERED'
 ];
 
