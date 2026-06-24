@@ -25,19 +25,7 @@ function statusEditor({ row, onRowChange }) {
   );
 }
 
-function TypeEditor({ row, onRowChange }) {
-  return (
-    <select
-      autoFocus
-      className="w-full h-full border-none outline-none bg-white text-gray-900 px-2"
-      value={row.agenda_type || 'Fresh'}
-      onChange={(e) => onRowChange({ ...row, agenda_type: e.target.value }, true)}
-    >
-      <option value="Fresh">Fresh</option>
-      <option value="Follow-up">Follow-up</option>
-    </select>
-  );
-}
+
 
 function NameEditor({ row, column, onRowChange, onClose }) {
   const [value, setValue] = useState(row[column.key] || '');
@@ -118,7 +106,7 @@ function NameEditor({ row, column, onRowChange, onClose }) {
 }
 
 const columns = [
-  { key: 'agenda_type', name: 'Type', width: 100, renderEditCell: TypeEditor, renderCell: (p) => (
+  { key: 'agenda_type', name: 'Type', width: 100, renderCell: (p) => (
     <span className={`font-semibold text-xs px-2 py-1 rounded ${p.row.agenda_type === 'Follow-up' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
       {p.row.agenda_type || 'Fresh'}
     </span>
@@ -134,6 +122,7 @@ const columns = [
   { key: 'work_experience', name: 'Work Experience', width: 150, renderEditCell: textEditor },
   { key: 'location', name: 'Location', width: 150, renderEditCell: textEditor },
   { key: 'budget', name: 'Budget', width: 120, renderEditCell: textEditor },
+  { key: 'remarks', name: 'Remarks', width: 200, renderEditCell: textEditor },
   { 
     key: 'status', 
     name: 'Status', 
