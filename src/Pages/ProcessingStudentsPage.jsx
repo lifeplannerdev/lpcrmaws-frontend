@@ -20,6 +20,16 @@ function debounce(func, wait) {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+const fixedDocumentTypes = [
+  'Enrollment documentation',
+  'Application Documents',
+  'Offer Letter',
+  'Visa Documentation Info',
+  'Visa Appointment',
+  'Visa Results',
+  'Accommodation'
+];
+
 export default function ProcessingStudentsPage() {
   const { hasPermission } = usePermissions();
   const { accessToken } = useAuth();
@@ -634,15 +644,21 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
     }
   };
 
-  const handleFileUpload = async (e) => {
+  const [uploadingDocType, setUploadingDocType] = useState(null);
+
+  const handleFileUpload = async (e, titleOverride = null) => {
     const file = e.target.files[0];
     if (!file || !student) return;
     
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('title', file.name);
+    formData.append('title', titleOverride || file.name);
 
-    setUploadingDoc(true);
+    if (titleOverride) {
+      setUploadingDocType(titleOverride);
+    } else {
+      setUploadingDoc(true);
+    }
     try {
       await axios.post(`${API_BASE_URL}/processing-students/${student.id}/documents/`, formData, {
         headers: { 
@@ -656,7 +672,9 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
       console.error('Error uploading document', err);
       alert('Failed to upload document.');
     } finally {
-      setUploadingDoc(false);
+      if (titleOverride) setUploadingDocType(null);
+      else setUploadingDoc(false);
+      e.target.value = null; // Reset input to allow re-uploading the same file
     }
   };
 
@@ -906,37 +924,101 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
         {activeTab === 'documents' && student && (
           <div className="space-y-6">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Student Documents</h3>
+              <h3 className="text-lg font-semibold text-gray-800">Checklist & Documents</h3>
               <div>
                 <input
                   type="file"
-                  id="doc-upload"
+                  id="doc-upload-other"
                   className="hidden"
-                  onChange={handleFileUpload}
+                  onChange={(e) => {
+                    const title = window.prompt("Enter a title for this document (e.g. Passport, ID):");
+                    if (!title) {
+                      e.target.value = null;
+                      return;
+                    }
+                    handleFileUpload(e, title);
+                  }}
                 />
                 <label
-                  htmlFor="doc-upload"
-                  className={`cursor-pointer px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors ${uploadingDoc ? 'opacity-50 pointer-events-none' : ''}`}
+                  htmlFor="doc-upload-other"
+                  className={`cursor-pointer px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm transition-colors ${uploadingDoc ? 'opacity-50 pointer-events-none' : ''}`}
                 >
-                  {uploadingDoc ? 'Uploading...' : 'Upload Document'}
+                  {uploadingDoc ? 'Uploading...' : 'Add Other Document'}
                 </label>
               </div>
             </div>
 
-            {documents.length === 0 ? (
-              <div className="text-center py-10 bg-gray-50 border border-dashed rounded-lg">
-                <p className="text-gray-500">No documents uploaded yet.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {documents.map(doc => (
-                  <div key={doc.id} className="flex items-center justify-between p-4 bg-white border rounded-lg shadow-sm">
+            <div className="grid grid-cols-1 gap-4">
+              {fixedDocumentTypes.map(docType => {
+                 const existingDoc = documents.find(d => d.title === docType);
+                 return (
+                   <div key={docType} className="flex items-center justify-between p-4 bg-white border rounded-lg shadow-sm">
+                      <div className="flex items-center gap-3">
+                         <div className={`p-2 rounded ${existingDoc ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>
+                           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              {existingDoc ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                              ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                              )}
+                           </svg>
+                         </div>
+                         <div>
+                           <p className={`font-medium ${existingDoc ? 'text-gray-800' : 'text-gray-500'}`}>{docType}</p>
+                           {existingDoc && (
+                             <p className="text-xs text-gray-500">Uploaded by {existingDoc.uploaded_by_name} on {new Date(existingDoc.uploaded_at).toLocaleDateString()}</p>
+                           )}
+                         </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {existingDoc ? (
+                          <>
+                            <a 
+                              href={existingDoc.file_url} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded transition-colors"
+                            >
+                              View
+                            </a>
+                            <button 
+                              type="button" 
+                              onClick={() => handleDeleteDocument(existingDoc.id)}
+                              className="px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <input
+                              type="file"
+                              id={`doc-upload-${docType.replace(/\s+/g, '-')}`}
+                              className="hidden"
+                              onChange={(e) => handleFileUpload(e, docType)}
+                            />
+                            <label
+                              htmlFor={`doc-upload-${docType.replace(/\s+/g, '-')}`}
+                              className={`cursor-pointer px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors ${uploadingDocType === docType ? 'opacity-50 pointer-events-none' : ''}`}
+                            >
+                              {uploadingDocType === docType ? 'Uploading...' : 'Upload'}
+                            </label>
+                          </>
+                        )}
+                      </div>
+                   </div>
+                 );
+              })}
+              
+              {/* Other Documents */}
+              {documents.filter(d => !fixedDocumentTypes.includes(d.title)).map(doc => (
+                  <div key={doc.id} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-lg shadow-sm">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-blue-50 text-blue-600 rounded">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-800">{doc.title}</p>
+                        <p className="font-medium text-gray-800">{doc.title} <span className="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500 ml-2">Other</span></p>
                         <p className="text-xs text-gray-500">Uploaded by {doc.uploaded_by_name} on {new Date(doc.uploaded_at).toLocaleDateString()}</p>
                       </div>
                     </div>
@@ -958,9 +1040,8 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+              ))}
+            </div>
           </div>
         )}
 
