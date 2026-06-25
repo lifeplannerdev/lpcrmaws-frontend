@@ -24,6 +24,7 @@ export default function ProcessingStudentsPage() {
   const { accessToken } = useAuth();
   const [students, setStudents] = useState([]);
   const [dynamicFields, setDynamicFields] = useState([]);
+  const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // State for layout & toggles
@@ -483,11 +484,32 @@ function StudentModal({ student, dynamicFields, onClose, onSave, accessToken }) 
                 <input name="intake" value={formData.intake || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date of Registration</label>
+                <input type="date" name="date_of_registration" value={formData.date_of_registration || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                 <select name="category" value={formData.category} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                   <option value="All Students">All Students</option>
                   <option value="GCC Students">GCC Students</option>
                   <option value="European Students">European Students</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+                <select name="assigned_to" value={formData.assigned_to} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                  <option value="">Unassigned</option>
+                  {staffList?.map(staff => (
+                    <option key={staff.id} value={staff.id}>{staff.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Registration Fee Status</label>
+                <select name="registration_fee_status" value={formData.registration_fee_status} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                  <option value="Pending">Pending</option>
+                  <option value="Shared with student">Shared with student</option>
+                  <option value="Without Tax amount">Without Tax amount</option>
                 </select>
               </div>
               <div>
@@ -497,6 +519,41 @@ function StudentModal({ student, dynamicFields, onClose, onSave, accessToken }) 
                   <option value="Shared">Shared</option>
                   <option value="Completed">Completed</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">App Documents Status</label>
+                <select name="application_documents_status" value={formData.application_documents_status} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                  <option value="Pending">Pending</option>
+                  <option value="Collected">Collected</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Application Status</label>
+                <input name="application_status" value={formData.application_status || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Offer Letter Status</label>
+                <input name="offer_letter_status" value={formData.offer_letter_status || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Visa Doc Info Status</label>
+                <input name="visa_documentation_info_status" value={formData.visa_documentation_info_status || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Visa Appointment</label>
+                <input name="visa_appointment" value={formData.visa_appointment || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Visa Documentation</label>
+                <input name="visa_documentation" value={formData.visa_documentation || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Accommodation</label>
+                <input name="accommodation" value={formData.accommodation || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Visa Results</label>
+                <input name="visa_results" value={formData.visa_results || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
             </div>
 
