@@ -36,9 +36,20 @@ export default function ProcessingStudentsPage() {
 
   const categories = ['All Students', 'GCC Students', 'European Students'];
 
+  const fetchStaff = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/employees/`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setStaffList(res.data || []);
+    } catch (err) {
+      console.error('Error fetching staff', err);
+    }
+  };
+
   const fetchDynamicFields = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/trainers/processing-students/dynamic-fields/`, {
+      const res = await axios.get(`${API_BASE_URL}/processing-students/dynamic-fields/`, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       setDynamicFields(res.data);
@@ -50,7 +61,7 @@ export default function ProcessingStudentsPage() {
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/trainers/processing-students/`, {
+      const res = await axios.get(`${API_BASE_URL}/processing-students/`, {
         params: { category: activeCategory !== 'All Students' ? activeCategory : undefined, search },
         headers: { Authorization: `Bearer ${accessToken}` }
       });
@@ -64,6 +75,7 @@ export default function ProcessingStudentsPage() {
 
   useEffect(() => {
     fetchDynamicFields();
+    fetchStaff();
   }, []);
 
   useEffect(() => {
@@ -73,7 +85,7 @@ export default function ProcessingStudentsPage() {
   const handleUpdateField = async (studentId, field, value) => {
     setStudents(prev => prev.map(s => s.id === studentId ? { ...s, [field]: value } : s));
     try {
-      await axios.patch(`${API_BASE_URL}/api/trainers/processing-students/${studentId}/`, { [field]: value }, {
+      await axios.patch(`${API_BASE_URL}/processing-students/${studentId}/`, { [field]: value }, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
     } catch (err) {
@@ -405,11 +417,11 @@ function StudentModal({ student, dynamicFields, onClose, onSave, accessToken }) 
     try {
       const payload = { ...formData, dynamic_data: dynamicData };
       if (student) {
-        await axios.put(`${API_BASE_URL}/api/trainers/processing-students/${student.id}/`, payload, {
+        await axios.put(`${API_BASE_URL}/processing-students/${student.id}/`, payload, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
       } else {
-        await axios.post(`${API_BASE_URL}/api/trainers/processing-students/`, payload, {
+        await axios.post(`${API_BASE_URL}/processing-students/`, payload, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
       }
