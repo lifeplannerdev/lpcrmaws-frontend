@@ -512,6 +512,20 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
   });
   const [dynamicData, setDynamicData] = useState({});
   const [loading, setLoading] = useState(false);
+  const [timeline, setTimeline] = useState([]);
+  const [newNote, setNewNote] = useState('');
+
+  const fetchTimeline = async () => {
+    if (!student) return;
+    try {
+      const res = await axios.get(`${API_BASE_URL}/processing-students/${student.id}/activity/`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setTimeline(res.data);
+    } catch (err) {
+      console.error('Error fetching timeline', err);
+    }
+  };
 
   useEffect(() => {
     if (student) {
@@ -520,8 +534,22 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
         assigned_to: student.assigned_to || ''
       });
       setDynamicData(student.dynamic_data || {});
+      fetchTimeline();
     }
   }, [student]);
+
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return;
+    try {
+      await axios.post(`${API_BASE_URL}/processing-students/${student.id}/note/`, { note: newNote }, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setNewNote('');
+      fetchTimeline();
+    } catch (err) {
+      console.error('Error adding note', err);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -557,14 +585,16 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-[90vw] lg:max-w-7xl max-h-[90vh] flex flex-col overflow-hidden">
         <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
           <h2 className="text-xl font-bold text-gray-800">{student ? 'Edit Student' : 'Add New Student'}</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1">
-          <form id="student-form" onSubmit={handleSubmit} className="space-y-8">
+        <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+          {/* Main Form Section */}
+          <div className="flex-1 p-6 overflow-y-auto lg:border-r border-gray-200">
+            <form id="student-form" onSubmit={handleSubmit} className="space-y-8">
             <div>
               <h3 className="font-semibold text-lg border-b pb-2 text-indigo-600 mb-4">Personal Info</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -701,7 +731,53 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
           </form>
         </div>
 
-        <div className="px-6 py-4 border-t flex justify-between gap-3 bg-gray-50">
+        {/* Timeline Section */}
+        {student && (
+          <div className="w-full lg:w-96 bg-gray-50 flex flex-col overflow-hidden border-t lg:border-t-0">
+            <div className="p-4 border-b bg-white">
+              <h3 className="font-semibold text-lg text-gray-800">Activity Timeline</h3>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {timeline.length === 0 ? (
+                <div className="text-gray-500 text-sm text-center italic">No recent activity</div>
+              ) : (
+                timeline.map(log => (
+                  <div key={log.id} className="relative pl-4 border-l-2 border-indigo-200">
+                    <div className="absolute -left-1.5 top-1 w-3 h-3 rounded-full bg-indigo-500"></div>
+                    <div className="text-sm font-semibold text-gray-800">{log.action}</div>
+                    <div className="text-sm text-gray-600 mt-1">{log.description}</div>
+                    <div className="text-xs text-gray-400 mt-2 flex justify-between">
+                      <span>{log.user}</span>
+                      <span>{new Date(log.created_at).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-4 border-t bg-white flex flex-col gap-2">
+              <textarea
+                rows="2"
+                placeholder="Add an internal note..."
+                className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+              ></textarea>
+              <button
+                type="button"
+                onClick={handleAddNote}
+                disabled={!newNote.trim()}
+                className="self-end px-4 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                Add Note
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="px-6 py-4 border-t flex justify-between gap-3 bg-gray-50 w-full">
           <div>
             {student && (
               <button type="button" onClick={() => onDelete(student.id)} className="px-4 py-2 text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100">
