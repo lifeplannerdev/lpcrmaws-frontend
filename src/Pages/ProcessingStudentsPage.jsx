@@ -95,6 +95,20 @@ export default function ProcessingStudentsPage() {
     }
   };
 
+  const handleDeleteStudent = async (studentId) => {
+    if (!window.confirm("Are you sure you want to delete this student?")) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/processing-students/${studentId}/`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      fetchStudents();
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error('Error deleting student', err);
+      alert('Failed to delete student');
+    }
+  };
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
 
@@ -193,7 +207,7 @@ export default function ProcessingStudentsPage() {
             <>
               {activeView === 'list' && <ListView students={students} dynamicFields={dynamicFields} onStudentClick={openEditModal} />}
               {activeView === 'kanban' && <KanbanView students={students} dynamicFields={dynamicFields} handleUpdateField={handleUpdateField} onStudentClick={openEditModal} />}
-              {activeView === 'spreadsheet' && <SpreadsheetView students={students} dynamicFields={dynamicFields} debouncedUpdateField={debouncedUpdateField} staffList={staffList} />}
+              {activeView === 'spreadsheet' && <SpreadsheetView students={students} dynamicFields={dynamicFields} debouncedUpdateField={debouncedUpdateField} staffList={staffList} onStudentClick={openEditModal} />}
             </>
           )}
         </div>
@@ -205,6 +219,7 @@ export default function ProcessingStudentsPage() {
           dynamicFields={dynamicFields}
           staffList={staffList}
           onClose={() => setIsModalOpen(false)}
+          onDelete={handleDeleteStudent}
           accessToken={accessToken}
           onSave={() => {
             setIsModalOpen(false);
@@ -216,7 +231,7 @@ export default function ProcessingStudentsPage() {
   );
 }
 
-function ListView({ students, dynamicFields }) {
+function ListView({ students, dynamicFields, onStudentClick }) {
   if (students.length === 0) return <div className="text-gray-500 text-center p-8">No students found.</div>;
 
   return (
@@ -310,7 +325,7 @@ function KanbanView({ students, dynamicFields, handleUpdateField, onStudentClick
   );
 }
 
-function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffList }) {
+function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffList, onStudentClick }) {
   const fixedColumns = [
     { key: 'name', label: 'Student Name' },
     { key: 'mobile_number', label: 'Mobile Number' },
@@ -353,6 +368,7 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                 {field.label}
               </th>
             ))}
+            <th className="px-4 py-3 text-center font-semibold text-gray-600 border-b border-l sticky right-0 z-10 bg-gray-50 shadow-sm">Actions</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -472,6 +488,11 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                   />
                 </td>
               ))}
+              <td className="px-4 py-2 border-l sticky right-0 z-10 bg-white text-center shadow-sm">
+                <button onClick={() => onStudentClick(student)} className="text-blue-600 font-medium hover:text-blue-800 hover:underline">
+                  Edit
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -480,7 +501,7 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
   );
 }
 
-function StudentModal({ student, dynamicFields, staffList, onClose, onSave, accessToken }) {
+function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, onSave, accessToken }) {
   const [formData, setFormData] = useState({
     name: '', mobile_number: '', whatsapp_number: '', email: '', parent_contact: '',
     program_applied: '', university: '', intake: '', registration_fee_status: 'Pending',
@@ -680,11 +701,20 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onSave, acce
           </form>
         </div>
 
-        <div className="px-6 py-4 border-t flex justify-end gap-3 bg-gray-50">
-          <button onClick={onClose} type="button" className="px-4 py-2 text-gray-600 bg-white border rounded-lg hover:bg-gray-50">Cancel</button>
-          <button form="student-form" type="submit" disabled={loading} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2">
-            {loading ? 'Saving...' : 'Save Student'}
-          </button>
+        <div className="px-6 py-4 border-t flex justify-between gap-3 bg-gray-50">
+          <div>
+            {student && (
+              <button type="button" onClick={() => onDelete(student.id)} className="px-4 py-2 text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100">
+                Delete Student
+              </button>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <button onClick={onClose} type="button" className="px-4 py-2 text-gray-600 bg-white border rounded-lg hover:bg-gray-50">Cancel</button>
+            <button form="student-form" type="submit" disabled={loading} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2">
+              {loading ? 'Saving...' : 'Save Student'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
