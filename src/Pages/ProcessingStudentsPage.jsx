@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Plus, List, Grid, Trello, X, Download } from 'lucide-react';
+import { Plus, List, Grid, Trello, X, Download, Columns } from 'lucide-react';
 import Navbar from '../Components/layouts/Navbar';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
