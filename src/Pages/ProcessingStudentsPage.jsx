@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { Plus, List, Grid, Trello, X, Download } from 'lucide-react';
 import Navbar from '../Components/layouts/Navbar';
+import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
-import { List, Columns, Table, Plus } from 'lucide-react';
 
 function debounce(func, wait) {
   let timeout;
@@ -124,6 +125,42 @@ export default function ProcessingStudentsPage() {
 
   const debouncedUpdateField = useCallback(debounce(handleUpdateField, 1000), []);
 
+  const handleExportExcel = () => {
+    if (filteredStudents.length === 0) {
+      alert("No data to export.");
+      return;
+    }
+    const data = filteredStudents.map(student => ({
+      "Student Name": student.name,
+      "Mobile Number": student.mobile_number,
+      "WhatsApp Number": student.whatsapp_number,
+      "Email": student.email,
+      "Parent Contact": student.parent_contact,
+      "Program Applied": student.program_applied,
+      "University": student.university,
+      "Intake": student.intake,
+      "Date of Registration": student.date_of_registration,
+      "Category": student.category,
+      "Assigned To": student.assigned_to_name || 'Unassigned',
+      "Registration Fee Status": student.registration_fee_status,
+      "Enrollment Process Status": student.enrollment_process_status,
+      "App Documents Status": student.application_documents_status,
+      "Application Status": student.application_status,
+      "Offer Letter Status": student.offer_letter_status,
+      "Visa Doc Info Status": student.visa_documentation_info_status,
+      "Visa Appointment": student.visa_appointment,
+      "Visa Documentation": student.visa_documentation,
+      "Accommodation": student.accommodation,
+      "Visa Results": student.visa_results,
+      ...student.dynamic_data
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Processing Students");
+    XLSX.writeFile(wb, "Processing_Students.xlsx");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <Navbar />
@@ -137,11 +174,16 @@ export default function ProcessingStudentsPage() {
               </h1>
               <p className="text-gray-600 text-lg">Manage abroad study processing and track statuses</p>
             </div>
-            {(canEditAny || canEditOwn) && (
-              <button onClick={openAddModal} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold">
-                <Plus size={18} /> Add Student
+            <div className="flex gap-3">
+              <button onClick={handleExportExcel} className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold">
+                <Download size={18} /> Export
               </button>
-            )}
+              {(canEditAny || canEditOwn) && (
+                <button onClick={openAddModal} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold">
+                  <Plus size={18} /> Add Student
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
