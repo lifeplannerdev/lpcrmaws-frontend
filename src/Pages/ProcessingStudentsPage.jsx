@@ -445,33 +445,36 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onSave, acce
         </div>
 
         <div className="p-6 overflow-y-auto flex-1">
-          <form id="student-form" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg border-b pb-2 text-indigo-600">Personal Info</h3>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Student Name *</label>
-                <input required name="name" value={formData.name || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number *</label>
-                <input required name="mobile_number" value={formData.mobile_number || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
-                <input name="whatsapp_number" value={formData.whatsapp_number || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input type="email" name="email" value={formData.email || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Parent Contact</label>
-                <input name="parent_contact" value={formData.parent_contact || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+          <form id="student-form" onSubmit={handleSubmit} className="space-y-8">
+            <div>
+              <h3 className="font-semibold text-lg border-b pb-2 text-indigo-600 mb-4">Personal Info</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Student Name *</label>
+                  <input required name="name" value={formData.name || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number *</label>
+                  <input required name="mobile_number" value={formData.mobile_number || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
+                  <input name="whatsapp_number" value={formData.whatsapp_number || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input type="email" name="email" value={formData.email || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Parent Contact</label>
+                  <input name="parent_contact" value={formData.parent_contact || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg border-b pb-2 text-indigo-600">Application Info</h3>
+            <div>
+              <h3 className="font-semibold text-lg border-b pb-2 text-indigo-600 mb-4">Application Info</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Program Applied</label>
                 <input name="program_applied" value={formData.program_applied || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
@@ -556,11 +559,12 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onSave, acce
                 <label className="block text-sm font-medium text-gray-700 mb-1">Visa Results</label>
                 <input name="visa_results" value={formData.visa_results || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
+              </div>
             </div>
 
             {dynamicFields.length > 0 && (
-              <div className="md:col-span-2 space-y-4 mt-4">
-                <h3 className="font-semibold text-lg border-b pb-2 text-indigo-600">Additional Fields</h3>
+              <div>
+                <h3 className="font-semibold text-lg border-b pb-2 text-indigo-600 mb-4">Additional Fields</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {dynamicFields.map(field => (
                     <div key={field.name}>
