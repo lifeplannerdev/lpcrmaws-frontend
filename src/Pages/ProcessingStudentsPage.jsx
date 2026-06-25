@@ -1,12 +1,27 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axiosInstance from '../config/axios';
+import axios from 'axios';
 import Navbar from '../Components/layouts/Navbar';
+import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
-import { FaList, FaColumns, FaTable, FaPlus } from 'react-icons/fa';
-import debounce from 'lodash/debounce';
+import { List, Columns, Table, Plus } from 'lucide-react';
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function ProcessingStudentsPage() {
   const { hasPermission } = usePermissions();
+  const { accessToken } = useAuth();
   const [students, setStudents] = useState([]);
   const [dynamicFields, setDynamicFields] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +38,9 @@ export default function ProcessingStudentsPage() {
 
   const fetchDynamicFields = async () => {
     try {
-      const res = await axiosInstance.get('/api/trainers/processing-students/dynamic-fields/');
+      const res = await axios.get(`${API_BASE_URL}/api/trainers/processing-students/dynamic-fields/`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
       setDynamicFields(res.data);
     } catch (err) {
       console.error('Error fetching dynamic fields', err);
@@ -33,8 +50,9 @@ export default function ProcessingStudentsPage() {
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const res = await axiosInstance.get('/api/trainers/processing-students/', {
-        params: { category: activeCategory !== 'All Students' ? activeCategory : undefined, search }
+      const res = await axios.get(`${API_BASE_URL}/api/trainers/processing-students/`, {
+        params: { category: activeCategory !== 'All Students' ? activeCategory : undefined, search },
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       setStudents(res.data.results || []);
     } catch (err) {
@@ -53,15 +71,13 @@ export default function ProcessingStudentsPage() {
   }, [activeCategory, search]);
 
   const handleUpdateField = async (studentId, field, value) => {
+    setStudents(prev => prev.map(s => s.id === studentId ? { ...s, [field]: value } : s));
     try {
-      await axiosInstance.patch(`/api/trainers/processing-students/${studentId}/`, {
-        [field]: value
+      await axios.patch(`${API_BASE_URL}/api/trainers/processing-students/${studentId}/`, { [field]: value }, {
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
-      // Update local state without full refetch for speed
-      setStudents(prev => prev.map(s => s.id === studentId ? { ...s, [field]: value } : s));
     } catch (err) {
-      console.error('Error updating student', err);
-      // Revert or show error
+      console.error('Error updating field', err);
       fetchStudents();
     }
   };
@@ -96,7 +112,7 @@ export default function ProcessingStudentsPage() {
             </div>
             {(canEditAny || canEditOwn) && (
               <button onClick={openAddModal} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold">
-                <FaPlus size={18} /> Add Student
+                <Plus size={18} /> Add Student
               </button>
             )}
           </div>
@@ -135,21 +151,21 @@ export default function ProcessingStudentsPage() {
                   className={`p-2 rounded-md ${activeView === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
                   title="List View"
                 >
-                  <FaList />
+                  <List size={18} />
                 </button>
                 <button
                   onClick={() => setActiveView('kanban')}
                   className={`p-2 rounded-md ${activeView === 'kanban' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
                   title="Kanban View"
                 >
-                  <FaColumns />
+                  <Columns size={18} />
                 </button>
                 <button
                   onClick={() => setActiveView('spreadsheet')}
                   className={`p-2 rounded-md ${activeView === 'spreadsheet' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
                   title="Spreadsheet View"
                 >
-                  <FaTable />
+                  <Table size={18} />
                 </button>
               </div>
             </div>
@@ -170,13 +186,13 @@ export default function ProcessingStudentsPage() {
             )}
           </div>
         </div>
-      </div>
       
       {isModalOpen && (
         <StudentModal 
           student={selectedStudent} 
           dynamicFields={dynamicFields} 
           onClose={() => setIsModalOpen(false)} 
+          accessToken={accessToken}
           onSave={() => {
             setIsModalOpen(false);
             fetchStudents();
@@ -353,7 +369,7 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField }) {
   );
 }
 
-function StudentModal({ student, dynamicFields, onClose, onSave }) {
+function StudentModal({ student, dynamicFields, onClose, onSave, accessToken }) {
   const [formData, setFormData] = useState({
     name: '', mobile_number: '', whatsapp_number: '', email: '', parent_contact: '',
     program_applied: '', university: '', intake: '', registration_fee_status: 'Pending',
@@ -390,9 +406,13 @@ function StudentModal({ student, dynamicFields, onClose, onSave }) {
     try {
       const payload = { ...formData, dynamic_data: dynamicData };
       if (student) {
-        await axiosInstance.put(`/api/trainers/processing-students/${student.id}/`, payload);
+        await axios.put(`${API_BASE_URL}/api/trainers/processing-students/${student.id}/`, payload, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
       } else {
-        await axiosInstance.post('/api/trainers/processing-students/', payload);
+        await axios.post(`${API_BASE_URL}/api/trainers/processing-students/`, payload, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
       }
       onSave();
     } catch (err) {
