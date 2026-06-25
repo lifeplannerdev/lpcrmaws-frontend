@@ -514,6 +514,11 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
   const [loading, setLoading] = useState(false);
   const [timeline, setTimeline] = useState([]);
   const [newNote, setNewNote] = useState('');
+  const [activeTab, setActiveTab] = useState('details');
+  const [documents, setDocuments] = useState([]);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [reminders, setReminders] = useState([]);
+  const [newReminder, setNewReminder] = useState({ date: '', time: '', note: '' });
 
   const fetchTimeline = async () => {
     if (!student) return;
@@ -527,6 +532,30 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
     }
   };
 
+  const fetchDocuments = async () => {
+    if (!student) return;
+    try {
+      const res = await axios.get(`${API_BASE_URL}/processing-students/${student.id}/documents/`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setDocuments(res.data);
+    } catch (err) {
+      console.error('Error fetching documents', err);
+    }
+  };
+
+  const fetchReminders = async () => {
+    if (!student) return;
+    try {
+      const res = await axios.get(`${API_BASE_URL}/followups/?processing_student=${student.id}`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setReminders(res.data);
+    } catch (err) {
+      console.error('Error fetching reminders', err);
+    }
+  };
+
   useEffect(() => {
     if (student) {
       setFormData({
@@ -535,6 +564,8 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
       });
       setDynamicData(student.dynamic_data || {});
       fetchTimeline();
+      fetchDocuments();
+      fetchReminders();
     }
   }, [student]);
 
@@ -548,6 +579,70 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
       fetchTimeline();
     } catch (err) {
       console.error('Error adding note', err);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !student) return;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', file.name);
+
+    setUploadingDoc(true);
+    try {
+      await axios.post(`${API_BASE_URL}/processing-students/${student.id}/documents/`, formData, {
+        headers: { 
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      fetchDocuments();
+      fetchTimeline();
+    } catch (err) {
+      console.error('Error uploading document', err);
+      alert('Failed to upload document.');
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handleDeleteDocument = async (docId) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/processing-student-documents/${docId}/`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      fetchDocuments();
+      fetchTimeline();
+    } catch (err) {
+      console.error('Error deleting document', err);
+    }
+  };
+
+  const handleCreateReminder = async (e) => {
+    e.preventDefault();
+    if (!newReminder.date || !newReminder.time) return alert("Date and Time are required.");
+    try {
+      await axios.post(`${API_BASE_URL}/followups/`, {
+        processing_student: student.id,
+        followup_date: newReminder.date,
+        followup_time: newReminder.time,
+        notes: newReminder.note,
+        phone_number: student.mobile_number || "0000000000",
+        status: "pending",
+        followup_type: "call",
+        priority: "medium"
+      }, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setNewReminder({ date: '', time: '', note: '' });
+      fetchReminders();
+      fetchTimeline();
+    } catch (err) {
+      console.error('Error creating reminder', err);
+      alert('Failed to schedule reminder');
     }
   };
 
@@ -592,12 +687,37 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
         </div>
 
         <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-          {/* Main Form Section */}
-          <div className="flex-1 p-6 overflow-y-auto lg:border-r border-gray-200">
-            <form id="student-form" onSubmit={handleSubmit} className="space-y-8">
-            <div>
-              <h3 className="font-semibold text-lg border-b pb-2 text-indigo-600 mb-4">Personal Info</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Main Content Section */}
+          <div className="flex-1 flex flex-col overflow-hidden lg:border-r border-gray-200">
+            {student && (
+              <div className="flex border-b bg-white px-4 pt-2">
+                <button
+                  className={`px-4 py-2 font-medium text-sm border-b-2 ${activeTab === 'details' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                  onClick={() => setActiveTab('details')}
+                >
+                  Details
+                </button>
+                <button
+                  className={`px-4 py-2 font-medium text-sm border-b-2 ${activeTab === 'documents' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                  onClick={() => setActiveTab('documents')}
+                >
+                  Documents
+                </button>
+                <button
+                  className={`px-4 py-2 font-medium text-sm border-b-2 ${activeTab === 'reminders' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                  onClick={() => setActiveTab('reminders')}
+                >
+                  Reminders
+                </button>
+              </div>
+            )}
+            
+            <div className="flex-1 p-6 overflow-y-auto">
+              {activeTab === 'details' && (
+                <form id="student-form" onSubmit={handleSubmit} className="space-y-8">
+                  <div>
+                    <h3 className="font-semibold text-lg border-b pb-2 text-indigo-600 mb-4">Personal Info</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Student Name *</label>
                   <input required name="name" value={formData.name || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
@@ -729,32 +849,144 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
               </div>
             )}
           </form>
-        </div>
+        )}
 
-        {/* Timeline Section */}
-        {student && (
-          <div className="w-full lg:w-96 bg-gray-50 flex flex-col overflow-hidden border-t lg:border-t-0">
-            <div className="p-4 border-b bg-white">
-              <h3 className="font-semibold text-lg text-gray-800">Activity Timeline</h3>
+        {activeTab === 'documents' && student && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Student Documents</h3>
+              <div>
+                <input
+                  type="file"
+                  id="doc-upload"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+                <label
+                  htmlFor="doc-upload"
+                  className={`cursor-pointer px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors ${uploadingDoc ? 'opacity-50 pointer-events-none' : ''}`}
+                >
+                  {uploadingDoc ? 'Uploading...' : 'Upload Document'}
+                </label>
+              </div>
             </div>
-            
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {timeline.length === 0 ? (
-                <div className="text-gray-500 text-sm text-center italic">No recent activity</div>
-              ) : (
-                timeline.map(log => (
-                  <div key={log.id} className="relative pl-4 border-l-2 border-indigo-200">
-                    <div className="absolute -left-1.5 top-1 w-3 h-3 rounded-full bg-indigo-500"></div>
-                    <div className="text-sm font-semibold text-gray-800">{log.action}</div>
-                    <div className="text-sm text-gray-600 mt-1">{log.description}</div>
-                    <div className="text-xs text-gray-400 mt-2 flex justify-between">
-                      <span>{log.user}</span>
-                      <span>{new Date(log.created_at).toLocaleString()}</span>
+
+            {documents.length === 0 ? (
+              <div className="text-center py-10 bg-gray-50 border border-dashed rounded-lg">
+                <p className="text-gray-500">No documents uploaded yet.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {documents.map(doc => (
+                  <div key={doc.id} className="flex items-center justify-between p-4 bg-white border rounded-lg shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-50 text-blue-600 rounded">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-800">{doc.title}</p>
+                        <p className="text-xs text-gray-500">Uploaded by {doc.uploaded_by_name} on {new Date(doc.uploaded_at).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a 
+                        href={doc.file_url} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded transition-colors"
+                      >
+                        View
+                      </a>
+                      <button 
+                        type="button" 
+                        onClick={() => handleDeleteDocument(doc.id)}
+                        className="px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'reminders' && student && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Schedule Reminder</h3>
+            <form onSubmit={handleCreateReminder} className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg border">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input type="date" required value={newReminder.date} onChange={e => setNewReminder({...newReminder, date: e.target.value})} className="w-full border rounded p-2 focus:ring-2 focus:ring-indigo-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                <input type="time" required value={newReminder.time} onChange={e => setNewReminder({...newReminder, time: e.target.value})} className="w-full border rounded p-2 focus:ring-2 focus:ring-indigo-500 outline-none" />
+              </div>
+              <div className="md:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea rows="2" value={newReminder.note} onChange={e => setNewReminder({...newReminder, note: e.target.value})} className="w-full border rounded p-2 focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="E.g. Call to check visa status..."></textarea>
+              </div>
+              <div className="md:col-span-3 flex justify-end">
+                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors">
+                  Add Reminder
+                </button>
+              </div>
+            </form>
+
+            <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mt-8">Scheduled Reminders</h3>
+            {reminders.length === 0 ? (
+              <div className="text-center py-10 bg-gray-50 border border-dashed rounded-lg">
+                <p className="text-gray-500">No reminders scheduled.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {reminders.map(rem => (
+                  <div key={rem.id} className="flex items-start justify-between p-4 bg-white border rounded-lg shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-amber-50 text-amber-600 rounded">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-800">{rem.notes || 'Reminder'}</p>
+                        <p className="text-xs text-gray-500 font-semibold">{rem.followup_date} at {rem.followup_time}</p>
+                        <p className="text-xs text-gray-400 mt-1">Status: {rem.status}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* Timeline Section */}
+      {student && (
+        <div className="w-full lg:w-96 bg-gray-50 flex flex-col overflow-hidden border-t lg:border-t-0">
+          <div className="p-4 border-b bg-white">
+            <h3 className="font-semibold text-lg text-gray-800">Activity Timeline</h3>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {timeline.length === 0 ? (
+              <div className="text-gray-500 text-sm text-center italic">No recent activity</div>
+            ) : (
+              timeline.map(log => (
+                <div key={log.id} className="relative pl-4 border-l-2 border-indigo-200">
+                  <div className="absolute -left-1.5 top-1 w-3 h-3 rounded-full bg-indigo-500"></div>
+                  <div className="text-sm font-semibold text-gray-800">{log.action}</div>
+                  <div className="text-sm text-gray-600 mt-1">{log.description}</div>
+                  <div className="text-xs text-gray-400 mt-2 flex justify-between">
+                    <span>{log.user}</span>
+                    <span>{new Date(log.created_at).toLocaleString()}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
 
             <div className="p-4 border-t bg-white flex flex-col gap-2">
               <textarea
