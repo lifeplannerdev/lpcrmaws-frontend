@@ -193,7 +193,7 @@ export default function ProcessingStudentsPage() {
             <>
               {activeView === 'list' && <ListView students={students} dynamicFields={dynamicFields} onStudentClick={openEditModal} />}
               {activeView === 'kanban' && <KanbanView students={students} dynamicFields={dynamicFields} handleUpdateField={handleUpdateField} onStudentClick={openEditModal} />}
-              {activeView === 'spreadsheet' && <SpreadsheetView students={students} dynamicFields={dynamicFields} debouncedUpdateField={debouncedUpdateField} />}
+              {activeView === 'spreadsheet' && <SpreadsheetView students={students} dynamicFields={dynamicFields} debouncedUpdateField={debouncedUpdateField} staffList={staffList} />}
             </>
           )}
         </div>
@@ -310,7 +310,7 @@ function KanbanView({ students, dynamicFields, handleUpdateField, onStudentClick
   );
 }
 
-function SpreadsheetView({ students, dynamicFields, debouncedUpdateField }) {
+function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffList }) {
   const fixedColumns = [
     { key: 'name', label: 'Student Name' },
     { key: 'mobile_number', label: 'Mobile Number' },
@@ -320,10 +320,18 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField }) {
     { key: 'program_applied', label: 'Program Applied' },
     { key: 'university', label: 'University' },
     { key: 'intake', label: 'Intake' },
+    { key: 'date_of_registration', label: 'Reg Date' },
+    { key: 'category', label: 'Category' },
+    { key: 'assigned_to', label: 'Assigned To' },
     { key: 'registration_fee_status', label: 'Reg Fee Status' },
     { key: 'enrollment_process_status', label: 'Enrollment Status' },
+    { key: 'application_documents_status', label: 'App Docs Status' },
     { key: 'application_status', label: 'Application Status' },
     { key: 'offer_letter_status', label: 'Offer Letter' },
+    { key: 'visa_documentation_info_status', label: 'Visa Doc Info' },
+    { key: 'visa_appointment', label: 'Visa Appointment' },
+    { key: 'visa_documentation', label: 'Visa Docs' },
+    { key: 'accommodation', label: 'Accommodation' },
     { key: 'visa_results', label: 'Visa Results' }
   ];
 
@@ -351,16 +359,106 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField }) {
           {students.map((student, idx) => (
             <tr key={student.id} className="hover:bg-gray-50">
               <td className="px-4 py-2 border-r text-gray-500 sticky left-0 z-10 bg-white">{idx + 1}</td>
-              {fixedColumns.map(col => (
-                <td key={col.key} className="px-4 py-2 border-r p-0">
-                  <input
-                    type="text"
-                    defaultValue={student[col.key] || ''}
-                    className="w-full h-full min-w-[120px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
-                    onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
-                  />
-                </td>
-              ))}
+              {fixedColumns.map(col => {
+                if (col.key === 'category') {
+                  return (
+                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                      <select
+                        defaultValue={student[col.key] || 'All Students'}
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                      >
+                        <option value="All Students">All Students</option>
+                        <option value="GCC Students">GCC Students</option>
+                        <option value="European Students">European Students</option>
+                      </select>
+                    </td>
+                  );
+                }
+                if (col.key === 'assigned_to') {
+                  return (
+                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                      <select
+                        defaultValue={student[col.key] || ''}
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                      >
+                        <option value="">Unassigned</option>
+                        {staffList?.map(staff => (
+                          <option key={staff.id} value={staff.id}>{staff.name}</option>
+                        ))}
+                      </select>
+                    </td>
+                  );
+                }
+                if (col.key === 'enrollment_process_status') {
+                  return (
+                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                      <select
+                        defaultValue={student[col.key] || 'Pending'}
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Shared">Shared</option>
+                        <option value="Completed">Completed</option>
+                      </select>
+                    </td>
+                  );
+                }
+                if (col.key === 'registration_fee_status') {
+                  return (
+                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                      <select
+                        defaultValue={student[col.key] || 'Pending'}
+                        className="w-full h-full min-w-[150px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Shared with student">Shared with student</option>
+                        <option value="Without Tax amount">Without Tax amount</option>
+                      </select>
+                    </td>
+                  );
+                }
+                if (col.key === 'application_documents_status') {
+                  return (
+                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                      <select
+                        defaultValue={student[col.key] || 'Pending'}
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Collected">Collected</option>
+                      </select>
+                    </td>
+                  );
+                }
+                if (col.key === 'date_of_registration') {
+                  return (
+                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                      <input
+                        type="date"
+                        defaultValue={student[col.key] || ''}
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                      />
+                    </td>
+                  );
+                }
+                
+                return (
+                  <td key={col.key} className="px-4 py-2 border-r p-0">
+                    <input
+                      type="text"
+                      defaultValue={student[col.key] || ''}
+                      className="w-full h-full min-w-[120px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                      onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                    />
+                  </td>
+                );
+              })}
               {dynamicFields.map(field => (
                 <td key={field.name} className="px-4 py-2 border-r p-0 bg-blue-50/10">
                   <input
