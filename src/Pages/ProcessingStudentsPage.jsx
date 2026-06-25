@@ -203,6 +203,7 @@ export default function ProcessingStudentsPage() {
         <StudentModal
           student={selectedStudent}
           dynamicFields={dynamicFields}
+          staffList={staffList}
           onClose={() => setIsModalOpen(false)}
           accessToken={accessToken}
           onSave={() => {
@@ -381,7 +382,7 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField }) {
   );
 }
 
-function StudentModal({ student, dynamicFields, onClose, onSave, accessToken }) {
+function StudentModal({ student, dynamicFields, staffList, onClose, onSave, accessToken }) {
   const [formData, setFormData] = useState({
     name: '', mobile_number: '', whatsapp_number: '', email: '', parent_contact: '',
     program_applied: '', university: '', intake: '', registration_fee_status: 'Pending',
