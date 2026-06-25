@@ -39,6 +39,7 @@ import AssetManagementPage from "./Pages/AssetManagementPage.jsx";
 import FeesManagementPage from "./Pages/FeesManagementPage.jsx";
 import RoleManagementPage from "./Pages/RoleManagementPage.jsx";
 import CredentialsVault from "./Pages/CredentialsVault.jsx";
+import ProcessingStudentsPage from "./Pages/ProcessingStudentsPage.jsx";
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -100,6 +101,7 @@ export default function App() {
         <Route path="/students/add" element={<PermissionRoute permissions={['students:edit_any', 'students:edit_tenant']}><AddStudentPage /></PermissionRoute>} />
         <Route path="/students/view/:id" element={<PermissionRoute resources={['students']}><StudentViewPage /></PermissionRoute>} />
         <Route path="/students/edit/:id" element={<PermissionRoute permissions={['students:edit_any', 'students:edit_tenant']}><StudentEditPage /></PermissionRoute>} />
+        <Route path="/processing-students" element={<PermissionRoute resources={['processing_students']}><ProcessingStudentsPage /></PermissionRoute>} />
         <Route path="/academic-batches" element={<PermissionRoute resources={['students', 'fees']}><AcademicBatchesPage /></PermissionRoute>} />
         <Route path="/attendance/mark" element={<PermissionRoute resources={['attendance', 'students']}><AttendanceMarkingPage /></PermissionRoute>} />
         <Route path="/students/:studentId/attendance" element={<PermissionRoute resources={['students', 'attendance']}><StudentAttendanceRecordsPage /></PermissionRoute>} />
