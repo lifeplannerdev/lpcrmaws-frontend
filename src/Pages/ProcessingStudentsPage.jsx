@@ -60,8 +60,8 @@ export default function ProcessingStudentsPage() {
     }
   };
 
-  const fetchStudents = async () => {
-    setLoading(true);
+  const fetchStudents = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const res = await axios.get(`${API_BASE_URL}/processing-students/`, {
         params: { category: activeCategory !== 'All Students' ? activeCategory : undefined, search },
@@ -71,7 +71,7 @@ export default function ProcessingStudentsPage() {
     } catch (err) {
       console.error('Error fetching students', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -92,7 +92,17 @@ export default function ProcessingStudentsPage() {
       });
     } catch (err) {
       console.error('Error updating field', err);
-      fetchStudents();
+      let errorMsg = 'Failed to update field. Please check your input.';
+      if (err.response?.data) {
+        if (typeof err.response.data === 'object' && !Array.isArray(err.response.data)) {
+          const firstKey = Object.keys(err.response.data)[0];
+          errorMsg = `Validation Error (${firstKey}): ${err.response.data[firstKey]}`;
+        } else if (typeof err.response.data === 'string') {
+          errorMsg = err.response.data;
+        }
+      }
+      alert(errorMsg);
+      fetchStudents(false);
     }
   };
 
