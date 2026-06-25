@@ -22,6 +22,7 @@ export const masterNavigation = [
   { id: "myTasks", label: "My Tasks", icon: ListTodo, path: "/mytasks", requiredResource: "tasks", requiredSpecificPermission: "tasks:read_own" },
   { id: "allTasks", label: "Tasks", icon: ListTodo, path: "/staff/tasks", requiredResource: "tasks", requiredSpecificPermission: "tasks:read_all" },
   { id: "students", label: "Students", icon: GraduationCap, path: "/students", requiredResource: "students" },
+  { id: "processingStudents", label: "Processing Students", icon: GraduationCap, path: "/processing-students", requiredResource: "processing_students" },
   { id: "fees", label: "Fees", icon: IndianRupee, path: "/fees", requiredResource: "fees" },
   { id: "markAttendance", label: "Mark Attendance", icon: CalendarCheck, path: "/attendance/mark", requiredResource: "attendance" },
   { id: "penalties", label: "Penalties", icon: ShieldAlert, path: "/hr/penalties", requiredResource: "penalties" },
