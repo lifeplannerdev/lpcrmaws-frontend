@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../Components/layouts/Navbar';
+import FeesAnalyticsWorkspace from './FeesAnalyticsWorkspace';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { RefreshCw, Plus, Receipt, AlertTriangle, Repeat, IndianRupee, Download, CheckCircle, Edit2, Trash2 } from 'lucide-react';
@@ -62,6 +63,7 @@ export default function FeesManagementPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('recordPayment');
   const [mainTab, setMainTab] = useState('accounts');
+  const [workspace, setWorkspace] = useState('accounting');
   const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [newTemplateForm, setNewTemplateForm] = useState({
     company: user?.company || 'FLAG',
@@ -86,6 +88,7 @@ export default function FeesManagementPage() {
   const canRestructureFees = hasPermission('fees:restructure') || canManageFees;
   const canRecordPartial = hasPermission('fees:partial_payment') || canManageFees;
   const canViewFees = hasAnyPermission('fees');
+  const canViewAnalytics = hasPermission('fees:analytics') || hasPermission('fees:manage');
 
   const selectedAccount = useMemo(
     () => accounts.find((account) => account.id === selectedAccountId) || null,
@@ -584,10 +587,27 @@ export default function FeesManagementPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-indigo-100 text-indigo-700 text-sm font-medium shadow-sm mb-4">
-              <IndianRupee size={16} />
-              Accounting Workspace
-            </div>
+            {canViewAnalytics ? (
+              <div className="inline-flex bg-white rounded-full p-1 border border-indigo-100 shadow-sm mb-4">
+                <button
+                  onClick={() => setWorkspace('accounting')}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ${workspace === 'accounting' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  <IndianRupee size={16} /> Accounting Workspace
+                </button>
+                <button
+                  onClick={() => setWorkspace('analytics')}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ${workspace === 'analytics' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  <TrendingUp size={16} /> Analytics Workspace
+                </button>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-indigo-100 text-indigo-700 text-sm font-medium shadow-sm mb-4">
+                <IndianRupee size={16} />
+                Accounting Workspace
+              </div>
+            )}
             <h1 className="text-4xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               Fees Management
             </h1>
