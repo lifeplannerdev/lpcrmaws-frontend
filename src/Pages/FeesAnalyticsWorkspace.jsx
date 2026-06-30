@@ -3,9 +3,21 @@ import {
   Users, TrendingUp, AlertTriangle, Search, Filter,
   ChevronRight, Calendar, IndianRupee, FileText, CheckCircle, Clock
 } from 'lucide-react';
-import api from '../api';
+import { useAuth } from '../context/AuthContext';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const FeesAnalyticsWorkspace = () => {
+  const { accessToken } = useAuth();
+  
+  const fetchWithAuth = async (url) => {
+    const res = await fetch(`${API_BASE_URL}${url}`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!res.ok) throw new Error("API failed");
+    return res.json();
+  };
+
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({ summary: {}, students: [] });
   const [branches, setBranches] = useState([]);
@@ -29,11 +41,11 @@ const FeesAnalyticsWorkspace = () => {
   const fetchMetadata = async () => {
     try {
       const [branchRes, batchRes] = await Promise.all([
-        api.get('/api/branches/'),
-        api.get('/api/academic-batches/')
+        fetchWithAuth('/api/branches/'),
+        fetchWithAuth('/api/academic-batches/')
       ]);
-      setBranches(branchRes.data);
-      setBatches(batchRes.data);
+      setBranches(branchRes);
+      setBatches(batchRes);
     } catch (err) {
       console.error("Failed to fetch metadata", err);
     }
@@ -46,8 +58,8 @@ const FeesAnalyticsWorkspace = () => {
       if (filters.branch) params.append('branch', filters.branch);
       if (filters.batch) params.append('batch', filters.batch);
       
-      const res = await api.get(`/api/analytics/overview/?${params.toString()}`);
-      setData(res.data);
+      const data = await fetchWithAuth(`/api/analytics/overview/?${params.toString()}`);
+      setData(data);
     } catch (err) {
       console.error("Failed to fetch analytics", err);
     } finally {
@@ -58,8 +70,8 @@ const FeesAnalyticsWorkspace = () => {
   const fetchStudent360 = async (studentId) => {
     try {
       setLoading360(true);
-      const res = await api.get(`/api/analytics/student/${studentId}/`);
-      setStudent360(res.data);
+      const data = await fetchWithAuth(`/api/analytics/student/${studentId}/`);
+      setStudent360(data);
     } catch (err) {
       console.error("Failed to fetch student 360", err);
     } finally {
