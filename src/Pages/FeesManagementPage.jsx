@@ -75,6 +75,8 @@ export default function FeesManagementPage() {
     monthly_amount: '',
     duration_months: '',
     due_day: 10,
+    start_date: '',
+    first_installment_date: '',
     notes: '',
   });
   const [editingEntity, setEditingEntity] = useState(null);
@@ -298,6 +300,8 @@ export default function FeesManagementPage() {
         template: createForm.template ? Number(createForm.template) : null,
         total_due: createForm.total_due ? createForm.total_due : '0.00',
         registration_amount: createForm.registration_amount ? createForm.registration_amount : '0.00',
+        start_date: createForm.start_date ? createForm.start_date : undefined,
+        first_installment_date: createForm.first_installment_date ? createForm.first_installment_date : undefined,
       });
       setCreateForm({
         student: '',
@@ -1129,8 +1133,20 @@ export default function FeesManagementPage() {
                     <input value={createForm.total_due} onChange={(e) => setCreateForm((p) => ({ ...p, total_due: e.target.value }))} placeholder="Total due" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
                     <input value={createForm.registration_amount} onChange={(e) => setCreateForm((p) => ({ ...p, registration_amount: e.target.value }))} placeholder="Registration" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
                   </div>
-                  <input value={createForm.plan_code} onChange={(e) => setCreateForm((p) => ({ ...p, plan_code: e.target.value }))} placeholder="Plan code" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
-                  <input value={createForm.due_day} onChange={(e) => setCreateForm((p) => ({ ...p, due_day: e.target.value }))} placeholder="Due day" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input value={createForm.plan_code} onChange={(e) => setCreateForm((p) => ({ ...p, plan_code: e.target.value }))} placeholder="Plan code" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
+                    <input value={createForm.due_day} onChange={(e) => setCreateForm((p) => ({ ...p, due_day: e.target.value }))} placeholder="Due day (1-31)" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Registration Date (Start)</label>
+                      <input type="date" value={createForm.start_date} onChange={(e) => setCreateForm((p) => ({ ...p, start_date: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">First Installment Date</label>
+                      <input type="date" value={createForm.first_installment_date} onChange={(e) => setCreateForm((p) => ({ ...p, first_installment_date: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 text-sm" />
+                    </div>
+                  </div>
                   <textarea value={createForm.notes} onChange={(e) => setCreateForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 min-h-24" />
                   {selectedCreateTemplate ? (
                     <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
