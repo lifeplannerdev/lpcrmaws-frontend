@@ -41,8 +41,8 @@ const FeesAnalyticsWorkspace = () => {
   const fetchMetadata = async () => {
     try {
       const [branchRes, batchRes] = await Promise.all([
-        fetchWithAuth('/api/branches/'),
-        fetchWithAuth('/api/academic-batches/')
+        fetchWithAuth('/branches/'),
+        fetchWithAuth('/academic-batches/')
       ]);
       setBranches(branchRes);
       setBatches(batchRes);
@@ -58,7 +58,7 @@ const FeesAnalyticsWorkspace = () => {
       if (filters.branch) params.append('branch', filters.branch);
       if (filters.batch) params.append('batch', filters.batch);
       
-      const data = await fetchWithAuth(`/api/fees/analytics/overview/?${params.toString()}`);
+      const data = await fetchWithAuth(`/fees/analytics/overview/?${params.toString()}`);
       setData(data);
     } catch (err) {
       console.error("Failed to fetch analytics", err);
@@ -70,7 +70,7 @@ const FeesAnalyticsWorkspace = () => {
   const fetchStudent360 = async (studentId) => {
     try {
       setLoading360(true);
-      const data = await fetchWithAuth(`/api/fees/analytics/student/${studentId}/`);
+      const data = await fetchWithAuth(`/fees/analytics/student/${studentId}/`);
       setStudent360(data);
     } catch (err) {
       console.error("Failed to fetch student 360", err);
