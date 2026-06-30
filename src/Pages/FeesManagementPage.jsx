@@ -42,6 +42,7 @@ export default function FeesManagementPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
+  const [feePolicy, setFeePolicy] = useState({ block_without_fee_account: false, pending_if_overdue: false });
   const [search, setSearch] = useState('');
   const [paymentForm, setPaymentForm] = useState(emptyPayment);
   const [restructureForm, setRestructureForm] = useState(emptyRestructure);
@@ -137,7 +138,7 @@ export default function FeesManagementPage() {
       const token = await getToken();
       if (!token) return;
 
-      const [templatesRes, accountsRes, studentsRes, summaryRes, pendingRes] = await Promise.all([
+      const [templatesRes, accountsRes, studentsRes, summaryRes, pendingRes, policyRes] = await Promise.all([
         fetch(`${API_BASE_URL}/fees/catalog/`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
@@ -160,12 +161,14 @@ export default function FeesManagementPage() {
       const studentsData = await studentsRes.json();
       const summaryJson = await summaryRes.json();
       const pendingData = await pendingRes.json();
+      const policyData = policyRes ? await policyRes.json().catch(()=>({})) : {};
 
       setTemplates(Array.isArray(templatesData) ? templatesData : []);
       setAccounts(Array.isArray(accountsData) ? accountsData : []);
       setStudents(Array.isArray(studentsData) ? studentsData : []);
       setSummaryData(Array.isArray(summaryJson) ? summaryJson : []);
       setPendingAttendances(pendingData.results || pendingData || []);
+      if(policyData.company) setFeePolicy(policyData);
       if (!selectedAccountId && Array.isArray(accountsData) && accountsData.length > 0) {
         setSelectedAccountId(accountsData[0].id);
       }
@@ -515,6 +518,26 @@ export default function FeesManagementPage() {
     }
   };
 
+  
+  const handleSavePolicy = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE_URL}/fees/policy/`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(feePolicy)
+      });
+      if (!res.ok) throw new Error('Failed to update fee policy');
+      setMessage({ type: 'success', text: 'Fee policy updated successfully.' });
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleApproveAttendance = async (attendanceId) => {
     try {
       const token = await getToken();
@@ -656,6 +679,113 @@ export default function FeesManagementPage() {
           </div>
         )}
 
+          </div>
+        )}
+
+        
+        {mainTab === 'pending_attendances' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Pending Attendances</h2>
+                  <p className="text-sm text-gray-500">Review and approve attendance for students with overdue fees.</p>
+                </div>
+              </div>
+              
+              {pendingAttendances.length === 0 ? (
+                <div className="py-12 text-center text-gray-500">
+                  <CheckCircle className="mx-auto mb-3 text-green-300" size={32} />
+                  No pending attendances require approval.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {pendingAttendances.map(record => (
+                    <div key={record.id} className="bg-white rounded-xl p-5 border border-orange-100 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <div className="font-bold text-gray-900 text-lg">{record.student_name}</div>
+                          <div className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                            Trainer: <span className="font-medium text-gray-700">{record.trainer_name}</span>
+                          </div>
+                        </div>
+                        <div className="text-xs text-orange-700 font-bold bg-orange-100 px-3 py-1.5 rounded-lg border border-orange-200">
+                          {record.date}
+                        </div>
+                      </div>
+                      
+                      <div className="bg-slate-50 p-3 rounded-lg border border-gray-100 mb-4 text-sm text-gray-600">
+                        Attendance was marked as <span className="font-semibold text-gray-900">{record.status}</span>, but the student's fee account was overdue at the time.
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleApproveAttendance(record.id)}
+                          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-sm transition-colors"
+                        >
+                          <CheckCircle size={16} /> Regularize
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {mainTab === 'policies' && (
+          <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6 max-w-3xl">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Fee Attendance Policies</h2>
+              <p className="text-sm text-gray-500 mt-1">Configure how student fee statuses affect trainer attendance marking.</p>
+            </div>
+            
+            <form onSubmit={handleSavePolicy} className="space-y-6">
+              <div className="p-5 border border-gray-100 rounded-2xl bg-slate-50">
+                <label className="flex items-start gap-4 cursor-pointer">
+                  <div className="pt-0.5">
+                    <input 
+                      type="checkbox" 
+                      checked={feePolicy.block_without_fee_account}
+                      onChange={(e) => setFeePolicy(p => ({ ...p, block_without_fee_account: e.target.checked }))}
+                      className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <div className="font-bold text-gray-900 text-base">Block attendance for students without a Fee Structure</div>
+                    <div className="text-sm text-gray-500 mt-1">If enabled, trainers cannot mark attendance for any student who has not been assigned a fee account. The API will reject the request.</div>
+                  </div>
+                </label>
+              </div>
+
+              <div className="p-5 border border-gray-100 rounded-2xl bg-slate-50">
+                <label className="flex items-start gap-4 cursor-pointer">
+                  <div className="pt-0.5">
+                    <input 
+                      type="checkbox" 
+                      checked={feePolicy.pending_if_overdue}
+                      onChange={(e) => setFeePolicy(p => ({ ...p, pending_if_overdue: e.target.checked }))}
+                      className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <div className="font-bold text-gray-900 text-base">Send to Pending if Fee Account is Overdue</div>
+                    <div className="text-sm text-gray-500 mt-1">If enabled, when a trainer marks an overdue student as "PRESENT", the attendance status will automatically become "PENDING FEE APPROVAL". Absences are recorded normally.</div>
+                  </div>
+                </label>
+              </div>
+              
+              <div className="pt-4 border-t border-gray-100 flex justify-end">
+                <button 
+                  type="submit" 
+                  disabled={saving || !canManageFees}
+                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Policies'}
+                </button>
+              </div>
+            </form>
           </div>
         )}
 
