@@ -640,6 +640,10 @@ export default function FeesManagementPage() {
           </div>
         )}
 
+{workspace === 'analytics' ? (
+          <FeesAnalyticsWorkspace />
+        ) : (
+          <>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
             <p className="text-sm text-gray-500 font-medium mb-1">Total Due</p>
@@ -1221,6 +1225,8 @@ export default function FeesManagementPage() {
             </div>
           </div>
         </div>
+        )}
+          </>
         )}
       </div>
 
