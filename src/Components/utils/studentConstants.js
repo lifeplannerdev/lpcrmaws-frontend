@@ -38,5 +38,6 @@ export const initialStudentFormData = {
   parent_phone: '',
   mode_of_study: 'OFFLINE',
   preferred_level: '',
+  fee_attendance_policy: 'FLEXIBLE',
   company: 'LP',
 };

@@ -57,6 +57,11 @@ export default function StudentFormFields({
     { value: 'OTHER', label: 'Other' },
   ];
 
+  const feeAttendancePolicyOptions = [
+    { value: 'FLEXIBLE', label: 'Flexible' },
+    { value: 'STRICT', label: 'Strict (Requires Fee Approval if Overdue)' },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Basic Information Section */}
@@ -303,6 +308,21 @@ export default function StudentFormFields({
             />
             <p className="mt-1 text-sm text-gray-500">
               Choose a standard plan from the catalog. If you leave this blank, the student will be created with pending fee setup.
+            </p>
+          </div>
+          
+          <div className="md:col-span-2">
+            <FormField
+              label="Fee Attendance Policy"
+              name="fee_attendance_policy"
+              type="select"
+              value={formData.fee_attendance_policy}
+              onChange={onChange}
+              options={feeAttendancePolicyOptions}
+              error={errors.fee_attendance_policy}
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              Set how attendance marking behaves for this student when they have overdue fees.
             </p>
           </div>
         </div>

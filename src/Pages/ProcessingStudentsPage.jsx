@@ -45,6 +45,7 @@ export default function ProcessingStudentsPage() {
 
   const canEditAny = hasPermission('processing_students:edit_any');
   const canEditOwn = hasPermission('processing_students:edit_own');
+  const canManageFees = hasPermission('processing_students:manage_fees');
 
   const categories = ['All Students', 'GCC Students', 'European Students'];
 
@@ -172,6 +173,9 @@ export default function ProcessingStudentsPage() {
       "Visa Documentation": student.visa_documentation,
       "Accommodation": student.accommodation,
       "Visa Results": student.visa_results,
+      "Processing Fee Amount": student.processing_fee_amount || 0,
+      "Processing Fee Paid": student.processing_fee_paid || 0,
+      "Processing Fee Status": student.processing_fee_status,
       ...student.dynamic_data
     }));
 
@@ -269,7 +273,7 @@ export default function ProcessingStudentsPage() {
             <>
               {activeView === 'list' && <ListView students={students} dynamicFields={dynamicFields} onStudentClick={openEditModal} />}
               {activeView === 'kanban' && <KanbanView students={students} dynamicFields={dynamicFields} handleUpdateField={handleUpdateField} onStudentClick={openEditModal} />}
-              {activeView === 'spreadsheet' && <SpreadsheetView students={students} dynamicFields={dynamicFields} debouncedUpdateField={debouncedUpdateField} staffList={staffList} onStudentClick={openEditModal} />}
+              {activeView === 'spreadsheet' && <SpreadsheetView students={students} dynamicFields={dynamicFields} debouncedUpdateField={debouncedUpdateField} staffList={staffList} onStudentClick={openEditModal} canManageFees={canManageFees} />}
             </>
           )}
         </div>
@@ -283,6 +287,7 @@ export default function ProcessingStudentsPage() {
           onClose={() => setIsModalOpen(false)}
           onDelete={handleDeleteStudent}
           accessToken={accessToken}
+          canManageFees={canManageFees}
           onSave={() => {
             setIsModalOpen(false);
             fetchStudents();
@@ -387,7 +392,7 @@ function KanbanView({ students, dynamicFields, handleUpdateField, onStudentClick
   );
 }
 
-function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffList, onStudentClick }) {
+function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffList, onStudentClick, canManageFees }) {
   const fixedColumns = [
     { key: 'name', label: 'Student Name' },
     { key: 'mobile_number', label: 'Mobile Number' },
@@ -409,7 +414,10 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
     { key: 'visa_appointment', label: 'Visa Appointment' },
     { key: 'visa_documentation', label: 'Visa Docs' },
     { key: 'accommodation', label: 'Accommodation' },
-    { key: 'visa_results', label: 'Visa Results' }
+    { key: 'visa_results', label: 'Visa Results' },
+    { key: 'processing_fee_amount', label: 'Proc Fee Amount' },
+    { key: 'processing_fee_paid', label: 'Proc Fee Paid' },
+    { key: 'processing_fee_status', label: 'Proc Fee Status' }
   ];
 
   if (students.length === 0) return <div className="text-gray-500 text-center p-8">No students found.</div>;
@@ -525,13 +533,30 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                     </td>
                   );
                 }
+                if (col.key === 'processing_fee_status') {
+                  return (
+                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                      <select
+                        defaultValue={student[col.key] || 'UNPAID'}
+                        disabled={!canManageFees}
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                      >
+                        <option value="UNPAID">Unpaid</option>
+                        <option value="PARTIAL">Partial</option>
+                        <option value="PAID">Paid</option>
+                      </select>
+                    </td>
+                  );
+                }
                 
                 return (
                   <td key={col.key} className="px-4 py-2 border-r p-0">
                     <input
-                      type="text"
+                      type={col.key === 'processing_fee_amount' || col.key === 'processing_fee_paid' ? 'number' : 'text'}
                       defaultValue={student[col.key] || ''}
-                      className="w-full h-full min-w-[120px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                      disabled={(col.key === 'processing_fee_amount' || col.key === 'processing_fee_paid') && !canManageFees}
+                      className="w-full h-full min-w-[120px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
                       onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
                     />
                   </td>
@@ -570,7 +595,8 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
     enrollment_process_status: 'Pending', application_documents_status: 'Pending',
     application_status: '', offer_letter_status: '', visa_documentation_info_status: '',
     visa_appointment: '', visa_documentation: '', accommodation: '', visa_results: '',
-    category: 'All Students', assigned_to: ''
+    category: 'All Students', assigned_to: '',
+    processing_fee_amount: '', processing_fee_paid: '', processing_fee_status: 'UNPAID'
   });
   const [dynamicData, setDynamicData] = useState({});
   const [loading, setLoading] = useState(false);
@@ -898,6 +924,33 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
                 <label className="block text-sm font-medium text-gray-700 mb-1">Visa Results</label>
                 <input name="visa_results" value={formData.visa_results || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
+              
+              {/* Fee Section */}
+              <div className="md:col-span-2 pt-4 border-t mt-4">
+                <h4 className="text-md font-semibold text-gray-700 mb-4">Processing Fees</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
+                    <input type="number" name="processing_fee_amount" value={formData.processing_fee_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
+                    <input type="number" name="processing_fee_paid" value={formData.processing_fee_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
+                    <select name="processing_fee_status" value={formData.processing_fee_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                      <option value="UNPAID">Unpaid</option>
+                      <option value="PARTIAL">Partial</option>
+                      <option value="PAID">Paid</option>
+                    </select>
+                  </div>
+                </div>
+                {!canManageFees && (
+                  <p className="text-xs text-amber-600 mt-2">Only accounts with fee management permissions can edit processing fees.</p>
+                )}
+              </div>
+              
               </div>
             </div>
 
