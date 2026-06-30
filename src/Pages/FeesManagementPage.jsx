@@ -60,6 +60,7 @@ export default function FeesManagementPage() {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('recordPayment');
+  const [mainTab, setMainTab] = useState('accounts');
   const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [newTemplateForm, setNewTemplateForm] = useState({
     company: user?.company || 'FLAG',
@@ -78,9 +79,9 @@ export default function FeesManagementPage() {
   });
   const [editingEntity, setEditingEntity] = useState(null);
 
-  const canManageFees = hasPermission('fees:edit_any') || hasPermission('fees:edit_tenant');
-  const canRestructureFees = canManageFees;
-  const canRecordPartial = canManageFees;
+  const canManageFees = hasPermission('fees:manage');
+  const canRestructureFees = hasPermission('fees:restructure') || canManageFees;
+  const canRecordPartial = hasPermission('fees:partial_payment') || canManageFees;
   const canViewFees = hasAnyPermission('fees');
 
   const selectedAccount = useMemo(
@@ -505,7 +506,7 @@ export default function FeesManagementPage() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-    } catch (err) {
+    } catch {
       setMessage({ type: 'error', text: 'Export failed' });
     }
   };
@@ -521,7 +522,7 @@ export default function FeesManagementPage() {
       if (!res.ok) throw new Error('Approval failed');
       setMessage({ type: 'success', text: 'Attendance approved' });
       fetchData();
-    } catch (err) {
+    } catch {
       setMessage({ type: 'error', text: 'Approval failed' });
     }
   };
@@ -611,6 +612,17 @@ export default function FeesManagementPage() {
           </div>
         </div>
 
+
+        {/* Top-Level Tabs */}
+        <div className="flex space-x-1 bg-white p-1 rounded-2xl shadow-sm border border-gray-100 mb-6">
+          <button onClick={() => setMainTab('accounts')} className={`flex-1 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'accounts' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Accounts & Payments</button>
+          <button onClick={() => setMainTab('all_fees')} className={`flex-1 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'all_fees' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>All Fees Overview</button>
+          <button onClick={() => setMainTab('catalog')} className={`flex-1 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'catalog' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Fee Catalog (Templates)</button>
+        </div>
+
+        {mainTab === 'accounts' && (
+          <div className="space-y-6">
+
         {pendingAttendances.length > 0 && (
           <div className="bg-orange-50 border border-orange-200 rounded-3xl p-6 shadow-sm">
             <h2 className="text-xl font-bold text-orange-900 mb-4 flex items-center gap-2">
@@ -640,6 +652,11 @@ export default function FeesManagementPage() {
           </div>
         )}
 
+          </div>
+        )}
+
+        {mainTab === 'catalog' && (
+          <div>
         {/* Fee Catalog Section */}
         <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6 mb-6">
               <div className="flex items-center justify-between mb-5">
@@ -712,7 +729,70 @@ export default function FeesManagementPage() {
               </div>
         </div>
 
+          </div>
+        )}
+
+        {mainTab === 'all_fees' && (
+          <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">All Fees Overview</h2>
+                <p className="text-sm text-gray-500">View of all student fee accounts.</p>
+              </div>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search student or plan..."
+                className="px-4 py-2 rounded-xl border border-gray-200 bg-slate-50 text-sm w-64"
+              />
+            </div>
+            
+            {loading ? (
+              <div className="py-20 text-center text-gray-500">Loading fee accounts...</div>
+            ) : accounts.length === 0 ? (
+              <div className="py-20 text-center text-gray-500">No fee accounts found</div>
+            ) : (
+              <div className="overflow-x-auto rounded-2xl border border-gray-100">
+                <table className="min-w-full divide-y divide-gray-100">
+                  <thead className="bg-slate-50 whitespace-nowrap">
+                    <tr className="text-left text-xs uppercase tracking-wider text-gray-500">
+                      <th className="px-4 py-3">Student Name</th>
+                      <th className="px-4 py-3">Branch</th>
+                      <th className="px-4 py-3">Trainer</th>
+                      <th className="px-4 py-3">Plan</th>
+                      <th className="px-4 py-3">Type</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3 text-right">Total Due</th>
+                      <th className="px-4 py-3 text-right">Total Paid</th>
+                      <th className="px-4 py-3 text-right">Balance Due</th>
+                      <th className="px-4 py-3 text-right">Overdue</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100 whitespace-nowrap">
+                    {accounts.map((account) => (
+                      <tr key={account.id} onClick={() => { setSelectedAccountId(account.id); setMainTab('accounts'); }} className="hover:bg-indigo-50 cursor-pointer transition-colors">
+                        <td className="px-4 py-3 font-semibold text-gray-900">{account.student_name}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{account.branch_name || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{account.trainer_name || '-'}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{account.plan_name || account.plan_code || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{account.plan_type}</td>
+                        <td className="px-4 py-3"><span className="px-2 py-1 rounded bg-slate-100 text-xs font-semibold">{account.status}</span></td>
+                        <td className="px-4 py-3 text-right text-gray-900">{currency(account.total_due)}</td>
+                        <td className="px-4 py-3 text-right text-green-600">{currency(account.total_paid)}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-indigo-700">{currency(account.balance_due)}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-red-600">{currency(account.overdue_amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+
         {/* Master Detail Section */}
+        {mainTab === 'accounts' && (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Left Column (Master - Fee Accounts) */}
           <div className="xl:col-span-1 space-y-6">
@@ -1004,6 +1084,7 @@ export default function FeesManagementPage() {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Template Creation Modal */}
