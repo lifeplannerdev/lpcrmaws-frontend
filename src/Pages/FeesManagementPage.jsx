@@ -3,7 +3,7 @@ import Navbar from '../Components/layouts/Navbar';
 import FeesAnalyticsWorkspace from './FeesAnalyticsWorkspace';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
-import { RefreshCw, Plus, Receipt, AlertTriangle, Repeat, IndianRupee, Download, CheckCircle, Edit2, Trash2 } from 'lucide-react';
+import { TrendingUp, RefreshCw, Plus, Receipt, AlertTriangle, Repeat, IndianRupee, Download, CheckCircle, Edit2, Trash2 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
