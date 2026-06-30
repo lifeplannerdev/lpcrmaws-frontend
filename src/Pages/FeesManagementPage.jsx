@@ -829,7 +829,7 @@ export default function FeesManagementPage() {
                   No fee accounts found
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-2xl border border-gray-100">
+                <div className="overflow-x-auto rounded-2xl border border-gray-100">
                   <table className="min-w-full divide-y divide-gray-100">
                     <thead className="bg-slate-50">
                       <tr className="text-left text-xs uppercase tracking-wider text-gray-500">
@@ -889,6 +889,16 @@ export default function FeesManagementPage() {
             <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6 min-h-[500px]">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Selected Account Details</h2>
+                {selectedAccount && canManageFees && (
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEditEntity('ACCOUNT', selectedAccount)} className="px-3 py-1.5 text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 rounded-lg shadow-sm">
+                      Edit
+                    </button>
+                    <button onClick={() => handleDeleteEntity('ACCOUNT', selectedAccount.id)} className="px-3 py-1.5 text-sm font-medium bg-white border border-gray-200 text-red-600 hover:bg-red-50 rounded-lg shadow-sm">
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
               {!selectedAccount ? (
                 <p className="text-gray-500">Select an account to view balance, payment history, and restructure controls.</p>
