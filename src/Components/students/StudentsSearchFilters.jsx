@@ -6,9 +6,12 @@ const StudentsSearchFilters = React.memo(({
   setSearchTerm,
   filterCourse,
   setFilterCourse,
+  filterAcademicBatch,
+  setFilterAcademicBatch,
   filterBranch,
   setFilterBranch,
   courses,
+  academicBatches = [],
   branches = []
 }) => {
   const handleSearchChange = useCallback((e) => {
@@ -18,6 +21,10 @@ const StudentsSearchFilters = React.memo(({
   const handleCourseChange = useCallback((e) => {
     setFilterCourse(e.target.value);
   }, [setFilterCourse]);
+
+  const handleAcademicBatchChange = useCallback((e) => {
+    setFilterAcademicBatch(e.target.value);
+  }, [setFilterAcademicBatch]);
 
   const handleBranchChange = useCallback((e) => {
     setFilterBranch(e.target.value);
@@ -41,7 +48,23 @@ const StudentsSearchFilters = React.memo(({
           />
         </div>
 
-        {/* Course/Batch Filter */}
+        {/* Academic Batch Filter */}
+        <select
+          value={filterAcademicBatch}
+          onChange={handleAcademicBatchChange}
+          className="px-4 py-3 border border-gray-200 rounded-xl bg-white
+                     focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent 
+                     transition-all appearance-none cursor-pointer"
+        >
+          <option value="all">All Academic Batches</option>
+          {academicBatches.map((batch) => (
+            <option key={batch.id} value={batch.id}>
+              {batch.name} ({batch.academic_year})
+            </option>
+          ))}
+        </select>
+
+        {/* Course/Grade Filter */}
         <select
           value={filterCourse}
           onChange={handleCourseChange}
@@ -49,7 +72,7 @@ const StudentsSearchFilters = React.memo(({
                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent 
                      transition-all appearance-none cursor-pointer"
         >
-          <option value="all">All Batches</option>
+          <option value="all">All Grades</option>
           {courses.map((course) => (
             <option key={course.value} value={course.value}>
               {course.label}
