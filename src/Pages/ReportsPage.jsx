@@ -30,7 +30,17 @@ const ReportRow = React.memo(({ report, isLate, getStatusBadge, navigate, downlo
         <span className="text-gray-700 font-medium">{report.report_heading || report.agenda_heading || 'Daily Report'}</span>
       </td>
       <td className="px-6 py-4 text-sm font-medium text-gray-700">{report.user_name || 'N/A'}</td>
-      <td className="px-6 py-4 text-sm text-gray-600 font-medium">{report.report_date}</td>
+      <td className="px-6 py-4 text-sm text-gray-600 font-medium">
+        <div>{report.report_date}</div>
+        <div className="text-[10px] text-gray-400 mt-1 font-normal">
+          {report.agenda_submitted_at && (
+            <div>Agenda: {new Date(report.agenda_submitted_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+          )}
+          {report.report_submitted_at && (
+            <div>Report: {new Date(report.report_submitted_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+          )}
+        </div>
+      </td>
       <td className="px-6 py-4">{getStatusBadge(report)}</td>
       <td className="px-6 py-4">
         <div className="flex items-center gap-2">

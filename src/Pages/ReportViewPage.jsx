@@ -221,6 +221,18 @@ export default function ReportViewPage() {
                     <Calendar size={16} className="text-indigo-500" />
                     <span className="font-medium">{report.report_date}</span>
                   </div>
+                  {report.agenda_submitted_at && (
+                    <div className="flex items-center gap-1.5" title="Agenda Submitted At">
+                      <Clock size={16} className="text-indigo-500" />
+                      <span className="font-medium">Agenda: {new Date(report.agenda_submitted_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                  )}
+                  {report.report_submitted_at && (
+                    <div className="flex items-center gap-1.5" title="Report Submitted At">
+                      <Clock size={16} className="text-indigo-500" />
+                      <span className="font-medium">Report: {new Date(report.report_submitted_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-1.5">
                     <User size={16} className="text-indigo-500" />
                     <span className="font-medium">{report.user_name || report.name || 'N/A'}</span>
