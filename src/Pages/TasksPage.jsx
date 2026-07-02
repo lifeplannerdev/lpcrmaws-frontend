@@ -4,7 +4,7 @@ import {
   Search, Plus, Calendar, User, Flag,
   CheckCircle, Circle, AlertCircle,
   ListTodo, Loader, CheckCheck,
-  AlertTriangle, XCircle, Filter, LayoutGrid, List
+  AlertTriangle, XCircle, Filter, LayoutGrid, List, MessageSquare, Trash2
 } from 'lucide-react';
 
 import Navbar from '../Components/layouts/Navbar';
@@ -229,6 +229,27 @@ export default function TasksPage() {
     }
   }, [tasks, getToken, API_BASE_URL, fetchStats]);
 
+  const handleDeleteTask = async (taskId) => {
+    if (!window.confirm("Are you sure you want to delete this task? This cannot be undone.")) return;
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE_URL}/tasks/${taskId}/`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        throw new Error('Failed to delete task');
+      }
+      // Remove from UI
+      setTasks(tasks.filter(t => t.id !== taskId));
+      setCount(prev => prev - 1);
+      fetchStats();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete task.');
+    }
+  };
+
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   const formatDate = (date) =>
@@ -448,11 +469,14 @@ export default function TasksPage() {
             </select>
 
             {/* Date filter */}
-            <div className="flex gap-2">
+            <div className="relative flex-1">
               <select
                 value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium text-gray-700 bg-white"
+                onChange={(e) => {
+                  setFilterDate(e.target.value);
+                  if (e.target.value !== 'custom') setFilterSpecificDate('');
+                }}
+                className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium bg-white transition-all ${filterDate === 'custom' ? 'rounded-b-none border-b-0' : ''} text-gray-700`}
               >
                 <option value="all">All Dates</option>
                 <option value="today">Today</option>
@@ -461,12 +485,14 @@ export default function TasksPage() {
               </select>
               
               {filterDate === 'custom' && (
-                <input 
-                  type="date"
-                  value={filterSpecificDate}
-                  onChange={(e) => setFilterSpecificDate(e.target.value)}
-                  className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium text-gray-700 bg-white"
-                />
+                <div className="absolute top-full left-0 right-0 z-10 bg-white border border-gray-200 border-t-0 rounded-b-xl p-2 shadow-lg animate-in slide-in-from-top-2">
+                  <input 
+                    type="date"
+                    value={filterSpecificDate}
+                    onChange={(e) => setFilterSpecificDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700"
+                  />
+                </div>
               )}
             </div>
 
@@ -565,6 +591,12 @@ export default function TasksPage() {
                         <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColors[task.status]}`}>
                           {task.status.replace('_', ' ')}
                         </span>
+                        {task.requires_attention_from == user?.id && (
+                          <span className="px-3 py-1 rounded-full text-xs font-bold border border-amber-300 bg-amber-100 text-amber-800 flex items-center gap-1 animate-pulse">
+                            <MessageSquare size={12} />
+                            Action Required
+                          </span>
+                        )}
                       </div>
 
                       <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">
@@ -615,12 +647,21 @@ export default function TasksPage() {
 
                     {/* FIX: Edit visible to any task assigner who created it, not just ADMIN */}
                     {canAssignTasks && task.assigned_by === user?.id && (
-                      <button
-                        onClick={() => navigate(`/tasks/edit/${task.id}`)}
-                        className="flex-1 lg:flex-none px-4 py-2.5 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all duration-200 text-sm font-semibold border border-indigo-200 hover:border-indigo-300 hover:shadow-md"
-                      >
-                        Edit Task
-                      </button>
+                      <div className="flex flex-1 lg:flex-none gap-2">
+                        <button
+                          onClick={() => navigate(`/tasks/edit/${task.id}`)}
+                          className="flex-1 px-4 py-2.5 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all duration-200 text-sm font-semibold border border-indigo-200 hover:border-indigo-300 hover:shadow-md flex items-center justify-center gap-1"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="px-3 py-2.5 text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 border border-red-200 hover:border-red-300 hover:shadow-md flex items-center justify-center"
+                          title="Delete Task"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>

@@ -6,7 +6,7 @@ import {
   ArrowLeft, Calendar, User, FileText, Clock,
   Edit2, CheckCircle, AlertTriangle, Loader,
   Circle, AlertCircle, XCircle, MessageSquare,
-  StickyNote, Flag
+  StickyNote, Flag, Trash2, Send
 } from 'lucide-react';
 
 
@@ -22,10 +22,12 @@ export default function TaskViewPage() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
 
-  // Completion modal state
   const [showCompletionModal,   setShowCompletionModal]   = useState(false);
   const [completionNotes,       setCompletionNotes]       = useState('');
   const [submittingCompletion,  setSubmittingCompletion]  = useState(false);
+
+  const [remarkText, setRemarkText] = useState('');
+  const [submittingRemark, setSubmittingRemark] = useState(false);
 
   // ── Style maps ─────────────────────────────────────────────────────────────
 
@@ -150,6 +152,55 @@ export default function TaskViewPage() {
     }
   };
 
+  const handleSubmitRemark = async () => {
+    const trimmed = remarkText.trim();
+    if (!trimmed) { alert('Please enter a remark.'); return; }
+    
+    try {
+      setSubmittingRemark(true);
+      const token = await getToken();
+      const res = await fetch(`${API_BASE_URL}/tasks/${id}/updates/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ notes: trimmed }),
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to post remark');
+      }
+      
+      setRemarkText('');
+      await loadTaskData();
+    } catch (err) {
+      console.error('Error posting remark:', err);
+      alert(err.message || 'Failed to post remark. Please try again.');
+    } finally {
+      setSubmittingRemark(false);
+    }
+  };
+
+  const handleDeleteTask = async () => {
+    if (!window.confirm("Are you sure you want to delete this task? This cannot be undone.")) return;
+    try {
+      setLoading(true);
+      const token = await getToken();
+      const res = await fetch(`${API_BASE_URL}/tasks/${id}/`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to delete task');
+      }
+      navigate('/staff/tasks');
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Failed to delete task.');
+      setLoading(false);
+    }
+  };
+
   // ── Format helpers ─────────────────────────────────────────────────────────
 
   const formatDate = (dateString) => {
@@ -230,18 +281,33 @@ export default function TaskViewPage() {
               <Flag className="inline w-4 h-4 mr-1" />
               {task.priority}
             </span>
+            {task.requires_attention_from == user?.id && (
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold bg-amber-100 text-amber-800 border-2 border-amber-300 animate-pulse shadow-sm">
+                <AlertCircle className="w-5 h-5" />
+                Action Required (Unreplied Query)
+              </span>
+            )}
           </div>
 
           {/* Action buttons */}
           <div className="flex flex-wrap gap-4">
             {canEditTask() && (
-              <button
-                onClick={() => navigate(`/tasks/edit/${id}`)}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-indigo-600 text-indigo-600 font-semibold rounded-xl hover:bg-indigo-50 transition-all shadow-sm hover:shadow-md"
-              >
-                <Edit2 className="w-4 h-4" />
-                Edit Task
-              </button>
+              <>
+                <button
+                  onClick={() => navigate(`/tasks/edit/${id}`)}
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-indigo-600 text-indigo-600 font-semibold rounded-xl hover:bg-indigo-50 transition-all shadow-sm hover:shadow-md"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit Task
+                </button>
+                <button
+                  onClick={handleDeleteTask}
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-red-600 text-red-600 font-semibold rounded-xl hover:bg-red-50 transition-all shadow-sm hover:shadow-md"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </>
             )}
 
             {canUpdateStatus() && (
@@ -337,9 +403,16 @@ export default function TaskViewPage() {
 
                       <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                         <div className="flex items-start justify-between mb-2 flex-wrap gap-2">
-                          <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-semibold">
-                            {update.previous_status.replace('_', ' ')} → {update.new_status.replace('_', ' ')}
-                          </span>
+                          {update.previous_status === update.new_status ? (
+                            <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-semibold flex items-center gap-1">
+                              <MessageSquare className="w-3 h-3" />
+                              Remark
+                            </span>
+                          ) : (
+                            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-semibold">
+                              {update.previous_status.replace('_', ' ')} → {update.new_status.replace('_', ' ')}
+                            </span>
+                          )}
                           <span className="text-sm text-slate-500 flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             {formatDateTime(update.created_at)}
@@ -365,6 +438,35 @@ export default function TaskViewPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+              
+              {/* Add Remark Form */}
+              {task.status !== 'COMPLETED' && task.status !== 'CANCELLED' && (
+                <div className="mt-8 pt-6 border-t border-slate-200">
+                  <div className="flex flex-col gap-3">
+                    <label className="text-slate-700 font-semibold flex items-center gap-2">
+                      <MessageSquare className="w-5 h-5 text-indigo-600" />
+                      Post a query or update
+                    </label>
+                    <div className="relative">
+                      <textarea
+                        value={remarkText}
+                        onChange={(e) => setRemarkText(e.target.value)}
+                        placeholder="Type your remark, query, or progress update here..."
+                        rows="3"
+                        className="w-full px-4 py-3 pb-12 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all resize-none bg-slate-50"
+                      />
+                      <button
+                        onClick={handleSubmitRemark}
+                        disabled={submittingRemark || !remarkText.trim()}
+                        className="absolute bottom-3 right-3 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {submittingRemark ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        Post Update
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
