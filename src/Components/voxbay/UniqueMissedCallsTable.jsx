@@ -17,7 +17,8 @@ export default function UniqueMissedCallsTable({ dateRange = 'today' }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [assigningUuid, setAssigningUuid] = useState(null);
-  const [selectedAgent, setSelectedAgent] = useState('');
+  const [selectedAgents, setSelectedAgents] = useState({});
+  const [isBulkAssigning, setIsBulkAssigning] = useState(false);
   const [staffList, setStaffList] = useState([]);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -63,7 +64,8 @@ export default function UniqueMissedCallsTable({ dateRange = 'today' }) {
   }, [accessToken]);
 
   const handleAssign = async (call_uuid) => {
-    if (!selectedAgent) return;
+    const agent_id = selectedAgents[call_uuid];
+    if (!agent_id) return;
     setAssigningUuid(call_uuid);
     try {
       const res = await fetch(`${API_BASE_URL}/voxbay/unassigned-missed/${call_uuid}/assign/`, {
@@ -72,12 +74,16 @@ export default function UniqueMissedCallsTable({ dateRange = 'today' }) {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ agent_id: selectedAgent })
+        body: JSON.stringify({ agent_id })
       });
       if (!res.ok) throw new Error('Failed to assign');
       // Remove from list
       setCalls(calls.filter(c => c.call_uuid !== call_uuid));
-      setSelectedAgent('');
+      setSelectedAgents(prev => {
+        const next = { ...prev };
+        delete next[call_uuid];
+        return next;
+      });
     } catch (err) {
       alert(err.message);
     } finally {
@@ -85,8 +91,39 @@ export default function UniqueMissedCallsTable({ dateRange = 'today' }) {
     }
   };
 
+  const handleBulkAssign = async () => {
+    const toAssign = Object.entries(selectedAgents).filter(([uuid, agentId]) => agentId);
+    if (toAssign.length === 0) return;
+
+    setIsBulkAssigning(true);
+    let successCount = 0;
+    try {
+      for (const [call_uuid, agent_id] of toAssign) {
+        const res = await fetch(`${API_BASE_URL}/voxbay/unassigned-missed/${call_uuid}/assign/`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ agent_id })
+        });
+        if (res.ok) {
+          successCount++;
+        }
+      }
+      fetchCalls();
+      setSelectedAgents({});
+    } catch (err) {
+      alert("Error during bulk assignment: " + err.message);
+    } finally {
+      setIsBulkAssigning(false);
+    }
+  };
+
   if (loading) return <div className="p-5 text-center text-gray-500">Loading unique missed calls...</div>;
   if (error) return <div className="p-5 text-center text-red-500">{error}</div>;
+
+  const hasSelections = Object.values(selectedAgents).filter(Boolean).length > 0;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mt-4">
@@ -96,6 +133,15 @@ export default function UniqueMissedCallsTable({ dateRange = 'today' }) {
           Unique Missed Calls (Unassigned Queue)
           <span className="text-xs text-red-500 font-normal">({calls.length} calls)</span>
         </h3>
+        {hasSelections && (
+          <button
+            onClick={handleBulkAssign}
+            disabled={isBulkAssigning}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs font-bold disabled:opacity-50"
+          >
+            {isBulkAssigning ? 'Assigning...' : 'Assign Selected'}
+          </button>
+        )}
       </div>
       
       {calls.length === 0 ? (
@@ -127,8 +173,8 @@ export default function UniqueMissedCallsTable({ dateRange = 'today' }) {
                     <div className="flex items-center gap-2">
                       <select 
                         className="px-2 py-1 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-red-400"
-                        onChange={(e) => setSelectedAgent(e.target.value)}
-                        value={assigningUuid === log.call_uuid ? selectedAgent : (selectedAgent || '')}
+                        onChange={(e) => setSelectedAgents({ ...selectedAgents, [log.call_uuid]: e.target.value })}
+                        value={selectedAgents[log.call_uuid] || ''}
                       >
                         <option value="">Select Staff...</option>
                         {staffList.map(staff => (
@@ -137,7 +183,7 @@ export default function UniqueMissedCallsTable({ dateRange = 'today' }) {
                       </select>
                       <button 
                         onClick={() => handleAssign(log.call_uuid)}
-                        disabled={!selectedAgent || assigningUuid === log.call_uuid}
+                        disabled={!selectedAgents[log.call_uuid] || assigningUuid === log.call_uuid}
                         className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs font-bold disabled:opacity-50"
                       >
                         {assigningUuid === log.call_uuid ? 'Assigning...' : 'Assign'}
@@ -153,3 +199,4 @@ export default function UniqueMissedCallsTable({ dateRange = 'today' }) {
     </div>
   );
 }
+
