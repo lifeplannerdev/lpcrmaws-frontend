@@ -438,7 +438,7 @@ export default function LeadsPage() {
                 />
               )}
 
-              {viewMode === 'list' && totalPages > 1 && (
+              {(viewMode === 'list' || viewMode === 'spreadsheet') && totalPages > 1 && (
                 <Pagination
                   currentPage={page}
                   totalPages={totalPages}
