@@ -59,6 +59,32 @@ function useCallStats(dateRange, callType, accessToken) {
   return { stats, loading, error, refetch: fetch_ };
 }
 
+function useAgentStats(dateRange, callType, accessToken) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  const fetch_ = useCallback(async () => {
+    if (!accessToken) return;
+    setLoading(true);
+    try {
+      const { from, to } = buildDateParams(dateRange);
+      const p = new URLSearchParams({ from, to });
+      if (callType && callType !== 'all') p.set('call_type', callType);
+      const res = await fetch(`${API_BASE}/voxbay/agent-stats/?${p}`, { 
+        headers: { Authorization: `Bearer ${accessToken}` },
+        credentials: 'omit' 
+      });
+      if (res.ok) {
+        setData(await res.json());
+      }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }, [dateRange, callType, accessToken]);
+
+  useEffect(() => { fetch_(); }, [fetch_]);
+  return { data, loading, refetch: fetch_ };
+}
+
 function useCallLogs({ dateRange, callType, callStatus, search, ordering, page, pageSize, accessToken }) {
   const [data, setData]       = useState({ results: [], count: 0 });
   const [loading, setLoading] = useState(true);
@@ -263,6 +289,94 @@ function Empty({ msg = 'No data' }) {
   );
 }
 
+// ─── Agent Scorecard Table ──────────────────────────────────────────────────
+
+function AgentScorecardTable({ agentStatsData, agentMap, loading }) {
+  if (loading) return <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm mb-4"><Skeleton rows={5} h="h-10" /></div>;
+  if (!agentStatsData || !agentStatsData.agents) return null;
+
+  const { overall_system, agents } = agentStatsData;
+
+  const renderRow = (row, isOverall = false) => {
+    const isAgent = !isOverall;
+    const label = isAgent ? agentLabel(agentMap, row.identifier) : null;
+    const displayName = isAgent ? ((label && typeof label === 'object') ? label.name : row.identifier) : "OVERALL SYSTEM";
+    const displayNum  = isAgent ? ((label && typeof label === 'object') ? label.number : null) : null;
+
+    return (
+      <tr key={row.identifier} className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${isOverall ? 'bg-indigo-50/50 hover:bg-indigo-50 border-indigo-100' : ''}`}>
+        <td className="px-4 py-3 whitespace-nowrap">
+          <div className="flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isOverall ? 'bg-indigo-100' : 'bg-gray-100'}`}>
+              {isOverall ? <BarChart3 size={14} className="text-indigo-600" /> : <UserPlus size={14} className="text-gray-500" />}
+            </div>
+            <div>
+              <p className={`text-xs font-bold ${isOverall ? 'text-indigo-900' : 'text-gray-800'}`}>{displayName}</p>
+              {displayNum && <p className="text-[10px] font-mono text-gray-500">{displayNum}</p>}
+            </div>
+          </div>
+        </td>
+        <td className="px-4 py-3 text-center">
+          <p className="text-xs font-bold text-gray-800">{row.incoming_calls_received}</p>
+        </td>
+        <td className="px-4 py-3 text-center">
+          <p className="text-xs font-bold text-emerald-600">{row.incoming_calls_answered}</p>
+        </td>
+        <td className="px-4 py-3 text-center">
+          <p className="text-xs font-mono text-gray-500">{fmtSec(row.incoming_avg_duration)}</p>
+        </td>
+        <td className="px-4 py-3 text-center border-l border-gray-100">
+          <p className="text-xs font-bold text-gray-800">{row.outgoing_calls_made}</p>
+        </td>
+        <td className="px-4 py-3 text-center">
+          <p className="text-xs font-bold text-blue-600">{row.outgoing_calls_answered}</p>
+        </td>
+        <td className="px-4 py-3 text-center">
+          <p className="text-xs font-mono text-gray-500">{fmtSec(row.outgoing_avg_duration)}</p>
+        </td>
+        <td className="px-4 py-3 text-center border-l border-gray-100">
+          <p className="text-xs font-bold text-red-500">{row.total_cancelled_missed}</p>
+        </td>
+      </tr>
+    );
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4 overflow-hidden">
+      <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white">
+        <h3 className="text-sm font-black text-gray-800 uppercase tracking-wide flex items-center gap-2">
+          <TrendingUp size={16} className="text-emerald-500" /> Agent Performance Scorecard
+        </h3>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3">Agent</th>
+              <th className="px-4 py-3 text-center">IN Received</th>
+              <th className="px-4 py-3 text-center">IN Answered</th>
+              <th className="px-4 py-3 text-center">IN Avg Conv</th>
+              <th className="px-4 py-3 text-center border-l border-gray-200">OUT Made</th>
+              <th className="px-4 py-3 text-center">OUT Answered</th>
+              <th className="px-4 py-3 text-center">OUT Avg Conv</th>
+              <th className="px-4 py-3 text-center border-l border-gray-200">Total Missed/Cancel</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {overall_system && renderRow(overall_system, true)}
+            {agents.map(agent => renderRow(agent))}
+            {agents.length === 0 && (
+              <tr>
+                <td colSpan="8" className="px-4 py-8 text-center text-gray-400 text-xs">No agent activity found for this period.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CallAnalyticsPage() {
@@ -280,13 +394,16 @@ export default function CallAnalyticsPage() {
 
   const { stats, loading: sLoading, error: sError, refetch: refetchStats } =
     useCallStats(dateRange, callType, accessToken);
+    
+  const { data: agentStatsData, loading: agentStatsLoading, refetch: refetchAgentStats } = 
+    useAgentStats(dateRange, callType, accessToken);
 
   const s          = stats || {};
   const totalLogs  = s.total || 0;
-  const anyLoading = sLoading || chartLoading;
+  const anyLoading = sLoading || chartLoading || agentStatsLoading;
   const anyError   = sError;
 
-  const refetchAll = () => { refetchStats(); };
+  const refetchAll = () => { refetchStats(); refetchAgentStats(); };
 
   const handleLogsFetched = useCallback((logs, loading) => {
     setChartLogs(logs);
@@ -477,8 +594,8 @@ export default function CallAnalyticsPage() {
             </div>
           </div>
 
-          {/* Calls by Hour */}
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+          {/* Calls by Hour - expanded to take remaining space */}
+          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm md:col-span-2">
             <h3 className="text-xs font-black text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-1.5">
               <BarChart3 size={13} className="text-indigo-500" /> Calls by Hour
             </h3>
@@ -498,40 +615,12 @@ export default function CallAnalyticsPage() {
                 </>
               )}
           </div>
-
-          {/* Score Card */}
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-            <h3 className="text-xs font-black text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-              <TrendingUp size={13} className="text-emerald-500" /> Score Card
-            </h3>
-            {chartLoading ? <Skeleton rows={3} h="h-14" /> : topAgents.length === 0
-              ? <Empty msg="No agent data" />
-              : (
-                <div className="space-y-2">
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">Top Answered</p>
-                  {topAgents.slice(0, 3).map(({ name, calls, answered, rate }, i) => {
-                    const label = agentLabel(agentMap, name);
-                    const displayName = (label && typeof label === 'object') ? label.name : name;
-                    const displayNum  = (label && typeof label === 'object') ? label.number : null;
-                    return (
-                    <div key={name} className={`p-2.5 rounded-xl ${i === 0 ? 'bg-emerald-50 border border-emerald-100' : 'bg-gray-50'}`}>
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[11px] font-bold text-gray-800 truncate">{displayName}</p>
-                          {displayNum && <p className="font-mono text-[9px] text-gray-400">{displayNum}</p>}
-                        </div>
-                        <p className="text-xs font-black text-emerald-600 ml-2">{rate}%</p>
-                      </div>
-                      <div className="w-full h-1.5 bg-white rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${rate}%` }} />
-                      </div>
-                      <p className="text-[9px] text-gray-400 mt-0.5">{answered} answered · {calls} total</p>
-                    </div>
-                  )})}
-                </div>
-              )}
-          </div>
         </div>
+
+        {/* ── Agent Scorecard (Admins only) ── */}
+        <Can perform="voxbay:admin">
+          <AgentScorecardTable agentStatsData={agentStatsData} agentMap={agentMap} loading={agentStatsLoading} />
+        </Can>
 
         {/* ── Success rate bar ── */}
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm mb-4">
