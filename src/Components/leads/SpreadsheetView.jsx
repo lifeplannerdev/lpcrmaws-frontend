@@ -122,7 +122,30 @@ const columns = [
   { key: 'work_experience', name: 'Work Experience', width: 150, renderEditCell: textEditor },
   { key: 'location', name: 'Location', width: 150, renderEditCell: textEditor },
   { key: 'budget', name: 'Budget', width: 120, renderEditCell: textEditor },
-  { key: 'remarks', name: 'Remarks', width: 200, renderEditCell: textEditor },
+  { 
+    key: 'remarks', 
+    name: 'Remarks', 
+    width: 350, 
+    renderEditCell: textEditor,
+    renderCell: (p) => (
+      <div title={p.row.remarks || ''} className="w-full h-full truncate cursor-pointer hover:bg-gray-50">
+        {p.row.remarks}
+      </div>
+    )
+  },
+  { 
+    key: 'current_handler', 
+    name: 'Handled By', 
+    width: 150,
+    renderCell: (p) => {
+      const h = p.row.current_handler;
+      return (
+        <span className="text-gray-700 text-xs">
+          {h ? (h.first_name ? `${h.first_name} ${h.last_name || ''}`.trim() : h.email) : 'Unassigned'}
+        </span>
+      );
+    }
+  },
   { 
     key: 'status', 
     name: 'Status', 
@@ -266,77 +289,40 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
     setLocalLeads([newRow, ...localLeads]);
   };
 
-  const isManager = user?.role_names?.some(r => ['SUPERADMIN', 'COMPANY_ADMIN', 'MD', 'DIRECTOR', 'GENERAL_MANAGER'].includes(r));
-
-  // Split into Management View vs Employee View
+  // Render Unified View for both Admin and Employee
   const renderGrid = () => {
-    if (isManager) {
-      // Management View: All filtered leads grouped by Counsellor/Handler
-      const grouped = leads.reduce((acc, lead) => {
-        const handlerName = lead.current_handler ? (lead.current_handler.first_name + ' ' + lead.current_handler.last_name).trim() || lead.current_handler.email : 'Unassigned';
-        if (!acc[handlerName]) acc[handlerName] = [];
-        acc[handlerName].push(lead);
-        return acc;
-      }, {});
-
-      return (
-        <div className="flex flex-col gap-8 h-full overflow-y-auto w-full">
-          <h2 className="text-xl font-bold px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded">Filtered Leads Overview</h2>
-          {Object.entries(grouped).map(([counsellor, cLeads]) => (
-            <div key={counsellor} className="flex flex-col gap-2">
-              <h3 className="text-lg font-semibold text-indigo-600 px-2">{counsellor} ({cLeads.length})</h3>
-              <div style={{ height: Math.min(cLeads.length * 35 + 40, 400) }} className="w-full">
-                <DataGrid 
-                  columns={columns} 
-                  rows={cLeads} 
-                  onRowsChange={handleRowsChange} 
-                  className="custom-data-grid h-full"
-                />
-              </div>
+    return (
+      <div className="flex flex-col gap-8 h-full overflow-y-auto w-full pb-20">
+        <div className="flex flex-col gap-2 w-full">
+          {isReportMode ? (
+            <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded">
+                <h2 className="text-lg font-bold text-indigo-600">
+                  Daily Agenda Leads ({localLeads.length})
+                </h2>
+                <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
+                  + Add Row
+                </button>
             </div>
-          ))}
-          {Object.keys(grouped).length === 0 && <p className="p-4 text-gray-500">No leads found for these filters.</p>}
-        </div>
-      );
-    } else {
-      // Employee View: Today's Assigned vs Other Filtered Leads
-      // If it's report mode, we might just show everything in one list or keep it split
-      const todaysAssigned = localLeads.filter(l => l.agenda_type === 'Fresh' || (l.assigned_date && isToday(parseISO(l.assigned_date))));
-      const otherLeads = localLeads.filter(l => l.agenda_type === 'Follow-up' || (!l.assigned_date || !isToday(parseISO(l.assigned_date))));
-
-      return (
-        <div className="flex flex-col gap-8 h-full overflow-y-auto w-full pb-20">
-          <div className="flex flex-col gap-2 w-full">
-            {isReportMode ? (
-              <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded">
-                  <h2 className="text-lg font-bold text-indigo-600">
-                    Daily Agenda Leads ({localLeads.length})
-                  </h2>
-                  <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
-                    + Add Row
-                  </button>
-              </div>
-            ) : (
-              <div className="flex items-center justify-end px-4 py-2">
-                <Can perform="leads:create">
-                  <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
-                    + Add Row
-                  </button>
-                </Can>
-              </div>
-            )}
-            <div className="rounded-lg border shadow-sm bg-white overflow-hidden" style={{ minHeight: '300px', height: '600px' }}>
-              <DataGrid 
-                columns={columns} 
-                rows={localLeads} 
-                onRowsChange={handleRowsChange} 
-                className="custom-data-grid h-full"
-              />
+          ) : (
+            <div className="flex items-center justify-end px-4 py-2">
+              <Can perform="leads:create">
+                <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
+                  + Add Row
+                </button>
+              </Can>
             </div>
+          )}
+          <div className="rounded-lg border shadow-sm bg-white overflow-hidden" style={{ minHeight: '300px', height: '600px' }}>
+            <DataGrid 
+              columns={columns} 
+              rows={localLeads} 
+              onRowsChange={handleRowsChange} 
+              className="custom-data-grid h-full"
+            />
           </div>
         </div>
-      );
-    }
+      </div>
+    );
   };
 
   return (
