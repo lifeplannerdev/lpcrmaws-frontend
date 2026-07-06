@@ -61,23 +61,66 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
     
     if (!pastedData) return;
 
-    // Split using \r?\n to cleanly remove hidden carriage returns from Excel
     const parsedRows = pastedData.split(/\r?\n/).filter(r => r.trim()).map((line, idx) => {
-      const cols = line.split('\t');
+      const cols = line.split('\t').map(c => c.trim());
+      
+      let date = '', serial_number = '', name = '', phone = '', email = '';
+      let interested_country = '', interested_course = '', previous_qualification = '';
+      let work_experience = '', location = '', budget = '', status = 'ENQUIRY';
+
+      const hasEmail = cols.some(c => c.includes('@') && c.includes('.'));
+      const hasPhone = cols.some(c => c.replace(/\D/g, '').length >= 7);
+
+      if (cols.length <= 3 && (hasEmail || hasPhone)) {
+        let emailIdx = cols.findIndex(c => c.includes('@') && c.includes('.'));
+        
+        let phoneIdx = -1;
+        let maxDigits = -1;
+        cols.forEach((c, i) => {
+            if (i !== emailIdx) {
+                const digitCount = c.replace(/\D/g, '').length;
+                if (digitCount > maxDigits) {
+                    maxDigits = digitCount;
+                    phoneIdx = i;
+                }
+            }
+        });
+        if (maxDigits < 7) phoneIdx = -1;
+
+        let nameIdx = cols.findIndex((c, i) => i !== emailIdx && i !== phoneIdx);
+
+        email = emailIdx !== -1 ? cols[emailIdx] : '';
+        phone = phoneIdx !== -1 ? cols[phoneIdx] : '';
+        name = nameIdx !== -1 ? cols[nameIdx] : '';
+      } else {
+        date = cols[0] || '';
+        serial_number = cols[1] || '';
+        name = cols[2] || '';
+        phone = cols[3] || '';
+        email = cols[4] || '';
+        interested_country = cols[5] || '';
+        interested_course = cols[6] || '';
+        previous_qualification = cols[7] || '';
+        work_experience = cols[8] || '';
+        location = cols[9] || '';
+        budget = cols[10] || '';
+        status = cols[11] || 'ENQUIRY';
+      }
+
       return {
         id: idx,
-        date: cols[0] || '',
-        serial_number: cols[1] || '',
-        name: cols[2] || '',
-        phone: cols[3] || '',
-        email: cols[4] || '',
-        interested_country: cols[5] || '',
-        interested_course: cols[6] || '',
-        previous_qualification: cols[7] || '',
-        work_experience: cols[8] || '',
-        location: cols[9] || '',
-        budget: cols[10] || '',
-        status: cols[11] || 'ENQUIRY',
+        date,
+        serial_number,
+        name,
+        phone,
+        email,
+        interested_country,
+        interested_course,
+        previous_qualification,
+        work_experience,
+        location,
+        budget,
+        status: status || 'ENQUIRY',
       };
     });
 
