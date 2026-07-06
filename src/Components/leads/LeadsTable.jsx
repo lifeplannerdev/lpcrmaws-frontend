@@ -39,8 +39,19 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
         <table className="w-full">
           <thead className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
             <tr>
-              {['Lead Info', 'Contact', 'Status', 'Source', 'Priority', 'Assignment', 'Date', 'Actions'].map(h => (
-                <th key={h} className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{h}</th>
+              {[
+                { label: 'Lead Info', className: 'min-w-[220px] w-1/4' },
+                { label: 'Contact', className: 'min-w-[250px] w-1/4' },
+                { label: 'Status', className: 'min-w-[130px]' },
+                { label: 'Source', className: 'min-w-[130px]' },
+                { label: 'Priority', className: 'min-w-[130px]' },
+                { label: 'Assignment', className: 'min-w-[180px]' },
+                { label: 'Date', className: 'min-w-[120px]' },
+                { label: 'Actions', className: 'min-w-[100px] text-right' }
+              ].map(h => (
+                <th key={h.label} className={`px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider ${h.className}`}>
+                  {h.label}
+                </th>
               ))}
             </tr>
           </thead>
@@ -56,16 +67,16 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 {/* Lead Info */}
-                <td className="px-6 py-5">
-                  <p className="font-bold text-gray-900 text-base group-hover:text-blue-700 transition-colors">{lead.name}</p>
-                  <p className="text-sm text-gray-600 mt-1 flex items-center gap-1">
-                    <ExternalLink size={12} className="opacity-50" />
-                    {lead.interest || lead.program || 'No program'}
+                <td className="px-4 py-5 align-top">
+                  <p className="font-bold text-gray-900 text-base group-hover:text-blue-700 transition-colors line-clamp-2">{lead.name}</p>
+                  <p className="text-sm text-gray-600 mt-1 flex items-center gap-1 truncate">
+                    <ExternalLink size={12} className="opacity-50 flex-shrink-0" />
+                    <span className="truncate">{lead.interest || lead.program || 'No program'}</span>
                   </p>
                 </td>
 
                 {/* Contact */}
-                <td className="px-6 py-5">
+                <td className="px-4 py-5 align-top">
                   <div className="space-y-2">
                     {/* Email */}
                     <a
@@ -73,10 +84,10 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
                       className={`flex items-center gap-2 text-sm text-gray-700 group/email ${lead.email && lead.email !== 'No email provided' ? 'cursor-pointer hover:text-blue-600 transition-colors' : ''}`}
                       title={lead.email && lead.email !== 'No email provided' ? `Compose email to ${lead.email}` : ''}
                     >
-                      <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center group-hover/email:bg-blue-200 transition-colors">
+                      <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover/email:bg-blue-200 transition-colors">
                         <Mail size={14} className="text-blue-600" />
                       </div>
-                      <span className="font-medium group-hover/email:underline">{lead.email}</span>
+                      <span className="font-medium group-hover/email:underline truncate">{lead.email}</span>
                     </a>
 
                     {/* Phone */}
@@ -86,7 +97,7 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
                         className="group/phone flex items-center gap-2 text-sm text-gray-700 hover:text-green-700 transition-colors disabled:opacity-50"
                         title="Click to Call"
                       >
-                        <div className="w-7 h-7 bg-green-100 rounded-lg flex items-center justify-center group-hover/phone:bg-green-200 transition-colors">
+                        <div className="w-7 h-7 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover/phone:bg-green-200 transition-colors">
                           {callingNumber === lead.phone ? <Loader2 size={14} className="animate-spin text-green-700" /> : <Phone size={14} className="text-green-600 group-hover/phone:text-green-800" />}
                         </div>
                         <span className="font-medium group-hover/phone:underline">{lead.phone}</span>
@@ -94,29 +105,29 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
 
                     {/* Location */}
                     <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <div className="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <div className="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
                         <MapPin size={14} className="text-purple-600" />
                       </div>
-                      <span className="font-medium">{lead.location}</span>
+                      <span className="font-medium truncate" title={lead.location}>{lead.location}</span>
                     </div>
                   </div>
                 </td>
 
                 {/* Status */}
-                <td className="px-6 py-5">
-                  <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide shadow-sm ${statusColors[lead.status]}`}>
-                    {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                <td className="px-4 py-5 align-top">
+                  <span className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wide shadow-sm whitespace-nowrap ${statusColors[lead.status]}`}>
+                    {lead.status.replace('_', ' ')}
                   </span>
                 </td>
 
                 {/* Source */}
-                <td className="px-6 py-5">
-                  <span className="text-sm font-semibold text-gray-700 bg-gray-100 px-3 py-1.5 rounded-lg">{lead.source}</span>
+                <td className="px-4 py-5 align-top">
+                  <span className="text-xs font-semibold text-gray-700 bg-gray-100 px-2.5 py-1.5 rounded-lg whitespace-nowrap">{lead.source}</span>
                 </td>
 
                 {/* Priority */}
-                <td className="px-6 py-5">
-                  <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide shadow-sm ${
+                <td className="px-4 py-5 align-top">
+                  <span className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wide shadow-sm whitespace-nowrap ${
                     lead.priority === 'HIGH'   ? 'bg-red-100 text-red-700' :
                     lead.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
                                                  'bg-gray-100 text-gray-700'
@@ -126,29 +137,29 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
                 </td>
 
                 {/* Assignment */}
-                <td className="px-6 py-5">
+                <td className="px-4 py-5 align-top">
                   <div className="space-y-2">
                     {lead.assigned_to ? (
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center">
+                        <div className="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
                           <UserCheck size={14} className="text-indigo-600" />
                         </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Primary</p>
-                          <p className="text-sm font-medium text-gray-900">
+                        <div className="min-w-0">
+                          <p className="text-[10px] uppercase font-bold text-gray-400">Primary</p>
+                          <p className="text-sm font-semibold text-gray-800 truncate" title={`${lead.assigned_to.first_name} ${lead.assigned_to.last_name}`}>
                             {lead.assigned_to.first_name} {lead.assigned_to.last_name}
                           </p>
                         </div>
                       </div>
                     ) : null}
                     {lead.sub_assigned_to ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
                           <Users size={14} className="text-purple-600" />
                         </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Sub</p>
-                          <p className="text-sm font-medium text-gray-900">
+                        <div className="min-w-0">
+                          <p className="text-[10px] uppercase font-bold text-gray-400">Sub</p>
+                          <p className="text-sm font-medium text-gray-900 truncate" title={`${lead.sub_assigned_to.first_name} ${lead.sub_assigned_to.last_name}`}>
                             {lead.sub_assigned_to.first_name} {lead.sub_assigned_to.last_name}
                           </p>
                         </div>
@@ -172,43 +183,43 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
                 </td>
 
                 {/* Date */}
-                <td className="px-6 py-5">
+                <td className="px-4 py-5 align-top">
                   <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                    <div className="w-7 h-7 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <div className="w-7 h-7 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
                       <Calendar size={14} className="text-orange-600" />
                     </div>
-                    {lead.date}
+                    <span className="whitespace-nowrap">{lead.date}</span>
                   </div>
                 </td>
 
                 {/* Actions */}
-                <td className="px-6 py-5">
-                  <div className="flex items-center gap-1.5">
+                <td className="px-4 py-5 align-top">
+                  <div className="flex items-center justify-end gap-1.5">
 
                     {/* Call History — permitted roles only */}
                     {allowHistory && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleCallHistory(lead.id); }}
-                        className="group/btn p-2.5 text-purple-600 hover:bg-purple-100 rounded-xl transition-all duration-200 hover:shadow-md hover:scale-110"
+                        className="group/btn p-2 text-purple-600 hover:bg-purple-100 rounded-xl transition-all duration-200 hover:shadow-md hover:scale-110"
                         title="Call history"
                       >
-                        <History size={18} className="group-hover/btn:rotate-12 transition-transform" />
+                        <History size={16} className="group-hover/btn:rotate-12 transition-transform" />
                       </button>
                     )}
 
                     {/* Edit */}
                     {allowEdit && (
                       <button onClick={(e) => { e.stopPropagation(); navigate(`/leads/edit/${lead.id}`); }}
-                        className="group/btn p-2.5 text-blue-600 hover:bg-blue-100 rounded-xl transition-all duration-200 hover:shadow-md hover:scale-110" title="Edit lead">
-                        <Edit size={18} className="group-hover/btn:rotate-12 transition-transform" />
+                        className="group/btn p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-all duration-200 hover:shadow-md hover:scale-110" title="Edit lead">
+                        <Edit size={16} className="group-hover/btn:rotate-12 transition-transform" />
                       </button>
                     )}
 
                     {/* Delete */}
                     {allowDelete && (
                       <button onClick={(e) => { e.stopPropagation(); onDeleteLead(lead.id); }}
-                        className="group/btn p-2.5 text-red-600 hover:bg-red-100 rounded-xl transition-all duration-200 hover:shadow-md hover:scale-110" title="Delete lead">
-                        <Trash2 size={18} className="group-hover/btn:rotate-12 transition-transform" />
+                        className="group/btn p-2 text-red-600 hover:bg-red-100 rounded-xl transition-all duration-200 hover:shadow-md hover:scale-110" title="Delete lead">
+                        <Trash2 size={16} className="group-hover/btn:rotate-12 transition-transform" />
                       </button>
                     )}
                   </div>
