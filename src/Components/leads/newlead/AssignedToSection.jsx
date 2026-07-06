@@ -70,7 +70,8 @@ const AssignedToSection = ({ formData, errors, onChange }) => {
         u.role === 'ADM_MANAGER' || 
         u.role === 'ADM_EXEC' || 
         u.role === 'FOE' ||
-        u.role === 'ADM_COUNSELLOR'
+        u.role === 'ADM_COUNSELLOR' ||
+        u.role === 'FLAG COORDINATOR'
       );
     }
 
@@ -87,6 +88,7 @@ const AssignedToSection = ({ formData, errors, onChange }) => {
       'CM': 'Center Manager',
       'BDM': 'Business Development Manager',
       'FOE': 'FOE Cum TC',
+      'FLAG COORDINATOR': 'Flag Coordinator',
     };
     return roleMap[role] || role;
   };

@@ -155,6 +155,7 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
       'CM': 'Center Manager',
       'BDM': 'Business Development Manager',
       'FOE': 'FOE Cum TC',
+      'FLAG COORDINATOR': 'Flag Coordinator',
     };
     return roleMap[role] || role;
   };
