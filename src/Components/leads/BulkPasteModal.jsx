@@ -68,15 +68,16 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
       let interested_country = '', interested_course = '', previous_qualification = '';
       let work_experience = '', location = '', budget = '', status = 'ENQUIRY';
 
-      const hasEmail = cols.some(c => c.includes('@') && c.includes('.'));
-      const hasPhone = cols.some(c => c.replace(/\D/g, '').length >= 7);
+      const validCols = cols.filter(c => c !== '');
+      const hasEmail = validCols.some(c => c.includes('@') && c.includes('.'));
+      const hasPhone = validCols.some(c => c.replace(/\D/g, '').length >= 7);
 
-      if (cols.length <= 3 && (hasEmail || hasPhone)) {
-        let emailIdx = cols.findIndex(c => c.includes('@') && c.includes('.'));
+      if (validCols.length > 0 && validCols.length <= 3 && (hasEmail || hasPhone)) {
+        let emailIdx = validCols.findIndex(c => c.includes('@') && c.includes('.'));
         
         let phoneIdx = -1;
         let maxDigits = -1;
-        cols.forEach((c, i) => {
+        validCols.forEach((c, i) => {
             if (i !== emailIdx) {
                 const digitCount = c.replace(/\D/g, '').length;
                 if (digitCount > maxDigits) {
@@ -87,11 +88,11 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
         });
         if (maxDigits < 7) phoneIdx = -1;
 
-        let nameIdx = cols.findIndex((c, i) => i !== emailIdx && i !== phoneIdx);
+        let nameIdx = validCols.findIndex((c, i) => i !== emailIdx && i !== phoneIdx);
 
-        email = emailIdx !== -1 ? cols[emailIdx] : '';
-        phone = phoneIdx !== -1 ? cols[phoneIdx] : '';
-        name = nameIdx !== -1 ? cols[nameIdx] : '';
+        email = emailIdx !== -1 ? validCols[emailIdx] : '';
+        phone = phoneIdx !== -1 ? validCols[phoneIdx] : '';
+        name = nameIdx !== -1 ? validCols[nameIdx] : '';
       } else {
         date = cols[0] || '';
         serial_number = cols[1] || '';
