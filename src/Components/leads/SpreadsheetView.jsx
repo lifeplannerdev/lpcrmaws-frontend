@@ -292,41 +292,39 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
   // Render Unified View for both Admin and Employee
   const renderGrid = () => {
     return (
-      <div className="flex flex-col gap-8 h-full overflow-y-auto w-full pb-20">
-        <div className="flex flex-col gap-2 w-full">
-          {isReportMode ? (
-            <div className="flex items-center justify-between px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded">
-                <h2 className="text-lg font-bold text-indigo-600">
-                  Daily Agenda Leads ({localLeads.length})
-                </h2>
-                <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
-                  + Add Row
-                </button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-end px-4 py-2">
-              <Can perform="leads:create">
-                <button onClick={handleAddRow} className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-semibold rounded hover:bg-indigo-700 transition">
-                  + Add Row
-                </button>
-              </Can>
-            </div>
-          )}
-          <div className="rounded-lg border shadow-sm bg-white overflow-hidden" style={{ minHeight: '300px', height: '600px' }}>
-            <DataGrid 
-              columns={columns} 
-              rows={localLeads} 
-              onRowsChange={handleRowsChange} 
-              className="custom-data-grid h-full"
-            />
+      <div className="flex flex-col h-full w-full">
+        {isReportMode ? (
+          <div className="flex items-center justify-between px-4 py-3 bg-indigo-50 border-b border-indigo-100">
+              <h2 className="text-lg font-bold text-indigo-700">
+                Daily Agenda Leads ({localLeads.length})
+              </h2>
+              <button onClick={handleAddRow} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition shadow-sm flex items-center gap-2">
+                <span className="text-lg leading-none">+</span> Add Row
+              </button>
           </div>
+        ) : (
+          <div className="flex items-center justify-end px-4 py-3 bg-white border-b border-gray-100">
+            <Can perform="leads:create">
+              <button onClick={handleAddRow} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition shadow-sm flex items-center gap-2">
+                <span className="text-lg leading-none">+</span> Add Row
+              </button>
+            </Can>
+          </div>
+        )}
+        <div className="flex-1 w-full bg-white relative">
+          <DataGrid 
+            columns={columns} 
+            rows={localLeads} 
+            onRowsChange={handleRowsChange} 
+            className="rdg-light absolute inset-0 h-full w-full border-none"
+          />
         </div>
       </div>
     );
   };
 
   return (
-    <div className="w-full h-full bg-white dark:bg-gray-900 flex-1 relative flex flex-col p-4 overflow-hidden">
+    <div className="w-full h-full bg-white flex-1 flex flex-col overflow-hidden">
        {renderGrid()}
     </div>
   );

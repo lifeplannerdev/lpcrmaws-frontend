@@ -398,7 +398,7 @@ export default function LeadsPage() {
                   activeLeadId={leadId}
                 />
               ) : viewMode === 'spreadsheet' ? (
-                <div className="h-[75vh] w-full border border-gray-200 rounded-xl overflow-hidden bg-white">
+                <div className="h-[75vh] w-full border border-gray-200 rounded-xl overflow-hidden bg-white flex flex-col shadow-sm">
                   <SpreadsheetView leads={leads} authFetch={authFetch} onUpdateLead={(updatedLead) => {
                     setLeads(prev => {
                       const exists = prev.find(l => l.id === updatedLead.id);
