@@ -13,6 +13,7 @@ export default function AddStudentPage() {
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   const canEditStudents = hasPermission('students:edit_any') || hasPermission('students:edit_tenant') || hasPermission('students:edit_own');
+  const canEditFees = hasPermission('fees:edit_any') || hasPermission('fees:edit_tenant');
   
   const [searchParams] = window.location.search ? [new URLSearchParams(window.location.search)] : [new URLSearchParams()];
   const sourceLeadId = searchParams.get('lead_id');
@@ -79,6 +80,7 @@ export default function AddStudentPage() {
               onChange={handleChange}
               batchChoices={BATCH_CHOICES}
               statusChoices={STATUS_CHOICES}
+              canEditFees={canEditFees}
             />
 
             {canEditStudents && (

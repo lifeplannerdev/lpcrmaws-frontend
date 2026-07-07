@@ -4,6 +4,7 @@ import Navbar from '../Components/layouts/Navbar';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useParams, useNavigate } from 'react-router-dom';
+import { usePermissions } from '../context/PermissionsContext';
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -25,6 +26,28 @@ export default function StudentViewPage() {
   const [feeLoading, setFeeLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+
+  const { hasPermission } = usePermissions();
+  const canEditStudents = hasPermission('students:edit_any') || hasPermission('students:edit_tenant') || hasPermission('students:edit_own');
+  const canEditFees = hasPermission('fees:edit_any') || hasPermission('fees:edit_tenant');
+
+  const handleGrantClearance = async () => {
+    try {
+      setLoading(true);
+      let token = accessToken || await refreshAccessToken();
+      await axios.patch(`${API_BASE_URL}/students/${id}/`, { status: 'PENDING_BATCH_ASSIGNMENT' }, { headers: { Authorization: `Bearer ${token}` } });
+      await fetchStudent();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleActivate = () => {
+    navigate(`/students/${id}/edit`);
+  };
 
   useEffect(() => {
     fetchStudent();
@@ -138,6 +161,46 @@ export default function StudentViewPage() {
                 Fee: {student.fee_setup_status || (student.fee_summary ? student.fee_summary.status : 'PENDING_FEE_SETUP')}
               </span>
             </div>
+
+            {student.status === 'PENDING_ENROLLMENT' && (
+              <div className="mb-6 p-4 rounded-xl border border-yellow-200 bg-yellow-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <ShieldAlert className="text-yellow-600" size={24} />
+                  <div>
+                    <h3 className="font-bold text-yellow-800">Pending Financial Clearance</h3>
+                    <p className="text-sm text-yellow-700">This student is awaiting fee setup and financial clearance.</p>
+                  </div>
+                </div>
+                {canEditFees && (
+                  <button 
+                    onClick={handleGrantClearance}
+                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg shadow transition-colors whitespace-nowrap"
+                  >
+                    Grant Clearance
+                  </button>
+                )}
+              </div>
+            )}
+
+            {student.status === 'PENDING_BATCH_ASSIGNMENT' && (
+              <div className="mb-6 p-4 rounded-xl border border-indigo-200 bg-indigo-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <ShieldAlert className="text-indigo-600" size={24} />
+                  <div>
+                    <h3 className="font-bold text-indigo-800">Pending Batch Assignment</h3>
+                    <p className="text-sm text-indigo-700">This student is financially cleared and needs to be assigned to a batch to become Active.</p>
+                  </div>
+                </div>
+                {canEditStudents && (
+                  <button 
+                    onClick={handleActivate}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow transition-colors whitespace-nowrap"
+                  >
+                    Assign Batch & Activate
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="mb-6 border-b border-gray-200">
               <nav className="-mb-px flex gap-6">

@@ -14,6 +14,8 @@ export const BATCH_CHOICES = [
 ];
 
 export const STATUS_CHOICES = [
+  { value: 'PENDING_ENROLLMENT', label: 'Pending Enrollment' },
+  { value: 'PENDING_BATCH_ASSIGNMENT', label: 'Pending Batch Assignment' },
   { value: 'ACTIVE', label: 'Active' },
   { value: 'PAUSED', label: 'Paused' },
   { value: 'COMPLETED', label: 'Completed' },
@@ -26,7 +28,7 @@ export const initialStudentFormData = {
   academic_batch: '',
   branch: '',
   trainer: '',
-  status: 'ACTIVE',
+  status: 'PENDING_ENROLLMENT',
   admission_date: new Date().toISOString().split('T')[0],
   student_class: '',
   email: '',

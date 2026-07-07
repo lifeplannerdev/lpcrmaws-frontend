@@ -17,6 +17,7 @@ export default function StudentFormFields({
   branchesLoading = false,
   feeTemplates = [],
   feeTemplatesLoading = false,
+  canEditFees = true,
 }) {
   // Transform trainers for select options
   const trainerOptions = trainers.map(trainer => ({
@@ -292,41 +293,43 @@ export default function StudentFormFields({
         </div>
       </div>
 
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Fee Setup</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="md:col-span-2">
-            <FormField
-              label="Fee Template"
-              name="fee_template"
-              type="select"
-              value={formData.fee_template}
-              onChange={onChange}
-              options={feeTemplateOptions}
-              placeholder={feeTemplatesLoading ? 'Loading templates...' : 'Select Fee Template'}
-              error={errors.fee_template}
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              Choose a standard plan from the catalog. If you leave this blank, the student will be created with pending fee setup.
-            </p>
-          </div>
-          
-          <div className="md:col-span-2">
-            <FormField
-              label="Fee Attendance Policy"
-              name="fee_attendance_policy"
-              type="select"
-              value={formData.fee_attendance_policy}
-              onChange={onChange}
-              options={feeAttendancePolicyOptions}
-              error={errors.fee_attendance_policy}
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              Set how attendance marking behaves for this student when they have overdue fees.
-            </p>
+      {canEditFees && (
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Fee Setup</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2">
+              <FormField
+                label="Fee Template"
+                name="fee_template"
+                type="select"
+                value={formData.fee_template}
+                onChange={onChange}
+                options={feeTemplateOptions}
+                placeholder={feeTemplatesLoading ? 'Loading templates...' : 'Select Fee Template'}
+                error={errors.fee_template}
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                Choose a standard plan from the catalog. If you leave this blank, the student will be created with pending fee setup.
+              </p>
+            </div>
+            
+            <div className="md:col-span-2">
+              <FormField
+                label="Fee Attendance Policy"
+                name="fee_attendance_policy"
+                type="select"
+                value={formData.fee_attendance_policy}
+                onChange={onChange}
+                options={feeAttendancePolicyOptions}
+                error={errors.fee_attendance_policy}
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                Set how attendance marking behaves for this student when they have overdue fees.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
