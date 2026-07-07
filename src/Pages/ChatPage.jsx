@@ -3,7 +3,7 @@ import {
   Send, Paperclip, Search, MoreVertical, ArrowLeft, Users,
   MessageSquare, X, Check, CheckCheck, Loader2,
   RefreshCw, UserPlus, Info, Crown, FileText, Image, Film,
-  Music, Archive, File, Download, XCircle,
+  Music, Archive, File, Download, XCircle, Trash2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -132,7 +132,7 @@ const FilePreview = ({ fileUrl, filename }) => {
 
   if (/\.(mp3|wav|ogg|aac)$/i.test(displayName)) {
     return (
-      <div className="mt-1 max-w-[220px]">
+      <div className="mt-1 w-[260px]">
         <audio controls className="w-full" preload="metadata">
           <source src={fileUrl} />
           Your browser does not support the audio element.
@@ -442,6 +442,28 @@ const ChatPage = () => {
         body: JSON.stringify({ conversation_id: convId }),
       });
     } catch {}
+  };
+
+  const handleDeleteMessage = async (msgId) => {
+    if (!window.confirm('Are you sure you want to delete this message?')) return;
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(`${API_BASE_URL}/messages/${msgId}/delete/`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
+      });
+      if (res.ok) {
+        // Optimistically remove from state
+        setMessages(prev => {
+          const convMsgs = prev[selectedConv.id] || [];
+          return { ...prev, [selectedConv.id]: convMsgs.filter(m => m.id !== msgId) };
+        });
+      }
+    } catch (e) {
+      console.error('Delete message failed', e);
+    }
   };
 
   useEffect(() => {
@@ -830,8 +852,19 @@ const ChatPage = () => {
                               <div className="flex-1 h-px bg-slate-200" />
                             </div>
                           )}
-                          <div className={`flex mb-0.5 gap-2 items-end ${isMe ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`flex mb-0.5 gap-2 items-end ${isMe ? 'justify-end' : 'justify-start'} group relative`}>
                             {!isMe && <Avatar name={msg.sender?.username || ''} size="sm" />}
+                            
+                            {isMe && !msg.optimistic && (
+                              <button 
+                                onClick={() => handleDeleteMessage(msg.id)}
+                                className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-100 rounded-full transition-all duration-200 mb-6"
+                                title="Delete Message"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
+
                             <div className="max-w-[80%] sm:max-w-[70%] md:max-w-[62%]">
                               {!isMe && isGroup && (
                                 <p className="text-xs font-semibold text-indigo-500 mb-1 pl-0.5">{msg.sender?.username}</p>

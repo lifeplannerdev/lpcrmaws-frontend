@@ -5,7 +5,8 @@ import { usePusher } from '../context/PusherContext';
 // onNewMessage: (messageData) => void
 // onMessagesDelivered: (data) => void
 // onMessagesRead: (data) => void
-export const useChatChannel = (conversationId, onNewMessage, onMessagesDelivered, onMessagesRead) => {
+// onMessageDeleted: (data) => void
+export const useChatChannel = (conversationId, onNewMessage, onMessagesDelivered, onMessagesRead, onMessageDeleted) => {
   const { pusher, isReady } = usePusher();
   const channelRef = useRef(null);
 
@@ -25,6 +26,10 @@ export const useChatChannel = (conversationId, onNewMessage, onMessagesDelivered
 
     channelRef.current.bind('messages-read', (data) => {
       onMessagesRead?.(data);
+    });
+
+    channelRef.current.bind('message-deleted', (data) => {
+      onMessageDeleted?.(data);
     });
 
     return () => {
