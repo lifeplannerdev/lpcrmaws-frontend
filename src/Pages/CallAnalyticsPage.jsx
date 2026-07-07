@@ -314,9 +314,8 @@ function AgentScorecardCarousel({ agentStatsData, agentMap, loading }) {
   const currentCard = allCards[safeIndex];
   const isOverall = safeIndex === 0 && overall_system;
 
-  const label = !isOverall ? agentLabel(agentMap, currentCard.identifier) : null;
-  const displayName = !isOverall ? ((label && typeof label === 'object') ? label.name : currentCard.identifier) : "OVERALL SYSTEM";
-  const displayNum  = !isOverall ? ((label && typeof label === 'object') ? label.number : null) : null;
+  const displayName = !isOverall ? (currentCard.agent_name || currentCard.identifier) : "OVERALL SYSTEM";
+  const displayNum  = null; // We are hiding numbers as requested
 
   const handlePrev = () => setCurrentIndex(prev => (prev === 0 ? allCards.length - 1 : prev - 1));
   const handleNext = () => setCurrentIndex(prev => (prev === allCards.length - 1 ? 0 : prev + 1));
