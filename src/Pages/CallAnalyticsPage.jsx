@@ -289,89 +289,144 @@ function Empty({ msg = 'No data' }) {
   );
 }
 
-// ─── Agent Scorecard Table ──────────────────────────────────────────────────
+// ─── Agent Scorecard Carousel ──────────────────────────────────────────────────
 
-function AgentScorecardTable({ agentStatsData, agentMap, loading }) {
+function AgentScorecardCarousel({ agentStatsData, agentMap, loading }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
   if (loading) return <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm mb-4"><Skeleton rows={5} h="h-10" /></div>;
   if (!agentStatsData || !agentStatsData.agents) return null;
 
   const { overall_system, agents } = agentStatsData;
+  const allCards = overall_system ? [overall_system, ...agents] : agents;
 
-  const renderRow = (row, isOverall = false) => {
-    const isAgent = !isOverall;
-    const label = isAgent ? agentLabel(agentMap, row.identifier) : null;
-    const displayName = isAgent ? ((label && typeof label === 'object') ? label.name : row.identifier) : "OVERALL SYSTEM";
-    const displayNum  = isAgent ? ((label && typeof label === 'object') ? label.number : null) : null;
-
+  if (allCards.length === 0) {
     return (
-      <tr key={row.identifier} className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${isOverall ? 'bg-indigo-50/50 hover:bg-indigo-50 border-indigo-100' : ''}`}>
-        <td className="px-4 py-3 whitespace-nowrap">
-          <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isOverall ? 'bg-indigo-100' : 'bg-gray-100'}`}>
-              {isOverall ? <BarChart3 size={14} className="text-indigo-600" /> : <UserPlus size={14} className="text-gray-500" />}
-            </div>
-            <div>
-              <p className={`text-xs font-bold ${isOverall ? 'text-indigo-900' : 'text-gray-800'}`}>{displayName}</p>
-              {displayNum && <p className="text-[10px] font-mono text-gray-500">{displayNum}</p>}
-            </div>
-          </div>
-        </td>
-        <td className="px-4 py-3 text-center">
-          <p className="text-xs font-bold text-gray-800">{row.incoming_calls_received}</p>
-        </td>
-        <td className="px-4 py-3 text-center">
-          <p className="text-xs font-bold text-emerald-600">{row.incoming_calls_answered}</p>
-        </td>
-        <td className="px-4 py-3 text-center">
-          <p className="text-xs font-mono text-gray-500">{fmtSec(row.incoming_avg_duration)}</p>
-        </td>
-        <td className="px-4 py-3 text-center border-l border-gray-100">
-          <p className="text-xs font-bold text-gray-800">{row.outgoing_calls_made}</p>
-        </td>
-        <td className="px-4 py-3 text-center">
-          <p className="text-xs font-bold text-blue-600">{row.outgoing_calls_answered}</p>
-        </td>
-        <td className="px-4 py-3 text-center">
-          <p className="text-xs font-mono text-gray-500">{fmtSec(row.outgoing_avg_duration)}</p>
-        </td>
-        <td className="px-4 py-3 text-center border-l border-gray-100">
-          <p className="text-xs font-bold text-red-500">{row.total_cancelled_missed}</p>
-        </td>
-      </tr>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4 p-10 flex flex-col items-center justify-center">
+        <TrendingUp size={30} className="text-gray-300 mb-2" />
+        <p className="text-xs text-gray-400">No agent activity found for this period.</p>
+      </div>
     );
-  };
+  }
+
+  // Ensure index is valid if data changes
+  const safeIndex = Math.min(currentIndex, allCards.length - 1);
+  const currentCard = allCards[safeIndex];
+  const isOverall = safeIndex === 0 && overall_system;
+
+  const label = !isOverall ? agentLabel(agentMap, currentCard.identifier) : null;
+  const displayName = !isOverall ? ((label && typeof label === 'object') ? label.name : currentCard.identifier) : "OVERALL SYSTEM";
+  const displayNum  = !isOverall ? ((label && typeof label === 'object') ? label.number : null) : null;
+
+  const handlePrev = () => setCurrentIndex(prev => (prev === 0 ? allCards.length - 1 : prev - 1));
+  const handleNext = () => setCurrentIndex(prev => (prev === allCards.length - 1 ? 0 : prev + 1));
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4 overflow-hidden">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4 overflow-hidden relative group">
+      {/* Header & Controls */}
       <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white">
         <h3 className="text-sm font-black text-gray-800 uppercase tracking-wide flex items-center gap-2">
           <TrendingUp size={16} className="text-emerald-500" /> Agent Performance Scorecard
         </h3>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-bold text-gray-400 uppercase">
+            {safeIndex + 1} of {allCards.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button onClick={handlePrev} className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 transition-all">
+              <ChevronLeft size={16} />
+            </button>
+            <button onClick={handleNext} className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 transition-all">
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              <th className="px-4 py-3">Agent</th>
-              <th className="px-4 py-3 text-center">IN Received</th>
-              <th className="px-4 py-3 text-center">IN Answered</th>
-              <th className="px-4 py-3 text-center">IN Avg Conv</th>
-              <th className="px-4 py-3 text-center border-l border-gray-200">OUT Made</th>
-              <th className="px-4 py-3 text-center">OUT Answered</th>
-              <th className="px-4 py-3 text-center">OUT Avg Conv</th>
-              <th className="px-4 py-3 text-center border-l border-gray-200">Total Missed/Cancel</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {overall_system && renderRow(overall_system, true)}
-            {agents.map(agent => renderRow(agent))}
-            {agents.length === 0 && (
-              <tr>
-                <td colSpan="8" className="px-4 py-8 text-center text-gray-400 text-xs">No agent activity found for this period.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+
+      {/* Card Content */}
+      <div className={`p-6 transition-all duration-300 ${isOverall ? 'bg-indigo-50/20' : ''}`}>
+        
+        {/* Agent Profile Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${isOverall ? 'bg-indigo-100' : 'bg-gray-100'}`}>
+            {isOverall ? <BarChart3 size={24} className="text-indigo-600" /> : <UserPlus size={24} className="text-gray-500" />}
+          </div>
+          <div>
+            <h2 className={`text-xl font-black ${isOverall ? 'text-indigo-900' : 'text-gray-900'}`}>{displayName}</h2>
+            {displayNum && <p className="text-sm font-mono text-gray-500">{displayNum}</p>}
+          </div>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* INCOMING */}
+          <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <PhoneIncoming size={14} className="text-emerald-600" />
+              </div>
+              <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide">Incoming Calls</h4>
+            </div>
+            <div className="space-y-4">
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Answered</p>
+                  <p className="text-3xl font-black text-emerald-600 leading-none">{currentCard.incoming_calls_answered}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Received</p>
+                  <p className="text-xl font-bold text-gray-700 leading-none">{currentCard.incoming_calls_received}</p>
+                </div>
+              </div>
+              <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-400 uppercase">Avg Conv.</span>
+                <span className="text-sm font-mono font-semibold text-gray-700">{fmtSec(currentCard.incoming_avg_duration)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* OUTGOING */}
+          <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                <PhoneOutgoing size={14} className="text-blue-600" />
+              </div>
+              <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide">Outgoing Calls</h4>
+            </div>
+            <div className="space-y-4">
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Answered</p>
+                  <p className="text-3xl font-black text-blue-600 leading-none">{currentCard.outgoing_calls_answered}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Made</p>
+                  <p className="text-xl font-bold text-gray-700 leading-none">{currentCard.outgoing_calls_made}</p>
+                </div>
+              </div>
+              <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-400 uppercase">Avg Conv.</span>
+                <span className="text-sm font-mono font-semibold text-gray-700">{fmtSec(currentCard.outgoing_avg_duration)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* MISSED / CANCELLED */}
+          <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+                <PhoneMissed size={14} className="text-red-500" />
+              </div>
+              <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide">Missed / Cancelled</h4>
+            </div>
+            <div className="flex flex-col justify-center h-[calc(100%-2rem)]">
+              <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Total Missed or Cancelled Calls</p>
+              <p className="text-4xl font-black text-red-500">{currentCard.total_cancelled_missed}</p>
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
   );
@@ -619,7 +674,7 @@ export default function CallAnalyticsPage() {
 
         {/* ── Agent Scorecard (Admins only) ── */}
         <Can perform="voxbay:admin">
-          <AgentScorecardTable agentStatsData={agentStatsData} agentMap={agentMap} loading={agentStatsLoading} />
+          <AgentScorecardCarousel agentStatsData={agentStatsData} agentMap={agentMap} loading={agentStatsLoading} />
         </Can>
 
         {/* ── Success rate bar ── */}
