@@ -8,7 +8,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../Components/layouts/Navbar';
-import Pusher from "pusher-js";
+import { useChatChannel } from '../hooks/useChatChannel';
+import { useUserChannel } from '../hooks/useUserChannel';
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -115,6 +116,28 @@ const FilePreview = ({ fileUrl, filename }) => {
           onError={e => { e.target.style.display = 'none'; }}
         />
       </a>
+    );
+  }
+
+  if (/\.(mp4|webm|mov|mkv)$/i.test(displayName)) {
+    return (
+      <div className="mt-1 max-w-[220px]">
+        <video controls className="w-full rounded-xl border border-white/20" preload="metadata">
+          <source src={fileUrl} />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    );
+  }
+
+  if (/\.(mp3|wav|ogg|aac)$/i.test(displayName)) {
+    return (
+      <div className="mt-1 max-w-[220px]">
+        <audio controls className="w-full" preload="metadata">
+          <source src={fileUrl} />
+          Your browser does not support the audio element.
+        </audio>
+      </div>
     );
   }
 
@@ -401,40 +424,33 @@ const ChatPage = () => {
     setShowGroupInfo(false);
   }, [selectedConv]);
 
-  useEffect(() => {
-    if (!selectedConv) return;
-
-    // ✅ Initialize Pusher
-    const pusher = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
-      cluster: import.meta.env.VITE_PUSHER_CLUSTER,
-    });
-
-    // ✅ Subscribe to conversation channel
-    const channel = pusher.subscribe(`chat-${selectedConv.id}`);
-
-    // ✅ Listen for new messages
-    channel.bind("new-message", (data) => {
-      setMessages((prev) => ({
+  const handleNewMessage = useCallback((data) => {
+    setMessages((prev) => {
+      const convMsgs = prev[selectedConv.id] || [];
+      if (convMsgs.some((m) => m.id === data.id)) return prev;
+      return {
         ...prev,
-        [selectedConv.id]: [...(prev[selectedConv.id] || []), data],
-      }));
-
-      // Update sidebar last message
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === selectedConv.id
-            ? { ...c, last_message: data }
-            : c
-        )
-      );
+        [selectedConv.id]: [...convMsgs, data],
+      };
     });
 
-    return () => {
-      channel.unbind_all();
-      channel.unsubscribe();
-      pusher.disconnect();
-    };
+    // Update sidebar last message
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === selectedConv.id
+          ? { ...c, last_message: data }
+          : c
+      )
+    );
   }, [selectedConv]);
+
+  useChatChannel(selectedConv?.id, handleNewMessage);
+
+  useUserChannel({
+    onNewConversation: () => {
+      loadConversations(true); // silent refresh
+    }
+  });
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -505,7 +521,21 @@ const ChatPage = () => {
       });
 
       if (!res.ok) throw new Error('Send failed');
-      // ℹ️ No loadMessages here — Pusher will deliver the new message in real-time
+      
+      const realMessage = await res.json();
+      
+      // Replace optimistic message with real message
+      setMessages(prev => ({
+        ...prev,
+        [selectedConv.id]: (prev[selectedConv.id] || []).map(m => 
+          m.id === optimistic.id ? realMessage : m
+        )
+      }));
+
+      // Update sidebar immediately for the sender
+      setConversations(prev => 
+        prev.map(c => c.id === selectedConv.id ? { ...c, last_message: realMessage } : c)
+      );
     } catch {
       // Roll back optimistic message and restore input
       setMessages(prev => ({
