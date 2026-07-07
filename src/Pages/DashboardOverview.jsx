@@ -12,6 +12,7 @@ import TodayFollowUps from '../Components/dashboard/TodayFollowUps';
 import ErrorAlert from '../Components/dashboard/ErrorAlert';
 import LoadingSpinner from '../Components/dashboard/LoadingSpinner';
 import RecentActivities from '../Components/dashboard/RecentActivities';
+import LiveLeadsBoard from '../Components/dashboard/LiveLeadsBoard';
 import { formatTimeAgo, formatTaskTime, getPriorityColor } from '../Components/utils/dashboardHelpers';
 import { LayoutDashboard, Activity } from 'lucide-react';
 
@@ -129,7 +130,10 @@ export default function DashboardOverview() {
         <ErrorAlert message={error} />
 
         {isAdmin ? (
-          <AdminStatsGrid stats={stats} />
+          <>
+            <AdminStatsGrid stats={stats} />
+            <LiveLeadsBoard />
+          </>
         ) : (
           <UserQuickActions
             tasksCount={tasks.length}
