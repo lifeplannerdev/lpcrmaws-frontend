@@ -19,7 +19,7 @@ export default function LiveLeadsBoard() {
     onLeadCreated: (data) => {
       setLeads((prev) => {
         if (prev.some(l => l.id === data.lead.id)) return prev;
-        return [data.lead, ...prev].slice(0, 20); // Keep max 20
+        return [data.lead, ...prev].slice(0, 100); // Keep max 100
       });
     },
     onLeadUpdated: (data) => {
@@ -37,7 +37,7 @@ export default function LiveLeadsBoard() {
       setLoading(true);
       try {
         let token = accessToken;
-        const makeReq = (t) => fetch(`${API_BASE_URL}/leads/?page_size=20`, {
+        const makeReq = (t) => fetch(`${API_BASE_URL}/leads/?daily_agenda=true&page_size=100`, {
           headers: { Authorization: `Bearer ${t}` }
         });
         let res = await makeReq(token);
@@ -51,7 +51,7 @@ export default function LiveLeadsBoard() {
           const data = await res.json();
           // Adjust based on your paginated response structure (usually data.results.leads)
           const results = data.results?.leads || data.results || (Array.isArray(data) ? data : []);
-          setLeads(results.slice(0, 20));
+          setLeads(results.slice(0, 100));
         } else if (isMounted) {
           setError('Failed to load recent leads');
         }
