@@ -418,21 +418,65 @@ const ChatPage = () => {
 
   useEffect(() => { loadConversations(); fetchEmployees(); }, []);
 
+  const markMessagesDelivered = async (convId) => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      await fetch(`${API_BASE_URL}/delivered/`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ conversation_id: convId }),
+      });
+    } catch {}
+  };
+
+  const markMessagesRead = async (convId) => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+      await fetch(`${API_BASE_URL}/read/`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ conversation_id: convId }),
+      });
+    } catch {}
+  };
+
   useEffect(() => {
     if (!selectedConv) return;
     loadMessages(selectedConv.id);
     setShowGroupInfo(false);
+    markMessagesRead(selectedConv.id);
   }, [selectedConv]);
 
   const handleNewMessage = useCallback((data) => {
     setMessages((prev) => {
       const convMsgs = prev[selectedConv.id] || [];
+      let foundOptimistic = false;
+      const nextMsgs = convMsgs.map(m => {
+        if (m.client_id && m.client_id === data.client_id) {
+          foundOptimistic = true;
+          return data;
+        }
+        return m;
+      });
+      if (foundOptimistic) {
+        return { ...prev, [selectedConv.id]: nextMsgs };
+      }
       if (convMsgs.some((m) => m.id === data.id)) return prev;
       return {
         ...prev,
         [selectedConv.id]: [...convMsgs, data],
       };
     });
+
+    // Notify delivered if we are not the sender
+    if (data.sender?.id !== user?.id) {
+      markMessagesDelivered(selectedConv.id);
+      if (selectedConv) markMessagesRead(selectedConv.id);
+    }
 
     // Update sidebar last message
     setConversations((prev) =>
@@ -442,9 +486,26 @@ const ChatPage = () => {
           : c
       )
     );
-  }, [selectedConv]);
+  }, [selectedConv, user]);
 
-  useChatChannel(selectedConv?.id, handleNewMessage);
+  useChatChannel(
+    selectedConv?.id, 
+    handleNewMessage,
+    (data) => { // onMessagesDelivered
+      setMessages(prev => {
+        const convMsgs = prev[data.conversation_id] || [];
+        const next = convMsgs.map(m => data.message_ids.includes(m.id) ? { ...m, delivered_to: [...(m.delivered_to || []), data.user_id] } : m);
+        return { ...prev, [data.conversation_id]: next };
+      });
+    },
+    (data) => { // onMessagesRead
+      setMessages(prev => {
+        const convMsgs = prev[data.conversation_id] || [];
+        const next = convMsgs.map(m => data.message_ids.includes(m.id) ? { ...m, read_by: [...(m.read_by || []), data.user_id] } : m);
+        return { ...prev, [data.conversation_id]: next };
+      });
+    }
+  );
 
   useUserChannel({
     onNewConversation: () => {
@@ -489,15 +550,19 @@ const ChatPage = () => {
     setAttachedFile(null);
     setSending(true);
 
+    const clientId = `opt-${Date.now()}`;
     // Optimistic message (shows immediately)
     const optimistic = {
-      id: `opt-${Date.now()}`,
+      id: clientId,
+      client_id: clientId,
       sender: { id: user?.id, username: user?.username },
       text: text || null,
       file: fileToSend ? URL.createObjectURL(fileToSend) : null,
       _optimisticFilename: fileToSend?.name,
       created_at: new Date().toISOString(),
       optimistic: true,
+      delivered_to: [],
+      read_by: [],
     };
     setMessages(prev => ({ ...prev, [selectedConv.id]: [...(prev[selectedConv.id] || []), optimistic] }));
 
@@ -505,9 +570,9 @@ const ChatPage = () => {
       const token = await getToken();
       if (!token) return;
 
-      // Use FormData so we can attach the file alongside text
       const formData = new FormData();
       formData.append('conversation_id', selectedConv.id);
+      formData.append('client_id', clientId);
       if (text) formData.append('text', text);
       if (fileToSend) formData.append('file', fileToSend);
 
@@ -782,10 +847,23 @@ const ChatPage = () => {
                                   <FilePreview fileUrl={fileUrl} filename={filename} />
                                 )}
                               </div>
-                              <div className={`flex items-center gap-1 mt-1 px-0.5 ${isMe ? 'justify-end' : 'justify-start'}`}>
                                 <span className="text-[10px] text-slate-400">{formatTime(msg.created_at)}</span>
-                                {isMe && !msg.optimistic && <CheckCheck size={12} className="text-indigo-400" />}
-                                {isMe && msg.optimistic && <Check size={12} className="text-slate-400" />}
+                                {isMe && !msg.optimistic && (() => {
+                                  // Determine tick status
+                                  const totalParticipants = selectedConv.participants?.length || 1;
+                                  const requiredAcks = totalParticipants - 1; // Exclude sender
+                                  
+                                  const reads = (msg.read_by || []).filter(uid => uid !== user?.id).length;
+                                  const deliveries = (msg.delivered_to || []).filter(uid => uid !== user?.id).length;
+                                  
+                                  if (requiredAcks > 0 && reads >= requiredAcks) {
+                                    return <CheckCheck size={14} className="text-blue-500" />;
+                                  } else if (requiredAcks > 0 && (deliveries >= requiredAcks || reads > 0)) {
+                                    return <CheckCheck size={14} className="text-slate-400" />;
+                                  }
+                                  return <Check size={14} className="text-slate-400" />;
+                                })()}
+                                {isMe && msg.optimistic && <Check size={14} className="text-slate-300 opacity-60" />}
                               </div>
                             </div>
                           </div>

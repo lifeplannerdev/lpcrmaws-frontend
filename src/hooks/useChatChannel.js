@@ -3,7 +3,9 @@ import { usePusher } from '../context/PusherContext';
 
 // Call this inside your chat page/component
 // onNewMessage: (messageData) => void
-export const useChatChannel = (conversationId, onNewMessage) => {
+// onMessagesDelivered: (data) => void
+// onMessagesRead: (data) => void
+export const useChatChannel = (conversationId, onNewMessage, onMessagesDelivered, onMessagesRead) => {
   const { pusher, isReady } = usePusher();
   const channelRef = useRef(null);
 
@@ -15,6 +17,14 @@ export const useChatChannel = (conversationId, onNewMessage) => {
 
     channelRef.current.bind('new-message', (data) => {
       onNewMessage?.(data);
+    });
+
+    channelRef.current.bind('messages-delivered', (data) => {
+      onMessagesDelivered?.(data);
+    });
+
+    channelRef.current.bind('messages-read', (data) => {
+      onMessagesRead?.(data);
     });
 
     return () => {
