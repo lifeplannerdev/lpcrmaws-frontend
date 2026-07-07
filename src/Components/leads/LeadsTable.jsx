@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '../../context/PermissionsContext';
 import { useVoxbayCall } from '../../hooks/useVoxbayCall';
 
-const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
+const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId, selectedLeads = [], setSelectedLeads = () => {} }) => {
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   const { initiateCall, callingNumber } = useVoxbayCall();
@@ -18,6 +18,23 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
 
   const handleCallHistory = (id) =>
     navigate(`/leads/${id}`, { state: { scrollTo: 'call-history' } });
+
+  const toggleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedLeads(leads.map(l => l.id));
+    } else {
+      setSelectedLeads([]);
+    }
+  };
+
+  const toggleSelectLead = (e, id) => {
+    e.stopPropagation();
+    if (e.target.checked) {
+      setSelectedLeads(prev => [...prev, id]);
+    } else {
+      setSelectedLeads(prev => prev.filter(lId => lId !== id));
+    }
+  };
 
   if (leads.length === 0) {
     return (
@@ -39,6 +56,14 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
         <table className="w-full">
           <thead className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-gray-200">
             <tr>
+              <th className="px-4 py-4 text-left w-10">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  checked={leads.length > 0 && selectedLeads.length === leads.length}
+                  onChange={toggleSelectAll}
+                />
+              </th>
               {[
                 { label: 'Lead Info', className: 'min-w-[220px] w-1/4' },
                 { label: 'Contact', className: 'min-w-[250px] w-1/4' },
@@ -66,6 +91,14 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
                 }`}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
+                <td className="px-4 py-5 align-top" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-1"
+                    checked={selectedLeads.includes(lead.id)}
+                    onChange={(e) => toggleSelectLead(e, lead.id)}
+                  />
+                </td>
                 {/* Lead Info */}
                 <td className="px-4 py-5 align-top">
                   <p className="font-bold text-gray-900 text-base group-hover:text-blue-700 transition-colors line-clamp-2">{lead.name}</p>
@@ -178,6 +211,17 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId }) => {
                         <UserCheck size={12} />
                         Handler: {lead.current_handler.first_name}
                       </span>
+                    )}
+                    {lead.assignment_source && (
+                      <div className="mt-1">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                          lead.assignment_source.includes('Admin') ? 'bg-blue-100 text-blue-700' :
+                          lead.assignment_source.includes('Missed') ? 'bg-red-100 text-red-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {lead.assignment_source}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </td>

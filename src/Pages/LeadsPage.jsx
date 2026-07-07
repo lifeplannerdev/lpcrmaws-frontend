@@ -10,10 +10,10 @@ import SpreadsheetView from '../Components/leads/SpreadsheetView';
 import LeadSidePanel from '../Components/leads/LeadSidePanel';
 import { Users, UserPlus, CheckCircle, TrendingUp, LayoutList, LayoutGrid, FileSpreadsheet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useLeadsChannel } from '../hooks/useLeadsChannel';
 import Pagination from '../Components/common/Pagination';
 import CompanySwitcher from '../Components/common/CompanySwitcher';
 import { Can } from '../context/PermissionsContext';
-
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const PAGE_SIZE = 20; 
@@ -64,7 +64,27 @@ export default function LeadsPage() {
   const tokenRef = useRef(accessToken);
   useEffect(() => { tokenRef.current = accessToken; }, [accessToken]);
 
+  // Real-time Push Updates
+  useLeadsChannel({
+    onLeadCreated: (data) => {
+      setLeads((prev) => {
+        // Prevent duplicates
+        if (prev.some(l => l.id === data.lead.id)) return prev;
+        return [data.lead, ...prev];
+      });
+      setTotalCount((prev) => prev + 1);
+    },
+    onLeadUpdated: (data) => {
+      setLeads((prev) => prev.map(l => l.id === data.lead.id ? { ...l, ...data.lead } : l));
+    },
+    onLeadDeleted: (data) => {
+      setLeads((prev) => prev.filter(l => l.id !== data.lead_id));
+      setTotalCount((prev) => prev - 1);
+    }
+  });
+
   const [leads, setLeads]                     = useState([]);
+  const [selectedLeads, setSelectedLeads]     = useState([]);
   const [stats, setStats]                     = useState({ new: 0, qualified: 0, converted: 0 });
   const [searchTerm, setSearchTerm]           = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -82,6 +102,7 @@ export default function LeadsPage() {
   const [page, setPage]                       = useState(1);
   const [totalPages, setTotalPages]           = useState(1);
   const [totalCount, setTotalCount]           = useState(0);
+  const [showReassignModal, setShowReassignModal] = useState(false);
 
   // Debounce search — wait 400ms after user stops typing
   const debounceTimer = useRef(null);
@@ -391,12 +412,27 @@ export default function LeadsPage() {
               )}
 
               {viewMode === 'list' ? (
-                <LeadsTable
-                  leads={leads}
-                  statusColors={statusColors}
-                  onDeleteLead={handleDeleteLead}
-                  activeLeadId={leadId}
-                />
+                <>
+                  {selectedLeads.length > 0 && (
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-4 flex items-center justify-between shadow-sm">
+                      <span className="text-indigo-800 font-medium">{selectedLeads.length} leads selected</span>
+                      <button
+                        onClick={() => setShowReassignModal(true)}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-md text-sm font-semibold transition-colors"
+                      >
+                        Bulk Reassign
+                      </button>
+                    </div>
+                  )}
+                  <LeadsTable
+                    leads={leads}
+                    statusColors={statusColors}
+                    onDeleteLead={handleDeleteLead}
+                    activeLeadId={leadId}
+                    selectedLeads={selectedLeads}
+                    setSelectedLeads={setSelectedLeads}
+                  />
+                </>
               ) : viewMode === 'spreadsheet' ? (
                 <div className="h-[75vh] w-full border border-gray-200 rounded-xl overflow-hidden bg-white flex flex-col shadow-sm">
                   <SpreadsheetView leads={leads} authFetch={authFetch} onUpdateLead={(updatedLead) => {
@@ -463,6 +499,57 @@ export default function LeadsPage() {
           </div>
         )}
       </div>
+
+      {showReassignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Bulk Reassign Leads</h3>
+            <p className="text-sm text-gray-600 mb-4">Select an agent to reassign {selectedLeads.length} leads to.</p>
+            <select
+              id="reassign-agent"
+              className="w-full border border-gray-300 rounded-lg p-2.5 mb-6"
+            >
+              <option value="">Select an Agent</option>
+              {staffMembers.map(staff => (
+                <option key={staff.id} value={staff.id}>{staff.first_name} {staff.last_name}</option>
+              ))}
+            </select>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowReassignModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const agentId = document.getElementById('reassign-agent').value;
+                  if (!agentId) return alert('Please select an agent');
+                  try {
+                    const res = await authFetch(`${API_BASE_URL}/leads/assign/bulk/`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ lead_ids: selectedLeads, assigned_to_id: agentId, notes: 'Bulk Reassigned' })
+                    });
+                    if (!res.ok) throw new Error('Failed to reassign');
+                    alert('Leads reassigned successfully');
+                    setShowReassignModal(false);
+                    setSelectedLeads([]);
+                    window.location.reload();
+                  } catch (e) {
+                    console.error(e);
+                    alert('Failed to reassign leads');
+                  }
+                }}
+                className="px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+              >
+                Confirm Reassign
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
