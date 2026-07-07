@@ -28,6 +28,8 @@ export default function StudentsPage() {
   const debounceTimer = useRef(null);
 
   const [filterCourse, setFilterCourse] = useState('all');
+  const [filterAcademicBatch, setFilterAcademicBatch] = useState('all');
+  const [academicBatches, setAcademicBatches] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterBranch, setFilterBranch] = useState('all');
   const [branches, setBranches] = useState([]);
@@ -68,9 +70,14 @@ export default function StudentsPage() {
         params.search = debouncedSearch;
       }
 
-      // Add batch filter if not "all"
+      // Add batch (grade) filter if not "all"
       if (filterCourse !== "all") {
         params.batch = filterCourse;
+      }
+
+      // Add academic_batch filter if not "all"
+      if (filterAcademicBatch !== "all") {
+        params.academic_batch = filterAcademicBatch;
       }
 
       // Add status filter if not "all" - convert to uppercase
@@ -102,7 +109,7 @@ export default function StudentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, refreshAccessToken, debouncedSearch, filterCourse, filterStatus, filterBranch, page]);
+  }, [accessToken, refreshAccessToken, debouncedSearch, filterCourse, filterAcademicBatch, filterStatus, filterBranch, page]);
 
   useEffect(() => {
     // Fetch branches
@@ -118,8 +125,23 @@ export default function StudentsPage() {
         console.error('Failed to load branches', err);
       }
     };
+
+    const fetchAcademicBatches = async () => {
+      try {
+        let token = accessToken;
+        if (!token) return;
+        const res = await axios.get(`${API_BASE_URL}/academic-batches/`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setAcademicBatches(res.data || []);
+      } catch (err) {
+        console.error('Failed to load academic batches', err);
+      }
+    };
+
     if (accessToken) {
       fetchBranches();
+      fetchAcademicBatches();
     }
     fetchStudents();
   }, [fetchStudents, accessToken]);
@@ -226,9 +248,12 @@ export default function StudentsPage() {
           setSearchTerm={setSearchTerm}
           filterCourse={filterCourse}
           setFilterCourse={setFilterCourse}
+          filterAcademicBatch={filterAcademicBatch}
+          setFilterAcademicBatch={setFilterAcademicBatch}
           filterBranch={filterBranch}
           setFilterBranch={setFilterBranch}
           courses={BATCH_CHOICES} 
+          academicBatches={academicBatches}
           branches={branches}
         />
 
