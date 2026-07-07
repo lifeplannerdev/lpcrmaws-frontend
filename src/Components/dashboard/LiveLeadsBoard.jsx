@@ -49,8 +49,8 @@ export default function LiveLeadsBoard() {
 
         if (res.ok && isMounted) {
           const data = await res.json();
-          // Adjust based on your paginated response structure (usually data.results)
-          const results = data.results || (Array.isArray(data) ? data : []);
+          // Adjust based on your paginated response structure (usually data.results.leads)
+          const results = data.results?.leads || data.results || (Array.isArray(data) ? data : []);
           setLeads(results.slice(0, 8));
         } else if (isMounted) {
           setError('Failed to load recent leads');
@@ -114,11 +114,12 @@ export default function LiveLeadsBoard() {
 
       {/* Grid Header (Like a Spreadsheet) */}
       <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50/50 border-b border-gray-100 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-        <div className="col-span-3">Lead Info</div>
-        <div className="col-span-3">Contact</div>
+        <div className="col-span-2">Lead Info</div>
+        <div className="col-span-2">Contact</div>
         <div className="col-span-2">Status</div>
+        <div className="col-span-3">Remarks</div>
         <div className="col-span-2">Handler</div>
-        <div className="col-span-2 text-right">Time</div>
+        <div className="col-span-1 text-right">Time</div>
       </div>
 
       {/* Rows */}
@@ -140,7 +141,7 @@ export default function LiveLeadsBoard() {
               >
                 
                 {/* Lead Name & Source */}
-                <div className="col-span-3">
+                <div className="col-span-2">
                   <div className="font-bold text-gray-900 text-sm truncate flex items-center">
                     {lead.name}
                     {getSourceBadge(lead)}
@@ -151,10 +152,12 @@ export default function LiveLeadsBoard() {
                 </div>
 
                 {/* Contact (Phone / Email) */}
-                <div className="col-span-3">
-                  <div className="flex items-center gap-1.5 text-gray-700 text-sm font-semibold">
-                    <Phone size={12} className="text-gray-400" />
-                    {lead.phone || 'No phone'}
+                <div className="col-span-2">
+                  <div className="flex flex-col justify-center">
+                    <div className="flex items-center gap-1.5 text-gray-700 text-sm font-semibold">
+                      <Phone size={12} className="text-gray-400 shrink-0" />
+                      <span className="truncate">{lead.phone || 'No phone'}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -163,6 +166,13 @@ export default function LiveLeadsBoard() {
                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusColor(lead.status)} inline-block truncate max-w-full text-center`}>
                     {(lead.status || 'NEW').replace('_', ' ')}
                   </span>
+                </div>
+
+                {/* Remarks */}
+                <div className="col-span-3">
+                  <p className="text-xs text-gray-600 truncate" title={lead.remarks || ''}>
+                    {lead.remarks || <span className="text-gray-300 italic">No remarks</span>}
+                  </p>
                 </div>
 
                 {/* Handler */}
@@ -176,12 +186,9 @@ export default function LiveLeadsBoard() {
                 </div>
 
                 {/* Time */}
-                <div className="col-span-2 text-right flex flex-col items-end justify-center">
+                <div className="col-span-1 text-right flex flex-col items-end justify-center">
                   <div className="text-xs font-bold text-gray-600 group-hover:text-indigo-600 transition-colors">
                     {lead.created_at ? format(parseISO(lead.created_at), 'h:mm a') : '—'}
-                  </div>
-                  <div className="text-[10px] text-gray-400 font-semibold mt-0.5">
-                    {lead.created_at ? format(parseISO(lead.created_at), 'MMM d, yyyy') : ''}
                   </div>
                 </div>
 
