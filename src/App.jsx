@@ -40,6 +40,7 @@ import FeesManagementPage from "./Pages/FeesManagementPage.jsx";
 import RoleManagementPage from "./Pages/RoleManagementPage.jsx";
 import CredentialsVault from "./Pages/CredentialsVault.jsx";
 import ProcessingStudentsPage from "./Pages/ProcessingStudentsPage.jsx";
+import FeedsPage from "./Pages/FeedsPage.jsx";
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -72,6 +73,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<ProtectedRoute><DashboardOverview /></ProtectedRoute>} />
+        <Route path="/feeds" element={<ProtectedRoute><FeedsPage /></ProtectedRoute>} />
 
         <Route path="/leads" element={<PermissionRoute resources={['leads']}><LeadsPage /></PermissionRoute>} />
         <Route path="/leads/:leadId" element={<PermissionRoute resources={['leads']}><LeadsPage /></PermissionRoute>} />

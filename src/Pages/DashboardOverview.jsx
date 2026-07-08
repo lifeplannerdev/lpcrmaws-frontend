@@ -13,6 +13,7 @@ import ErrorAlert from '../Components/dashboard/ErrorAlert';
 import LoadingSpinner from '../Components/dashboard/LoadingSpinner';
 import RecentActivities from '../Components/dashboard/RecentActivities';
 import LiveLeadsBoard from '../Components/dashboard/LiveLeadsBoard';
+import FeedsWidget from '../Components/dashboard/FeedsWidget';
 import { formatTimeAgo, formatTaskTime, getPriorityColor } from '../Components/utils/dashboardHelpers';
 import { LayoutDashboard, Activity } from 'lucide-react';
 
@@ -180,10 +181,13 @@ export default function DashboardOverview() {
               />
             </div>
             <div className="lg:col-span-1">
-             <TodayFollowUps
+              <TodayFollowUps
                 followUps={todayFollowUps}
                 onViewAll={() => navigate('/followups')}
               />
+            </div>
+            <div className="lg:col-span-3">
+              <FeedsWidget />
             </div>
           </div>
         )}

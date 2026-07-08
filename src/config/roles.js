@@ -35,6 +35,7 @@ export const masterNavigation = [
   { id: "roles", label: "Role Management", icon: ShieldAlert, path: "/roles", requiredResource: "staff", requiredPermissions: ["staff:edit_any", "staff:edit_tenant"] },
   { id: "credentials", label: "Credentials Vault", icon: Key, path: "/credentials", requiredResource: "credentials" },
   { id: "call", label: "Voxbay", icon: PhoneCall, path: "/call-analytics", requiredResource: "voxbay" },
+  { id: "feeds", label: "Feeds", icon: UserCheck, path: "/feeds" },
 ];
 
 export const getFilteredMenu = (hasAnyPermission, hasPermission) => {
