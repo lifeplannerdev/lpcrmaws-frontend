@@ -41,7 +41,8 @@ export default function FeedsPage() {
       });
       if (!res.ok) throw new Error('Failed to fetch feeds');
       const data = await res.json();
-      setPosts(data);
+      const postsArray = data.results || data || [];
+      setPosts(Array.isArray(postsArray) ? postsArray : []);
     } catch (err) {
       setError(err.message);
     } finally {

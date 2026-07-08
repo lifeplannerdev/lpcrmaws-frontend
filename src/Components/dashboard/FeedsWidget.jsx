@@ -18,7 +18,8 @@ export default function FeedsWidget() {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
         const data = await res.json();
-        setPosts(data.slice(0, 3)); // Only show top 3 on dashboard
+        const postsArray = data.results || data || [];
+        setPosts(Array.isArray(postsArray) ? postsArray.slice(0, 3) : []); // Only show top 3 on dashboard
       } catch (error) {
         console.error('Failed to load feeds:', error);
       } finally {
