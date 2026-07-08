@@ -422,9 +422,9 @@ function FeedPostCard({ post, canDelete, onDelete, getToken, currentUser }) {
       {post.media_type !== 'none' && post.media && (
         <div className="w-full bg-gray-100 flex justify-center max-h-[600px] overflow-hidden">
           {post.media_type === 'image' ? (
-            <img src={`${API_BASE_URL.replace('/api', '')}${post.media}`} alt="Post media" className="max-w-full object-contain" />
+            <img src={post.media.startsWith('http') ? post.media : `${API_BASE_URL.replace('/api', '')}${post.media}`} alt="Post media" className="max-w-full object-contain" />
           ) : (
-            <video src={`${API_BASE_URL.replace('/api', '')}${post.media}`} controls className="max-w-full object-contain" />
+            <video src={post.media.startsWith('http') ? post.media : `${API_BASE_URL.replace('/api', '')}${post.media}`} controls className="max-w-full object-contain" />
           )}
         </div>
       )}
