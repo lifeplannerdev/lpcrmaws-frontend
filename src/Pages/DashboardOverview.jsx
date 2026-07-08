@@ -133,14 +133,22 @@ export default function DashboardOverview() {
         {isAdmin ? (
           <>
             <AdminStatsGrid stats={stats} />
+            <div className="mt-6 mb-6">
+              <FeedsWidget />
+            </div>
             <LiveLeadsBoard />
           </>
         ) : (
-          <UserQuickActions
-            tasksCount={tasks.length}
-            upcomingCount={upcomingTasks.length}
-            followUpsCount={todayFollowUps.length}
-          />
+          <>
+            <UserQuickActions
+              tasksCount={tasks.length}
+              upcomingCount={upcomingTasks.length}
+              followUpsCount={todayFollowUps.length}
+            />
+            <div className="mt-6 mb-6">
+              <FeedsWidget />
+            </div>
+          </>
         )}
 
         {/* Tab bar */}
@@ -185,9 +193,6 @@ export default function DashboardOverview() {
                 followUps={todayFollowUps}
                 onViewAll={() => navigate('/followups')}
               />
-            </div>
-            <div className="lg:col-span-3">
-              <FeedsWidget />
             </div>
           </div>
         )}
