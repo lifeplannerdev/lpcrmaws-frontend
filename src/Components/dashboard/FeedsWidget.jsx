@@ -150,17 +150,18 @@ export default function FeedsWidget() {
                     <p className="text-sm text-gray-600 line-clamp-2 mt-0.5">{post.content}</p>
                   )}
                   {post.media_type !== 'none' && post.media ? (
-                    <div className="mt-2 rounded-xl overflow-hidden max-h-40 bg-gray-100 border border-gray-200 shadow-sm">
+                    <div className="mt-2 rounded-xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm">
                       {post.media_type === 'image' ? (
                         <img 
                           src={post.media.startsWith('http') ? post.media : `${API_BASE_URL.replace('/api', '')}${post.media}`} 
                           alt="Post media" 
-                          className="w-full h-full object-cover" 
+                          className="w-full h-auto" 
                         />
                       ) : (
                         <video 
                           src={post.media.startsWith('http') ? post.media : `${API_BASE_URL.replace('/api', '')}${post.media}`} 
-                          className="w-full h-full object-cover" 
+                          className="w-full h-auto" 
+                          controls
                         />
                       )}
                     </div>
