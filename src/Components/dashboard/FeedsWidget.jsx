@@ -1,21 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Heart, MessageCircle, MoreHorizontal } from 'lucide-react';
+import { getPusherClient } from '../../lib/pusher';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function FeedsWidget() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { accessToken } = useAuth();
+  const { accessToken, refreshAccessToken } = useAuth();
   const navigate = useNavigate();
+
+  const getToken = useCallback(async () => {
+    return accessToken || await refreshAccessToken();
+  }, [accessToken, refreshAccessToken]);
 
   useEffect(() => {
     const fetchPosts = async () => {
       try {
+        const token = await getToken();
         const res = await fetch(`${API_BASE_URL}/feeds/`, {
-          headers: { Authorization: `Bearer ${accessToken}` }
+          headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
         const postsArray = data.results || data || [];
@@ -26,10 +32,68 @@ export default function FeedsWidget() {
         setLoading(false);
       }
     };
+
     if (accessToken) {
       fetchPosts();
     }
-  }, [accessToken]);
+
+    const setupPusher = async () => {
+      const pusherClient = getPusherClient(getToken);
+      const channel = pusherClient.subscribe('feeds');
+
+      channel.bind('new_post', (newPost) => {
+        setPosts((prev) => [newPost, ...prev].slice(0, 3));
+      });
+
+      channel.bind('delete_post', (data) => {
+        setPosts((prev) => prev.filter(p => p.id !== data.id));
+      });
+
+      channel.bind('new_reaction', (reactionData) => {
+        setPosts((prev) => prev.map(p => {
+          if (p.id === reactionData.post) {
+            return { ...p, reaction_count: (p.reaction_count || 0) + 1 };
+          }
+          return p;
+        }));
+      });
+
+      channel.bind('remove_reaction', (data) => {
+        setPosts((prev) => prev.map(p => {
+          if (p.id === data.post_id) {
+            return { ...p, reaction_count: Math.max(0, (p.reaction_count || 0) - 1) };
+          }
+          return p;
+        }));
+      });
+
+      channel.bind('new_comment', (commentData) => {
+        setPosts((prev) => prev.map(p => {
+          if (p.id === commentData.post) {
+            return { ...p, comment_count: (p.comment_count || 0) + 1 };
+          }
+          return p;
+        }));
+      });
+      
+      channel.bind('delete_comment', (data) => {
+        setPosts((prev) => prev.map(p => {
+          if (p.id === data.post_id) {
+            return { ...p, comment_count: Math.max(0, (p.comment_count || 0) - 1) };
+          }
+          return p;
+        }));
+      });
+    };
+
+    if (accessToken) {
+      setupPusher();
+    }
+
+    return () => {
+      // Cleanup if needed, but getPusherClient caches the connection
+    };
+  }, [accessToken, getToken]);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex flex-col h-full">
