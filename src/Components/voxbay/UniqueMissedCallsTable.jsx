@@ -3,11 +3,32 @@ import { useAuth } from '../../context/AuthContext';
 import { PhoneMissed, Check, Clock, UserPlus } from 'lucide-react';
 
 function buildDateParams(dateRange) {
+  if (dateRange && dateRange.startsWith('custom|')) {
+    const parts = dateRange.split('|');
+    if (parts.length === 3 && parts[1] && parts[2]) {
+      const from = new Date(parts[1]);
+      from.setHours(0, 0, 0, 0);
+      const to = new Date(parts[2]);
+      to.setHours(23, 59, 59, 999);
+      return { from: from.toISOString(), to: to.toISOString() };
+    }
+  }
+
   const now = new Date(), from = new Date();
-  if (dateRange === 'today')  from.setHours(0, 0, 0, 0);
-  if (dateRange === '7days')  from.setDate(now.getDate() - 7);
-  if (dateRange === '30days') from.setDate(now.getDate() - 30);
-  if (dateRange === '90days') from.setDate(now.getDate() - 90);
+  if (dateRange === 'today') {
+    from.setHours(0, 0, 0, 0);
+  } else if (dateRange === 'yesterday') {
+    from.setDate(now.getDate() - 1);
+    from.setHours(0, 0, 0, 0);
+    now.setDate(now.getDate() - 1);
+    now.setHours(23, 59, 59, 999);
+  } else if (dateRange === '7days') {
+    from.setDate(now.getDate() - 7);
+  } else if (dateRange === '30days') {
+    from.setDate(now.getDate() - 30);
+  } else if (dateRange === '90days') {
+    from.setDate(now.getDate() - 90);
+  }
   return { from: from.toISOString(), to: now.toISOString() };
 }
 

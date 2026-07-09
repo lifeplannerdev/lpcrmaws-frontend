@@ -17,11 +17,32 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function buildDateParams(dateRange) {
+  if (dateRange && dateRange.startsWith('custom|')) {
+    const parts = dateRange.split('|');
+    if (parts.length === 3 && parts[1] && parts[2]) {
+      const from = new Date(parts[1]);
+      from.setHours(0, 0, 0, 0);
+      const to = new Date(parts[2]);
+      to.setHours(23, 59, 59, 999);
+      return { from: from.toISOString(), to: to.toISOString() };
+    }
+  }
+
   const now = new Date(), from = new Date();
-  if (dateRange === 'today')  from.setHours(0, 0, 0, 0);
-  if (dateRange === '7days')  from.setDate(now.getDate() - 7);
-  if (dateRange === '30days') from.setDate(now.getDate() - 30);
-  if (dateRange === '90days') from.setDate(now.getDate() - 90);
+  if (dateRange === 'today') {
+    from.setHours(0, 0, 0, 0);
+  } else if (dateRange === 'yesterday') {
+    from.setDate(now.getDate() - 1);
+    from.setHours(0, 0, 0, 0);
+    now.setDate(now.getDate() - 1);
+    now.setHours(23, 59, 59, 999);
+  } else if (dateRange === '7days') {
+    from.setDate(now.getDate() - 7);
+  } else if (dateRange === '30days') {
+    from.setDate(now.getDate() - 30);
+  } else if (dateRange === '90days') {
+    from.setDate(now.getDate() - 90);
+  }
   return { from: from.toISOString(), to: now.toISOString() };
 }
 
@@ -440,6 +461,8 @@ export default function CallAnalyticsPage() {
 
   const agentMap = useAgentMap(accessToken);
   const [dateRange,   setDateRange]   = useState('today');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd,   setCustomEnd]   = useState('');
   const [callType,    setCallType]    = useState('all');
 
   const [activeTab, setActiveTab] = useState('Missed Call Report');
@@ -477,7 +500,7 @@ export default function CallAnalyticsPage() {
     const csv = [headers,...rows].map(r => r.map(v => `"${v||''}"`).join(',')).join('\n');
     Object.assign(document.createElement('a'), {
       href: URL.createObjectURL(new Blob([csv], { type:'text/csv' })),
-      download: `call-logs-${dateRange}.csv`,
+      download: `call-logs-${dateRange.replace(/\|/g, '-')}.csv`,
     }).click();
   };
 
@@ -537,13 +560,54 @@ export default function CallAnalyticsPage() {
               <option value="outgoing">Outgoing</option>
             </select>
 
-            <select value={dateRange} onChange={e => setDateRange(e.target.value)}
-              className="px-3 py-2 border-2 border-gray-200 rounded-xl text-xs font-bold text-gray-600 bg-white focus:outline-none focus:border-indigo-400">
-              <option value="today">Today</option>
-              <option value="7days">Last 7 Days</option>
-              <option value="30days">Last 30 Days</option>
-              <option value="90days">Last 90 Days</option>
-            </select>
+            <div className="flex items-center gap-2">
+              <select 
+                value={dateRange.startsWith('custom') ? 'custom' : dateRange} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val !== 'custom') {
+                    setDateRange(val);
+                  } else {
+                    if (customStart && customEnd) {
+                      setDateRange(`custom|${customStart}|${customEnd}`);
+                    } else {
+                      setDateRange('custom||');
+                    }
+                  }
+                }}
+                className="px-3 py-2 border-2 border-gray-200 rounded-xl text-xs font-bold text-gray-600 bg-white focus:outline-none focus:border-indigo-400">
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="7days">Last 7 Days</option>
+                <option value="30days">Last 30 Days</option>
+                <option value="90days">Last 90 Days</option>
+                <option value="custom">Custom Range</option>
+              </select>
+
+              {dateRange.startsWith('custom') && (
+                <div className="flex items-center gap-2 bg-white border-2 border-gray-200 rounded-xl px-2 py-1">
+                  <input 
+                    type="date" 
+                    value={customStart}
+                    onChange={e => {
+                      setCustomStart(e.target.value);
+                      if (e.target.value && customEnd) setDateRange(`custom|${e.target.value}|${customEnd}`);
+                    }}
+                    className="text-xs font-semibold text-gray-600 outline-none bg-transparent cursor-pointer w-28"
+                  />
+                  <span className="text-gray-400 text-xs font-bold">to</span>
+                  <input 
+                    type="date" 
+                    value={customEnd}
+                    onChange={e => {
+                      setCustomEnd(e.target.value);
+                      if (customStart && e.target.value) setDateRange(`custom|${customStart}|${e.target.value}`);
+                    }}
+                    className="text-xs font-semibold text-gray-600 outline-none bg-transparent cursor-pointer w-28"
+                  />
+                </div>
+              )}
+            </div>
 
             <button onClick={handleExport}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md">
