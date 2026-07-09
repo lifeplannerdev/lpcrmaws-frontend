@@ -96,7 +96,7 @@ export default function FeedsWidget() {
   }, [accessToken, getToken]);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex flex-col h-full">
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex flex-col transition-all duration-300">
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
           <span className="bg-gradient-to-r from-pink-500 to-indigo-500 w-2 h-6 rounded-full inline-block"></span>
@@ -110,7 +110,7 @@ export default function FeedsWidget() {
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col gap-4 overflow-y-auto pr-1">
+      <div className="flex flex-col gap-4 max-h-[500px] overflow-y-auto pr-1">
         {loading ? (
           <div className="animate-pulse flex flex-col gap-4">
             {[1, 2, 3].map(i => (
@@ -124,13 +124,13 @@ export default function FeedsWidget() {
             ))}
           </div>
         ) : posts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500 py-6">
+          <div className="flex flex-col items-center justify-center py-6 text-gray-500">
             <MessageCircle size={32} className="text-gray-300 mb-2" />
             <p className="text-sm">No feeds yet.</p>
           </div>
         ) : (
           posts.map(post => (
-            <div key={post.id} className="group relative p-3 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 cursor-pointer" onClick={() => navigate('/feeds')}>
+            <div key={post.id} className="group relative p-3 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 cursor-pointer animate-in fade-in slide-in-from-bottom-2 duration-300" onClick={() => navigate('/feeds')}>
               <div className="flex gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-500 to-yellow-500 p-[2px] shrink-0">
                   <div className="w-full h-full rounded-full border-2 border-white bg-white overflow-hidden flex items-center justify-center font-bold text-gray-600 text-sm">
@@ -149,7 +149,22 @@ export default function FeedsWidget() {
                   {post.content && (
                     <p className="text-sm text-gray-600 line-clamp-2 mt-0.5">{post.content}</p>
                   )}
-                  {post.media_type !== 'none' && (
+                  {post.media_type !== 'none' && post.media ? (
+                    <div className="mt-2 rounded-xl overflow-hidden max-h-40 bg-gray-100 border border-gray-200 shadow-sm">
+                      {post.media_type === 'image' ? (
+                        <img 
+                          src={post.media.startsWith('http') ? post.media : `${API_BASE_URL.replace('/api', '')}${post.media}`} 
+                          alt="Post media" 
+                          className="w-full h-full object-cover" 
+                        />
+                      ) : (
+                        <video 
+                          src={post.media.startsWith('http') ? post.media : `${API_BASE_URL.replace('/api', '')}${post.media}`} 
+                          className="w-full h-full object-cover" 
+                        />
+                      )}
+                    </div>
+                  ) : post.media_type !== 'none' && (
                     <div className="mt-2 text-xs font-medium text-indigo-500 flex items-center gap-1">
                       {post.media_type === 'video' ? '🎥 Video Post' : '🖼️ Image Post'}
                     </div>
