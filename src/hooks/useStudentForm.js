@@ -196,7 +196,7 @@ export function useStudentForm(studentId = null, sourceLeadId = null) {
       let token = accessToken || await refreshAccessToken();
       if (!token) return;
 
-      const res = await axios.get(`${API_BASE_URL}/trainers/academic-batches/`, {
+      const res = await axios.get(`${API_BASE_URL}/academic-batches/`, {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true,
       });

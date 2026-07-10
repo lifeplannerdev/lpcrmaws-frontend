@@ -21,6 +21,10 @@ export default function StudentEditPage() {
     trainersLoading,
     academicBatches,
     batchesLoading,
+    branches,
+    branchesLoading,
+    feeTemplates,
+    feeTemplatesLoading,
     loading,
     fetchLoading,
     errors,
@@ -93,9 +97,14 @@ export default function StudentEditPage() {
               trainersLoading={trainersLoading}
               academicBatches={academicBatches}
               batchesLoading={batchesLoading}
+              branches={branches}
+              branchesLoading={branchesLoading}
+              feeTemplates={feeTemplates}
+              feeTemplatesLoading={feeTemplatesLoading}
               onChange={handleChange}
               batchChoices={BATCH_CHOICES}
               statusChoices={STATUS_CHOICES}
+              canEditFees={hasPermission('fees:edit_any') || hasPermission('fees:edit_tenant')}
             />
 
             {canEditStudents && (

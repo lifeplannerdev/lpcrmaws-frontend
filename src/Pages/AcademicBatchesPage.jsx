@@ -38,7 +38,7 @@ export default function AcademicBatchesPage() {
     try {
       setLoading(true);
       let token = accessToken || await refreshAccessToken();
-      const res = await fetch(`${API_BASE_URL}/trainers/academic-batches/`, {
+      const res = await fetch(`${API_BASE_URL}/academic-batches/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -108,8 +108,8 @@ export default function AcademicBatchesPage() {
     try {
       let token = accessToken || await refreshAccessToken();
       const url = editingBatch 
-        ? `${API_BASE_URL}/trainers/academic-batches/${editingBatch.id}/` 
-        : `${API_BASE_URL}/trainers/academic-batches/`;
+        ? `${API_BASE_URL}/academic-batches/${editingBatch.id}/` 
+        : `${API_BASE_URL}/academic-batches/`;
       const method = editingBatch ? 'PUT' : 'POST';
 
       const payload = { ...formData };
@@ -142,7 +142,7 @@ export default function AcademicBatchesPage() {
     if (!window.confirm('Are you sure you want to delete this batch?')) return;
     try {
       let token = accessToken || await refreshAccessToken();
-      const res = await fetch(`${API_BASE_URL}/trainers/academic-batches/${id}/`, {
+      const res = await fetch(`${API_BASE_URL}/academic-batches/${id}/`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
