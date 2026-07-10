@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../Components/layouts/Navbar';
 import FeesAnalyticsWorkspace from './FeesAnalyticsWorkspace';
+import FeesGridWorkspace from './FeesGridWorkspace';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { TrendingUp, RefreshCw, Plus, Receipt, AlertTriangle, Repeat, IndianRupee, Download, CheckCircle, Edit2, Trash2 } from 'lucide-react';
@@ -667,6 +668,7 @@ export default function FeesManagementPage() {
         {/* Top-Level Tabs */}
         <div className="flex space-x-1 bg-white p-1 rounded-2xl shadow-sm border border-gray-100 mb-6 overflow-x-auto">
           <button onClick={() => setMainTab('accounts')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'accounts' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Accounts & Payments</button>
+          <button onClick={() => setMainTab('grid')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'grid' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Spreadsheet View</button>
           <button onClick={() => setMainTab('pending_attendances')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'pending_attendances' ? 'bg-orange-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Pending Attendances {pendingAttendances.length > 0 && <span className="ml-1 bg-white text-orange-600 px-2 py-0.5 rounded-full text-xs">{pendingAttendances.length}</span>}</button>
           <button onClick={() => setMainTab('all_fees')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'all_fees' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>All Fees</button>
           <button onClick={() => setMainTab('catalog')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'catalog' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Fee Catalog</button>
@@ -676,6 +678,12 @@ export default function FeesManagementPage() {
         {mainTab === 'accounts' && (
           <div className="space-y-6">
 
+          </div>
+        )}
+
+        {mainTab === 'grid' && (
+          <div className="space-y-6">
+            <FeesGridWorkspace />
           </div>
         )}
 
