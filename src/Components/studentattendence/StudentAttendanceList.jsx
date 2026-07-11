@@ -7,6 +7,7 @@ import EmptyState from '../common/EmptyState';
 export default function StudentAttendanceList({ 
   students, 
   attendanceRecords, 
+  approvalRecords,
   onStatusChange, 
   loading,
   selectedStudents,
@@ -65,6 +66,7 @@ export default function StudentAttendanceList({
               key={student.id}
               student={student}
               selectedStatus={attendanceRecords[student.id]}
+              approvalStatus={approvalRecords?.[student.id]}
               onStatusChange={onStatusChange}
               isSelected={selectedStudents.includes(student.id)}
               onToggleSelect={onToggleSelect}

@@ -19,6 +19,7 @@ export default function AttendanceMarkingPage() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [students, setStudents] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState({});
+  const [approvalRecords, setApprovalRecords] = useState({});
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -95,33 +96,41 @@ const fetchAttendance = useCallback(async (studentsList) => {
 
     // Create a map of existing attendance records
     const attendanceMap = {};
+    const approvalMap = {};
     existingAttendance.forEach(record => {
       attendanceMap[record.student] = record.status;
+      approvalMap[record.student] = record.approval_status;
     });
 
     // Initialize records for all students
     const initialRecords = {};
+    const initialApproval = {};
     const studentsToUse = studentsList || students;
     
     studentsToUse.forEach(student => {
-      // Use existing attendance if available, otherwise default to PRESENT
-      initialRecords[student.id] = attendanceMap[student.id] || 'PRESENT';
+      // Use existing attendance if available, otherwise default to ABSENT
+      initialRecords[student.id] = attendanceMap[student.id] || 'ABSENT';
+      initialApproval[student.id] = approvalMap[student.id] || null;
     });
 
     setAttendanceRecords(initialRecords);
+    setApprovalRecords(initialApproval);
     
     // Select all students by default
     setSelectedStudents(studentsToUse.map(s => s.id));
 
   } catch (err) {
     console.error('Failed to fetch attendance', err);
-    // If fetch fails, initialize with PRESENT as default
+    // If fetch fails, initialize with ABSENT as default
     const initialRecords = {};
+    const initialApproval = {};
     const studentsToUse = studentsList || students;
     studentsToUse.forEach(student => {
-      initialRecords[student.id] = 'PRESENT';
+      initialRecords[student.id] = 'ABSENT';
+      initialApproval[student.id] = null;
     });
     setAttendanceRecords(initialRecords);
+    setApprovalRecords(initialApproval);
     setSelectedStudents(studentsToUse.map(s => s.id));
   }
 }, [accessToken, refreshAccessToken, selectedDate, students]);
@@ -343,9 +352,10 @@ const fetchAttendance = useCallback(async (studentsList) => {
           statusCounts={statusCounts}
         />
 
-        <StudentAttendanceList
+        <StudentAttendanceList 
           students={students}
           attendanceRecords={attendanceRecords}
+          approvalRecords={approvalRecords}
           onStatusChange={handleStatusChange}
           loading={loading}
           selectedStudents={selectedStudents}

@@ -5,10 +5,14 @@ import { attendenceStatusOptions } from '../utils/attendenceStatusOptions';
 export default function StudentAttendanceRow({
   student,
   selectedStatus,
+  approvalStatus,
   onStatusChange,
   isSelected,
   onToggleSelect
 }) {
+  const isPending = approvalStatus === 'PENDING_FEE_APPROVAL' || 
+    (selectedStatus === 'PRESENT' && student.fee_summary?.status === 'OVERDUE' && student.fee_attendance_policy !== 'FLEXIBLE');
+
   return (
     <div className={`p-4 transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}>
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -48,14 +52,24 @@ export default function StudentAttendanceRow({
         </div>
 
         <div className="flex gap-2 flex-wrap">
-          {attendenceStatusOptions.map((option) => (
-            <StatusButton
-              key={option.value}
-              option={option}
-              isSelected={selectedStatus === option.value}
-              onClick={() => onStatusChange(student.id, option.value)}
-            />
-          ))}
+          {attendenceStatusOptions.map((option) => {
+            // Override presentation if it's "PRESENT" but actually pending
+            let displayOption = { ...option };
+            if (option.value === 'PRESENT' && isPending) {
+              displayOption.label = 'Pending';
+              displayOption.color = 'bg-yellow-100 text-yellow-700 border-yellow-500';
+              // Optionally override icon here if we import Clock or AlertTriangle, but keeping Check is fine for now
+            }
+
+            return (
+              <StatusButton
+                key={option.value}
+                option={displayOption}
+                isSelected={selectedStatus === option.value}
+                onClick={() => onStatusChange(student.id, option.value)}
+              />
+            );
+          })}
         </div>
       </div>
     </div>
