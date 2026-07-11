@@ -16,7 +16,8 @@ export default function EditStaffFormUI({
   handleBack,
   hasDualAccess,
   dbRolesList,
-  onDbRolesChange
+  onDbRolesChange,
+  branches
 }) {
   const { hasPermission } = usePermissions();
   const canEditStaff = hasPermission('staff:edit_any') || hasPermission('staff:edit_tenant');
@@ -83,6 +84,7 @@ export default function EditStaffFormUI({
             hasDualAccess={hasDualAccess}
             dbRolesList={dbRolesList}
             onDbRolesChange={onDbRolesChange}
+            branches={branches}
           />
 
           <AssignedAssetsSection assets={formData.assets} />

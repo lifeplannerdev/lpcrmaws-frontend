@@ -33,7 +33,10 @@ export default function AddStaffPage() {
           fetch(`${API_BASE_URL}/branches/`, { headers: { Authorization: `Bearer ${accessToken}` } }),
           fetch(`${API_BASE_URL}/roles/`, { headers: { Authorization: `Bearer ${accessToken}` } })
         ]);
-        if (branchesRes.ok) setBranches(await branchesRes.json() || []);
+        if (branchesRes.ok) {
+          const b = await branchesRes.json();
+          setBranches(b.results || b || []);
+        }
         if (rolesRes.ok) {
           const r = await rolesRes.json();
           setDbRolesList(r.results || r || []);

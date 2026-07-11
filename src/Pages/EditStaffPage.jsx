@@ -24,9 +24,11 @@ export default function EditStaffPage() {
     salary: '',
     isActive: true,
     company: 'LP',
+    branch: '',
     assets: [],
   });
   const [dbRolesList, setDbRolesList] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
 
@@ -67,9 +69,10 @@ export default function EditStaffPage() {
     const fetchStaffDetails = async () => {
       setLoading(true);
       try {
-        const [staffRes, rolesRes] = await Promise.all([
+        const [staffRes, rolesRes, branchesRes] = await Promise.all([
           authFetch(`${API_BASE_URL}/staff/${id}/`),
-          authFetch(`${API_BASE_URL}/roles/`)
+          authFetch(`${API_BASE_URL}/roles/`),
+          authFetch(`${API_BASE_URL}/branches/`)
         ]);
 
         if (!staffRes.ok) {
@@ -80,7 +83,9 @@ export default function EditStaffPage() {
 
         const data = await staffRes.json();
         const rolesData = rolesRes.ok ? await rolesRes.json() : [];
+        const branchesData = branchesRes.ok ? await branchesRes.json() : [];
         setDbRolesList(rolesData.results || rolesData);
+        setBranches(branchesData.results || branchesData);
         setFormData({
           firstName: data.first_name || '',
           lastName: data.last_name || '',
@@ -96,6 +101,7 @@ export default function EditStaffPage() {
           team: data.team || '',
           isActive: data.is_active ?? true,
           company: data.company || 'LP',
+          branch: data.branch_id || data.branch || '',
           assets: data.assets || [],
         });
       } catch (err) {
@@ -134,8 +140,8 @@ export default function EditStaffPage() {
   }
 
   return (
-    <EditStaffForm
-      formData={formData}
+    <EditStaffForm 
+      formData={formData} 
       setFormData={setFormData}
       staffId={id}
       authFetch={authFetch}
@@ -143,6 +149,7 @@ export default function EditStaffPage() {
       navigate={navigate}
       hasDualAccess={hasPermission('staff:access_flag')}
       dbRolesList={dbRolesList}
+      branches={branches}
     />
   );
 }

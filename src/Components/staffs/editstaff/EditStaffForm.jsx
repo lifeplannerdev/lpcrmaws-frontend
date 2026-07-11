@@ -9,7 +9,8 @@ export default function EditStaffForm({
   apiBaseUrl,
   navigate,
   hasDualAccess,
-  dbRolesList
+  dbRolesList,
+  branches
 }) {
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
@@ -82,6 +83,7 @@ export default function EditStaffForm({
       salary: formData.salary, 
       is_active: formData.isActive,
       company: formData.company,
+      branch_id: formData.branch || null,
     };
 
     try {
@@ -140,9 +142,9 @@ export default function EditStaffForm({
       handleInputChange={handleInputChange}
       handleSubmit={handleSubmit}
       handleBack={handleBack}
-      hasDualAccess={hasDualAccess}
       dbRolesList={dbRolesList}
       onDbRolesChange={(roles) => setFormData({...formData, db_roles: roles})}
+      branches={branches}
     />
   );
 }
