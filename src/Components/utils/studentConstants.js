@@ -3,20 +3,13 @@ export const BATCH_CHOICES = [
   { value: 'A2', label: 'A2 (Elementary)' },
   { value: 'B1', label: 'B1 (Intermediate)' },
   { value: 'B2', label: 'B2 (Upper Intermediate)' },
-  { value: 'A1 ONLINE', label: 'A1 (Online)' },
-  { value: 'A2 ONLINE', label: 'A2 (Online)' },
-  { value: 'B1 ONLINE', label: 'B1 (Online)' },
-  { value: 'ONLINE', label: 'Online' },
-  { value: 'A1 EXAM PREPERATION', label: 'A1 (Exam Preparation)' },
-  { value: 'A2 EXAM PREPERATION', label: 'A2 (Exam Preparation)' },
-  { value: 'B1 EXAM PREPERATION', label: 'B1 (Exam Preparation)' },
-  { value: 'B2 EXAM PREPERATION', label: 'B2 (Exam Preparation)' },
 ];
 
 export const STATUS_CHOICES = [
   { value: 'PENDING_ENROLLMENT', label: 'Pending Enrollment' },
   { value: 'PENDING_BATCH_ASSIGNMENT', label: 'Pending Batch Assignment' },
   { value: 'ACTIVE', label: 'Active' },
+  { value: 'EXAM_PREPARATION', label: 'Exam Preparation' },
   { value: 'PAUSED', label: 'Paused' },
   { value: 'COMPLETED', label: 'Completed' },
   { value: 'DROPPED', label: 'Dropped' },

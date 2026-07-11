@@ -139,30 +139,6 @@ const FormFields = ({ formData, handleInputChange, errors, user, setFormData, au
       </div>
     </div>
 
-    {/* Morning Agenda */}
-    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-      <h3 className="font-bold text-indigo-900 mb-3">Morning Agenda (50%)</h3>
-      <div className="space-y-3">
-        <div>
-          <label className="block text-xs font-semibold text-indigo-800 mb-1">Agenda Heading</label>
-          <input
-            type="text" name="agenda_heading" value={formData.agenda_heading || ''}
-            onChange={handleInputChange} placeholder="Brief heading for your agenda"
-            className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-indigo-800 mb-1">Agenda Details</label>
-          <textarea
-            name="next_day_agenda" value={formData.next_day_agenda || ''}
-            onChange={handleInputChange} rows={3}
-            placeholder="Plan for the day..."
-            className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-      </div>
-    </div>
-
     {/* Evening Report */}
     <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
       <h3 className="font-bold text-emerald-900 mb-3">Evening Report (+50%)</h3>
@@ -191,6 +167,30 @@ const FormFields = ({ formData, handleInputChange, errors, user, setFormData, au
             />
           </div>
         )}
+      </div>
+    </div>
+
+    {/* Morning Agenda */}
+    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+      <h3 className="font-bold text-indigo-900 mb-3">Morning Agenda (50%)</h3>
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs font-semibold text-indigo-800 mb-1">Agenda Heading</label>
+          <input
+            type="text" name="agenda_heading" value={formData.agenda_heading || ''}
+            onChange={handleInputChange} placeholder="Brief heading for your agenda"
+            className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-indigo-800 mb-1">Agenda Details</label>
+          <textarea
+            name="next_day_agenda" value={formData.next_day_agenda || ''}
+            onChange={handleInputChange} rows={3}
+            placeholder="Plan for the day..."
+            className="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
       </div>
     </div>
   </div>

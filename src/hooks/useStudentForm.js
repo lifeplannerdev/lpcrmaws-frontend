@@ -49,6 +49,34 @@ export function useStudentForm(studentId = null, sourceLeadId = null) {
     fetchFeeTemplates();
   }, [accessToken, company]);
 
+  // Auto-set trainer and branch if user is a trainer
+  useEffect(() => {
+    if (trainers.length > 0 && user && !studentId) {
+      // Check if current user is a trainer
+      const currentTrainer = trainers.find(t => 
+        (t.user && t.user.id === user.id) || t.user === user.id || t.email === user.email || user.role === 'Trainer'
+      );
+
+      if (currentTrainer) {
+        setFormData(prev => ({
+          ...prev,
+          trainer: currentTrainer.id,
+          branch: currentTrainer.branch || prev.branch
+        }));
+      }
+    }
+  }, [trainers, user, studentId]);
+
+  // Auto-update branch when a trainer is selected
+  useEffect(() => {
+    if (formData.trainer && !studentId && trainers.length > 0) {
+      const selectedTrainer = trainers.find(t => t.id === Number(formData.trainer));
+      if (selectedTrainer && selectedTrainer.branch) {
+        setFormData(prev => ({ ...prev, branch: selectedTrainer.branch }));
+      }
+    }
+  }, [formData.trainer, trainers, studentId]);
+
   useEffect(() => {
     if (!feeTemplateTouched) {
       if (formData.academic_batch) {

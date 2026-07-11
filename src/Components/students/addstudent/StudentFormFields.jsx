@@ -1,7 +1,8 @@
 // Components/students/StudentFormFields.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import FormField from '../../common/FormField';
-import { Mail, Phone, Link as LinkIcon } from 'lucide-react';
+import { Mail, Phone, Link as LinkIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function StudentFormFields({
   formData,
@@ -19,6 +20,10 @@ export default function StudentFormFields({
   feeTemplatesLoading = false,
   canEditFees = true,
 }) {
+  const { user } = useAuth();
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const isTrainer = user?.role === 'Trainer' || user?.groups?.includes('Trainer') || (trainers.some(t => t.user === user?.id || t.email === user?.email));
+
   // Transform trainers for select options
   const trainerOptions = trainers.map(trainer => ({
     value: trainer.id,
@@ -116,28 +121,35 @@ export default function StudentFormFields({
         </div>
       </div>
 
-      {/* Parent Information Section */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Parent Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            label="Parent Name"
-            name="parent_name"
-            value={formData.parent_name}
-            onChange={onChange}
-            error={errors.parent_name}
-          />
-          <FormField
-            label="Parent Phone"
-            name="parent_phone"
-            type="tel"
-            value={formData.parent_phone}
-            onChange={onChange}
-            icon={Phone}
-            error={errors.parent_phone}
-          />
-        </div>
+      {/* Advanced Details Toggle */}
+      <div className="flex items-center justify-between border-t border-gray-200 pt-6 cursor-pointer" onClick={() => setShowAdvanced(!showAdvanced)}>
+        <h2 className="text-xl font-semibold text-gray-900">Advanced Details</h2>
+        {showAdvanced ? <ChevronUp className="h-6 w-6 text-gray-500" /> : <ChevronDown className="h-6 w-6 text-gray-500" />}
       </div>
+
+      {showAdvanced && (
+        <>
+          {/* Parent Information Section */}
+          <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                label="Parent Name"
+                name="parent_name"
+                value={formData.parent_name}
+                onChange={onChange}
+                error={errors.parent_name}
+              />
+              <FormField
+                label="Parent Phone"
+                name="parent_phone"
+                type="tel"
+                value={formData.parent_phone}
+                onChange={onChange}
+                icon={Phone}
+                error={errors.parent_phone}
+              />
+            </div>
+          </div>
 
       {/* Academic Information Section */}
       <div>
@@ -202,40 +214,26 @@ export default function StudentFormFields({
           />
 
           {/* Trainer */}
-          <div>
-            <FormField
-              label="Trainer"
-              name="trainer"
-              type="select"
-              value={formData.trainer}
-              onChange={onChange}
-              options={trainerOptions}
-              placeholder={trainersLoading ? 'Loading trainers...' : 'Select Trainer'}
-              required
-              error={errors.trainer}
-            />
-            {trainers.length === 0 && !trainersLoading && (
-              <p className="mt-1 text-sm text-yellow-600">No trainers available</p>
-            )}
-          </div>
+          {!isTrainer && (
+            <div>
+              <FormField
+                label="Trainer"
+                name="trainer"
+                type="select"
+                value={formData.trainer}
+                onChange={onChange}
+                options={trainerOptions}
+                placeholder={trainersLoading ? 'Loading trainers...' : 'Select Trainer'}
+                required
+                error={errors.trainer}
+              />
+              {trainers.length === 0 && !trainersLoading && (
+                <p className="mt-1 text-sm text-yellow-600">No trainers available</p>
+              )}
+            </div>
+          )}
 
-          {/* Branch */}
-          <div>
-            <FormField
-              label="Branch"
-              name="branch"
-              type="select"
-              value={formData.branch}
-              onChange={onChange}
-              options={branchOptions}
-              placeholder={branchesLoading ? 'Loading branches...' : 'Select Branch'}
-              required
-              error={errors.branch}
-            />
-            {branches.length === 0 && !branchesLoading && (
-              <p className="mt-1 text-sm text-yellow-600">No branches available</p>
-            )}
-          </div>
+          {/* Branch is hidden, auto-assigned in background */}
 
           {/* Status */}
           <FormField
@@ -292,6 +290,8 @@ export default function StudentFormFields({
           />
         </div>
       </div>
+      </>
+      )}
 
       {canEditFees && (
         <div>
