@@ -158,6 +158,9 @@ export default function FeesManagementPage() {
         fetch(`${API_BASE_URL}/attendance/detail/?approval_status=PENDING_FEE_APPROVAL`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
+        fetch(`${API_BASE_URL}/fees/policy/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
       const templatesData = await templatesRes.json();
