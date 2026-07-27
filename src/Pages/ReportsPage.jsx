@@ -40,21 +40,28 @@ const ReportRow = React.memo(({ report, isLate, getStatusBadge, navigate, downlo
             <div>Report: {new Date(report.report_submitted_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
           )}
         </div>
+        {report.status !== 'missing' && (
+          <div className="mt-2 flex items-center gap-1.5 px-2 py-0.5 bg-gray-100 rounded-md text-xs font-semibold text-gray-600 w-max">
+            Progress: {report.completion_percentage}%
+          </div>
+        )}
       </td>
       <td className="px-6 py-4">{getStatusBadge(report)}</td>
       <td className="px-6 py-4">
         <div className="flex items-center gap-2">
           {/* View Report Details */}
-          <button
-            onClick={() => navigate(`/reports/view/${report.id}`)}
-            className="p-2.5 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-all duration-200 hover:scale-110 shadow-sm hover:shadow-md"
-            title="View Report Details"
-          >
-            View
-          </button>
+          {report.status !== 'missing' && (
+            <button
+              onClick={() => navigate(`/reports/view/${report.id}`)}
+              className="p-2.5 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-all duration-200 hover:scale-110 shadow-sm hover:shadow-md"
+              title="View Report Details"
+            >
+              View
+            </button>
+          )}
 
           {/* Download Attachments */}
-          {report.attachments?.length > 0 && (
+          {report.status !== 'missing' && report.attachments?.length > 0 && (
             <button
               onClick={() => downloadFile(report.attachments[0])}
               className="p-2.5 text-green-600 hover:bg-green-100 rounded-lg transition-all duration-200 hover:scale-110 shadow-sm hover:shadow-md"
@@ -141,14 +148,34 @@ export default function ReportsPage() {
       if (selectedStatus && selectedStatus !== 'all') params.status = selectedStatus;
       if (selectedLateness && selectedLateness !== 'all') params.lateness = selectedLateness;
       if (searchTerm) params.search = searchTerm;
-      const res = await axios.get(`${API_BASE}/admin/reports/`, {
-        params,
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      if (selectedLateness === 'missing') {
+        const res = await axios.get(`${API_BASE}/admin/reports/missing/`, {
+          params,
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const dummyReports = (res.data || []).map(u => ({
+           id: `missing-${u.id}`,
+           user_name: u.name,
+           name: u.name,
+           report_heading: 'Did Not Submit',
+           status: 'missing',
+           report_date: selectedDate && selectedDate !== 'all' ? selectedDate : new Date().toISOString().split('T')[0],
+           completion_percentage: 0,
+           attachments: []
+        }));
+        setRecentReports(dummyReports);
+        setTotalCount(dummyReports.length);
+        setTotalPages(1);
+      } else {
+        const res = await axios.get(`${API_BASE}/admin/reports/`, {
+          params,
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
 
-      setRecentReports(res.data.results || []);
-      setTotalCount(res.data.count || 0);
-      setTotalPages(Math.ceil((res.data.count || 0) / PAGE_SIZE));
+        setRecentReports(res.data.results || []);
+        setTotalCount(res.data.count || 0);
+        setTotalPages(Math.ceil((res.data.count || 0) / PAGE_SIZE));
+      }
     } catch (err) {
       console.error('Failed to fetch reports:', err);
     } finally {
@@ -217,6 +244,13 @@ export default function ReportsPage() {
         <span className="bg-gradient-to-r from-red-100 to-rose-100 text-red-700 px-3 py-1.5 rounded-full text-xs font-bold border border-red-200 inline-flex items-center gap-1">
           <XCircle className="w-3.5 h-3.5" />
           Rejected
+        </span>
+      );
+    } else if (status === 'missing') {
+      return (
+        <span className="bg-gradient-to-r from-red-100 to-red-200 text-red-800 px-3 py-1.5 rounded-full text-xs font-bold border border-red-300 inline-flex items-center gap-1">
+          <AlertCircle className="w-3.5 h-3.5" />
+          Missing
         </span>
       );
     } else {
@@ -390,6 +424,7 @@ export default function ReportsPage() {
                 <option value="late_report">Late Report</option>
                 <option value="incomplete">Incomplete</option>
                 <option value="on_time">100% On Time</option>
+                <option value="missing">Missing</option>
               </select>
             </div>
           </div>

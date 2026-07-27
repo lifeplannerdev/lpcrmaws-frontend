@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 export const masterNavigation = [
-  { id: "overview", label: "Overview", icon: FileText, path: "/", requiredResource: "dashboard" },
+  { id: "overview", label: "Overview", icon: FileText, path: "/" },
   { id: "leads", label: "Leads", icon: Users, path: "/leads", requiredResource: "leads" },
   { id: "staff", label: "Staff", icon: UserCheck, path: "/staff", requiredResource: "staff" },
   { id: "myTasks", label: "My Tasks", icon: ListTodo, path: "/mytasks", requiredResource: "tasks", requiredSpecificPermission: "tasks:read_own" },
@@ -29,29 +29,38 @@ export const masterNavigation = [
   { id: "attendanceDocs", label: "Attendance Docs", icon: FolderClock, path: "/hr/attendance", requiredResource: "staff" },
   { id: "candidates", label: "Candidates", icon: Users, path: "/candidates", requiredResource: "candidates" },
   { id: "assets", label: "Assets", icon: Monitor, path: "/hr/assets", requiredResource: "assets" },
-  { id: "myReports", label: "My Reports", icon: FileText, path: "/myreports", requiredResource: "reports", requiredSpecificPermission: "reports:read_own" },
-  { id: "reports", label: "Staff Reports", icon: FileText, path: "/daily/reports", requiredResource: "reports", requiredSpecificPermission: "reports:read_all" },
-  { id: "reportSettings", label: "Report Settings", icon: Settings, path: "/admin/reports/settings", requiredResource: "report_settings", requiredSpecificPermission: "report_settings:manage" },
+  { id: "myReports", label: "My Reports", icon: FileText, path: "/myreports" },
+  { id: "reports", label: "Staff Reports", icon: FileText, path: "/daily/reports", requiredResource: "reports", requiredSpecificPermission: "reports:read_all", requiredRoles: ['ADM_MANAGER', 'ADM_COUNSELLOR', 'FLAG_COORDINATOR'] },
+  { id: "reportSettings", label: "Report Settings", icon: Settings, path: "/admin/reports/settings", requiredResource: "report_settings", requiredSpecificPermission: "report_settings:manage", requiredRoles: ['ADM_MANAGER'] },
   { id: "roles", label: "Role Management", icon: ShieldAlert, path: "/roles", requiredResource: "staff", requiredPermissions: ["staff:edit_any", "staff:edit_tenant"] },
   { id: "credentials", label: "Credentials Vault", icon: Key, path: "/credentials", requiredResource: "credentials" },
   { id: "call", label: "Voxbay", icon: PhoneCall, path: "/call-analytics", requiredResource: "voxbay" },
   { id: "feeds", label: "Feeds", icon: UserCheck, path: "/feeds" },
 ];
 
-export const getFilteredMenu = (hasAnyPermission, hasPermission) => {
+export const getFilteredMenu = (hasAnyPermission, hasPermission, user) => {
   if (typeof hasAnyPermission !== 'function') return [];
   return masterNavigation.filter((item) => {
-    if (item.requiredResource && !hasAnyPermission(item.requiredResource)) return false;
+    let allowed = true;
     
-    if (item.requiredSpecificPermission && typeof hasPermission === 'function') {
-      if (!hasPermission(item.requiredSpecificPermission)) return false;
+    // Default to true, and we verify if there's any restriction
+    if (item.requiredResource && !hasAnyPermission(item.requiredResource)) allowed = false;
+    
+    if (allowed && item.requiredSpecificPermission && typeof hasPermission === 'function') {
+      if (!hasPermission(item.requiredSpecificPermission)) allowed = false;
     }
     
-    if (item.requiredPermissions && typeof hasPermission === 'function') {
-      if (!item.requiredPermissions.some(perm => hasPermission(perm))) return false;
+    if (allowed && item.requiredPermissions && typeof hasPermission === 'function') {
+      if (!item.requiredPermissions.some(perm => hasPermission(perm))) allowed = false;
     }
     
-    return true;
+    // If the item provides an alternative way to grant access via roles, override previous denials
+    if (item.requiredRoles && user && user.role_names) {
+       const hasRole = item.requiredRoles.some(role => user.role_names.includes(role));
+       if (hasRole) allowed = true;
+    }
+    
+    return allowed;
   });
 };
 

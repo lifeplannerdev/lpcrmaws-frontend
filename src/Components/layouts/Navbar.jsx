@@ -101,7 +101,7 @@ const Navbar = () => {
     }),
   });
 
-  const navItems = getFilteredMenu(hasAnyPermission, hasPermission);
+  const navItems = getFilteredMenu(hasAnyPermission, hasPermission, user);
   const handleNavigation = (path) => { navigate(path); setIsMobileMenuOpen(false); };
   const handleLogout = async () => { await logout(); navigate('/login'); };
   const handleChatOpen = () => { navigate('/chat'); setIsMobileMenuOpen(false); };

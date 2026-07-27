@@ -48,20 +48,21 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
-const PermissionRoute = ({ children, resources = [], permissions = [] }) => {
-  const { isAuthenticated, loading } = useAuth();
+const PermissionRoute = ({ children, resources = [], permissions = [], roles = [] }) => {
+  const { isAuthenticated, loading, user } = useAuth();
   const { hasPermission, hasAnyPermission } = usePermissions();
   
   if (loading) return null;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   
   let allowed = false;
-  if (resources.length === 0 && permissions.length === 0) {
+  if (resources.length === 0 && permissions.length === 0 && roles.length === 0) {
     allowed = true;
   } else {
     const resourceAllowed = resources.some(res => hasAnyPermission(res));
     const permissionAllowed = permissions.some(perm => hasPermission(perm));
-    allowed = resourceAllowed || permissionAllowed;
+    const roleAllowed = user?.role_names?.some(r => roles.includes(r));
+    allowed = resourceAllowed || permissionAllowed || roleAllowed;
   }
   
   return allowed ? children : <Navigate to="/" replace />;
@@ -94,10 +95,10 @@ export default function App() {
         <Route path="/tasks/:id" element={<PermissionRoute resources={['tasks']}><TaskViewPage /></PermissionRoute>} />
         <Route path="/tasks/edit/:id" element={<PermissionRoute resources={['tasks']}><EditTaskPage /></PermissionRoute>} />
 
-        <Route path="/daily/reports" element={<PermissionRoute resources={['reports']}><ReportsPage /></PermissionRoute>} />
-        <Route path="/admin/reports/settings" element={<PermissionRoute resources={['reports']}><ReportTimingSettingsPage /></PermissionRoute>} />
-        <Route path="/reports/view/:id" element={<PermissionRoute resources={['reports']}><ReportViewPage /></PermissionRoute>} />
-        <Route path="/myreports/" element={<PermissionRoute resources={['reports']}><MyReportsPage /></PermissionRoute>} />
+        <Route path="/daily/reports" element={<PermissionRoute resources={['reports']} permissions={['reports:read_all']} roles={['ADM_MANAGER', 'ADM_COUNSELLOR', 'FLAG_COORDINATOR']}><ReportsPage /></PermissionRoute>} />
+        <Route path="/admin/reports/settings" element={<PermissionRoute resources={['reports']} permissions={['report_settings:manage']} roles={['ADM_MANAGER']}><ReportTimingSettingsPage /></PermissionRoute>} />
+        <Route path="/reports/view/:id" element={<ProtectedRoute><ReportViewPage /></ProtectedRoute>} />
+        <Route path="/myreports/" element={<ProtectedRoute><MyReportsPage /></ProtectedRoute>} />
 
         <Route path="/students" element={<PermissionRoute resources={['students']}><StudentsPage /></PermissionRoute>} />
         <Route path="/students/add" element={<PermissionRoute permissions={['students:edit_any', 'students:edit_tenant']}><AddStudentPage /></PermissionRoute>} />
