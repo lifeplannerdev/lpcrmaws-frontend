@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Heart, MessageCircle, MoreHorizontal } from 'lucide-react';
@@ -20,10 +21,10 @@ export default function FeedsWidget() {
     const fetchPosts = async () => {
       try {
         const token = await getToken();
-        const res = await fetch(`${API_BASE_URL}/feeds/`, {
+        const res = await axios.get(`${API_BASE_URL}/feeds/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        const data = await res.json();
+        const data = res.data;
         const postsArray = data.results || data || [];
         setPosts(Array.isArray(postsArray) ? postsArray.slice(0, 3) : []); // Only show top 3 on dashboard
       } catch (error) {

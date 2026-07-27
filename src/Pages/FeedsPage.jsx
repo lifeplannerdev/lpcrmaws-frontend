@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { getPusherClient } from '../lib/pusher';
@@ -36,15 +37,15 @@ export default function FeedsPage() {
   const fetchPosts = async () => {
     try {
       const token = await getToken();
-      const res = await fetch(`${API_BASE_URL}/feeds/`, {
+      const res = await axios.get(`${API_BASE_URL}/feeds/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (!res.ok) throw new Error('Failed to fetch feeds');
-      const data = await res.json();
+      const data = res.data;
       const postsArray = data.results || data || [];
       setPosts(Array.isArray(postsArray) ? postsArray : []);
     } catch (err) {
-      setError(err.message);
+      console.error(err);
+      setError(err.response?.data?.detail || err.response?.data?.message || err.message || 'Failed to fetch feeds');
     } finally {
       setLoading(false);
     }
@@ -165,21 +166,14 @@ export default function FeedsPage() {
 
     try {
       const token = await getToken();
-      const res = await fetch(`${API_BASE_URL}/feeds/`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData
+      await axios.post(`${API_BASE_URL}/feeds/`, formData, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-      
-      if (res.ok) {
-        setContent('');
-        clearMedia();
-      } else {
-        const err = await res.text();
-        setError(err);
-      }
+      setContent('');
+      clearMedia();
     } catch (err) {
-      setError(err.message);
+      console.error(err);
+      setError(err.response?.data?.detail || err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -189,8 +183,7 @@ export default function FeedsPage() {
     if (!confirm('Are you sure you want to delete this post?')) return;
     try {
       const token = await getToken();
-      await fetch(`${API_BASE_URL}/feeds/${id}/`, {
-        method: 'DELETE',
+      await axios.delete(`${API_BASE_URL}/feeds/${id}/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
     } catch (err) {
@@ -337,13 +330,8 @@ function FeedPostCard({ post, canDelete, onDelete, getToken, currentUser }) {
   const handleReact = async (emoji) => {
     try {
       const token = await getToken();
-      await fetch(`${API_BASE_URL}/feeds/${post.id}/react/`, {
-        method: 'POST',
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ emoji })
+      await axios.post(`${API_BASE_URL}/feeds/${post.id}/react/`, { emoji }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       setShowEmojiPicker(false);
     } catch (err) {
@@ -356,13 +344,8 @@ function FeedPostCard({ post, canDelete, onDelete, getToken, currentUser }) {
     if (!commentText.trim()) return;
     try {
       const token = await getToken();
-      await fetch(`${API_BASE_URL}/feeds/${post.id}/comments/`, {
-        method: 'POST',
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ content: commentText })
+      await axios.post(`${API_BASE_URL}/feeds/${post.id}/comments/`, { content: commentText }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       setCommentText('');
     } catch (err) {
@@ -374,8 +357,7 @@ function FeedPostCard({ post, canDelete, onDelete, getToken, currentUser }) {
     if (!confirm('Delete comment?')) return;
     try {
       const token = await getToken();
-      await fetch(`${API_BASE_URL}/feeds/comments/${commentId}/`, {
-        method: 'DELETE',
+      await axios.delete(`${API_BASE_URL}/feeds/comments/${commentId}/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
     } catch (err) {
