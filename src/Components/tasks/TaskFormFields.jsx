@@ -99,6 +99,7 @@ export default function TaskFormFields({
             value={formData.deadline}
             onChange={(e) => onFieldChange('deadline', e.target.value)}
             min={getTodayDate()}
+            onKeyDown={(e) => e.preventDefault()}
             className={`w-full px-4 py-3.5 bg-slate-50 border ${
               errors.deadline ? 'border-red-500' : 'border-slate-200'
             } rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all text-slate-900 ${

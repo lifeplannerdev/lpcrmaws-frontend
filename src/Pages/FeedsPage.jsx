@@ -6,7 +6,7 @@ import { getPusherClient } from '../lib/pusher';
 import Navbar from '../Components/layouts/Navbar';
 import { 
   Heart, MessageCircle, Share2, MoreHorizontal, Image as ImageIcon, 
-  Video as VideoIcon, Send, X, Smile, Trash2
+  Video as VideoIcon, Send, X, Smile, Trash2, Calendar
 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -25,6 +25,9 @@ export default function FeedsPage() {
   const [mediaPreview, setMediaPreview] = useState(null);
   const [mediaType, setMediaType] = useState('none');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validFrom, setValidFrom] = useState('');
+  const [validUntil, setValidUntil] = useState('');
+  const [showTimeOptions, setShowTimeOptions] = useState(false);
   const fileInputRef = useRef(null);
 
   const canPost = hasPermission('feeds:post') || hasPermission('feeds:admin') || user?.is_superuser;
@@ -163,6 +166,12 @@ export default function FeedsPage() {
     if (mediaFile) {
       formData.append('media', mediaFile);
     }
+    if (validFrom) {
+      formData.append('valid_from', new Date(validFrom).toISOString());
+    }
+    if (validUntil) {
+      formData.append('valid_until', new Date(validUntil).toISOString());
+    }
 
     try {
       const token = await getToken();
@@ -171,6 +180,9 @@ export default function FeedsPage() {
       });
       setContent('');
       clearMedia();
+      setValidFrom('');
+      setValidUntil('');
+      setShowTimeOptions(false);
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.detail || err.message);
@@ -269,6 +281,13 @@ export default function FeedsPage() {
                       accept="image/*,video/*"
                       onChange={handleFileChange}
                     />
+                    <button 
+                      onClick={() => setShowTimeOptions(!showTimeOptions)}
+                      className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition ${showTimeOptions || validFrom || validUntil ? 'text-indigo-600 bg-indigo-50' : 'text-gray-600 hover:bg-gray-100'}`}
+                    >
+                      <Calendar size={18} className={showTimeOptions || validFrom || validUntil ? 'text-indigo-600' : 'text-indigo-500'} />
+                      <span className="hidden sm:inline">Schedule</span>
+                    </button>
                   </div>
                   <button 
                     onClick={handlePostSubmit}
@@ -283,6 +302,33 @@ export default function FeedsPage() {
                     )}
                   </button>
                 </div>
+
+                {showTimeOptions && (
+                  <div className="mt-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 flex flex-col sm:flex-row gap-4 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex-1">
+                      <label className="block text-xs font-semibold text-indigo-900 mb-1.5 uppercase tracking-wider">Schedule Post (From)</label>
+                      <input 
+                        type="datetime-local" 
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
+                        value={validFrom}
+                        onChange={(e) => setValidFrom(e.target.value)}
+                        min={new Date().toISOString().slice(0, 16)}
+                        onKeyDown={(e) => e.preventDefault()}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-semibold text-indigo-900 mb-1.5 uppercase tracking-wider">Auto-remove (Until)</label>
+                      <input 
+                        type="datetime-local" 
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
+                        value={validUntil}
+                        onChange={(e) => setValidUntil(e.target.value)}
+                        min={validFrom || new Date().toISOString().slice(0, 16)}
+                        onKeyDown={(e) => e.preventDefault()}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

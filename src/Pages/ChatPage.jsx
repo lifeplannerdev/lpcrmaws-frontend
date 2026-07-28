@@ -532,6 +532,13 @@ const ChatPage = () => {
   useUserChannel({
     onNewConversation: () => {
       loadConversations(true); // silent refresh
+    },
+    onChatMessage: (data) => {
+      // If we are NOT currently in the conversation where the message was sent,
+      // update the sidebar silently so we see the new message preview!
+      if (!selectedConv || selectedConv.id !== data.conversation_id) {
+        loadConversations(true);
+      }
     }
   });
 

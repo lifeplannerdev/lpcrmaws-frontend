@@ -7,6 +7,7 @@ export const useUserChannel = ({
   onTaskStatusUpdated,
   onLeadAssigned,
   onNewConversation,
+  onChatMessage,
 } = {}) => {
   const { pusher, isReady } = usePusher();
   const { user } = useAuth();
@@ -17,6 +18,7 @@ export const useUserChannel = ({
   const onTaskStatusUpdatedRef = useRef(onTaskStatusUpdated);
   const onLeadAssignedRef = useRef(onLeadAssigned);
   const onNewConversationRef = useRef(onNewConversation);
+  const onChatMessageRef = useRef(onChatMessage);
 
   // Update refs on every render (no re-subscription needed)
   useEffect(() => {
@@ -24,6 +26,7 @@ export const useUserChannel = ({
     onTaskStatusUpdatedRef.current = onTaskStatusUpdated;
     onLeadAssignedRef.current = onLeadAssigned;
     onNewConversationRef.current = onNewConversation;
+    onChatMessageRef.current = onChatMessage;
   });
 
   useEffect(() => {
@@ -36,6 +39,7 @@ export const useUserChannel = ({
     channelRef.current.bind('task.status_updated', (data) => onTaskStatusUpdatedRef.current?.(data));
     channelRef.current.bind('lead.assigned', (data) => onLeadAssignedRef.current?.(data));
     channelRef.current.bind('new-conversation', (data) => onNewConversationRef.current?.(data));
+    channelRef.current.bind('chat.new_message', (data) => onChatMessageRef.current?.(data));
 
     return () => {
       channelRef.current?.unbind_all();
