@@ -526,7 +526,7 @@ export default function LeadsPage() {
                   const agentId = document.getElementById('reassign-agent').value;
                   if (!agentId) return alert('Please select an agent');
                   try {
-                    const res = await authFetch(`${API_BASE_URL}/leads/assign/bulk/`, {
+                    const res = await authFetch(`${API_BASE_URL}/leads/bulk-assign/`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ lead_ids: selectedLeads, assigned_to_id: agentId, notes: 'Bulk Reassigned' })
