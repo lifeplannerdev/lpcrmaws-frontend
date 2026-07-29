@@ -511,7 +511,7 @@ export default function LeadsPage() {
             >
               <option value="">Select an Agent</option>
               {staffMembers.filter(s => s.is_active !== false).map(staff => (
-                <option key={staff.id} value={staff.id}>{staff.first_name} {staff.last_name}</option>
+                <option key={staff.id} value={staff.id}>{staff.username || `${staff.first_name || ''} ${staff.last_name || ''}`.trim() || `Staff #${staff.id}`}</option>
               ))}
             </select>
             <div className="flex justify-end gap-3">
