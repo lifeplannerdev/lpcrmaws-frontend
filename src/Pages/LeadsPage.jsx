@@ -230,7 +230,7 @@ export default function LeadsPage() {
         //  Parallel: staff only on first load, leads every time
         const [leadsRes, staffRes] = await Promise.all([
           authFetch(`${API_BASE_URL}/leads/?${new URLSearchParams(paramsObj)}`, {}, signal),
-          initialLoad ? authFetch(`${API_BASE_URL}/employees/list/`, {}, signal) : Promise.resolve(null),
+          initialLoad ? authFetch(`${API_BASE_URL}/employees/list/?include_inactive=true`, {}, signal) : Promise.resolve(null),
         ]);
 
         if (signal.aborted) return;
@@ -510,7 +510,7 @@ export default function LeadsPage() {
               className="w-full border border-gray-300 rounded-lg p-2.5 mb-6"
             >
               <option value="">Select an Agent</option>
-              {staffMembers.map(staff => (
+              {staffMembers.filter(s => s.is_active !== false).map(staff => (
                 <option key={staff.id} value={staff.id}>{staff.first_name} {staff.last_name}</option>
               ))}
             </select>

@@ -53,7 +53,7 @@ const LeadsFilters = ({
     { id: 'all', label: 'All Staff' },
     ...(staffMembers || []).map((staff) => ({
       id: staff.id,
-      label: staff.username || `${staff.first_name || ''} ${staff.last_name || ''}`.trim() || `Staff #${staff.id}`,
+      label: (staff.username || `${staff.first_name || ''} ${staff.last_name || ''}`.trim() || `Staff #${staff.id}`) + (staff.is_active === false ? ' (Inactive)' : ''),
     })),
   ];
 
