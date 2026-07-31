@@ -157,6 +157,24 @@ const columns = [
       </span>
     )
   },
+  { 
+    key: 'voxbay_status', 
+    name: 'Voxbay Status', 
+    width: 150, 
+    renderCell: (p) => {
+      if (!p.row.voxbay_status) return null;
+      const status = p.row.voxbay_status.toLowerCase();
+      let colorClass = 'bg-gray-100 text-gray-700';
+      if (status === 'answered') colorClass = 'bg-green-100 text-green-700';
+      else if (status === 'missed') colorClass = 'bg-red-100 text-red-700';
+      else if (status === 'outgoing') colorClass = 'bg-blue-100 text-blue-700';
+      return (
+        <span className={`font-semibold text-xs px-2 py-1 rounded ${colorClass}`}>
+          {p.row.voxbay_status}
+        </span>
+      );
+    }
+  },
 ];
 
 export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isReportMode = false, onLeadsChange }) {
