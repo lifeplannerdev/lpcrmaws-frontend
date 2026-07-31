@@ -3,7 +3,7 @@ import Navbar from '../Components/layouts/Navbar';
 import {
   RefreshCw, Download, Phone, PhoneIncoming, PhoneMissed,
   PhoneOutgoing, Search, ChevronLeft, ChevronRight, Wifi, WifiOff,
-  Clock, TrendingUp, BarChart3, Filter, UserPlus, ExternalLink, PhoneCall, Settings
+  Clock, TrendingUp, BarChart3, Filter, UserPlus, ExternalLink, PhoneCall, Settings, FileText
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Can } from '../context/PermissionsContext';
@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import UniqueMissedCallsTable from '../Components/voxbay/UniqueMissedCallsTable';
 import CallLogsTable from '../Components/voxbay/CallLogsTable';
 import VoxbaySettingsTab from '../Components/voxbay/VoxbaySettingsTab';
+import VoxbayReportsTab from '../Components/voxbay/VoxbayReportsTab';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -768,6 +769,7 @@ export default function CallAnalyticsPage() {
               { id: 'Unique Missed Calls', icon: PhoneMissed, label: 'Unique Missed Calls', adminOnly: true },
               { id: 'Incoming Call Report', icon: PhoneIncoming, label: 'Incoming Call Report' },
               { id: 'Outgoing Call Report', icon: PhoneOutgoing, label: 'Outgoing Call Report' },
+              { id: 'Reports', icon: FileText, label: 'Reports', adminOnly: true },
               { id: 'Voxbay Settings', icon: Settings, label: 'Voxbay Settings', adminOnly: true },
             ].map(tab => {
               const TabButton = () => (
@@ -809,6 +811,11 @@ export default function CallAnalyticsPage() {
             )}
             {activeTab === 'Outgoing Call Report' && (
               <CallLogsTable dateRange={dateRange} globalCallType={callType} agentMap={agentMap} defaultCallType="outgoing" title="Outgoing Call Report" onLogsFetched={handleLogsFetched} hideTypeFilter />
+            )}
+            {activeTab === 'Reports' && (
+              <Can perform="voxbay:admin">
+                <VoxbayReportsTab accessToken={accessToken} />
+              </Can>
             )}
             {activeTab === 'Voxbay Settings' && (
               <Can perform="voxbay:admin">
