@@ -27,7 +27,7 @@ function getLocalYYYYMMDD() {
   return `${year}-${month}-${day}`;
 }
 
-function formatDate(date) {
+function formatHeaderDate(date) {
   return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
@@ -306,9 +306,9 @@ export default function MyReportsPage() {
   const displayName = userName;
   const hasLeadsAccess = hasAnyPermission('leads');
 
-  const morningHeading = `${displayName} | ${roleName} | ${formatDate(getYesterdayDate())} | Morning Agenda`;
-  const eveningHeading = `${displayName} | ${roleName} | ${formatDate(getTodayDate())} | Evening Report`;
-  const nextDayHeading = `${displayName} | ${roleName} | ${formatDate(getNextWorkingDate())} | Next Day Agenda`;
+  const morningHeading = `${displayName} | ${roleName} | ${formatHeaderDate(getYesterdayDate())} | Morning Agenda`;
+  const eveningHeading = `${displayName} | ${roleName} | ${formatHeaderDate(getTodayDate())} | Evening Report`;
+  const nextDayHeading = `${displayName} | ${roleName} | ${formatHeaderDate(getNextWorkingDate())} | Next Day Agenda`;
 
   useEffect(() => {
     if (showCreateModal || showEditModal) {
