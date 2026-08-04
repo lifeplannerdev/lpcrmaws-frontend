@@ -19,21 +19,23 @@ const ALLOWED_EXCEL_TYPES = [
 ];
 const ALLOWED_EXCEL_EXT = /\.(xls|xlsx)$/i;
 
-const getLocalYYYYMMDD = () => {
+function getLocalYYYYMMDD() {
   const d = new Date();
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-};
+}
 
-const formatDate = (date) => {
+function formatDate(date) {
   return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-};
+}
 
-const getTodayDate = () => new Date();
+function getTodayDate() {
+  return new Date();
+}
 
-const getYesterdayDate = () => {
+function getYesterdayDate() {
   const d = new Date();
   if (d.getDay() === 1) {
     d.setDate(d.getDate() - 2);
@@ -41,9 +43,9 @@ const getYesterdayDate = () => {
     d.setDate(d.getDate() - 1);
   }
   return d;
-};
+}
 
-const getNextWorkingDate = () => {
+function getNextWorkingDate() {
   const d = new Date();
   if (d.getDay() === 6) {
     d.setDate(d.getDate() + 2);
@@ -51,9 +53,9 @@ const getNextWorkingDate = () => {
     d.setDate(d.getDate() + 1);
   }
   return d;
-};
+}
 
-const SalesDailyAgendaGrid = ({ formData, setFormData, authFetch }) => {
+function SalesDailyAgendaGrid({ formData, setFormData, authFetch }) {
   const [leads, setLeads] = useState([]);
 
   useEffect(() => {
@@ -127,7 +129,7 @@ const SalesDailyAgendaGrid = ({ formData, setFormData, authFetch }) => {
   );
 };
 
-const FormFields = ({ formData, handleInputChange, errors, user, setFormData, authFetch, hasLeadsAccess, morningAgendaText, morningHeading, eveningHeading, nextDayHeading }) => {
+function FormFields({ formData, handleInputChange, errors, user, setFormData, authFetch, hasLeadsAccess, morningAgendaText, morningHeading, eveningHeading, nextDayHeading }) {
   const completionPercentage = (() => {
     let score = 0;
     if (formData.next_day_agenda && formData.next_day_agenda.trim().length > 0) score += 50;
@@ -232,9 +234,11 @@ const FormFields = ({ formData, handleInputChange, errors, user, setFormData, au
       </div>
     </div>
   </div>
-)};
+  );
+}
 
-const FileUploadSection = ({ label = 'Attach Excel File (Optional)', formData, errors, handleFileChange, removeFile, getFileIcon }) => (
+function FileUploadSection({ label = 'Attach Excel File (Optional)', formData, errors, handleFileChange, removeFile, getFileIcon }) {
+  return (
   <div className="mt-5">
     <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
     <input
@@ -264,7 +268,8 @@ const FileUploadSection = ({ label = 'Attach Excel File (Optional)', formData, e
       </div>
     )}
   </div>
-);
+  );
+}
 
 export default function MyReportsPage() {
   const { accessToken, refreshAccessToken, user } = useAuth();
