@@ -318,15 +318,53 @@ export default function ReportViewPage() {
             Report Content
           </h2>
           <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6">
-            {(report.report_text || '').trim().startsWith('[') ? (
-               <div className="h-[500px] w-full rounded-lg overflow-hidden border border-indigo-200 bg-white">
-                  <SpreadsheetView leads={JSON.parse(report.report_text)} isReportMode={true} authFetch={()=>{}} />
-               </div>
-            ) : (
-               <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-                 {report.report_text || 'No content provided'}
-               </p>
-            )}
+            {(() => {
+              const text = report.report_text || '';
+              if (text.startsWith('[Daily Leads Snapshot]\n')) {
+                try {
+                  const parts = text.split('\n\n[Evening Report]\n');
+                  const leadsStr = parts[0].replace('[Daily Leads Snapshot]\n', '');
+                  const leads = JSON.parse(leadsStr);
+                  const extraText = parts.length > 1 ? parts[1] : '';
+                  
+                  return (
+                    <div className="space-y-4">
+                      <div className="h-[500px] w-full rounded-lg overflow-hidden border border-indigo-200 bg-white">
+                        <SpreadsheetView leads={leads} isReportMode={true} authFetch={()=>{}} />
+                      </div>
+                      {extraText && (
+                        <div className="bg-white rounded-lg p-4 border border-gray-200">
+                          <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{extraText}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                } catch (e) {
+                  return (
+                    <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{text}</p>
+                  );
+                }
+              } else if (text.trim().startsWith('[')) {
+                try {
+                  const leads = JSON.parse(text);
+                  return (
+                    <div className="h-[500px] w-full rounded-lg overflow-hidden border border-indigo-200 bg-white">
+                      <SpreadsheetView leads={leads} isReportMode={true} authFetch={()=>{}} />
+                    </div>
+                  );
+                } catch (e) {
+                  return (
+                    <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{text}</p>
+                  );
+                }
+              } else {
+                return (
+                  <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                    {text || 'No content provided'}
+                  </p>
+                );
+              }
+            })()}
           </div>
         </div>
 
