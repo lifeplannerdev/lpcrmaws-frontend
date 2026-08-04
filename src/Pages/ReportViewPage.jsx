@@ -319,13 +319,18 @@ export default function ReportViewPage() {
           </h2>
           <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6">
             {(() => {
-              const text = report.report_text || '';
-              if (text.startsWith('[Daily Leads Snapshot]\n')) {
+              const text = (report.report_text || '').trim();
+              if (text.includes('[Daily Leads Snapshot]')) {
                 try {
-                  const parts = text.split('\n\n[Evening Report]\n');
-                  const leadsStr = parts[0].replace('[Daily Leads Snapshot]\n', '');
+                  let leadsStr = text;
+                  let extraText = '';
+                  if (text.includes('[Evening Report]')) {
+                    const parts = text.split(/\[Evening Report\]\r?\n?/);
+                    leadsStr = parts[0];
+                    extraText = parts[1] ? parts[1].trim() : '';
+                  }
+                  leadsStr = leadsStr.replace(/\[Daily Leads Snapshot\]\r?\n?/, '').trim();
                   const leads = JSON.parse(leadsStr);
-                  const extraText = parts.length > 1 ? parts[1] : '';
                   
                   return (
                     <div className="space-y-4">
@@ -344,7 +349,7 @@ export default function ReportViewPage() {
                     <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{text}</p>
                   );
                 }
-              } else if (text.trim().startsWith('[')) {
+              } else if (text.startsWith('[')) {
                 try {
                   const leads = JSON.parse(text);
                   return (

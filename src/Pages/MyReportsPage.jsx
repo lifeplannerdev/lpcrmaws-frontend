@@ -635,20 +635,28 @@ export default function MyReportsPage() {
 
   const renderReportSummary = (text) => {
     if (!text) return '';
-    if (text.startsWith('[Daily Leads Snapshot]\n')) {
+    const trimmed = text.trim();
+    if (trimmed.includes('[Daily Leads Snapshot]')) {
       try {
-        const parts = text.split('\n\n[Evening Report]\n');
-        const leadsStr = parts[0].replace('[Daily Leads Snapshot]\n', '');
+        let leadsStr = trimmed;
+        let extraText = '';
+        if (trimmed.includes('[Evening Report]')) {
+          const parts = trimmed.split(/\[Evening Report\]\r?\n?/);
+          leadsStr = parts[0];
+          extraText = parts[1] ? parts[1].trim() : '';
+        }
+        leadsStr = leadsStr.replace(/\[Daily Leads Snapshot\]\r?\n?/, '').trim();
         const parsed = JSON.parse(leadsStr);
         if (Array.isArray(parsed)) {
-          return `Sales Daily Leads Snapshot (${parsed.length} leads)`;
+          const summary = `Sales Daily Leads Snapshot (${parsed.length} leads)`;
+          return extraText ? `${summary} | ${extraText}` : summary;
         }
       } catch (e) {
-        // Ignore JSON parse errors
+        // Fallback if parsing fails
       }
-    } else if (text.trim().startsWith('[')) {
+    } else if (trimmed.startsWith('[')) {
       try {
-        const parsed = JSON.parse(text);
+        const parsed = JSON.parse(trimmed);
         if (Array.isArray(parsed)) {
           return `Sales Daily Leads Snapshot (${parsed.length} leads)`;
         }
@@ -946,13 +954,49 @@ export default function MyReportsPage() {
                 {selectedReport.report_text && (
                   <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-6 mb-6">
                     <h4 className="text-sm font-semibold text-emerald-900 mb-3">{selectedReport.report_heading || "Evening Report"}</h4>
-                    {selectedReport.report_text.trim().startsWith('[') ? (
-                       <div className="h-[400px] w-full rounded-lg overflow-hidden border border-emerald-200 bg-white">
-                          <SpreadsheetView leads={JSON.parse(selectedReport.report_text)} isReportMode={true} authFetch={()=>{}} />
-                       </div>
-                    ) : (
-                       <p className="text-emerald-800 whitespace-pre-wrap leading-relaxed">{selectedReport.report_text}</p>
-                    )}
+                    {(() => {
+                      const text = (selectedReport.report_text || '').trim();
+                      if (text.includes('[Daily Leads Snapshot]')) {
+                        try {
+                          let leadsStr = text;
+                          let extraText = '';
+                          if (text.includes('[Evening Report]')) {
+                            const parts = text.split(/\[Evening Report\]\r?\n?/);
+                            leadsStr = parts[0];
+                            extraText = parts[1] ? parts[1].trim() : '';
+                          }
+                          leadsStr = leadsStr.replace(/\[Daily Leads Snapshot\]\r?\n?/, '').trim();
+                          const leads = JSON.parse(leadsStr);
+                          return (
+                            <div className="space-y-4">
+                              <div className="h-[400px] w-full rounded-lg overflow-hidden border border-emerald-200 bg-white">
+                                <SpreadsheetView leads={leads} isReportMode={true} authFetch={() => {}} />
+                              </div>
+                              {extraText && (
+                                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                                  <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{extraText}</p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        } catch (e) {
+                          return <p className="text-emerald-800 whitespace-pre-wrap leading-relaxed">{text}</p>;
+                        }
+                      } else if (text.startsWith('[')) {
+                        try {
+                          const leads = JSON.parse(text);
+                          return (
+                            <div className="h-[400px] w-full rounded-lg overflow-hidden border border-emerald-200 bg-white">
+                              <SpreadsheetView leads={leads} isReportMode={true} authFetch={() => {}} />
+                            </div>
+                          );
+                        } catch (e) {
+                          return <p className="text-emerald-800 whitespace-pre-wrap leading-relaxed">{text}</p>;
+                        }
+                      } else {
+                        return <p className="text-emerald-800 whitespace-pre-wrap leading-relaxed">{text}</p>;
+                      }
+                    })()}
                   </div>
                 )}
 
