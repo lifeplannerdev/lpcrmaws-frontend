@@ -10,6 +10,7 @@ import SpreadsheetView from '../Components/leads/SpreadsheetView';
 import LeadSidePanel from '../Components/leads/LeadSidePanel';
 import { Users, UserPlus, CheckCircle, TrendingUp, LayoutList, LayoutGrid, FileSpreadsheet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import { useLeadsChannel } from '../hooks/useLeadsChannel';
 import Pagination from '../Components/common/Pagination';
 import CompanySwitcher from '../Components/common/CompanySwitcher';
@@ -60,6 +61,12 @@ export default function LeadsPage() {
   const navigate = useNavigate();
   const { leadId } = useParams();
   const { accessToken, refreshAccessToken, loading: authLoading, user } = useAuth();
+  const { hasPermission } = usePermissions();
+
+  const hasGlobalRead = user?.role === 'ADMIN' || 
+                        user?.db_roles?.some(r => ['ADMIN', 'CEO', 'SUPER_ADMIN'].includes(r.name)) || 
+                        hasPermission('leads:read_any') || 
+                        hasPermission('leads:read_tenant');
 
   const tokenRef = useRef(accessToken);
   useEffect(() => { tokenRef.current = accessToken; }, [accessToken]);
@@ -67,6 +74,9 @@ export default function LeadsPage() {
   // Real-time Push Updates
   useLeadsChannel({
     onLeadCreated: (data) => {
+      const isMine = data.lead?.assigned_to?.id === user?.id || data.lead?.sub_assigned_to?.id === user?.id;
+      if (!hasGlobalRead && !isMine) return;
+
       setLeads((prev) => {
         // Prevent duplicates
         if (prev.some(l => l.id === data.lead.id)) return prev;
@@ -75,11 +85,28 @@ export default function LeadsPage() {
       setTotalCount((prev) => prev + 1);
     },
     onLeadUpdated: (data) => {
+      const isMine = data.lead?.assigned_to?.id === user?.id || data.lead?.sub_assigned_to?.id === user?.id;
+      if (!hasGlobalRead && !isMine) {
+        setLeads((prev) => {
+          if (prev.some(l => l.id === data.lead.id)) {
+             setTotalCount(c => Math.max(0, c - 1));
+             return prev.filter(l => l.id !== data.lead.id);
+          }
+          return prev;
+        });
+        return;
+      }
+
       setLeads((prev) => prev.map(l => l.id === data.lead.id ? { ...l, ...data.lead } : l));
     },
     onLeadDeleted: (data) => {
-      setLeads((prev) => prev.filter(l => l.id !== data.lead_id));
-      setTotalCount((prev) => prev - 1);
+      setLeads((prev) => {
+         if (prev.some(l => l.id === data.lead_id)) {
+            setTotalCount(c => Math.max(0, c - 1));
+            return prev.filter(l => l.id !== data.lead_id);
+         }
+         return prev;
+      });
     }
   });
 

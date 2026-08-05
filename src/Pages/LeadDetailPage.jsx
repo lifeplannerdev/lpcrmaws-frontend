@@ -14,6 +14,8 @@ import UnifiedTimeline from '../Components/leads/UnifiedTimeline';
 import CustomerJourney from '../Components/leads/CustomerJourney';
 import LeadDocuments from '../Components/leads/LeadDocuments';
 import LeadQuickActions from '../Components/leads/LeadQuickActions';
+import RemarkModal from '../Components/leads/RemarkModal';
+import { format } from 'date-fns';
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -30,6 +32,7 @@ export default function LeadDetailPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('details');
   const [refreshTimelineTrigger, setRefreshTimelineTrigger] = useState(0);
+  const [remarkModalOpen, setRemarkModalOpen] = useState(false);
 
   // Keep token in a ref so authFetch stays stable across re-renders
   const tokenRef = useRef(accessToken);
@@ -58,6 +61,51 @@ export default function LeadDetailPage() {
 
     return res;
   }, [refreshAccessToken]);
+
+  const handleUpdateLeadField = async (field, value) => {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/leads/${leadId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLead(data.lead || data);
+      }
+    } catch (err) {
+      console.error(`Failed to update ${field}:`, err);
+    }
+  };
+
+  const handleRemarkSubmit = async (leadToUpdate, newRemarkText) => {
+    const timestamp = format(new Date(), 'dd/MM/yyyy HH:mm');
+    const username = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : (user?.username || 'User');
+    const formattedRemark = `[${timestamp}] ${username}: ${newRemarkText}`;
+    
+    const updatedRemarks = leadToUpdate.remarks 
+      ? `${leadToUpdate.remarks}\n\n${formattedRemark}`
+      : formattedRemark;
+
+    try {
+      const response = await authFetch(`${API_BASE_URL}/leads/${leadToUpdate.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ remarks: updatedRemarks })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setLead(data.lead || data);
+        setRemarkModalOpen(false);
+      } else {
+        alert('Failed to save remark');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error saving remark');
+    }
+  };
 
   // Fetch lead details
   useEffect(() => {
@@ -364,16 +412,23 @@ export default function LeadDetailPage() {
                   </div>
                 </div>
 
-                {lead.remarks && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                       <FileText size={20} className="text-indigo-600" /> Remarks
                     </h3>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-gray-700 whitespace-pre-wrap">{lead.remarks}</p>
-                    </div>
+                    <button onClick={() => setRemarkModalOpen(true)} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1 rounded-md transition-colors">+ Add / View Remarks</button>
                   </div>
-                )}
+                  {lead.remarks ? (
+                    <div className="p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => setRemarkModalOpen(true)}>
+                      <p className="text-gray-700 whitespace-pre-wrap line-clamp-3">{lead.remarks}</p>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-gray-50 rounded-lg text-gray-500 italic text-sm cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => setRemarkModalOpen(true)}>
+                      No remarks yet. Click to add one.
+                    </div>
+                  )}
+                </div>
 
                 {lead.processing_notes && (
                   <div>
@@ -582,7 +637,13 @@ export default function LeadDetailPage() {
           </div>
         </div>
       </div>
-    </div>
+      {remarkModalOpen && (
+        <RemarkModal 
+          lead={lead} 
+          onClose={() => setRemarkModalOpen(false)} 
+          onSubmit={handleRemarkSubmit} 
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLeadsChannel } from '../../hooks/useLeadsChannel';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionsContext';
 import { useNavigate } from 'react-router-dom';
 import { Phone, User, Clock, ChevronRight, Activity } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -8,7 +9,13 @@ import { format, parseISO } from 'date-fns';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function LiveLeadsBoard() {
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
+  
+  const hasGlobalRead = user?.role === 'ADMIN' || 
+                        user?.db_roles?.some(r => ['ADMIN', 'CEO', 'SUPER_ADMIN'].includes(r.name)) || 
+                        hasPermission('leads:read_any') || 
+                        hasPermission('leads:read_tenant');
   const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,12 +24,20 @@ export default function LiveLeadsBoard() {
   // Use real-time Pusher channel
   useLeadsChannel({
     onLeadCreated: (data) => {
+      const isMine = data.lead?.assigned_to?.id === user?.id || data.lead?.sub_assigned_to?.id === user?.id;
+      if (!hasGlobalRead && !isMine) return;
+
       setLeads((prev) => {
         if (prev.some(l => l.id === data.lead.id)) return prev;
         return [data.lead, ...prev].slice(0, 100); // Keep max 100
       });
     },
     onLeadUpdated: (data) => {
+      const isMine = data.lead?.assigned_to?.id === user?.id || data.lead?.sub_assigned_to?.id === user?.id;
+      if (!hasGlobalRead && !isMine) {
+        setLeads((prev) => prev.filter(l => l.id !== data.lead.id));
+        return;
+      }
       setLeads((prev) => prev.map(l => l.id === data.lead.id ? { ...l, ...data.lead } : l));
     },
     onLeadDeleted: (data) => {

@@ -4,6 +4,7 @@ import 'react-data-grid/lib/styles.css';
 import { format, isToday, parseISO, isSameDay, subDays } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
 import { Can } from '../../context/PermissionsContext';
+import RemarkModal from './RemarkModal';
 
 const STATUS_OPTIONS = [
   'ENQUIRY', 'JOB_ENQUIRY', 'CONTACTED', 'QUALIFIED', 'NOT_INTERESTED',
@@ -126,10 +127,13 @@ const columns = [
     key: 'remarks', 
     name: 'Remarks', 
     width: 350, 
-    renderEditCell: textEditor,
     renderCell: (p) => (
-      <div title={p.row.remarks || ''} className="w-full h-full truncate cursor-pointer hover:bg-gray-50">
-        {p.row.remarks}
+      <div 
+        title={p.row.remarks || ''} 
+        className="w-full h-full truncate cursor-pointer hover:bg-indigo-50 flex items-center px-2 text-indigo-600 text-xs font-semibold"
+        onClick={() => window.dispatchEvent(new CustomEvent('openRemarkModal', { detail: p.row }))}
+      >
+        {p.row.remarks ? 'View/Add Remarks' : '+ Add Remark'}
       </div>
     )
   },
@@ -180,6 +184,44 @@ const columns = [
 export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isReportMode = false, onLeadsChange }) {
   const { user } = useAuth();
   const [localLeads, setLocalLeads] = useState(leads || []);
+  const [remarkModalLead, setRemarkModalLead] = useState(null);
+
+  useEffect(() => {
+    const handleOpenModal = (e) => setRemarkModalLead(e.detail);
+    window.addEventListener('openRemarkModal', handleOpenModal);
+    return () => window.removeEventListener('openRemarkModal', handleOpenModal);
+  }, []);
+
+  const handleRemarkSubmit = async (leadToUpdate, newRemarkText) => {
+    const timestamp = format(new Date(), 'dd/MM/yyyy HH:mm');
+    const username = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : (user?.username || 'User');
+    const formattedRemark = `[${timestamp}] ${username}: ${newRemarkText}`;
+    
+    const updatedRemarks = leadToUpdate.remarks 
+      ? `${leadToUpdate.remarks}\n\n${formattedRemark}`
+      : formattedRemark;
+
+    try {
+      const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/leads/${leadToUpdate.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ remarks: updatedRemarks })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const updatedLead = data.lead || data;
+        setLocalLeads(prev => prev.map(l => l.id === leadToUpdate.id ? updatedLead : l));
+        if (onUpdateLead) onUpdateLead(updatedLead);
+        setRemarkModalLead(null);
+      } else {
+        alert('Failed to save remark');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error saving remark');
+    }
+  };
 
   useEffect(() => {
     setLocalLeads(prev => {
@@ -344,6 +386,13 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
   return (
     <div className="w-full h-full bg-white flex-1 flex flex-col overflow-hidden">
        {renderGrid()}
+       {remarkModalLead && (
+         <RemarkModal 
+           lead={remarkModalLead} 
+           onClose={() => setRemarkModalLead(null)} 
+           onSubmit={handleRemarkSubmit} 
+         />
+       )}
     </div>
   );
 }
