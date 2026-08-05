@@ -127,15 +127,34 @@ const columns = [
     key: 'remarks', 
     name: 'Remarks', 
     width: 350, 
-    renderCell: (p) => (
-      <div 
-        title={p.row.remarks || ''} 
-        className="w-full h-full truncate cursor-pointer hover:bg-indigo-50 flex items-center px-2 text-indigo-600 text-xs font-semibold"
-        onClick={() => window.dispatchEvent(new CustomEvent('openRemarkModal', { detail: p.row }))}
-      >
-        {p.row.remarks ? 'View/Add Remarks' : '+ Add Remark'}
-      </div>
-    )
+    renderCell: (p) => {
+      const remarks = p.row.remarks;
+      let lastRemark = '';
+      if (remarks) {
+        const parts = remarks.split('\n\n');
+        lastRemark = parts[parts.length - 1];
+      }
+      return (
+        <div className="w-full h-full flex items-center justify-between px-2 gap-2 hover:bg-gray-50 transition-colors">
+          <div 
+            title={remarks || ''} 
+            className="truncate text-gray-700 text-xs flex-1 cursor-pointer"
+            onClick={() => window.dispatchEvent(new CustomEvent('openRemarkModal', { detail: p.row }))}
+          >
+            {lastRemark || <span className="text-gray-400 italic">No remarks</span>}
+          </div>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(new CustomEvent('openRemarkModal', { detail: p.row }));
+            }}
+            className="flex-shrink-0 text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 transition-colors whitespace-nowrap"
+          >
+            + Add
+          </button>
+        </div>
+      );
+    }
   },
   { 
     key: 'current_handler', 
