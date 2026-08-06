@@ -12,6 +12,7 @@ import { Users, UserPlus, CheckCircle, TrendingUp, LayoutList, LayoutGrid, FileS
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useLeadsChannel } from '../hooks/useLeadsChannel';
+import { useUserChannel } from '../hooks/useUserChannel';
 import Pagination from '../Components/common/Pagination';
 import CompanySwitcher from '../Components/common/CompanySwitcher';
 import { Can } from '../context/PermissionsContext';
