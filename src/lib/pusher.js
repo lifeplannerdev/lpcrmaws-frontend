@@ -15,7 +15,7 @@ export const getPusherClient = (getToken) => {
   pusherInstance = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
     cluster: import.meta.env.VITE_PUSHER_CLUSTER,
     forceTLS: true,
-    enabledTransports: ['xhr_streaming', 'xhr_polling'],
+    enabledTransports: ['ws', 'wss', 'xhr_streaming', 'xhr_polling'],
     authorizer: (channel) => ({
       authorize: async (socketId, callback) => {
         try {

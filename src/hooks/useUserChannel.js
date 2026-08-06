@@ -8,6 +8,7 @@ export const useUserChannel = ({
   onLeadAssigned,
   onNewConversation,
   onChatMessage,
+  onIncomingCall,
 } = {}) => {
   const { pusher, isReady } = usePusher();
   const { user } = useAuth();
@@ -19,6 +20,7 @@ export const useUserChannel = ({
   const onLeadAssignedRef = useRef(onLeadAssigned);
   const onNewConversationRef = useRef(onNewConversation);
   const onChatMessageRef = useRef(onChatMessage);
+  const onIncomingCallRef = useRef(onIncomingCall);
 
   // Update refs on every render (no re-subscription needed)
   useEffect(() => {
@@ -27,6 +29,7 @@ export const useUserChannel = ({
     onLeadAssignedRef.current = onLeadAssigned;
     onNewConversationRef.current = onNewConversation;
     onChatMessageRef.current = onChatMessage;
+    onIncomingCallRef.current = onIncomingCall;
   });
 
   useEffect(() => {
@@ -40,6 +43,7 @@ export const useUserChannel = ({
     channelRef.current.bind('lead.assigned', (data) => onLeadAssignedRef.current?.(data));
     channelRef.current.bind('new-conversation', (data) => onNewConversationRef.current?.(data));
     channelRef.current.bind('chat.new_message', (data) => onChatMessageRef.current?.(data));
+    channelRef.current.bind('telephony.incoming_call', (data) => onIncomingCallRef.current?.(data));
 
     return () => {
       channelRef.current?.unbind_all();

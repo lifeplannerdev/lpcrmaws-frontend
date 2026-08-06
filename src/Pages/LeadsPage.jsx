@@ -71,10 +71,23 @@ export default function LeadsPage() {
   const tokenRef = useRef(accessToken);
   useEffect(() => { tokenRef.current = accessToken; }, [accessToken]);
 
+  const checkIsMine = useCallback((lead) => {
+    if (!lead || !user?.id) return false;
+    const userId = String(user.id);
+    const assignedId = lead.assigned_to?.id !== undefined ? lead.assigned_to?.id : lead.assigned_to;
+    const subAssignedId = lead.sub_assigned_to?.id !== undefined ? lead.sub_assigned_to?.id : lead.sub_assigned_to;
+    
+    return (
+      (assignedId !== null && assignedId !== undefined && String(assignedId) === userId) ||
+      (subAssignedId !== null && subAssignedId !== undefined && String(subAssignedId) === userId)
+    );
+  }, [user?.id]);
+
   // Real-time Push Updates
   useLeadsChannel({
     onLeadCreated: (data) => {
-      const isMine = data.lead?.assigned_to?.id === user?.id || data.lead?.sub_assigned_to?.id === user?.id;
+      if (!data?.lead) return;
+      const isMine = checkIsMine(data.lead);
       if (!hasGlobalRead && !isMine) return;
 
       setLeads((prev) => {
@@ -85,7 +98,8 @@ export default function LeadsPage() {
       setTotalCount((prev) => prev + 1);
     },
     onLeadUpdated: (data) => {
-      const isMine = data.lead?.assigned_to?.id === user?.id || data.lead?.sub_assigned_to?.id === user?.id;
+      if (!data?.lead) return;
+      const isMine = checkIsMine(data.lead);
       if (!hasGlobalRead && !isMine) {
         setLeads((prev) => {
           if (prev.some(l => l.id === data.lead.id)) {
@@ -97,7 +111,12 @@ export default function LeadsPage() {
         return;
       }
 
-      setLeads((prev) => prev.map(l => l.id === data.lead.id ? { ...l, ...data.lead } : l));
+      setLeads((prev) => {
+        if (!prev.some(l => l.id === data.lead.id)) {
+          return [data.lead, ...prev];
+        }
+        return prev.map(l => l.id === data.lead.id ? { ...l, ...data.lead } : l);
+      });
     },
     onLeadDeleted: (data) => {
       setLeads((prev) => {
@@ -109,6 +128,22 @@ export default function LeadsPage() {
       });
     }
   });
+
+  // User-specific Channel Updates (Tasks, Assignments, Live Calls)
+  useUserChannel({
+    onLeadAssigned: (data) => {
+      if (data?.lead_id) {
+        // Trigger page re-fetch or manual check
+        fetchLeadsRef.current?.();
+      }
+    },
+    onIncomingCall: (data) => {
+      // Refresh lead list when a live call comes in for this user
+      fetchLeadsRef.current?.();
+    }
+  });
+
+  const fetchLeadsRef = useRef(null);
 
   const [leads, setLeads]                     = useState([]);
   const [selectedLeads, setSelectedLeads]     = useState([]);
@@ -233,6 +268,7 @@ export default function LeadsPage() {
     const { signal } = controller;
 
     const fetchAll = async () => {
+      fetchLeadsRef.current = fetchAll;
       setLoading(true);
       try {
         const paramsObj = { page, page_size: PAGE_SIZE };

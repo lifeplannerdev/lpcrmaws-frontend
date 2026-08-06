@@ -335,17 +335,17 @@ export default function PenaltyManagementPage() {
   const nonAdminEmployees = employees.filter(emp => !emp.role_names?.some(r => r.toLowerCase() === 'admin'));
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <Navbar />
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">
+              <h1 className="text-4xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
                 Penalty Management
               </h1>
-              <p className="text-gray-500 text-sm">
+              <p className="text-gray-600 text-lg">
                 Track and manage employee penalties
               </p>
             </div>
@@ -364,7 +364,7 @@ export default function PenaltyManagementPage() {
                   });
                   setShowModal(true);
                 }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 transition-colors shadow-sm font-medium text-sm"
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold"
               >
                 <Plus className="w-5 h-5" />
                 Add Penalty
@@ -383,7 +383,7 @@ export default function PenaltyManagementPage() {
 
         {/* Stats Card */}
         {selectedMonth && (
-          <div className="bg-indigo-600 rounded-xl p-6 shadow-sm mb-6 text-white">
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6 shadow-lg mb-6 text-white">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-indigo-100 text-sm font-medium mb-1">
@@ -407,15 +407,19 @@ export default function PenaltyManagementPage() {
         <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <Filter className="w-5 h-5 text-gray-600" />
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-4">
-          <div className="flex flex-col md:flex-row gap-4 items-center">
-            
+            <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Month Filter */}
-            <div className="w-full md:w-auto">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Month
+              </label>
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">All Months</option>
                 {monthOptions.map(option => (
@@ -427,11 +431,14 @@ export default function PenaltyManagementPage() {
             </div>
 
             {/* Employee Filter */}
-            <div className="w-full md:w-auto">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Employee
+              </label>
               <select
                 value={selectedEmployee}
                 onChange={(e) => setSelectedEmployee(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">All Employees</option>
                 {nonAdminEmployees.map(emp => (
@@ -443,15 +450,20 @@ export default function PenaltyManagementPage() {
             </div>
 
             {/* Search */}
-            <div className="flex-1 w-full relative">
-              <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search by act or employee..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Search
+              </label>
+              <div className="relative">
+                <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search by act or employee..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -479,18 +491,18 @@ export default function PenaltyManagementPage() {
         ) : (
           <>
             {/* Desktop Table */}
-            <div className="hidden lg:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="hidden lg:block bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Employee</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Act/Reason</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Amount</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Month</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Date</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Employee</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Act/Reason</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Amount</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Month</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Date</th>
                       {canManagePenalties && (
-                        <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase">Actions</th>
+                        <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Actions</th>
                       )}
                     </tr>
                   </thead>
@@ -499,7 +511,7 @@ export default function PenaltyManagementPage() {
                       <tr key={penalty.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 font-semibold text-sm">
+                            <div className="w-8 h-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                               {getEmployeeName(penalty.user).charAt(0).toUpperCase()}
                             </div>
                             <span className="font-medium text-gray-900">
@@ -511,7 +523,7 @@ export default function PenaltyManagementPage() {
                           <p className="text-gray-700">{penalty.act}</p>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold text-red-700">
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-700">
                             <IndianRupee className="w-4 h-4" />
                             {parseFloat(penalty.amount).toFixed(2)}
                           </span>
@@ -530,14 +542,14 @@ export default function PenaltyManagementPage() {
                             <div className="flex items-center justify-center gap-2">
                               <button
                                 onClick={() => handleEdit(penalty)}
-                                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
                                 title="Edit"
                               >
                                 <Edit className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleDelete(penalty.id)}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
                                 title="Delete"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -561,7 +573,7 @@ export default function PenaltyManagementPage() {
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 font-semibold">
+                      <div className="w-10 h-10 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
                         {getEmployeeName(penalty.user).charAt(0).toUpperCase()}
                       </div>
                       <div>
@@ -571,7 +583,7 @@ export default function PenaltyManagementPage() {
                         <p className="text-sm text-gray-500">{formatMonth(penalty.month)}</p>
                       </div>
                     </div>
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold text-red-700">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-700">
                       <IndianRupee className="w-4 h-4" />
                       {parseFloat(penalty.amount).toFixed(2)}
                     </span>
@@ -591,13 +603,13 @@ export default function PenaltyManagementPage() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEdit(penalty)}
-                          className="p-2 rounded-lg bg-gray-50 hover:bg-indigo-50 text-gray-600 hover:text-indigo-600 transition-colors"
+                          className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(penalty.id)}
-                          className="p-2 rounded-lg bg-gray-50 hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors"
+                          className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -613,24 +625,24 @@ export default function PenaltyManagementPage() {
         {/* Add/Edit Modal */}
         {showModal && (
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden flex flex-col max-h-[90vh]">
-              <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                <h3 className="text-lg font-bold text-gray-900">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
+                <h2 className="text-2xl font-bold text-gray-900">
                   {editingPenalty ? 'Edit Penalty' : 'Add New Penalty'}
-                </h3>
+                </h2>
                 <button
                   onClick={() => {
                     setShowModal(false);
                     setEditingPenalty(null);
                     setErrors({});
                   }}
-                  className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <X className="w-6 h-6 text-gray-500" />
                 </button>
               </div>
 
-              <div className="p-6 overflow-y-auto">
+              <div className="p-6">
                 {errors.submit && (
                   <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                     {errors.submit}
@@ -647,7 +659,7 @@ export default function PenaltyManagementPage() {
                       name="user"
                       value={formData.user}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                      className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                         errors.user ? 'border-red-500' : 'border-gray-300'
                       }`}
                     >
@@ -674,7 +686,7 @@ export default function PenaltyManagementPage() {
                       onChange={handleInputChange}
                       rows={3}
                       placeholder="Describe the reason for penalty..."
-                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                      className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                         errors.act ? 'border-red-500' : 'border-gray-300'
                       }`}
                     />
@@ -698,7 +710,7 @@ export default function PenaltyManagementPage() {
                         placeholder="0.00"
                         step="0.01"
                         min="0"
-                        className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                        className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                           errors.amount ? 'border-red-500' : 'border-gray-300'
                         }`}
                       />
@@ -717,7 +729,7 @@ export default function PenaltyManagementPage() {
                       name="month"
                       value={formData.month}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                      className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                         errors.month ? 'border-red-500' : 'border-gray-300'
                       }`}
                     >
@@ -743,7 +755,7 @@ export default function PenaltyManagementPage() {
                       name="date"
                       value={formData.date}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                      className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                         errors.date ? 'border-red-500' : 'border-gray-300'
                       }`}
                     />
@@ -752,6 +764,25 @@ export default function PenaltyManagementPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Form Actions */}
+                <div className="mt-8 flex gap-3 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowModal(false);
+                      setEditingPenalty(null);
+                      setErrors({});
+                    }}
+                    disabled={submitting}
+                    className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={submitting}
                     className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-semibold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {submitting ? (
