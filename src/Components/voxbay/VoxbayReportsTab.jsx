@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Calendar, User, FileText, AlertCircle, Loader2 } from 'lucide-react';
+import { Download, Calendar, User, FileText, AlertCircle, Loader2, Phone } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
@@ -12,6 +12,7 @@ export default function VoxbayReportsTab({ accessToken }) {
   const [customStart, setCustomStart] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [customEnd, setCustomEnd] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedAgent, setSelectedAgent] = useState('all');
+  const [callType, setCallType] = useState('all');
   
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState(null);
@@ -49,6 +50,9 @@ export default function VoxbayReportsTab({ accessToken }) {
       let url = `${API_BASE}/voxbay/reports/export/?start_date=${start}&end_date=${end}`;
       if (selectedAgent !== 'all') {
          url += `&agent_id=${selectedAgent}`;
+      }
+      if (callType !== 'all') {
+         url += `&call_type=${callType}`;
       }
       
       const response = await fetch(url, {
@@ -125,6 +129,23 @@ export default function VoxbayReportsTab({ accessToken }) {
               ))}
             </select>
             {loadingAgents && <p className="text-xs text-gray-400 mt-2 flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Loading agents...</p>}
+          </div>
+
+          {/* Call Type Selection */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
+              <Phone size={16} className="text-gray-400" />
+              Call Type
+            </label>
+            <select
+              value={callType}
+              onChange={(e) => setCallType(e.target.value)}
+              className="w-full sm:w-96 p-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
+            >
+              <option value="all">All Calls</option>
+              <option value="incoming">Incoming Calls Only</option>
+              <option value="outgoing">Outgoing Calls Only</option>
+            </select>
           </div>
 
           {/* Date Range Selection */}
