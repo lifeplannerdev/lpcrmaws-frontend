@@ -186,6 +186,17 @@ const BulkUploadModal = ({ onClose, authFetch }) => {
                 </div>
               </div>
 
+              {/* ── Download template ── */}
+              <a
+                href={TEMPLATE_URL}
+                download="leads_bulk_upload_template.xlsx"
+                className="flex items-center justify-center gap-2.5 w-full py-3 rounded-xl border-2 border-dashed border-indigo-300 hover:border-indigo-500 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-sm transition-all duration-200 group"
+              >
+                <Download size={16} className="group-hover:-translate-y-0.5 transition-transform duration-200" />
+                Download Excel Template
+                <span className="text-indigo-400 font-normal text-xs">(.xlsx)</span>
+              </a>
+
               {/* ── Drop zone ── */}
               <div
                 onDragOver={(e) => e.preventDefault()}
