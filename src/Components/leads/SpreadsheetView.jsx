@@ -107,6 +107,22 @@ function NameEditor({ row, column, onRowChange, onClose }) {
 }
 
 const columns = [
+  { key: 'call_action', name: '', width: 50, renderCell: (p) => (
+    <div className="w-full h-full flex items-center justify-center">
+      <button 
+        className="text-emerald-600 hover:text-emerald-800 p-1 rounded-md hover:bg-emerald-50 transition-colors"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (p.row.phone) {
+            window.dispatchEvent(new CustomEvent('initiateVoxbayCall', { detail: p.row.phone }));
+          }
+        }}
+        title="Click to Call"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+      </button>
+    </div>
+  )},
   { key: 'agenda_type', name: 'Type', width: 100, renderCell: (p) => (
     <span className={`font-semibold text-xs px-2 py-1 rounded ${p.row.agenda_type === 'Follow-up' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
       {p.row.agenda_type || 'Fresh'}
@@ -200,16 +216,26 @@ const columns = [
   },
 ];
 
+import { useVoxbayCall } from '../../hooks/useVoxbayCall';
+
 export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isReportMode = false, onLeadsChange }) {
   const { user } = useAuth();
   const [localLeads, setLocalLeads] = useState(leads || []);
   const [remarkModalLead, setRemarkModalLead] = useState(null);
+  const { initiateCall } = useVoxbayCall();
 
   useEffect(() => {
     const handleOpenModal = (e) => setRemarkModalLead(e.detail);
+    const handleCall = (e) => initiateCall(e.detail);
+    
     window.addEventListener('openRemarkModal', handleOpenModal);
-    return () => window.removeEventListener('openRemarkModal', handleOpenModal);
-  }, []);
+    window.addEventListener('initiateVoxbayCall', handleCall);
+    
+    return () => {
+      window.removeEventListener('openRemarkModal', handleOpenModal);
+      window.removeEventListener('initiateVoxbayCall', handleCall);
+    };
+  }, [initiateCall]);
 
   const handleRemarkSubmit = async (leadToUpdate, newRemarkText) => {
     const timestamp = format(new Date(), 'dd/MM/yyyy HH:mm');
