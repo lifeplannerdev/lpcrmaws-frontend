@@ -7,12 +7,21 @@ export function useVoxbayCall() {
 
   const initiateCall = async (phoneNumber) => {
     if (!phoneNumber) return;
-    setCallingNumber(phoneNumber);
+    
+    // Normalize phone number for Voxbay if it's exactly 10 digits
+    let destNumber = phoneNumber.toString().replace(/\D/g, '');
+    if (destNumber.length === 10) {
+      destNumber = `91${destNumber}`;
+    } else {
+      destNumber = phoneNumber; // fallback to original if not 10 digits
+    }
+
+    setCallingNumber(destNumber);
     try {
       const res = await authFetch(`${apiBaseUrl}/voxbay/click-to-call/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ destination: phoneNumber })
+        body: JSON.stringify({ destination: destNumber })
       });
       if (!res.ok) {
         const errorData = await res.json();

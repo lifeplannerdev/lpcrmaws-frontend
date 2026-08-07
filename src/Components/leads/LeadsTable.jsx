@@ -240,6 +240,20 @@ const LeadsTable = ({ leads, statusColors, onDeleteLead, activeLeadId, selectedL
                 <td className="px-4 py-5 align-top">
                   <div className="flex items-center justify-end gap-1.5">
 
+                    {/* Quick Call */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); initiateCall(lead.phone); }}
+                      disabled={callingNumber === lead.phone}
+                      className="group/btn p-2 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all duration-200 hover:shadow-md hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Click to Call (Voxbay)"
+                    >
+                      {callingNumber === lead.phone ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Phone size={16} className="group-hover/btn:rotate-12 transition-transform" />
+                      )}
+                    </button>
+
                     {/* Call History — permitted roles only */}
                     {allowHistory && (
                       <button
