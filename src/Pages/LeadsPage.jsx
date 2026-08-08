@@ -8,7 +8,7 @@ import LeadsTable from '../Components/leads/LeadsTable';
 import LeadsKanbanBoard from '../Components/leads/LeadsKanbanBoard';
 import SpreadsheetView from '../Components/leads/SpreadsheetView';
 import LeadSidePanel from '../Components/leads/LeadSidePanel';
-import { Users, UserPlus, CheckCircle, TrendingUp, LayoutList, LayoutGrid, FileSpreadsheet } from 'lucide-react';
+import { Users, UserPlus, CheckCircle, TrendingUp, LayoutList, LayoutGrid, FileSpreadsheet, Activity } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useLeadsChannel } from '../hooks/useLeadsChannel';
@@ -166,6 +166,7 @@ export default function LeadsPage() {
   const [totalPages, setTotalPages]           = useState(1);
   const [totalCount, setTotalCount]           = useState(0);
   const [showReassignModal, setShowReassignModal] = useState(false);
+  const [agendaDate, setAgendaDate]           = useState(getLocalDateString());
 
   // Debounce search — wait 400ms after user stops typing
   const debounceTimer = useRef(null);
@@ -287,6 +288,9 @@ export default function LeadsPage() {
         
         if (viewMode === 'spreadsheet') {
           paramsObj.daily_agenda = 'true';
+          if (agendaDate) paramsObj.agenda_date = agendaDate;
+        } else if (viewMode === 'admin_feed') {
+          paramsObj.ordering = '-updated_at';
         } else if (filterToday) {
           paramsObj.created_at__date = getLocalDateString();
         }
@@ -367,7 +371,7 @@ export default function LeadsPage() {
     authLoading, authFetch,
     page, debouncedSearch,
     filterStatus, filterPriority, filterSource, filterStaff, companyFilter,
-    filterCampaign, filterToday, viewMode,
+    filterCampaign, filterToday, viewMode, agendaDate,
   ]);
 
   const statsCards = useMemo(() => [
@@ -430,7 +434,32 @@ export default function LeadsPage() {
               <FileSpreadsheet size={18} />
               Spreadsheet
             </button>
+            {hasGlobalRead && (
+              <button
+                onClick={() => setViewMode('admin_feed')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
+                  viewMode === 'admin_feed' 
+                    ? 'bg-indigo-50 text-indigo-700 shadow-sm' 
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Activity size={18} />
+                Live Spreadsheet
+              </button>
+            )}
           </div>
+          
+          {viewMode === 'spreadsheet' && (
+            <div className="flex items-center gap-2 bg-white border-2 border-gray-200 rounded-xl px-4 py-2 shadow-sm">
+              <label className="text-sm font-semibold text-gray-700 whitespace-nowrap">Agenda Date:</label>
+              <input 
+                type="date"
+                value={agendaDate}
+                onChange={(e) => { setPage(1); setAgendaDate(e.target.value); }}
+                className="border-none bg-transparent text-gray-900 font-medium focus:outline-none focus:ring-0 cursor-pointer"
+              />
+            </div>
+          )}
           
           <Can perform="leads:view_any">
             <button
@@ -497,7 +526,7 @@ export default function LeadsPage() {
                     setSelectedLeads={setSelectedLeads}
                   />
                 </>
-              ) : viewMode === 'spreadsheet' ? (
+              ) : (viewMode === 'spreadsheet' || viewMode === 'admin_feed') ? (
                 <div className="h-[75vh] w-full border border-gray-200 rounded-xl overflow-hidden bg-white flex flex-col shadow-sm">
                   <SpreadsheetView leads={leads} authFetch={authFetch} onUpdateLead={(updatedLead) => {
                     setLeads(prev => {
@@ -538,7 +567,7 @@ export default function LeadsPage() {
                 />
               )}
 
-              {(viewMode === 'list' || viewMode === 'spreadsheet') && totalPages > 1 && (
+              {(viewMode === 'list' || viewMode === 'spreadsheet' || viewMode === 'admin_feed') && totalPages > 1 && (
                 <Pagination
                   currentPage={page}
                   totalPages={totalPages}
