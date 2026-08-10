@@ -1,6 +1,6 @@
 .programs-page {
   padding: 20px 30px;
-  background-color: #f4f7fa;
+  background-color: #fdf2f8;
   min-height: 100vh;
 }
 
@@ -13,13 +13,13 @@
 
 .programs-header h1 {
   font-size: 2rem;
-  color: #2c3e50;
+  color: #831843;
   margin: 0;
   font-weight: 700;
 }
 
 .btn-add-main {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
   color: white;
   border: none;
   padding: 12px 24px;
@@ -27,13 +27,13 @@
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(118, 75, 162, 0.3);
+  box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .btn-add-main:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(118, 75, 162, 0.4);
+  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4);
 }
 
 .country-section {
@@ -42,8 +42,8 @@
 
 .country-title {
   font-size: 1.4rem;
-  color: #34495e;
-  border-bottom: 2px solid #ddd;
+  color: #831843;
+  border-bottom: 2px solid #fbcfe8;
   padding-bottom: 10px;
   margin-bottom: 20px;
 }
@@ -62,31 +62,31 @@
   display: flex;
   flex-direction: column;
   transition: transform 0.3s, box-shadow 0.3s;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(251, 207, 232, 0.4);
   position: relative;
 }
 
 .program-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+  box-shadow: 0 12px 24px rgba(236, 72, 153, 0.15);
 }
 
 .card-header {
   padding: 20px;
-  background: linear-gradient(to right, #fdfbfb 0%, #ebedee 100%);
-  border-bottom: 1px solid #eee;
+  background: linear-gradient(to right, #fdf2f8 0%, #fce7f3 100%);
+  border-bottom: 1px solid #fbcfe8;
 }
 
 .card-header h3 {
   margin: 0 0 10px 0;
   font-size: 1.25rem;
-  color: #2c3e50;
+  color: #9d174d;
 }
 
 .uni-badge {
   display: inline-block;
-  background: #e3f2fd;
-  color: #1976d2;
+  background: #fbcfe8;
+  color: #9d174d;
   padding: 4px 10px;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -107,24 +107,24 @@
 
 .fee-highlight {
   margin-top: 15px;
-  background: #f8fdf8;
-  border-left: 4px solid #28a745;
+  background: #fdf2f8;
+  border-left: 4px solid #ec4899;
   padding: 10px;
   font-size: 0.9rem;
-  color: #2e7d32;
+  color: #be185d;
 }
 
 .card-footer {
   padding: 15px 20px;
   background: #fcfcfc;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #fbcfe8;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .btn-share {
-  background: #007bff;
+  background: #ec4899;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -135,7 +135,7 @@
 }
 
 .btn-share:hover {
-  background: #0056b3;
+  background: #be185d;
 }
 
 .admin-actions {
@@ -152,11 +152,11 @@
 }
 
 .btn-edit {
-  color: #6c757d;
+  color: #9d174d;
 }
 
 .btn-edit:hover {
-  color: #343a40;
+  color: #831843;
 }
 
 .btn-delete {
