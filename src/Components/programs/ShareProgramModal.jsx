@@ -109,7 +109,7 @@ Please let me know if you have any questions!`;
       <div className="modal-content program-modal">
         <h2>Share Program: {program.title}</h2>
         
-        <div className="share-section">
+        <div className="share-section program-form">
           <div className="form-group" style={{position: 'relative'}}>
             <label>Search Existing Lead (Optional)</label>
             <input 
