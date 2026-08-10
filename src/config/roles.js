@@ -12,7 +12,8 @@ import {
   Monitor,
   IndianRupee,
   Key,
-  Settings
+  Settings,
+  BookOpen
 } from "lucide-react";
 
 export const masterNavigation = [
@@ -36,6 +37,7 @@ export const masterNavigation = [
   { id: "credentials", label: "Credentials Vault", icon: Key, path: "/credentials", requiredResource: "credentials" },
   { id: "call", label: "Voxbay", icon: PhoneCall, path: "/call-analytics", requiredResource: "voxbay" },
   { id: "feeds", label: "Feeds", icon: UserCheck, path: "/feeds" },
+  { id: "programs", label: "Programs", icon: BookOpen, path: "/programs", requiredResource: "programs" },
 ];
 
 export const getFilteredMenu = (hasAnyPermission, hasPermission, user) => {
