@@ -1,7 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import './ProgramFormModal.css';
+import CreatableSelect from './CreatableSelect';
+import { useApi } from '../../context/ApiContext';
 
 const ProgramFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
+  const { authFetch, apiBaseUrl } = useApi();
+  const [countries, setCountries] = useState([]);
+  const [universities, setUniversities] = useState([]);
+  const [intakes, setIntakes] = useState([]);
+
+  const fetchOptions = async () => {
+    try {
+      const [cRes, uRes, iRes] = await Promise.all([
+        authFetch(`${apiBaseUrl}/program-countries/`),
+        authFetch(`${apiBaseUrl}/program-universities/`),
+        authFetch(`${apiBaseUrl}/program-intakes/`)
+      ]);
+      if (cRes.ok) { const data = await cRes.json(); setCountries(data.results || data); }
+      if (uRes.ok) { const data = await uRes.json(); setUniversities(data.results || data); }
+      if (iRes.ok) { const data = await iRes.json(); setIntakes(data.results || data); }
+    } catch (err) {
+      console.error('Error fetching options:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchOptions();
+    }
+  }, [isOpen, apiBaseUrl]);
+
   const [formData, setFormData] = useState({
     title: '',
     country: '',
@@ -95,18 +123,39 @@ const ProgramFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
               <input type="text" name="title" value={formData.title} onChange={handleChange} required />
             </div>
             <div className="form-group">
-              <label>Country</label>
-              <input type="text" name="country" value={formData.country} onChange={handleChange} required />
+              <CreatableSelect 
+                label="Country"
+                name="country"
+                value={formData.country}
+                onChange={handleChange}
+                options={countries}
+                endpoint="program-countries"
+                onOptionAdded={(newOpt) => setCountries([...countries, newOpt])}
+              />
             </div>
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>University / College</label>
-              <input type="text" name="university" value={formData.university} onChange={handleChange} />
+              <CreatableSelect 
+                label="University / College"
+                name="university"
+                value={formData.university}
+                onChange={handleChange}
+                options={universities}
+                endpoint="program-universities"
+                onOptionAdded={(newOpt) => setUniversities([...universities, newOpt])}
+              />
             </div>
             <div className="form-group">
-              <label>Intake</label>
-              <input type="text" name="intake" value={formData.intake} onChange={handleChange} />
+              <CreatableSelect 
+                label="Intake"
+                name="intake"
+                value={formData.intake}
+                onChange={handleChange}
+                options={intakes}
+                endpoint="program-intakes"
+                onOptionAdded={(newOpt) => setIntakes([...intakes, newOpt])}
+              />
             </div>
           </div>
           <div className="form-row">

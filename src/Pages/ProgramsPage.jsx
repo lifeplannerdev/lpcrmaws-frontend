@@ -15,6 +15,7 @@ const ProgramsPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState(null);
+  const [selectedCountry, setSelectedCountry] = useState('All');
 
   const canManage = hasPermission('programs:manage');
 
@@ -99,6 +100,8 @@ const ProgramsPage = () => {
     return acc;
   }, {});
 
+  const allCountries = Object.keys(programsByCountry).sort();
+
   if (loading) {
     return <div className="programs-page loading">Loading programs...</div>;
   }
@@ -107,15 +110,30 @@ const ProgramsPage = () => {
     <div className="programs-page">
       <div className="programs-header">
         <h1>Academic Programs & Fees Structure</h1>
-        {canManage && (
-          <button className="btn-add-main" onClick={handleAddClick}>
-            + Add New Program
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+          <select 
+            className="form-select" 
+            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+            value={selectedCountry}
+            onChange={(e) => setSelectedCountry(e.target.value)}
+          >
+            <option value="All">All Countries</option>
+            {allCountries.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          {canManage && (
+            <button className="btn-add-main" onClick={handleAddClick}>
+              + Add New Program
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="programs-content">
-        {Object.keys(programsByCountry).map(country => (
+        {allCountries
+          .filter(country => selectedCountry === 'All' || country === selectedCountry)
+          .map(country => (
           <div key={country} className="country-section">
             <h2 className="country-title">{country.toUpperCase()}</h2>
             <div className="programs-grid">
