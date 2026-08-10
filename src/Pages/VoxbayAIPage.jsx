@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import api from '../api';
+import { useAuth } from '../context/AuthContext';
 import './VoxbayAIPage.css';
 
 export default function VoxbayAIPage() {
@@ -17,10 +17,19 @@ export default function VoxbayAIPage() {
 
   const isToday = date === new Date().toISOString().split('T')[0];
 
+  const { accessToken } = useAuth();
+  
   const fetchData = async (targetDate) => {
     try {
-      const res = await api.get(`/api/telephony/voxbay-ai/report/?date=${targetDate}`);
-      setData(res.data);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/telephony/voxbay-ai/report/?date=${targetDate}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setData(json);
+      }
       setLoading(false);
     } catch (err) {
       console.error(err);
