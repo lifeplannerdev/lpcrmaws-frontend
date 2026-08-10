@@ -9,6 +9,8 @@ const ShareProgramModal = ({ isOpen, onClose, program }) => {
   const [leads, setLeads] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLead, setSelectedLead] = useState(null);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   
   const [contactInfo, setContactInfo] = useState({
     phone: callingNumber || '',
@@ -55,21 +57,27 @@ Please let me know if you have any questions!`;
   useEffect(() => {
     // Do not search if the query exactly matches the selected lead's name
     if (searchQuery.length > 2 && (!selectedLead || searchQuery !== selectedLead.name)) {
+      setIsSearching(true);
       const fetchLeads = async () => {
         try {
           const res = await authFetch(`${apiBaseUrl}/leads/?search=${searchQuery}`);
           if (res.ok) {
             const data = await res.json();
             setLeads(data.results || data);
+            setHasSearched(true);
           }
         } catch (err) {
           console.error('Error fetching leads:', err);
+        } finally {
+          setIsSearching(false);
         }
       };
       const timeoutId = setTimeout(fetchLeads, 500);
       return () => clearTimeout(timeoutId);
     } else {
       setLeads([]);
+      setHasSearched(false);
+      setIsSearching(false);
     }
   }, [searchQuery, apiBaseUrl, authFetch, selectedLead]);
 
@@ -120,21 +128,28 @@ Please let me know if you have any questions!`;
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            {leads.length > 0 && (
+            {searchQuery.length > 2 && (!selectedLead || searchQuery !== selectedLead.name) && (
               <ul className="lead-dropdown" style={{
                 position: 'absolute', top: '100%', left: 0, right: 0, 
                 background: 'white', border: '1px solid #ccc', zIndex: 1000,
-                maxHeight: '150px', overflowY: 'auto', listStyle: 'none', padding: 0, margin: 0
+                maxHeight: '150px', overflowY: 'auto', listStyle: 'none', padding: 0, margin: 0,
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
               }}>
-                {leads.map(lead => (
-                  <li 
-                    key={lead.id} 
-                    onClick={() => handleSelectLead(lead)}
-                    style={{padding: '8px', borderBottom: '1px solid #eee', cursor: 'pointer'}}
-                  >
-                    <strong>{lead.name}</strong> - {lead.phone}
-                  </li>
-                ))}
+                {isSearching ? (
+                  <li style={{padding: '8px', color: '#666'}}>Searching...</li>
+                ) : leads.length > 0 ? (
+                  leads.map(lead => (
+                    <li 
+                      key={lead.id} 
+                      onClick={() => handleSelectLead(lead)}
+                      style={{padding: '8px', borderBottom: '1px solid #eee', cursor: 'pointer'}}
+                    >
+                      <strong>{lead.name}</strong> - {lead.phone}
+                    </li>
+                  ))
+                ) : hasSearched ? (
+                  <li style={{padding: '8px', color: '#666'}}>No leads found.</li>
+                ) : null}
               </ul>
             )}
           </div>
