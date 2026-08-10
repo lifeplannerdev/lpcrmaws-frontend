@@ -21,7 +21,7 @@ export default function VoxbayAIPage() {
   
   const fetchData = async (targetDate) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/telephony/voxbay-ai/report/?date=${targetDate}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/voxbay-ai/report/?date=${targetDate}`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }
