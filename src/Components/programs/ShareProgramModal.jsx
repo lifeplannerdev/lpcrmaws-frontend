@@ -53,7 +53,8 @@ Please let me know if you have any questions!`;
 
   // Search leads
   useEffect(() => {
-    if (searchQuery.length > 2) {
+    // Do not search if the query exactly matches the selected lead's name
+    if (searchQuery.length > 2 && (!selectedLead || searchQuery !== selectedLead.name)) {
       const fetchLeads = async () => {
         try {
           const res = await authFetch(`${apiBaseUrl}/leads/?search=${searchQuery}`);
@@ -70,7 +71,7 @@ Please let me know if you have any questions!`;
     } else {
       setLeads([]);
     }
-  }, [searchQuery, apiBaseUrl, authFetch]);
+  }, [searchQuery, apiBaseUrl, authFetch, selectedLead]);
 
   if (!isOpen || !program) return null;
 
@@ -114,6 +115,7 @@ Please let me know if you have any questions!`;
             <label>Search Existing Lead (Optional)</label>
             <input 
               type="text" 
+              style={{ padding: '10px' }}
               placeholder="Search by name, email, or phone..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -121,7 +123,7 @@ Please let me know if you have any questions!`;
             {leads.length > 0 && (
               <ul className="lead-dropdown" style={{
                 position: 'absolute', top: '100%', left: 0, right: 0, 
-                background: 'white', border: '1px solid #ccc', zIndex: 10,
+                background: 'white', border: '1px solid #ccc', zIndex: 1000,
                 maxHeight: '150px', overflowY: 'auto', listStyle: 'none', padding: 0, margin: 0
               }}>
                 {leads.map(lead => (
