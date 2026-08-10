@@ -265,12 +265,29 @@ export default function VoxbayAIPage() {
           </div>
           <div className="call-list">
             {filteredLeads.map((c, i) => (
-              <div key={i} className="lead-item">
-                <div className="lead-item-top">
-                  <div className="lead-name">{c.lead_name}</div>
-                  <div className="lead-emp">{c.empName}</div>
+              <div key={i} className="lead-item" style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                <div className="lead-item-top" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+                  <div>
+                    <div className="lead-name" style={{fontSize: '15px', fontWeight: '600', color: 'var(--text)'}}>{c.lead_name}</div>
+                    <div className="lead-emp" style={{color: 'var(--text-dim)', fontSize: '13px'}}>{c.empName}</div>
+                  </div>
+                  <div style={{display: 'flex', gap: '6px', alignItems: 'center'}}>
+                    <span className="badge" style={{background: 'var(--surface-2)', color: 'var(--text-dim)'}}>{c.call_date} {c.call_time}</span>
+                    <span className="badge" style={{background: c.call_status === 'ANSWER' || c.call_status === 'ANSWERED' ? 'var(--cyan-dim)' : 'var(--rose-dim)', color: c.call_status === 'ANSWER' || c.call_status === 'ANSWERED' ? 'var(--cyan)' : 'var(--rose)'}}>{c.call_status}</span>
+                  </div>
                 </div>
-                {c.last_msg && <div className="lead-remark">{c.last_msg}</div>}
+                
+                {c.last_msg && <div className="lead-remark" style={{background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '6px', fontSize: '13px', color: 'var(--text-dim)'}}><b>Remark:</b> {c.last_msg}</div>}
+                
+                <div className="lead-meta-grid" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', marginTop: '4px', borderTop: '1px solid var(--border)', paddingTop: '10px'}}>
+                  <div style={{color: 'var(--text-dim)'}}><b>Destination:</b> <span style={{color: 'var(--text)'}}>{c.destination}</span></div>
+                  <div style={{color: 'var(--text-dim)'}}><b>Extension:</b> <span style={{color: 'var(--text)'}}>{c.extension}</span></div>
+                  <div style={{color: 'var(--text-dim)'}}><b>Total Duration:</b> <span style={{color: 'var(--text)'}}>{c.duration_sec}s</span></div>
+                  <div style={{color: 'var(--text-dim)'}}><b>Talk Time:</b> <span style={{color: 'var(--text)'}}>{c.conversation_duration}s</span></div>
+                  {c.program && <div style={{color: 'var(--text-dim)'}}><b>Program:</b> <span style={{color: 'var(--text)'}}>{c.program}</span></div>}
+                  {c.source && <div style={{color: 'var(--text-dim)'}}><b>Source:</b> <span style={{color: 'var(--text)'}}>{c.source}</span></div>}
+                  {c.lead_created && <div style={{color: 'var(--text-dim)'}}><b>Lead Created:</b> <span style={{color: 'var(--text)'}}>{c.lead_created}</span></div>}
+                </div>
               </div>
             ))}
           </div>
