@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApi } from '../context/ApiContext';
+import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import ProgramFormModal from '../Components/programs/ProgramFormModal';
 import ShareProgramModal from '../Components/programs/ShareProgramModal';
@@ -7,6 +8,7 @@ import './ProgramsPage.css';
 
 const ProgramsPage = () => {
   const { authFetch, apiBaseUrl } = useApi();
+  const { user } = useAuth();
   const { hasPermission } = usePermissions();
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,8 +37,10 @@ const ProgramsPage = () => {
   };
 
   useEffect(() => {
-    fetchPrograms();
-  }, [apiBaseUrl, authFetch]);
+    if (user) {
+      fetchPrograms();
+    }
+  }, [apiBaseUrl, authFetch, user]);
 
   const handleAddClick = () => {
     setSelectedProgram(null);
@@ -65,6 +69,21 @@ const ProgramsPage = () => {
       }
     } catch (err) {
       console.error('Error deleting program', err);
+    }
+  };
+
+  const handleToggleVisibility = async (program) => {
+    try {
+      const res = await authFetch(`${apiBaseUrl}/programs/${program.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_hidden: !program.is_hidden })
+      });
+      if (res.ok) {
+        fetchPrograms();
+      }
+    } catch (err) {
+      console.error('Error toggling visibility', err);
     }
   };
 
@@ -140,7 +159,10 @@ const ProgramsPage = () => {
               {programsByCountry[country].map(program => (
                 <div key={program.id} className="program-card">
                   <div className="card-header">
-                    <h3>{program.title}</h3>
+                    <h3>
+                      {program.title}
+                      {program.is_hidden && <span style={{color: 'red', fontSize: '0.8em', marginLeft: '10px'}}>(Hidden)</span>}
+                    </h3>
                     {program.university && <span className="uni-badge">{program.university}</span>}
                   </div>
                   
@@ -161,6 +183,13 @@ const ProgramsPage = () => {
                     </button>
                     {canManage && (
                       <div className="admin-actions">
+                        <button 
+                          className="btn-edit" 
+                          onClick={() => handleToggleVisibility(program)}
+                          title={program.is_hidden ? "Program is hidden, click to show" : "Program is visible, click to hide"}
+                        >
+                          {program.is_hidden ? 'Show' : 'Hide'}
+                        </button>
                         <button className="btn-edit" onClick={() => handleEditClick(program)}>Edit</button>
                         <button className="btn-delete" onClick={() => handleDeleteClick(program.id)}>Delete</button>
                       </div>
