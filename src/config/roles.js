@@ -36,6 +36,7 @@ export const masterNavigation = [
   { id: "roles", label: "Role Management", icon: ShieldAlert, path: "/roles", requiredResource: "staff", requiredPermissions: ["staff:edit_any", "staff:edit_tenant"] },
   { id: "credentials", label: "Credentials Vault", icon: Key, path: "/credentials", requiredResource: "credentials" },
   { id: "call", label: "Voxbay", icon: PhoneCall, path: "/call-analytics", requiredResource: "voxbay" },
+  { id: "voxbay_ai", label: "Voxbay AI", icon: PhoneCall, path: "/voxbay-ai", requiredPermissions: ["voxbay_ai:admin"] },
   { id: "feeds", label: "Feeds", icon: UserCheck, path: "/feeds" },
   { id: "programs", label: "Programs", icon: BookOpen, path: "/programs", requiredResource: "programs" },
 ];
