@@ -1,26 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { api } from '../../utils/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import { UserPlus, Edit2, Search } from 'lucide-react';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const StudentRegistryPage = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const { accessToken, refreshAccessToken } = useAuth();
 
-  useEffect(() => {
-    fetchStudents();
-  }, []);
-
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
-      const res = await api.get('/students/students/');
+      let token = accessToken;
+      if (!token) token = await refreshAccessToken();
+      if (!token) return;
+
+      const res = await axios.get(`${API_BASE_URL}/api/students/students/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setStudents(res.data.results || res.data);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessToken, refreshAccessToken]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
 
   const filtered = students.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
 

@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { api } from '../../utils/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import { Calendar, CheckCircle2, XCircle, AlertCircle, Clock } from 'lucide-react';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const BatchAttendancePage = () => {
   const [batches, setBatches] = useState([]);
@@ -10,25 +13,38 @@ const BatchAttendancePage = () => {
   const [attendanceData, setAttendanceData] = useState({});
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const { accessToken, refreshAccessToken } = useAuth();
 
-  useEffect(() => {
-    fetchBatches();
-  }, []);
-
-  const fetchBatches = async () => {
+  const fetchBatches = useCallback(async () => {
     try {
-      const res = await api.get('/students/batches/');
+      let token = accessToken;
+      if (!token) token = await refreshAccessToken();
+      if (!token) return;
+
+      const res = await axios.get(`${API_BASE_URL}/api/students/batches/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setBatches(res.data.results || res.data);
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [accessToken, refreshAccessToken]);
+
+  useEffect(() => {
+    fetchBatches();
+  }, [fetchBatches]);
 
   const fetchStudents = async (batchId) => {
     if (!batchId) return;
     setLoading(true);
     try {
-      const res = await api.get(`/students/students/?batch=${batchId}&is_active=true`);
+      let token = accessToken;
+      if (!token) token = await refreshAccessToken();
+      if (!token) return;
+
+      const res = await axios.get(`${API_BASE_URL}/api/students/students/?batch=${batchId}&is_active=true`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const studentList = res.data.results || res.data;
       setStudents(studentList);
       
@@ -72,7 +88,13 @@ const BatchAttendancePage = () => {
     };
 
     try {
-      const res = await api.post('/students/attendances/bulk_submit/', payload);
+      let token = accessToken;
+      if (!token) token = await refreshAccessToken();
+      if (!token) return;
+
+      const res = await axios.post(`${API_BASE_URL}/api/students/attendances/bulk_submit/`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       alert(res.data.message);
       // Let's check if any were marked PENDING
       const pending = res.data.data.filter(a => a.approval_status === 'PENDING');

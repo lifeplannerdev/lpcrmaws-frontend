@@ -1,31 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { api } from '../../utils/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import { ShieldCheck, AlertTriangle } from 'lucide-react';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const AccountsApprovalPage = () => {
   const [pendingAttendances, setPendingAttendances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(null);
+  const { accessToken, refreshAccessToken } = useAuth();
 
-  useEffect(() => {
-    fetchPending();
-  }, []);
-
-  const fetchPending = async () => {
+  const fetchPending = useCallback(async () => {
     try {
-      const res = await api.get('/students/attendances/?approval_status=PENDING');
+      let token = accessToken;
+      if (!token) token = await refreshAccessToken();
+      if (!token) return;
+
+      const res = await axios.get(`${API_BASE_URL}/api/students/attendances/?approval_status=PENDING`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setPendingAttendances(res.data.results || res.data);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessToken, refreshAccessToken]);
+
+  useEffect(() => {
+    fetchPending();
+  }, [fetchPending]);
 
   const handleRegularize = async (id) => {
     setProcessing(id);
     try {
-      await api.post(`/students/attendances/${id}/regularize/`);
+      let token = accessToken;
+      if (!token) token = await refreshAccessToken();
+      if (!token) return;
+
+      await axios.post(`${API_BASE_URL}/api/students/attendances/${id}/regularize/`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setPendingAttendances(prev => prev.filter(a => a.id !== id));
       alert('Attendance regularized successfully.');
     } catch (err) {

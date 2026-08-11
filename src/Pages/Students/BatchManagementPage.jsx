@@ -1,32 +1,48 @@
-import React, { useState, useEffect } from 'react';
-import { api } from '../../utils/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import { FiUsers, FiAward, FiArrowUpCircle, FiAlertCircle } from 'react-ui-icons'; // Assuming some icon library or I'll just use lucide-react if present. Let's use lucide-react.
 
 import { Users, Award, ArrowUpCircle, AlertCircle } from 'lucide-react';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const BatchManagementPage = () => {
   const [batches, setBatches] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { accessToken, refreshAccessToken } = useAuth();
 
-  useEffect(() => {
-    fetchBatches();
-  }, []);
-
-  const fetchBatches = async () => {
+  const fetchBatches = useCallback(async () => {
     try {
-      const res = await api.get('/students/batches/');
+      let token = accessToken;
+      if (!token) token = await refreshAccessToken();
+      if (!token) return;
+
+      const res = await axios.get(`${API_BASE_URL}/api/students/batches/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setBatches(res.data.results || res.data);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessToken, refreshAccessToken]);
+
+  useEffect(() => {
+    fetchBatches();
+  }, [fetchBatches]);
 
   const handlePromoteBatch = async (batchId) => {
     try {
-      const res = await api.post(`/students/batches/${batchId}/promote/`);
+      let token = accessToken;
+      if (!token) token = await refreshAccessToken();
+      if (!token) return;
+
+      const res = await axios.post(`${API_BASE_URL}/api/students/batches/${batchId}/promote/`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       alert(res.data.message);
       fetchBatches();
       setSelectedBatch(null);
