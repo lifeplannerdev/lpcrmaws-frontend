@@ -120,6 +120,8 @@ const StudentRegistryPage = () => {
       const payload = { ...batchForm };
       if (payload.starting_grade_id) payload.starting_grade = payload.starting_grade_id;
       if (payload.current_grade_id) payload.current_grade = payload.current_grade_id;
+      if (!payload.start_date) delete payload.start_date;
+      if (!payload.target_end_date) delete payload.target_end_date;
       delete payload.starting_grade_id;
       delete payload.current_grade_id;
 
