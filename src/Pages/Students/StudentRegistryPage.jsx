@@ -22,6 +22,8 @@ const StudentRegistryPage = () => {
     name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_template_id: '', fee_attendance_policy: 'STRICT'
   });
   const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   const fetchStudents = useCallback(async () => {
     try {
@@ -67,11 +69,19 @@ const StudentRegistryPage = () => {
       delete payload.batch_id;
       delete payload.fee_template_id;
 
-      await axios.post(`${API_BASE_URL}/students/students/`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      if (isEditing && editingId) {
+        await axios.patch(`${API_BASE_URL}/students/students/${editingId}/`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        await axios.post(`${API_BASE_URL}/students/students/`, payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
       setShowAddModal(false);
       setFormData({ name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_template_id: '', fee_attendance_policy: 'STRICT' });
+      setIsEditing(false);
+      setEditingId(null);
       fetchStudents();
     } catch (err) {
       console.error(err);
@@ -79,6 +89,21 @@ const StudentRegistryPage = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEditClick = (student) => {
+    setIsEditing(true);
+    setEditingId(student.id);
+    setFormData({
+      name: student.name || '',
+      mobile_number: student.mobile_number || '',
+      email: student.email || '',
+      package_id: student.package || student.package_detail?.id || '',
+      batch_id: student.batch || student.batch_detail?.id || '',
+      fee_template_id: '',
+      fee_attendance_policy: student.fee_attendance_policy || 'STRICT'
+    });
+    setShowAddModal(true);
   };
 
   const [packageForm, setPackageForm] = useState({ name: '', starting_grade_id: '', ending_grade_id: '' });
@@ -149,7 +174,12 @@ const StudentRegistryPage = () => {
           <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Student Registry (FLAG)</h1>
           <p className="text-gray-500 mt-2">Accounts team: Add students, manage packages, and define fee policies.</p>
         </div>
-        <button className="btn-primary flex items-center gap-2" onClick={() => setShowAddModal(true)}>
+        <button className="btn-primary flex items-center gap-2" onClick={() => {
+          setIsEditing(false);
+          setEditingId(null);
+          setFormData({ name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_template_id: '', fee_attendance_policy: 'STRICT' });
+          setShowAddModal(true);
+        }}>
           <UserPlus size={20} /> Add Student
         </button>
       </div>
@@ -191,7 +221,7 @@ const StudentRegistryPage = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <button className="text-brand-600 hover:text-brand-800"><Edit2 size={18}/></button>
+                    <button onClick={() => handleEditClick(student)} className="text-brand-600 hover:text-brand-800"><Edit2 size={18}/></button>
                   </td>
                 </tr>
               ))}
@@ -205,7 +235,7 @@ const StudentRegistryPage = () => {
           <div className="glass-panel w-full max-w-2xl overflow-hidden rounded-2xl">
             <form onSubmit={handleSaveStudent} className="flex flex-col h-full">
               <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white/50">
-                <h2 className="text-2xl font-bold text-gray-900">Add New Student</h2>
+                <h2 className="text-2xl font-bold text-gray-900">{isEditing ? 'Edit Student' : 'Add New Student'}</h2>
                 <button type="button" onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
               </div>
               
@@ -226,13 +256,15 @@ const StudentRegistryPage = () => {
                 </div>
 
                 <div className="border-t border-gray-100 pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Fee Plan Template</label>
-                    <select className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={formData.fee_template_id} onChange={e => setFormData({...formData, fee_template_id: e.target.value})}>
-                      <option value="">-- Select Fee Plan --</option>
-                      {feeTemplates.map(t => <option key={t.id} value={t.id}>{t.name} (₹{t.total_amount})</option>)}
-                    </select>
-                  </div>
+                  {!isEditing && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Fee Plan Template</label>
+                      <select className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={formData.fee_template_id} onChange={e => setFormData({...formData, fee_template_id: e.target.value})}>
+                        <option value="">-- Select Fee Plan --</option>
+                        {feeTemplates.map(t => <option key={t.id} value={t.id}>{t.name} (₹{t.total_amount})</option>)}
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-sm font-semibold text-gray-700">Academic Package</label>
@@ -276,7 +308,7 @@ const StudentRegistryPage = () => {
               
               <div className="px-8 py-5 bg-gray-50/80 border-t border-gray-100 flex justify-end gap-3 rounded-b-2xl">
                 <button type="button" onClick={() => setShowAddModal(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : 'Save Student'}</button>
+                <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : (isEditing ? 'Update Student' : 'Save Student')}</button>
               </div>
             </form>
           </div>
