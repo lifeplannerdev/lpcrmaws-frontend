@@ -1,13 +1,42 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-900: #134e4a;
+}
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 font-sans antialiased;
+    background-image: radial-gradient(circle at top right, #f0fdfa 0%, #ffffff 100%);
+  }
+}
+
 @layer utilities {
   .scrollbar-hide {
-    /* IE and Edge */
     -ms-overflow-style: none;
-    /* Firefox */
     scrollbar-width: none;
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+  
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl;
+  }
+  
+  .glass-panel {
+    @apply bg-white/80 backdrop-blur-lg border border-white/60 shadow-lg rounded-xl;
+  }
+  
+  .btn-primary {
+    @apply px-6 py-2 bg-brand-600 hover:bg-brand-500 text-white font-medium rounded-xl shadow-md shadow-brand-500/30 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0;
+  }
+  
+  .btn-secondary {
+    @apply px-6 py-2 bg-white text-gray-700 hover:bg-gray-50 font-medium rounded-xl border border-gray-200 shadow-sm transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0;
   }
 }

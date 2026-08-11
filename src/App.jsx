@@ -25,6 +25,10 @@ import AddStudentPage from "./Pages/AddStudentPage.jsx";
 import AcademicBatchesPage from "./Pages/AcademicBatchesPage.jsx";
 import MyReportsPage from "./Pages/MyReportsPage.jsx";
 import ReportTimingSettingsPage from "./Pages/ReportTimingSettingsPage.jsx";
+import StudentRegistryPage from "./Pages/Students/StudentRegistryPage.jsx";
+import BatchManagementPage from "./Pages/Students/BatchManagementPage.jsx";
+import BatchAttendancePage from "./Pages/Students/BatchAttendancePage.jsx";
+import AccountsApprovalPage from "./Pages/Students/AccountsApprovalPage.jsx";
 import AttendanceMarkingPage from './Pages/AttendanceMarkingPage';
 import StudentAttendanceRecordsPage from './Pages/StudentAttendanceRecordsPage';
 import AttendanceDocumentsPage from "./Pages/AttendanceDocumentsPage.jsx";
@@ -107,8 +111,13 @@ export default function App() {
         <Route path="/students/view/:id" element={<PermissionRoute resources={['students']}><StudentViewPage /></PermissionRoute>} />
         <Route path="/students/edit/:id" element={<PermissionRoute permissions={['students:edit_any', 'students:edit_tenant']}><StudentEditPage /></PermissionRoute>} />
         <Route path="/processing-students" element={<PermissionRoute resources={['processing_students']}><ProcessingStudentsPage /></PermissionRoute>} />
-        <Route path="/academic-batches" element={<PermissionRoute resources={['students', 'fees']}><AcademicBatchesPage /></PermissionRoute>} />
-        <Route path="/attendance/mark" element={<PermissionRoute resources={['attendance', 'students']}><AttendanceMarkingPage /></PermissionRoute>} />
+        
+        {/* New Students Module */}
+        <Route path="/registry" element={<PermissionRoute resources={['students']}><StudentRegistryPage /></PermissionRoute>} />
+        <Route path="/academic-batches" element={<PermissionRoute resources={['students']}><BatchManagementPage /></PermissionRoute>} />
+        <Route path="/attendance/mark" element={<PermissionRoute resources={['students']}><BatchAttendancePage /></PermissionRoute>} />
+        <Route path="/attendance/approvals" element={<PermissionRoute resources={['students']}><AccountsApprovalPage /></PermissionRoute>} />
+        
         <Route path="/students/:studentId/attendance" element={<PermissionRoute resources={['students', 'attendance']}><StudentAttendanceRecordsPage /></PermissionRoute>} />
 
         <Route path="/hr/attendance" element={<PermissionRoute resources={['staff']}><AttendanceDocumentsPage /></PermissionRoute>} />
