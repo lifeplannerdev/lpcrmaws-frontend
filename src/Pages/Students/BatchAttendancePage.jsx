@@ -21,7 +21,7 @@ const BatchAttendancePage = () => {
       if (!token) token = await refreshAccessToken();
       if (!token) return;
 
-      const res = await axios.get(`${API_BASE_URL}/api/students/batches/`, {
+      const res = await axios.get(`${API_BASE_URL}/students/batches/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setBatches(res.data.results || res.data);
@@ -42,7 +42,7 @@ const BatchAttendancePage = () => {
       if (!token) token = await refreshAccessToken();
       if (!token) return;
 
-      const res = await axios.get(`${API_BASE_URL}/api/students/students/?batch=${batchId}&is_active=true`, {
+      const res = await axios.get(`${API_BASE_URL}/students/students/?batch=${batchId}&is_active=true`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const studentList = res.data.results || res.data;
@@ -92,7 +92,7 @@ const BatchAttendancePage = () => {
       if (!token) token = await refreshAccessToken();
       if (!token) return;
 
-      const res = await axios.post(`${API_BASE_URL}/api/students/attendances/bulk_submit/`, payload, {
+      const res = await axios.post(`${API_BASE_URL}/students/attendances/bulk_submit/`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
       alert(res.data.message);

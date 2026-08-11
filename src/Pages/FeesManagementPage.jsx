@@ -155,7 +155,7 @@ export default function FeesManagementPage() {
         fetch(`${API_BASE_URL}/fees/summary/`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`${API_BASE_URL}/attendance/detail/?approval_status=PENDING_FEE_APPROVAL`, {
+        fetch(`${API_BASE_URL}/students/attendances/?approval_status=PENDING`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`${API_BASE_URL}/fees/policy/`, {

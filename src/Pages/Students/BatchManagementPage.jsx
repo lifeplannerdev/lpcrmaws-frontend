@@ -17,7 +17,7 @@ const BatchManagementPage = () => {
       if (!token) token = await refreshAccessToken();
       if (!token) return;
 
-      const res = await axios.get(`${API_BASE_URL}/api/students/batches/`, {
+      const res = await axios.get(`${API_BASE_URL}/students/batches/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setBatches(res.data.results || res.data);
@@ -38,7 +38,7 @@ const BatchManagementPage = () => {
       if (!token) token = await refreshAccessToken();
       if (!token) return;
 
-      const res = await axios.post(`${API_BASE_URL}/api/students/batches/${batchId}/promote/`, {}, {
+      const res = await axios.post(`${API_BASE_URL}/students/batches/${batchId}/promote/`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       alert(res.data.message);

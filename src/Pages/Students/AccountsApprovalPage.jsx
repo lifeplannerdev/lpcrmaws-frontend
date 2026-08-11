@@ -17,7 +17,7 @@ const AccountsApprovalPage = () => {
       if (!token) token = await refreshAccessToken();
       if (!token) return;
 
-      const res = await axios.get(`${API_BASE_URL}/api/students/attendances/?approval_status=PENDING`, {
+      const res = await axios.get(`${API_BASE_URL}/students/attendances/?approval_status=PENDING`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPendingAttendances(res.data.results || res.data);
@@ -39,7 +39,7 @@ const AccountsApprovalPage = () => {
       if (!token) token = await refreshAccessToken();
       if (!token) return;
 
-      await axios.post(`${API_BASE_URL}/api/students/attendances/${id}/regularize/`, {}, {
+      await axios.post(`${API_BASE_URL}/students/attendances/${id}/regularize/`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPendingAttendances(prev => prev.filter(a => a.id !== id));

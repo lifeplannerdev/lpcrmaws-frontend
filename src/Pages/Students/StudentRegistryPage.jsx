@@ -26,9 +26,9 @@ const StudentRegistryPage = () => {
       if (!token) return;
 
       const [res, pkgRes, batchRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/students/students/`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE_URL}/api/students/packages/`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE_URL}/api/students/batches/`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API_BASE_URL}/students/students/`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/students/packages/`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/students/batches/`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       setStudents(res.data.results || res.data);
       setPackages(pkgRes.data.results || pkgRes.data);
@@ -57,7 +57,7 @@ const StudentRegistryPage = () => {
       delete payload.package_id;
       delete payload.batch_id;
 
-      await axios.post(`${API_BASE_URL}/api/students/students/`, payload, {
+      await axios.post(`${API_BASE_URL}/students/students/`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowAddModal(false);
