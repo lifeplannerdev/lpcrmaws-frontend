@@ -18,19 +18,14 @@ import TaskViewPage from "./Pages/TaskViewPage.jsx";
 import EditTaskPage from "./Pages/EditTaskPage.jsx";
 import ReportsPage from './Pages/ReportsPage.jsx';
 import ReportViewPage from "./Pages/ReportViewPage.jsx";
-import StudentsPage from './Pages/StudentsPage.jsx';
-import StudentEditPage from "./Pages/StudentEditPage.jsx";
-import StudentViewPage from "./Pages/StudentViewPage.jsx";
-import AddStudentPage from "./Pages/AddStudentPage.jsx";
-import AcademicBatchesPage from "./Pages/AcademicBatchesPage.jsx";
+
 import MyReportsPage from "./Pages/MyReportsPage.jsx";
 import ReportTimingSettingsPage from "./Pages/ReportTimingSettingsPage.jsx";
 import StudentRegistryPage from "./Pages/Students/StudentRegistryPage.jsx";
 import BatchManagementPage from "./Pages/Students/BatchManagementPage.jsx";
 import BatchAttendancePage from "./Pages/Students/BatchAttendancePage.jsx";
 import AccountsApprovalPage from "./Pages/Students/AccountsApprovalPage.jsx";
-import AttendanceMarkingPage from './Pages/AttendanceMarkingPage';
-import StudentAttendanceRecordsPage from './Pages/StudentAttendanceRecordsPage';
+
 import AttendanceDocumentsPage from "./Pages/AttendanceDocumentsPage.jsx";
 import PenaltyManagementPage from "./Pages/PenaltyManagementPage.jsx";
 import CallAnalyticsPage from "./Pages/CallAnalyticsPage.jsx";
@@ -106,22 +101,16 @@ export default function App() {
         <Route path="/reports/view/:id" element={<ProtectedRoute><ReportViewPage /></ProtectedRoute>} />
         <Route path="/myreports/" element={<ProtectedRoute><MyReportsPage /></ProtectedRoute>} />
 
-        <Route path="/students" element={<PermissionRoute resources={['students']}><StudentsPage /></PermissionRoute>} />
-        <Route path="/students/add" element={<PermissionRoute permissions={['students:edit_any', 'students:edit_tenant']}><AddStudentPage /></PermissionRoute>} />
-        <Route path="/students/view/:id" element={<PermissionRoute resources={['students']}><StudentViewPage /></PermissionRoute>} />
-        <Route path="/students/edit/:id" element={<PermissionRoute permissions={['students:edit_any', 'students:edit_tenant']}><StudentEditPage /></PermissionRoute>} />
         <Route path="/processing-students" element={<PermissionRoute resources={['processing_students']}><ProcessingStudentsPage /></PermissionRoute>} />
         
         {/* New Students Module */}
         {/* Accounts Pages */}
-        <Route path="/registry" element={<PermissionRoute resources={['fees', 'students']}><StudentRegistryPage /></PermissionRoute>} />
-        <Route path="/attendance/approvals" element={<PermissionRoute resources={['fees']}><AccountsApprovalPage /></PermissionRoute>} />
+        <Route path="/registry" element={<PermissionRoute permissions={['students:registry_manage']}><StudentRegistryPage /></PermissionRoute>} />
+        <Route path="/attendance/approvals" element={<PermissionRoute permissions={['attendance:approvals']}><AccountsApprovalPage /></PermissionRoute>} />
         
         {/* Trainer Pages */}
-        <Route path="/academic-batches" element={<PermissionRoute resources={['students', 'attendance']}><BatchManagementPage /></PermissionRoute>} />
-        <Route path="/attendance/mark" element={<PermissionRoute resources={['attendance']}><BatchAttendancePage /></PermissionRoute>} />
-        
-        <Route path="/students/:studentId/attendance" element={<PermissionRoute resources={['students', 'attendance']}><StudentAttendanceRecordsPage /></PermissionRoute>} />
+        <Route path="/academic-batches" element={<PermissionRoute permissions={['students:batch_manage']}><BatchManagementPage /></PermissionRoute>} />
+        <Route path="/attendance/mark" element={<PermissionRoute permissions={['attendance:mark']}><BatchAttendancePage /></PermissionRoute>} />
 
         <Route path="/hr/attendance" element={<PermissionRoute resources={['staff']}><AttendanceDocumentsPage /></PermissionRoute>} />
         <Route path="/hr/penalties" element={<PermissionRoute resources={['penalties']}><PenaltyManagementPage /></PermissionRoute>} />

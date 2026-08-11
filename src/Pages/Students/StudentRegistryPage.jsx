@@ -11,16 +11,28 @@ const StudentRegistryPage = () => {
   const [search, setSearch] = useState('');
   const { accessToken, refreshAccessToken } = useAuth();
 
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [packages, setPackages] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [formData, setFormData] = useState({
+    name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_attendance_policy: 'STRICT'
+  });
+  const [saving, setSaving] = useState(false);
+
   const fetchStudents = useCallback(async () => {
     try {
       let token = accessToken;
       if (!token) token = await refreshAccessToken();
       if (!token) return;
 
-      const res = await axios.get(`${API_BASE_URL}/api/students/students/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const [res, pkgRes, batchRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/api/students/students/`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/api/students/packages/`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/api/students/batches/`, { headers: { Authorization: `Bearer ${token}` } })
+      ]);
       setStudents(res.data.results || res.data);
+      setPackages(pkgRes.data.results || pkgRes.data);
+      setBatches(batchRes.data.results || batchRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -32,6 +44,33 @@ const StudentRegistryPage = () => {
     fetchStudents();
   }, [fetchStudents]);
 
+  const handleSaveStudent = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      let token = accessToken;
+      if (!token) token = await refreshAccessToken();
+      
+      const payload = { ...formData };
+      if (payload.package_id) payload.package = payload.package_id;
+      if (payload.batch_id) payload.batch = payload.batch_id;
+      delete payload.package_id;
+      delete payload.batch_id;
+
+      await axios.post(`${API_BASE_URL}/api/students/students/`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setShowAddModal(false);
+      setFormData({ name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_attendance_policy: 'STRICT' });
+      fetchStudents();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save student.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const filtered = students.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
@@ -41,7 +80,7 @@ const StudentRegistryPage = () => {
           <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Student Registry (FLAG)</h1>
           <p className="text-gray-500 mt-2">Accounts team: Add students, manage packages, and define fee policies.</p>
         </div>
-        <button className="btn-primary flex items-center gap-2">
+        <button className="btn-primary flex items-center gap-2" onClick={() => setShowAddModal(true)}>
           <UserPlus size={20} /> Add Student
         </button>
       </div>
@@ -91,6 +130,72 @@ const StudentRegistryPage = () => {
           </table>
         )}
       </div>
+
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-2xl overflow-hidden rounded-2xl">
+            <form onSubmit={handleSaveStudent} className="flex flex-col h-full">
+              <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white/50">
+                <h2 className="text-2xl font-bold text-gray-900">Add New Student</h2>
+                <button type="button" onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+              
+              <div className="p-8 space-y-6 bg-white overflow-y-auto max-h-[70vh]">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Student Name *</label>
+                    <input required type="text" className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                    <input type="email" className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+                    <input type="text" className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={formData.mobile_number} onChange={e => setFormData({...formData, mobile_number: e.target.value})} />
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-100 pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Academic Package</label>
+                    <select className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={formData.package_id} onChange={e => setFormData({...formData, package_id: e.target.value})}>
+                      <option value="">-- Select Package --</option>
+                      {packages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Assign Batch</label>
+                    <select className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={formData.batch_id} onChange={e => setFormData({...formData, batch_id: e.target.value})}>
+                      <option value="">-- Select Batch --</option>
+                      {batches.map(b => <option key={b.id} value={b.id}>{b.name} ({b.current_grade_detail?.name})</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">Fee Attendance Policy</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="policy" value="STRICT" checked={formData.fee_attendance_policy === 'STRICT'} onChange={e => setFormData({...formData, fee_attendance_policy: e.target.value})} className="text-brand-600 focus:ring-brand-500" />
+                      <span className="text-sm font-medium text-gray-800">Strict (Flags due on Attendance)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="policy" value="LENIENT" checked={formData.fee_attendance_policy === 'LENIENT'} onChange={e => setFormData({...formData, fee_attendance_policy: e.target.value})} className="text-brand-600 focus:ring-brand-500" />
+                      <span className="text-sm font-medium text-gray-800">Lenient</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="px-8 py-5 bg-gray-50/80 border-t border-gray-100 flex justify-end gap-3 rounded-b-2xl">
+                <button type="button" onClick={() => setShowAddModal(false)} className="btn-secondary">Cancel</button>
+                <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : 'Save Student'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
