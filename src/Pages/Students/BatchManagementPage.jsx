@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { FiUsers, FiAward, FiArrowUpCircle, FiAlertCircle } from 'react-ui-icons'; // Assuming some icon library or I'll just use lucide-react if present. Let's use lucide-react.
-
 import { Users, Award, ArrowUpCircle, AlertCircle } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
