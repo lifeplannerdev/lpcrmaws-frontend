@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { UserPlus, Edit2, Search } from 'lucide-react';
+import { UserPlus, Edit2, Search, Plus } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -12,10 +12,14 @@ const StudentRegistryPage = () => {
   const { accessToken, refreshAccessToken } = useAuth();
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddPackageModal, setShowAddPackageModal] = useState(false);
+  const [showAddBatchModal, setShowAddBatchModal] = useState(false);
   const [packages, setPackages] = useState([]);
   const [batches, setBatches] = useState([]);
+  const [feeTemplates, setFeeTemplates] = useState([]);
+  const [grades, setGrades] = useState([]);
   const [formData, setFormData] = useState({
-    name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_attendance_policy: 'STRICT'
+    name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_template_id: '', fee_attendance_policy: 'STRICT'
   });
   const [saving, setSaving] = useState(false);
 
@@ -25,14 +29,18 @@ const StudentRegistryPage = () => {
       if (!token) token = await refreshAccessToken();
       if (!token) return;
 
-      const [res, pkgRes, batchRes] = await Promise.all([
+      const [res, pkgRes, batchRes, feeRes, gradeRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/students/students/`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/students/packages/`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE_URL}/students/batches/`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API_BASE_URL}/students/batches/`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/fees/catalog/`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/students/grades/`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       setStudents(res.data.results || res.data);
       setPackages(pkgRes.data.results || pkgRes.data);
       setBatches(batchRes.data.results || batchRes.data);
+      setFeeTemplates(feeRes.data.results || feeRes.data);
+      setGrades(gradeRes.data.results || gradeRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -54,18 +62,77 @@ const StudentRegistryPage = () => {
       const payload = { ...formData };
       if (payload.package_id) payload.package = payload.package_id;
       if (payload.batch_id) payload.batch = payload.batch_id;
+      if (payload.fee_template_id) payload.fee_template = payload.fee_template_id;
       delete payload.package_id;
       delete payload.batch_id;
+      delete payload.fee_template_id;
 
       await axios.post(`${API_BASE_URL}/students/students/`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setShowAddModal(false);
-      setFormData({ name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_attendance_policy: 'STRICT' });
+      setFormData({ name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_template_id: '', fee_attendance_policy: 'STRICT' });
       fetchStudents();
     } catch (err) {
       console.error(err);
       alert('Failed to save student.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const [packageForm, setPackageForm] = useState({ name: '', starting_grade_id: '', ending_grade_id: '' });
+  const [batchForm, setBatchForm] = useState({ name: '', starting_grade_id: '', current_grade_id: '', start_date: '', target_end_date: '', schedule: '' });
+
+  const handleSavePackage = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      let token = accessToken;
+      if (!token) token = await refreshAccessToken();
+      const payload = { ...packageForm };
+      if (payload.starting_grade_id) payload.starting_grade = payload.starting_grade_id;
+      if (payload.ending_grade_id) payload.ending_grade = payload.ending_grade_id;
+      delete payload.starting_grade_id;
+      delete payload.ending_grade_id;
+
+      const res = await axios.post(`${API_BASE_URL}/students/packages/`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPackages([...packages, res.data]);
+      setFormData({...formData, package_id: res.data.id});
+      setShowAddPackageModal(false);
+      setPackageForm({ name: '', starting_grade_id: '', ending_grade_id: '' });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save package.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveBatch = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      let token = accessToken;
+      if (!token) token = await refreshAccessToken();
+      const payload = { ...batchForm };
+      if (payload.starting_grade_id) payload.starting_grade = payload.starting_grade_id;
+      if (payload.current_grade_id) payload.current_grade = payload.current_grade_id;
+      delete payload.starting_grade_id;
+      delete payload.current_grade_id;
+
+      const res = await axios.post(`${API_BASE_URL}/students/batches/`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setBatches([...batches, res.data]);
+      setFormData({...formData, batch_id: res.data.id});
+      setShowAddBatchModal(false);
+      setBatchForm({ name: '', starting_grade_id: '', current_grade_id: '', start_date: '', target_end_date: '', schedule: '' });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save batch.');
     } finally {
       setSaving(false);
     }
@@ -156,16 +223,33 @@ const StudentRegistryPage = () => {
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="border-t border-gray-100 pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Academic Package</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Fee Plan Template</label>
+                    <select className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={formData.fee_template_id} onChange={e => setFormData({...formData, fee_template_id: e.target.value})}>
+                      <option value="">-- Select Fee Plan --</option>
+                      {feeTemplates.map(t => <option key={t.id} value={t.id}>{t.name} (₹{t.total_amount})</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-gray-700">Academic Package</label>
+                      <button type="button" onClick={() => setShowAddPackageModal(true)} className="text-brand-600 hover:text-brand-800 p-1 bg-brand-50 rounded-md hover:bg-brand-100 transition-colors">
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
                     <select className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={formData.package_id} onChange={e => setFormData({...formData, package_id: e.target.value})}>
                       <option value="">-- Select Package --</option>
                       {packages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Assign Batch</label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-gray-700">Assign Batch</label>
+                      <button type="button" onClick={() => setShowAddBatchModal(true)} className="text-brand-600 hover:text-brand-800 p-1 bg-brand-50 rounded-md hover:bg-brand-100 transition-colors">
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
                     <select className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={formData.batch_id} onChange={e => setFormData({...formData, batch_id: e.target.value})}>
                       <option value="">-- Select Batch --</option>
                       {batches.map(b => <option key={b.id} value={b.id}>{b.name} ({b.current_grade_detail?.name})</option>)}
@@ -191,6 +275,92 @@ const StudentRegistryPage = () => {
               <div className="px-8 py-5 bg-gray-50/80 border-t border-gray-100 flex justify-end gap-3 rounded-b-2xl">
                 <button type="button" onClick={() => setShowAddModal(false)} className="btn-secondary">Cancel</button>
                 <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : 'Save Student'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAddPackageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-lg overflow-hidden rounded-2xl">
+            <form onSubmit={handleSavePackage} className="flex flex-col h-full">
+              <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white/50">
+                <h2 className="text-2xl font-bold text-gray-900">Add Academic Package</h2>
+                <button type="button" onClick={() => setShowAddPackageModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+              <div className="p-8 space-y-6 bg-white overflow-y-auto">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Package Name *</label>
+                  <input required type="text" className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={packageForm.name} onChange={e => setPackageForm({...packageForm, name: e.target.value})} placeholder="e.g., A1 to B2 Package" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Starting Grade *</label>
+                    <select required className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={packageForm.starting_grade_id} onChange={e => setPackageForm({...packageForm, starting_grade_id: e.target.value})}>
+                      <option value="">-- Select --</option>
+                      {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Ending Grade *</label>
+                    <select required className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={packageForm.ending_grade_id} onChange={e => setPackageForm({...packageForm, ending_grade_id: e.target.value})}>
+                      <option value="">-- Select --</option>
+                      {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="px-8 py-5 bg-gray-50/80 border-t border-gray-100 flex justify-end gap-3 rounded-b-2xl">
+                <button type="button" onClick={() => setShowAddPackageModal(false)} className="btn-secondary">Cancel</button>
+                <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : 'Create Package'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAddBatchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="glass-panel w-full max-w-lg overflow-hidden rounded-2xl">
+            <form onSubmit={handleSaveBatch} className="flex flex-col h-full">
+              <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white/50">
+                <h2 className="text-2xl font-bold text-gray-900">Add Academic Batch</h2>
+                <button type="button" onClick={() => setShowAddBatchModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+              <div className="p-8 space-y-6 bg-white overflow-y-auto max-h-[70vh]">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Batch Name *</label>
+                  <input required type="text" className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={batchForm.name} onChange={e => setBatchForm({...batchForm, name: e.target.value})} placeholder="e.g., A1 Morning Sept" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Starting Grade *</label>
+                    <select required className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={batchForm.starting_grade_id} onChange={e => setBatchForm({...batchForm, starting_grade_id: e.target.value, current_grade_id: e.target.value})}>
+                      <option value="">-- Select --</option>
+                      {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Current Grade *</label>
+                    <select required className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={batchForm.current_grade_id} onChange={e => setBatchForm({...batchForm, current_grade_id: e.target.value})}>
+                      <option value="">-- Select --</option>
+                      {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Start Date</label>
+                    <input type="date" className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={batchForm.start_date} onChange={e => setBatchForm({...batchForm, start_date: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Schedule</label>
+                    <input type="text" className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={batchForm.schedule} onChange={e => setBatchForm({...batchForm, schedule: e.target.value})} placeholder="e.g., Morning" />
+                  </div>
+                </div>
+              </div>
+              <div className="px-8 py-5 bg-gray-50/80 border-t border-gray-100 flex justify-end gap-3 rounded-b-2xl">
+                <button type="button" onClick={() => setShowAddBatchModal(false)} className="btn-secondary">Cancel</button>
+                <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : 'Create Batch'}</button>
               </div>
             </form>
           </div>
