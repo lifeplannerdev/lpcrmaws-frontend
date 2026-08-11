@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { UserPlus, Edit2, Search, Plus } from 'lucide-react';
+import { UserPlus, Edit2, Search, Plus, Trash2 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -104,6 +104,21 @@ const StudentRegistryPage = () => {
       fee_attendance_policy: student.fee_attendance_policy || 'STRICT'
     });
     setShowAddModal(true);
+  };
+
+  const handleDeleteStudent = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this student?')) return;
+    try {
+      let token = accessToken;
+      if (!token) token = await refreshAccessToken();
+      await axios.delete(`${API_BASE_URL}/students/students/${id}/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchStudents();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete student.');
+    }
   };
 
   const [packageForm, setPackageForm] = useState({ name: '', starting_grade_id: '', ending_grade_id: '' });
@@ -220,8 +235,9 @@ const StudentRegistryPage = () => {
                       {student.fee_attendance_policy}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 flex gap-2">
                     <button onClick={() => handleEditClick(student)} className="text-brand-600 hover:text-brand-800"><Edit2 size={18}/></button>
+                    <button onClick={() => handleDeleteStudent(student.id)} className="text-red-600 hover:text-red-800"><Trash2 size={18}/></button>
                   </td>
                 </tr>
               ))}
