@@ -113,10 +113,13 @@ export default function App() {
         <Route path="/processing-students" element={<PermissionRoute resources={['processing_students']}><ProcessingStudentsPage /></PermissionRoute>} />
         
         {/* New Students Module */}
-        <Route path="/registry" element={<PermissionRoute resources={['students']}><StudentRegistryPage /></PermissionRoute>} />
-        <Route path="/academic-batches" element={<PermissionRoute resources={['students']}><BatchManagementPage /></PermissionRoute>} />
-        <Route path="/attendance/mark" element={<PermissionRoute resources={['students']}><BatchAttendancePage /></PermissionRoute>} />
-        <Route path="/attendance/approvals" element={<PermissionRoute resources={['students']}><AccountsApprovalPage /></PermissionRoute>} />
+        {/* Accounts Pages */}
+        <Route path="/registry" element={<PermissionRoute resources={['fees', 'students']}><StudentRegistryPage /></PermissionRoute>} />
+        <Route path="/attendance/approvals" element={<PermissionRoute resources={['fees']}><AccountsApprovalPage /></PermissionRoute>} />
+        
+        {/* Trainer Pages */}
+        <Route path="/academic-batches" element={<PermissionRoute resources={['students', 'attendance']}><BatchManagementPage /></PermissionRoute>} />
+        <Route path="/attendance/mark" element={<PermissionRoute resources={['attendance']}><BatchAttendancePage /></PermissionRoute>} />
         
         <Route path="/students/:studentId/attendance" element={<PermissionRoute resources={['students', 'attendance']}><StudentAttendanceRecordsPage /></PermissionRoute>} />
 
