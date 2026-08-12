@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import { Users, ArrowUpCircle, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Users, ArrowUpCircle, AlertCircle, CheckCircle, XCircle, Edit2 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -17,6 +17,10 @@ const BatchManagementPage = () => {
   const [showCreateBatchModal, setShowCreateBatchModal] = useState(false);
   const [newBatchForm, setNewBatchForm] = useState({ name: '', current_grade: '' });
   const [creatingBatch, setCreatingBatch] = useState(false);
+  
+  const [showEditBatchModal, setShowEditBatchModal] = useState(false);
+  const [editBatchForm, setEditBatchForm] = useState({ id: '', name: '', status: '' });
+  const [editingBatch, setEditingBatch] = useState(false);
   
   const [loading, setLoading] = useState(true);
   const { accessToken, refreshAccessToken } = useAuth();
@@ -40,6 +44,31 @@ const BatchManagementPage = () => {
       alert(err.response?.data?.error || err.response?.data?.detail || 'Failed to create batch');
     } finally {
       setCreatingBatch(false);
+    }
+  };
+
+  const handleEditBatch = async (e) => {
+    e.preventDefault();
+    setEditingBatch(true);
+    try {
+      let token = accessToken;
+      if (!token) token = await refreshAccessToken();
+      if (!token) return;
+
+      await axios.patch(`${API_BASE_URL}/students/batches/${editBatchForm.id}/`, {
+        name: editBatchForm.name,
+        status: editBatchForm.status
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Batch updated successfully!');
+      setShowEditBatchModal(false);
+      setSelectedBatch(null);
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.error || err.response?.data?.detail || 'Failed to update batch');
+    } finally {
+      setEditingBatch(false);
     }
   };
 
@@ -178,7 +207,14 @@ const BatchManagementPage = () => {
             </div>
 
             <div className="flex justify-end gap-4 mt-8">
-              <button className="btn-secondary" onClick={() => setSelectedBatch(null)}>Close</button>
+              <button className="btn-secondary text-gray-500" onClick={() => setSelectedBatch(null)}>Close</button>
+              <div className="flex-1"></div>
+              <button 
+                className="btn-secondary flex items-center gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                onClick={() => { setEditBatchForm({ id: selectedBatch.id, name: selectedBatch.name, status: selectedBatch.status }); setShowEditBatchModal(true); }}
+              >
+                <Edit2 size={20} /> Edit Batch
+              </button>
               <button 
                 className="btn-primary flex items-center gap-2"
                 onClick={() => handlePreviewPromote(selectedBatch.id)}
@@ -321,6 +357,50 @@ const BatchManagementPage = () => {
                 className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed shadow-md shadow-indigo-600/20 mt-2"
               >
                 {creatingBatch ? 'Creating...' : 'Create Batch'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditBatchModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-xl relative">
+            <button onClick={() => setShowEditBatchModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 transition-colors">
+              <XCircle size={16} />
+            </button>
+            <h3 className="text-xl font-black text-gray-800 mb-6 flex items-center gap-2">
+              <Edit2 className="text-indigo-500" /> Edit Batch
+            </h3>
+            <form onSubmit={handleEditBatch} className="space-y-5">
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Batch Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editBatchForm.name}
+                  onChange={e => setEditBatchForm(p => ({ ...p, name: e.target.value }))}
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-semibold text-gray-800"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Status</label>
+                <select
+                  required
+                  value={editBatchForm.status}
+                  onChange={e => setEditBatchForm(p => ({ ...p, status: e.target.value }))}
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-semibold text-gray-800"
+                >
+                  <option value="ACTIVE">Active</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+              </div>
+              <button
+                type="submit"
+                disabled={editingBatch}
+                className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed shadow-md shadow-indigo-600/20 mt-2"
+              >
+                {editingBatch ? 'Saving...' : 'Save Changes'}
               </button>
             </form>
           </div>
