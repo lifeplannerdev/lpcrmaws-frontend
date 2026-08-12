@@ -24,6 +24,7 @@ import ReportTimingSettingsPage from "./Pages/ReportTimingSettingsPage.jsx";
 import StudentRegistryPage from "./Pages/Students/StudentRegistryPage.jsx";
 import BatchManagementPage from "./Pages/Students/BatchManagementPage.jsx";
 import BatchAttendancePage from "./Pages/Students/BatchAttendancePage.jsx";
+import TrainerStudentsPage from "./Pages/Students/TrainerStudentsPage.jsx";
 
 
 import AttendanceDocumentsPage from "./Pages/AttendanceDocumentsPage.jsx";
@@ -111,6 +112,7 @@ export default function App() {
         {/* Trainer Pages */}
         <Route path="/academic-batches" element={<PermissionRoute permissions={['students:batch_manage']}><BatchManagementPage /></PermissionRoute>} />
         <Route path="/attendance/mark" element={<PermissionRoute permissions={['attendance:mark']}><BatchAttendancePage /></PermissionRoute>} />
+        <Route path="/my-students" element={<PermissionRoute permissions={['attendance:mark']}><TrainerStudentsPage /></PermissionRoute>} />
 
         <Route path="/hr/attendance" element={<PermissionRoute resources={['staff']}><AttendanceDocumentsPage /></PermissionRoute>} />
         <Route path="/hr/penalties" element={<PermissionRoute resources={['penalties']}><PenaltyManagementPage /></PermissionRoute>} />
