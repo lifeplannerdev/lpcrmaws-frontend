@@ -36,7 +36,7 @@ const StudentRegistryPage = () => {
         axios.get(`${API_BASE_URL}/students/packages/`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/students/batches/`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/students/grades/`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE_URL}/accounts/staff/?limit=1000`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API_BASE_URL}/staff/?limit=1000`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] }))
       ]);
       setStudents(res.data.results || res.data);
       setPackages(pkgRes.data.results || pkgRes.data);
