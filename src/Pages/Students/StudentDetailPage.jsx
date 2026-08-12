@@ -466,7 +466,7 @@ export default function StudentDetailPage() {
                         </div>
                         {modelExam ? (
                           <span className={`px-2.5 py-1 text-xs font-bold rounded-lg ${modelExam.status === 'PASSED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{modelExam.status}</span>
-                        ) : isCurrent && (canEditProfile || isTrainer) ? (
+                        ) : (canEditProfile || isTrainer) ? (
                           <button onClick={() => { setExamForm({ grade_id: grade.id, exam_type: 'MODEL', marks: '', status: 'PASSED' }); setShowExamModal(true); }} className="px-3 py-1.5 text-xs font-bold bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg transition-colors">Record</button>
                         ) : null}
                       </div>
@@ -483,7 +483,7 @@ export default function StudentDetailPage() {
                         </div>
                         {mainExam ? (
                           <span className={`px-2.5 py-1 text-xs font-bold rounded-lg ${mainExam.status === 'PASSED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{mainExam.status}</span>
-                        ) : isCurrent && (canEditProfile || isTrainer) ? (
+                        ) : (canEditProfile || isTrainer) ? (
                           <button onClick={() => { setExamForm({ grade_id: grade.id, exam_type: 'MAIN', marks: '', status: 'PASSED' }); setShowExamModal(true); }} className="px-3 py-1.5 text-xs font-bold bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-lg transition-colors">Record</button>
                         ) : null}
                       </div>
