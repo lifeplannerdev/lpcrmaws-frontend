@@ -18,8 +18,9 @@ const StudentRegistryPage = () => {
   const [batches, setBatches] = useState([]);
   const [feeTemplates, setFeeTemplates] = useState([]);
   const [grades, setGrades] = useState([]);
+  const [staffList, setStaffList] = useState([]);
   const [formData, setFormData] = useState({
-    name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_template_id: '', fee_attendance_policy: 'STRICT'
+    name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_template_id: '', fee_attendance_policy: 'STRICT', trainer_id: ''
   });
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -31,18 +32,20 @@ const StudentRegistryPage = () => {
       if (!token) token = await refreshAccessToken();
       if (!token) return;
 
-      const [res, pkgRes, batchRes, feeRes, gradeRes] = await Promise.all([
+      const [res, pkgRes, batchRes, feeRes, gradeRes, staffRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/students/students/`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/students/packages/`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/students/batches/`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/fees/catalog/`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE_URL}/students/grades/`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(`${API_BASE_URL}/students/grades/`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/accounts/staff/?limit=1000`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       setStudents(res.data.results || res.data);
       setPackages(pkgRes.data.results || pkgRes.data);
       setBatches(batchRes.data.results || batchRes.data);
       setFeeTemplates(feeRes.data.results || feeRes.data);
       setGrades(gradeRes.data.results || gradeRes.data);
+      setStaffList(staffRes.data.results || staffRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -65,9 +68,11 @@ const StudentRegistryPage = () => {
       if (payload.package_id) payload.package = payload.package_id;
       if (payload.batch_id) payload.batch = payload.batch_id;
       if (payload.fee_template_id) payload.fee_template = payload.fee_template_id;
+      if (payload.trainer_id) payload.trainer = payload.trainer_id;
       delete payload.package_id;
       delete payload.batch_id;
       delete payload.fee_template_id;
+      delete payload.trainer_id;
 
       if (isEditing && editingId) {
         await axios.patch(`${API_BASE_URL}/students/students/${editingId}/`, payload, {
@@ -79,7 +84,7 @@ const StudentRegistryPage = () => {
         });
       }
       setShowAddModal(false);
-      setFormData({ name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_template_id: '', fee_attendance_policy: 'STRICT' });
+      setFormData({ name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_template_id: '', fee_attendance_policy: 'STRICT', trainer_id: '' });
       setIsEditing(false);
       setEditingId(null);
       fetchStudents();
@@ -100,6 +105,7 @@ const StudentRegistryPage = () => {
       email: student.email || '',
       package_id: student.package || student.package_detail?.id || '',
       batch_id: student.batch || student.batch_detail?.id || '',
+      trainer_id: student.trainer || '',
       fee_template_id: '',
       fee_attendance_policy: student.fee_attendance_policy || 'STRICT'
     });
@@ -192,7 +198,7 @@ const StudentRegistryPage = () => {
         <button className="btn-primary flex items-center gap-2" onClick={() => {
           setIsEditing(false);
           setEditingId(null);
-          setFormData({ name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_template_id: '', fee_attendance_policy: 'STRICT' });
+          setFormData({ name: '', mobile_number: '', email: '', package_id: '', batch_id: '', fee_template_id: '', fee_attendance_policy: 'STRICT', trainer_id: '' });
           setShowAddModal(true);
         }}>
           <UserPlus size={20} /> Add Student
@@ -229,7 +235,10 @@ const StudentRegistryPage = () => {
                 <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50/50">
                   <td className="px-6 py-4 font-medium">{student.name}</td>
                   <td className="px-6 py-4">{student.package_detail?.name || 'N/A'}</td>
-                  <td className="px-6 py-4">{student.batch_detail?.name || 'Unassigned'}</td>
+                  <td className="px-6 py-4">
+                    <div className="text-gray-900 font-medium">{student.batch_detail?.name || 'Unassigned Batch'}</div>
+                    {student.trainer_name && <div className="text-xs text-gray-500 mt-1">Trainer: {student.trainer_name}</div>}
+                  </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 text-xs rounded-full ${student.fee_attendance_policy === 'STRICT' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
                       {student.fee_attendance_policy}
@@ -303,6 +312,15 @@ const StudentRegistryPage = () => {
                     <select className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={formData.batch_id} onChange={e => setFormData({...formData, batch_id: e.target.value})}>
                       <option value="">-- Select Batch --</option>
                       {batches.map(b => <option key={b.id} value={b.id}>{b.name} ({b.current_grade_detail?.name})</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-gray-700">Assign Trainer</label>
+                    </div>
+                    <select className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={formData.trainer_id} onChange={e => setFormData({...formData, trainer_id: e.target.value})}>
+                      <option value="">-- Select Trainer --</option>
+                      {staffList.map(s => <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>)}
                     </select>
                   </div>
                 </div>

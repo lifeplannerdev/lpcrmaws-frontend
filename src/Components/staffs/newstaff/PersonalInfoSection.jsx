@@ -97,10 +97,16 @@ const PersonalInfoSection = React.memo(({ formData, errors, onChange }) => {
         <FormField
           label="Location"
           name="location"
+          type="select"
           value={formData.location}
           onChange={onChange}
-          placeholder="Enter location"
+          placeholder="Select location"
           icon={MapPin}
+          options={[
+            { value: 'KOTTAYAM', label: 'KOTTAYAM' },
+            { value: 'KOCHI', label: 'KOCHI' },
+            { value: 'KOTTAYAM HO', label: 'KOTTAYAM HO' }
+          ]}
           className="px-4 py-3 border-2 rounded-xl font-medium"
         />
 

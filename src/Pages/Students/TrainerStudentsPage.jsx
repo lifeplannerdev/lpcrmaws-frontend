@@ -195,14 +195,18 @@ export default function TrainerStudentsPage() {
 
   const [students, setStudents] = useState([]);
   const [batches,  setBatches]  = useState([]);
+  const [staffList, setStaffList] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [search,   setSearch]   = useState('');
   const [batchFilter,  setBatchFilter]  = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [feeFilter,    setFeeFilter]    = useState('all');
   const [statFilter,   setStatFilter]   = useState(null);
+  const [locationFilter, setLocationFilter] = useState('all');
+  const [trainerFilter, setTrainerFilter] = useState('all');
 
-  const canView = hasAnyPermission('students') ||
+  const isAdmin = hasPermission('students:admin') || hasPermission('students');
+  const canView = isAdmin ||
     hasPermission('students:view') ||
     hasPermission('students:list') ||
     hasPermission('students:registry_manage') ||
@@ -215,12 +219,14 @@ export default function TrainerStudentsPage() {
     try {
       const token = await getToken();
       if (!token) return;
-      const [sRes, bRes] = await Promise.all([
+      const [sRes, bRes, staffRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/students/students/`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/students/batches/`, { headers: { Authorization: `Bearer ${token}` } }),
+        isAdmin ? axios.get(`${API_BASE_URL}/accounts/staff/?limit=1000`, { headers: { Authorization: `Bearer ${token}` } }) : Promise.resolve({ data: [] }),
       ]);
       setStudents(sRes.data.results || sRes.data || []);
       setBatches(bRes.data.results || bRes.data || []);
+      setStaffList(staffRes.data.results || staffRes.data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -247,6 +253,8 @@ export default function TrainerStudentsPage() {
     if (batchFilter !== 'all') list = list.filter(s => String(s.batch) === batchFilter);
     if (feeFilter === 'due')    list = list.filter(s => s.has_fee_due);
     if (feeFilter === 'no_due') list = list.filter(s => !s.has_fee_due);
+    if (locationFilter !== 'all') list = list.filter(s => s.trainer_location === locationFilter);
+    if (trainerFilter !== 'all') list = list.filter(s => String(s.trainer) === trainerFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(s =>
@@ -259,8 +267,8 @@ export default function TrainerStudentsPage() {
     return list;
   }, [students, statFilter, statusFilter, batchFilter, feeFilter, search]);
 
-  const hasActiveFilters = !!(statFilter || batchFilter !== 'all' || statusFilter !== 'all' || feeFilter !== 'all' || search);
-  const clearFilters = () => { setStatFilter(null); setBatchFilter('all'); setStatusFilter('all'); setFeeFilter('all'); setSearch(''); };
+  const hasActiveFilters = !!(statFilter || batchFilter !== 'all' || statusFilter !== 'all' || feeFilter !== 'all' || locationFilter !== 'all' || trainerFilter !== 'all' || search);
+  const clearFilters = () => { setStatFilter(null); setBatchFilter('all'); setStatusFilter('all'); setFeeFilter('all'); setLocationFilter('all'); setTrainerFilter('all'); setSearch(''); };
 
   const batchOptions = [
     { value: 'all', label: 'All Batches' },
@@ -275,6 +283,16 @@ export default function TrainerStudentsPage() {
     { value: 'all',    label: 'All Fee Status' },
     { value: 'due',    label: '⚠️ Fee Due'     },
     { value: 'no_due', label: '✅ Fee Clear'   },
+  ];
+  const locationOptions = [
+    { value: 'all', label: 'All Locations' },
+    { value: 'KOTTAYAM', label: 'KOTTAYAM' },
+    { value: 'KOCHI', label: 'KOCHI' },
+    { value: 'KOTTAYAM HO', label: 'KOTTAYAM HO' }
+  ];
+  const trainerOptions = [
+    { value: 'all', label: 'All Trainers' },
+    ...staffList.map(s => ({ value: String(s.id), label: `${s.first_name} ${s.last_name}` }))
   ];
 
   if (!canView) {
@@ -340,7 +358,13 @@ export default function TrainerStudentsPage() {
             <div className="flex flex-wrap gap-2 items-center">
               <DropdownFilter label="All Batches"    value={batchFilter}  options={batchOptions}  onChange={setBatchFilter}  icon={GraduationCap} />
               <DropdownFilter label="All Status"     value={statusFilter} options={statusOptions} onChange={setStatusFilter} icon={Filter} />
-              <DropdownFilter label="Fee Status"     value={feeFilter}    options={feeOptions}    onChange={setFeeFilter}    icon={IndianRupee} />
+              <DropdownFilter label="All Fee Status" value={feeFilter}    options={feeOptions}    onChange={setFeeFilter}    icon={IndianRupee} />
+              {isAdmin && (
+                <>
+                  <DropdownFilter label="All Locations" value={locationFilter} options={locationOptions} onChange={setLocationFilter} icon={MapPin} />
+                  <DropdownFilter label="All Trainers"  value={trainerFilter}  options={trainerOptions}  onChange={setTrainerFilter}  icon={Users} />
+                </>
+              )}
               {hasActiveFilters && (
                 <button onClick={clearFilters} className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors">
                   <X size={13} /> Clear
