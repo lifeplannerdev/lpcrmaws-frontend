@@ -14,8 +14,34 @@ const BatchManagementPage = () => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [demotedAssignments, setDemotedAssignments] = useState({}); // { studentId: { gradeId, batchId } }
   
+  const [showCreateBatchModal, setShowCreateBatchModal] = useState(false);
+  const [newBatchForm, setNewBatchForm] = useState({ name: '', current_grade: '' });
+  const [creatingBatch, setCreatingBatch] = useState(false);
+  
   const [loading, setLoading] = useState(true);
   const { accessToken, refreshAccessToken } = useAuth();
+
+  const handleCreateBatch = async (e) => {
+    e.preventDefault();
+    setCreatingBatch(true);
+    try {
+      let token = accessToken;
+      if (!token) token = await refreshAccessToken();
+      if (!token) return;
+
+      await axios.post(`${API_BASE_URL}/students/batches/`, newBatchForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Batch created successfully!');
+      setShowCreateBatchModal(false);
+      setNewBatchForm({ name: '', current_grade: '' });
+      fetchData();
+    } catch (err) {
+      alert(err.response?.data?.error || err.response?.data?.detail || 'Failed to create batch');
+    } finally {
+      setCreatingBatch(false);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -104,7 +130,10 @@ const BatchManagementPage = () => {
           <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Academic Batches</h1>
           <p className="text-gray-500 mt-2">Manage student batches, enter marks, and process promotions.</p>
         </div>
-        <button className="btn-primary flex items-center gap-2">
+        <button 
+          className="btn-primary flex items-center gap-2"
+          onClick={() => setShowCreateBatchModal(true)}
+        >
           <Users size={20} /> New Batch
         </button>
       </div>
@@ -250,6 +279,54 @@ const BatchManagementPage = () => {
           </div>
         </div>
       )}
+
+      {showCreateBatchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-xl relative">
+            <button onClick={() => setShowCreateBatchModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 transition-colors">
+              <XCircle size={16} />
+            </button>
+            <h3 className="text-xl font-black text-gray-800 mb-6 flex items-center gap-2">
+              <Users className="text-indigo-500" /> Create New Batch
+            </h3>
+            <form onSubmit={handleCreateBatch} className="space-y-5">
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Batch Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newBatchForm.name}
+                  onChange={e => setNewBatchForm(p => ({ ...p, name: e.target.value }))}
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-semibold text-gray-800"
+                  placeholder="e.g. FLAG_KTM-99"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Starting Grade</label>
+                <select
+                  required
+                  value={newBatchForm.current_grade}
+                  onChange={e => setNewBatchForm(p => ({ ...p, current_grade: e.target.value }))}
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-semibold text-gray-800"
+                >
+                  <option value="">Select Grade...</option>
+                  {grades.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="submit"
+                disabled={creatingBatch}
+                className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed shadow-md shadow-indigo-600/20 mt-2"
+              >
+                {creatingBatch ? 'Creating...' : 'Create Batch'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
