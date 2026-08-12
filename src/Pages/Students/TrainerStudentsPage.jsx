@@ -220,7 +220,7 @@ export default function TrainerStudentsPage() {
       const [sRes, bRes, staffRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/students/students/`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/students/batches/`, { headers: { Authorization: `Bearer ${token}` } }),
-        isAdmin ? axios.get(`${API_BASE_URL}/accounts/staff/?limit=1000`, { headers: { Authorization: `Bearer ${token}` } }) : Promise.resolve({ data: [] }),
+        isAdmin ? axios.get(`${API_BASE_URL}/staff/?limit=1000`, { headers: { Authorization: `Bearer ${token}` } }) : Promise.resolve({ data: [] }),
       ]);
       setStudents(sRes.data.results || sRes.data || []);
       setBatches(bRes.data.results || bRes.data || []);
