@@ -27,7 +27,6 @@ export const masterNavigation = [
   { id: "processingStudents", label: "Processing Students", icon: GraduationCap, path: "/processing-students", requiredResource: "processing_students" },
   { id: "fees", label: "Fees", icon: IndianRupee, path: "/fees", requiredResource: "fees" },
   { id: "markAttendance", label: "Mark Attendance", icon: CalendarCheck, path: "/attendance/mark", requiredPermissions: ["attendance:mark"] },
-  { id: "attendanceApprovals", label: "Attendance Approvals", icon: CalendarCheck, path: "/attendance/approvals", requiredPermissions: ["attendance:approvals"] },
   { id: "penalties", label: "Penalties", icon: ShieldAlert, path: "/hr/penalties", requiredResource: "penalties" },
   { id: "attendanceDocs", label: "Attendance Docs", icon: FolderClock, path: "/hr/attendance", requiredResource: "staff" },
   { id: "candidates", label: "Candidates", icon: Users, path: "/candidates", requiredResource: "candidates" },

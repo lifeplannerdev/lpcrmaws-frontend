@@ -11,6 +11,7 @@ const BatchAttendancePage = () => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [students, setStudents] = useState([]);
   const [attendanceData, setAttendanceData] = useState({});
+  const [approvalData, setApprovalData] = useState({});
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { accessToken, refreshAccessToken } = useAuth();
@@ -34,7 +35,8 @@ const BatchAttendancePage = () => {
     fetchBatches();
   }, [fetchBatches]);
 
-  const fetchStudents = async (batchId) => {
+  // Fetch students AND existing attendance records for the selected batch+date
+  const fetchStudents = useCallback(async (batchId, selectedDate) => {
     if (!batchId) return;
     setLoading(true);
     try {
@@ -42,30 +44,60 @@ const BatchAttendancePage = () => {
       if (!token) token = await refreshAccessToken();
       if (!token) return;
 
-      const res = await axios.get(`${API_BASE_URL}/students/students/?batch=${batchId}&is_active=true`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const [studentsRes, attendancesRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/students/students/?batch=${batchId}&is_active=true`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get(`${API_BASE_URL}/students/attendances/?batch=${batchId}&date=${selectedDate}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+      ]);
+
+      const studentList = studentsRes.data.results || studentsRes.data;
+      const existingRecords = attendancesRes.data.results || attendancesRes.data;
+
+      // Build map: studentId -> { status, approval_status }
+      const existingMap = {};
+      existingRecords.forEach(r => {
+        existingMap[r.student] = { status: r.status, approval_status: r.approval_status };
       });
-      const studentList = res.data.results || res.data;
+
       setStudents(studentList);
-      
-      // Initialize attendance data
+
+      // Pre-fill from existing DB records, or default to PRESENT
       const initialData = {};
+      const initialApproval = {};
       studentList.forEach(s => {
-        initialData[s.id] = 'PRESENT'; // default
+        if (existingMap[s.id]) {
+          initialData[s.id] = existingMap[s.id].status;
+          initialApproval[s.id] = existingMap[s.id].approval_status;
+        } else {
+          initialData[s.id] = 'PRESENT';
+          initialApproval[s.id] = null;
+        }
       });
       setAttendanceData(initialData);
+      setApprovalData(initialApproval);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessToken, refreshAccessToken]);
 
   const handleBatchChange = (e) => {
     const val = e.target.value;
     setSelectedBatch(val);
-    fetchStudents(val);
+    fetchStudents(val, date);
   };
+
+  // Re-fetch when date changes (if batch already selected)
+  useEffect(() => {
+    if (selectedBatch) {
+      fetchStudents(selectedBatch, date);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date]);
 
   const handleStatusChange = (studentId, status) => {
     setAttendanceData(prev => ({
@@ -96,7 +128,10 @@ const BatchAttendancePage = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       alert(res.data.message);
-      // Let's check if any were marked PENDING
+
+      // Refresh to get updated approval_status from DB
+      await fetchStudents(selectedBatch, date);
+
       const pending = res.data.data.filter(a => a.approval_status === 'PENDING');
       if (pending.length > 0) {
         alert(`${pending.length} attendances require Accounts Regularization due to fee dues.`);
