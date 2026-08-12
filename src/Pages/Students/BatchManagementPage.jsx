@@ -266,7 +266,7 @@ const BatchManagementPage = () => {
                   <div className="space-y-4">
                     {previewData.failed_students.map(s => {
                       const assignment = demotedAssignments[s.id] || { gradeId: '', batchId: '' };
-                      const gradeBatches = batches.filter(b => b.current_grade === parseInt(assignment.gradeId));
+                      const gradeBatches = batches.filter(b => b.current_grade === parseInt(assignment.gradeId) && b.id !== selectedBatch.id);
 
                       return (
                         <div key={s.id} className="bg-red-50/50 border border-red-100 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
