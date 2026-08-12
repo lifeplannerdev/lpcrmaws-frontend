@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
@@ -47,6 +48,7 @@ const StatusBadge = ({ isActive, hasFee }) => {
 
 // ─── Student Card ─────────────────────────────────────────────────────────────
 const StudentCard = ({ student }) => {
+  const navigate = useNavigate();
   const hasFee = student.has_fee_due;
   const batch  = student.batch_detail;
   const accentClass = !student.is_active
@@ -56,7 +58,10 @@ const StudentCard = ({ student }) => {
     : 'bg-gradient-to-r from-indigo-500 to-purple-600';
 
   return (
-    <div className={`group relative bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden ${!student.is_active ? 'opacity-70' : ''}`}>
+    <div
+      onClick={() => navigate(`/my-students/${student.id}`)}
+      className={`group relative bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden cursor-pointer ${!student.is_active ? 'opacity-70' : ''}`}
+    >
       <div className={`h-1 w-full ${accentClass}`} />
       <div className="p-5">
         <div className="flex items-start gap-3 mb-4">
