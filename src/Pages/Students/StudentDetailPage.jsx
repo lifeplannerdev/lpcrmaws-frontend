@@ -692,6 +692,58 @@ export default function StudentDetailPage() {
             )}
           </div>
         )}
+      {showExamModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-xl relative">
+            <button onClick={() => setShowExamModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 transition-colors">
+              <X size={16} />
+            </button>
+            <h3 className="text-xl font-black text-gray-800 mb-6 flex items-center gap-2">
+              <Award className="text-indigo-500" /> Record {examForm.exam_type} Exam
+            </h3>
+            <form onSubmit={handleSaveExam} className="space-y-5">
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Marks (out of 100)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={examForm.marks}
+                  onChange={e => setExamForm(p => ({ ...p, marks: e.target.value }))}
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all text-lg font-semibold text-gray-800"
+                  placeholder="Enter marks..."
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Final Status</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setExamForm(p => ({ ...p, status: 'PASSED' }))}
+                    className={`py-3 rounded-xl font-bold border-2 transition-all ${examForm.status === 'PASSED' ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm' : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200'}`}
+                  >
+                    PASSED
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setExamForm(p => ({ ...p, status: 'FAILED' }))}
+                    className={`py-3 rounded-xl font-bold border-2 transition-all ${examForm.status === 'FAILED' ? 'border-red-500 bg-red-50 text-red-700 shadow-sm' : 'border-gray-100 bg-white text-gray-500 hover:border-gray-200'}`}
+                  >
+                    FAILED
+                  </button>
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed shadow-md shadow-indigo-600/20 mt-2"
+              >
+                {saving ? 'Saving Result...' : 'Save Exam Result'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
