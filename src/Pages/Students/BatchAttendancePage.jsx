@@ -202,15 +202,15 @@ const BatchAttendancePage = () => {
                       <button
                         onClick={() => handleStatusChange(student.id, 'PRESENT')}
                         className={`px-4 py-2 flex items-center gap-2 rounded-lg font-medium transition-all ${
-                          attendanceData[student.id] === 'PRESENT' 
-                            ? (student.fee_attendance_policy === 'STRICT' && student.has_fee_due)
-                              ? 'bg-yellow-100 text-yellow-700 ring-2 ring-yellow-500/50' // Pending Due
-                              : 'bg-green-100 text-green-700 ring-2 ring-green-500/50' // Normal Present
+                          attendanceData[student.id] === 'PRESENT'
+                            ? approvalData[student.id] === 'PENDING'
+                              ? 'bg-yellow-100 text-yellow-700 ring-2 ring-yellow-500/50'
+                              : 'bg-green-100 text-green-700 ring-2 ring-green-500/50'
                             : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                         }`}
                       >
                         <CheckCircle2 size={18} /> {
-                          (attendanceData[student.id] === 'PRESENT' && student.fee_attendance_policy === 'STRICT' && student.has_fee_due)
+                          (attendanceData[student.id] === 'PRESENT' && approvalData[student.id] === 'PENDING')
                           ? 'Pending' : 'Present'
                         }
                       </button>
