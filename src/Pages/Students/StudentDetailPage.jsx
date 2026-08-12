@@ -7,7 +7,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import {
   ArrowLeft, GraduationCap, Phone, Mail, CalendarDays, BookOpen,
   IndianRupee, CheckCircle2, XCircle, Clock, AlertTriangle, Edit2,
-  Save, X, TrendingUp, ShieldCheck, User, RefreshCw, CalendarCheck, BookA
+  Save, X, TrendingUp, ShieldCheck, User, RefreshCw, CalendarCheck, BookA, Award
 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
