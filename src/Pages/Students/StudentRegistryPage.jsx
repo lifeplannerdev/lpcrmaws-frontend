@@ -16,7 +16,6 @@ const StudentRegistryPage = () => {
   const [showAddBatchModal, setShowAddBatchModal] = useState(false);
   const [packages, setPackages] = useState([]);
   const [batches, setBatches] = useState([]);
-  const [feeTemplates, setFeeTemplates] = useState([]);
   const [grades, setGrades] = useState([]);
   const [staffList, setStaffList] = useState([]);
   const [formData, setFormData] = useState({
@@ -32,18 +31,16 @@ const StudentRegistryPage = () => {
       if (!token) token = await refreshAccessToken();
       if (!token) return;
 
-      const [res, pkgRes, batchRes, feeRes, gradeRes, staffRes] = await Promise.all([
+      const [res, pkgRes, batchRes, gradeRes, staffRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/students/students/`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/students/packages/`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/students/batches/`, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(`${API_BASE_URL}/fees/catalog/`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/students/grades/`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/accounts/staff/?limit=1000`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       setStudents(res.data.results || res.data);
       setPackages(pkgRes.data.results || pkgRes.data);
       setBatches(batchRes.data.results || batchRes.data);
-      setFeeTemplates(feeRes.data.results || feeRes.data);
       setGrades(gradeRes.data.results || gradeRes.data);
       setStaffList(staffRes.data.results || staffRes.data);
     } catch (err) {
@@ -281,15 +278,7 @@ const StudentRegistryPage = () => {
                 </div>
 
                 <div className="border-t border-gray-100 pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {!isEditing && (
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Fee Plan Template</label>
-                      <select className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none" value={formData.fee_template_id} onChange={e => setFormData({...formData, fee_template_id: e.target.value})}>
-                        <option value="">-- Select Fee Plan --</option>
-                        {feeTemplates.map(t => <option key={t.id} value={t.id}>{t.name} (₹{t.total_amount})</option>)}
-                      </select>
-                    </div>
-                  )}
+
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-sm font-semibold text-gray-700">Academic Package</label>
