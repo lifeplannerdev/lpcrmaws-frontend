@@ -7,7 +7,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import {
   ArrowLeft, GraduationCap, Phone, Mail, CalendarDays, BookOpen,
   IndianRupee, CheckCircle2, XCircle, Clock, AlertTriangle, Edit2,
-  Save, X, TrendingUp, ShieldCheck, User, RefreshCw, CalendarCheck
+  Save, X, TrendingUp, ShieldCheck, User, RefreshCw, CalendarCheck, BookA
 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -64,14 +64,14 @@ const AttendanceDot = ({ status, approvalStatus }) => {
 };
 
 // ─── Tab bar ─────────────────────────────────────────────────────────────────
-const TABS = ['profile', 'attendance', 'fees'];
-const TAB_LABELS = { profile: 'Profile', attendance: 'Attendance', fees: 'Fee Status' };
-const TAB_ICONS  = { profile: User, attendance: CalendarCheck, fees: IndianRupee };
+const TABS = ['profile', 'academics', 'attendance', 'fees'];
+const TAB_LABELS = { profile: 'Profile', academics: 'Academics', attendance: 'Attendance', fees: 'Fee Status' };
+const TAB_ICONS  = { profile: User, academics: BookA, attendance: CalendarCheck, fees: IndianRupee };
 
 export default function StudentDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission, hasAnyPermission } = usePermissions();
 
   // Permission flags
@@ -83,11 +83,14 @@ export default function StudentDetailPage() {
   const [student, setStudent]         = useState(null);
   const [batches, setBatches]         = useState([]);
   const [packages, setPackages]       = useState([]);
+  const [grades, setGrades]           = useState([]);
+  const [examResults, setExamResults] = useState([]);
   const [attendance, setAttendance]   = useState([]);
   const [feeAccount, setFeeAccount]   = useState(null);
   const [loading, setLoading]         = useState(true);
   const [activeTab, setActiveTab]     = useState('profile');
   const [editing, setEditing]         = useState(false);
+  const [trainerEditing, setTrainerEditing] = useState(false);
   const [editForm, setEditForm]       = useState({});
   const [saving, setSaving]           = useState(false);
   const [msg, setMsg]                 = useState(null);
@@ -98,15 +101,19 @@ export default function StudentDetailPage() {
     setLoading(true);
     try {
       const token = await getToken();
-      const [sRes, bRes, pRes] = await Promise.all([
+      const [sRes, bRes, pRes, gRes, eRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/students/students/${id}/`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/students/batches/`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_BASE_URL}/students/packages/`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/students/grades/`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/students/exam-results/?student=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       setStudent(sRes.data);
       setEditForm({ name: sRes.data.name, mobile_number: sRes.data.mobile_number || '', email: sRes.data.email || '', fee_attendance_policy: sRes.data.fee_attendance_policy });
       setBatches(bRes.data.results || bRes.data || []);
       setPackages(pRes.data.results || pRes.data || []);
+      setGrades(gRes.data.results || gRes.data || []);
+      setExamResults(eRes.data.results || eRes.data || []);
 
       // Attendance — last 30 days
       const to   = new Date().toISOString().split('T')[0];
@@ -139,9 +146,41 @@ export default function StudentDetailPage() {
       await axios.patch(`${API_BASE_URL}/students/students/${id}/`, editForm, { headers: { Authorization: `Bearer ${token}` } });
       setMsg({ type: 'success', text: 'Profile updated.' });
       setEditing(false);
+      setTrainerEditing(false);
       fetchAll();
     } catch (err) {
       setMsg({ type: 'error', text: err.response?.data?.detail || 'Update failed.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isTrainer = student?.trainer === user?.id;
+
+  const [showExamModal, setShowExamModal] = useState(false);
+  const [examForm, setExamForm] = useState({ grade_id: '', exam_type: 'MODEL', marks: '', status: 'PASSED' });
+
+  const handleSaveExam = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setMsg(null);
+    try {
+      const token = await getToken();
+      if (!student.batch) throw new Error("Student is not assigned to a batch.");
+      const payload = {
+        student: student.id,
+        batch: student.batch,
+        grade: examForm.grade_id,
+        exam_type: examForm.exam_type,
+        marks: examForm.marks || null,
+        status: examForm.status
+      };
+      await axios.post(`${API_BASE_URL}/students/exam-results/`, payload, { headers: { Authorization: `Bearer ${token}` } });
+      setMsg({ type: 'success', text: 'Exam result recorded successfully.' });
+      setShowExamModal(false);
+      fetchAll();
+    } catch (err) {
+      setMsg({ type: 'error', text: err.response?.data?.error || err.response?.data?.detail || err.message || 'Failed to record exam.' });
     } finally {
       setSaving(false);
     }
@@ -249,14 +288,19 @@ export default function StudentDetailPage() {
               <button onClick={fetchAll} className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center hover:bg-indigo-50 transition-colors shadow-sm">
                 <RefreshCw size={14} />
               </button>
-              {canEditProfile && activeTab === 'profile' && !editing && (
+              {canEditProfile && activeTab === 'profile' && !editing && !trainerEditing && (
                 <button onClick={() => setEditing(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-md">
                   <Edit2 size={14} /> Edit
                 </button>
               )}
-              {editing && (
+              {!canEditProfile && isTrainer && activeTab === 'profile' && !editing && !trainerEditing && (
+                <button onClick={() => setTrainerEditing(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-md">
+                  <Edit2 size={14} /> Quick Edit
+                </button>
+              )}
+              {(editing || trainerEditing) && (
                 <>
-                  <button onClick={() => { setEditing(false); setMsg(null); }} className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center hover:bg-red-50 text-gray-500 hover:text-red-600 transition-colors">
+                  <button onClick={() => { setEditing(false); setTrainerEditing(false); setMsg(null); }} className="w-9 h-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center hover:bg-red-50 text-gray-500 hover:text-red-600 transition-colors">
                     <X size={14} />
                   </button>
                   <button onClick={handleSaveProfile} disabled={saving} className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-md disabled:opacity-60">
@@ -275,7 +319,7 @@ export default function StudentDetailPage() {
                 return (
                   <button
                     key={tab}
-                    onClick={() => { setActiveTab(tab); setEditing(false); setMsg(null); }}
+                    onClick={() => { setActiveTab(tab); setEditing(false); setTrainerEditing(false); setMsg(null); }}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === tab ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
                   >
                     <Icon size={14} />{TAB_LABELS[tab]}
@@ -322,6 +366,20 @@ export default function StudentDetailPage() {
                       <option value="LENIENT">Lenient</option>
                     </select>
                   </div>
+                </div>
+              ) : trainerEditing ? (
+                <div className="space-y-4">
+                  {[['mobile_number','Mobile','tel'],['email','Email','email']].map(([field, label, type]) => (
+                    <div key={field}>
+                      <label className="text-xs font-semibold text-gray-500 block mb-1">{label}</label>
+                      <input
+                        type={type}
+                        value={editForm[field] || ''}
+                        onChange={e => setEditForm(p => ({ ...p, [field]: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      />
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -370,6 +428,70 @@ export default function StudentDetailPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ── ACADEMICS TAB ── */}
+        {activeTab === 'academics' && (
+          <div className="space-y-8 relative before:absolute before:inset-0 before:ml-6 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-indigo-500 before:via-purple-500 before:to-pink-500">
+            {grades.sort((a,b) => a.order - b.order).map((grade, index) => {
+              const modelExam = examResults.find(e => e.grade === grade.id && e.exam_type === 'MODEL');
+              const mainExam = examResults.find(e => e.grade === grade.id && e.exam_type === 'MAIN');
+              const isCurrent = student.batch_detail?.current_grade === grade.id;
+
+              return (
+                <div key={grade.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                  {/* Timeline dot */}
+                  <div className={`flex items-center justify-center w-12 h-12 rounded-full border-4 border-slate-50 bg-white shadow-xl shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 ${isCurrent ? 'ring-4 ring-indigo-200 z-10' : ''}`}>
+                    <span className={`font-black text-lg ${isCurrent ? 'text-indigo-600' : 'text-slate-400'}`}>{grade.name}</span>
+                  </div>
+
+                  {/* Card */}
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-3rem)] p-4 rounded-3xl bg-white border border-slate-100 shadow-sm hover:shadow-lg transition-shadow duration-300">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-bold text-slate-800 text-lg">{grade.name} Exams</h4>
+                      {isCurrent && <span className="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-full">Current</span>}
+                    </div>
+
+                    <div className="space-y-3">
+                      {/* Model Exam */}
+                      <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                        <div>
+                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Model Exam</p>
+                          {modelExam ? (
+                            <p className="text-sm font-semibold text-slate-700 mt-1">Marks: {modelExam.marks || '—'} / 100</p>
+                          ) : (
+                            <p className="text-sm text-slate-400 mt-1 italic">Not taken</p>
+                          )}
+                        </div>
+                        {modelExam ? (
+                          <span className={`px-2.5 py-1 text-xs font-bold rounded-lg ${modelExam.status === 'PASSED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{modelExam.status}</span>
+                        ) : isCurrent && canEditProfile ? (
+                          <button onClick={() => { setExamForm({ grade_id: grade.id, exam_type: 'MODEL', marks: '', status: 'PASSED' }); setShowExamModal(true); }} className="px-3 py-1.5 text-xs font-bold bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg transition-colors">Record</button>
+                        ) : null}
+                      </div>
+
+                      {/* Main Exam */}
+                      <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                        <div>
+                          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Main Exam</p>
+                          {mainExam ? (
+                            <p className="text-sm font-semibold text-slate-700 mt-1">Marks: {mainExam.marks || '—'} / 100</p>
+                          ) : (
+                            <p className="text-sm text-slate-400 mt-1 italic">Not taken</p>
+                          )}
+                        </div>
+                        {mainExam ? (
+                          <span className={`px-2.5 py-1 text-xs font-bold rounded-lg ${mainExam.status === 'PASSED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{mainExam.status}</span>
+                        ) : isCurrent && canEditProfile ? (
+                          <button onClick={() => { setExamForm({ grade_id: grade.id, exam_type: 'MAIN', marks: '', status: 'PASSED' }); setShowExamModal(true); }} className="px-3 py-1.5 text-xs font-bold bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-lg transition-colors">Record</button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 

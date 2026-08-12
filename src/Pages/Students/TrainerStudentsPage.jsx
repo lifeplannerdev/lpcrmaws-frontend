@@ -7,7 +7,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import {
   Search, Users, GraduationCap, CheckCircle2, XCircle, RefreshCw,
   ChevronDown, Phone, Mail, CalendarDays, BookOpen, IndianRupee,
-  AlertTriangle, Filter, X
+  AlertTriangle, Filter, X, MapPin
 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -205,10 +205,8 @@ export default function TrainerStudentsPage() {
   const [locationFilter, setLocationFilter] = useState('all');
   const [trainerFilter, setTrainerFilter] = useState('all');
 
-  const isAdmin = hasPermission('students:admin') || hasPermission('students');
+  const isAdmin = hasPermission('students:admin') || hasPermission('students:edit_any');
   const canView = isAdmin ||
-    hasPermission('students:view') ||
-    hasPermission('students:list') ||
     hasPermission('students:registry_manage') ||
     hasPermission('attendance:mark');
 
