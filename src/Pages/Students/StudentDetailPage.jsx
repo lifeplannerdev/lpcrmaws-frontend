@@ -463,7 +463,11 @@ export default function StudentDetailPage() {
                   <StatCard label="Total Due"   value={`₹${Number(feeAccount.total_due||0).toLocaleString('en-IN')}`}     color="bg-slate-50 text-slate-700 border-slate-200" />
                   <StatCard label="Total Paid"  value={`₹${Number(feeAccount.total_paid||0).toLocaleString('en-IN')}`}    color="bg-emerald-50 text-emerald-700 border-emerald-200" />
                   <StatCard label="Balance Due" value={`₹${Number(feeAccount.balance_due||0).toLocaleString('en-IN')}`}   color="bg-indigo-50 text-indigo-700 border-indigo-200" />
-                  <StatCard label="Status"      value={feeAccount.is_overdue ? 'Overdue' : 'Clear'}                       color={feeAccount.is_overdue ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'} />
+                  <StatCard 
+                    label="Status"      
+                    value={feeAccount.status}                       
+                    color={['OVERDUE'].includes(feeAccount.status) ? 'bg-red-50 text-red-700 border-red-200' : ['ACTIVE', 'PARTIAL'].includes(feeAccount.status) ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'} 
+                  />
                 </div>
 
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
@@ -474,15 +478,93 @@ export default function StudentDetailPage() {
                     <InfoRow icon={CalendarDays} label="Due Day of Month"   value={`${feeAccount.due_day}th`}   color="text-slate-500" />
                     <InfoRow icon={AlertTriangle} label="Registration Amt"  value={`₹${Number(feeAccount.registration_amount||0).toLocaleString('en-IN')}`} color="text-amber-600" />
                   </div>
-                  {feeAccount.is_overdue && (
+                  {feeAccount.status === 'OVERDUE' && (
                     <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-200">
                       <AlertTriangle size={18} className="text-red-500 flex-shrink-0" />
                       <div>
                         <p className="text-sm font-bold text-red-700">Fee Overdue</p>
-                        <p className="text-xs text-red-500 mt-0.5">This student's fee account is overdue. Attendance may require regularization.</p>
+                        <p className="text-xs text-red-500 mt-0.5">This student's fee account is overdue by ₹{Number(feeAccount.overdue_amount||0).toLocaleString('en-IN')}. Attendance may require regularization.</p>
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* EMIs / Installments */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
+                    <h3 className="text-sm font-bold text-gray-800">EMI Schedule (Installments)</h3>
+                    <span className="text-xs font-bold bg-white border border-gray-200 px-3 py-1 rounded-full text-gray-600 shadow-sm">{feeAccount.installments?.length || 0} Installments</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="text-xs text-gray-500 bg-white border-b border-gray-100">
+                        <tr>
+                          <th className="px-6 py-3 font-semibold">Label</th>
+                          <th className="px-6 py-3 font-semibold">Due Date</th>
+                          <th className="px-6 py-3 font-semibold text-right">Scheduled</th>
+                          <th className="px-6 py-3 font-semibold text-right">Paid</th>
+                          <th className="px-6 py-3 font-semibold text-right">Balance</th>
+                          <th className="px-6 py-3 font-semibold text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {feeAccount.installments?.length > 0 ? feeAccount.installments.map(inst => (
+                          <tr key={inst.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-3 font-medium text-gray-800">{inst.label || `Installment #${inst.sequence_number}`}</td>
+                            <td className="px-6 py-3 text-gray-600">{new Date(inst.due_date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}</td>
+                            <td className="px-6 py-3 text-right font-medium text-gray-700">₹{Number(inst.scheduled_amount).toLocaleString('en-IN')}</td>
+                            <td className="px-6 py-3 text-right font-medium text-emerald-600">₹{Number(inst.paid_amount).toLocaleString('en-IN')}</td>
+                            <td className="px-6 py-3 text-right font-bold text-indigo-600">₹{Number(inst.balance_amount).toLocaleString('en-IN')}</td>
+                            <td className="px-6 py-3 text-center">
+                              <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${inst.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' : inst.status === 'OVERDUE' ? 'bg-red-100 text-red-700' : inst.status === 'PARTIAL' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                                {inst.status}
+                              </span>
+                            </td>
+                          </tr>
+                        )) : (
+                          <tr><td colSpan="6" className="px-6 py-8 text-center text-gray-400">No installments found for this plan.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Payments History */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
+                    <h3 className="text-sm font-bold text-gray-800">Payment History</h3>
+                    <span className="text-xs font-bold bg-white border border-gray-200 px-3 py-1 rounded-full text-gray-600 shadow-sm">{feeAccount.payments?.length || 0} Payments</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="text-xs text-gray-500 bg-white border-b border-gray-100">
+                        <tr>
+                          <th className="px-6 py-3 font-semibold">Receipt No.</th>
+                          <th className="px-6 py-3 font-semibold">Date</th>
+                          <th className="px-6 py-3 font-semibold">Method</th>
+                          <th className="px-6 py-3 font-semibold">Collected By</th>
+                          <th className="px-6 py-3 font-semibold text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {feeAccount.payments?.length > 0 ? feeAccount.payments.map(pay => (
+                          <tr key={pay.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-3 font-semibold text-indigo-600">{pay.receipt_number}</td>
+                            <td className="px-6 py-3 text-gray-600">{new Date(pay.payment_date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</td>
+                            <td className="px-6 py-3">
+                              <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                {pay.payment_method}
+                              </span>
+                            </td>
+                            <td className="px-6 py-3 text-gray-500">{pay.created_by_name}</td>
+                            <td className="px-6 py-3 text-right font-black text-emerald-600">₹{Number(pay.amount).toLocaleString('en-IN')}</td>
+                          </tr>
+                        )) : (
+                          <tr><td colSpan="5" className="px-6 py-8 text-center text-gray-400">No payments recorded yet.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </>
             )}
