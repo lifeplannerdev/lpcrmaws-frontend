@@ -4,7 +4,7 @@ import FeesAnalyticsWorkspace from './FeesAnalyticsWorkspace';
 import FeesGridWorkspace from './FeesGridWorkspace';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
-import { TrendingUp, RefreshCw, Plus, Receipt, AlertTriangle, Repeat, IndianRupee, Download, CheckCircle, Edit2, Trash2 } from 'lucide-react';
+import { TrendingUp, RefreshCw, Plus, Receipt, AlertTriangle, Repeat, IndianRupee, Download, CheckCircle, Edit2, Trash2, ShieldCheck } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -548,16 +548,17 @@ export default function FeesManagementPage() {
   const handleApproveAttendance = async (attendanceId) => {
     try {
       const token = await getToken();
-      const res = await fetch(`${API_BASE_URL}/attendance/${attendanceId}/approve/`, {
+      const res = await fetch(`${API_BASE_URL}/students/attendances/${attendanceId}/regularize/`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approval_notes: 'Approved from Fees Dashboard' })
+        body: JSON.stringify({})
       });
-      if (!res.ok) throw new Error('Approval failed');
-      setMessage({ type: 'success', text: 'Attendance approved' });
-      fetchData();
+      if (!res.ok) throw new Error('Regularization failed');
+      // Optimistically remove from list
+      setPendingAttendances(prev => prev.filter(a => a.id !== attendanceId));
+      setMessage({ type: 'success', text: 'Attendance regularized successfully.' });
     } catch {
-      setMessage({ type: 'error', text: 'Approval failed' });
+      setMessage({ type: 'error', text: 'Failed to regularize attendance.' });
     }
   };
 
@@ -696,42 +697,51 @@ export default function FeesManagementPage() {
             <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Pending Attendances</h2>
-                  <p className="text-sm text-gray-500">Review and approve attendance for students with overdue fees.</p>
+                  <h2 className="text-xl font-bold text-gray-900">Accounts Regularization</h2>
+                  <p className="text-sm text-gray-500">Approve attendance for students with pending fee dues under Strict policies.</p>
                 </div>
+                {pendingAttendances.length > 0 && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 text-sm font-bold rounded-xl border border-orange-200">
+                    <AlertTriangle size={14} />
+                    {pendingAttendances.length} Pending
+                  </span>
+                )}
               </div>
-              
+
               {pendingAttendances.length === 0 ? (
-                <div className="py-12 text-center text-gray-500">
-                  <CheckCircle className="mx-auto mb-3 text-green-300" size={32} />
-                  No pending attendances require approval.
+                <div className="py-16 text-center flex flex-col items-center gap-3">
+                  <ShieldCheck size={48} className="text-green-400 opacity-60" />
+                  <h3 className="text-lg font-bold text-gray-800">All clear!</h3>
+                  <p className="text-sm text-gray-500">There are no pending attendances requiring regularization.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   {pendingAttendances.map(record => (
-                    <div key={record.id} className="bg-white rounded-xl p-5 border border-orange-100 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start mb-4">
+                    <div key={record.id} className="flex flex-col md:flex-row justify-between items-center gap-6 p-5 rounded-2xl border border-l-4 border-yellow-400 bg-white shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-start gap-4 w-full md:w-auto">
+                        <div className="bg-yellow-100 p-3 rounded-full text-yellow-600 flex-shrink-0">
+                          <AlertTriangle size={22} />
+                        </div>
                         <div>
-                          <div className="font-bold text-gray-900 text-lg">{record.student_name}</div>
-                          <div className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                            Trainer: <span className="font-medium text-gray-700">{record.trainer_name}</span>
+                          <h3 className="text-lg font-bold text-gray-900">{record.student_name}</h3>
+                          <div className="text-sm text-gray-500 mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                            <span>Date: <span className="font-semibold text-gray-700">{record.date}</span></span>
+                            <span>Status Marked: <span className="font-semibold text-gray-700">{record.status}</span></span>
+                            {record.trainer_name && (
+                              <span>Trainer: <span className="font-semibold text-gray-700">{record.trainer_name}</span></span>
+                            )}
+                          </div>
+                          <div className="mt-2 text-xs text-gray-400 bg-slate-50 rounded-lg px-3 py-1.5 border border-gray-100 inline-block">
+                            Attendance marked but fee account was overdue — pending regularization.
                           </div>
                         </div>
-                        <div className="text-xs text-orange-700 font-bold bg-orange-100 px-3 py-1.5 rounded-lg border border-orange-200">
-                          {record.date}
-                        </div>
                       </div>
-                      
-                      <div className="bg-slate-50 p-3 rounded-lg border border-gray-100 mb-4 text-sm text-gray-600">
-                        Attendance was marked as <span className="font-semibold text-gray-900">{record.status}</span>, but the student's fee account was overdue at the time.
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <button 
+                      <div className="flex gap-3 w-full md:w-auto flex-shrink-0">
+                        <button
                           onClick={() => handleApproveAttendance(record.id)}
-                          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-sm transition-colors"
+                          className="w-full md:w-auto px-6 py-2.5 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
                         >
-                          <CheckCircle size={16} /> Regularize
+                          <ShieldCheck size={18} /> Regularize
                         </button>
                       </div>
                     </div>
