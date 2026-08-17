@@ -289,7 +289,13 @@ export default function FdsFeesPage() {
                       <td>
                         <button className="fds-btn fds-btn-ghost" style={{ fontSize: '0.8rem', padding: '4px 10px', color: 'var(--fds-primary)' }} onClick={() => {
                           // Pre-fill payment form with this student
-                          setForm({ ...EMPTY_FORM, student: acc.student });
+                          setForm({ 
+                            ...EMPTY_FORM, 
+                            student: acc.student,
+                            fees_type: acc.active_package || '',
+                            total_fees: acc.balance_due,
+                            paid_amount: acc.balance_due
+                          });
                           setPaymentTarget('student');
                           setShowModal(true);
                         }}>
