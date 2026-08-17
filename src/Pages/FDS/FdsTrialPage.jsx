@@ -94,6 +94,7 @@ export default function FdsTrialPage() {
   const authFetchJson = useCallback(async (url, opts = {}) => {
     const res = await authFetch(url, opts);
     if (!res.ok) throw new Error('Failed');
+    if (res.status === 204) return null;
     return res.json();
   }, [authFetch]);
 

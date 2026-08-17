@@ -46,6 +46,7 @@ export default function FdsWeddingGroupsPage() {
     if (!token) token = await refreshAccessToken();
     const res = await fetch(url, { ...opts, headers: { Authorization: `Bearer ${token}`, ...(opts.headers || {}) } });
     if (!res.ok) throw new Error('Failed');
+    if (res.status === 204) return null;
     return res.json();
   }, [accessToken, refreshAccessToken]);
 
