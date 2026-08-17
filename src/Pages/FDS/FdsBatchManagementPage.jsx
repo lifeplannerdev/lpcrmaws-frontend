@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, X, Edit2, Trash2, Users, Music, Clock } from 'lucide-react';
-import Layout from '../../Components/Layout';
+import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, FDS_CATEGORIES } from './fdsApi';
@@ -106,7 +106,7 @@ export default function FdsBatchManagementPage() {
   const catColor = (cat) => ({ DANCE: 'var(--fds-dance)', ZUMBA: 'var(--fds-zumba)', YOGA: 'var(--fds-yoga)' }[cat] || 'var(--fds-primary)');
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-slate-50"><Navbar />
       <div className="fds-theme">
         <div className="fds-page">
           <div className="fds-page-header">
@@ -315,6 +315,6 @@ export default function FdsBatchManagementPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </div>
   );
 }

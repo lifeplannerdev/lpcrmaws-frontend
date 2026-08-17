@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, X, Download, Edit2, Trash2, IndianRupee, ChevronDown } from 'lucide-react';
-import Layout from '../../Components/Layout';
+import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, FDS_CATEGORIES, getStatusBadgeClass, downloadExcelFromResponse } from './fdsApi';
@@ -103,7 +103,7 @@ export default function FdsFeesPage() {
   useEffect(() => { setPage(1); }, [search, filterStatus, filterMode, filterMonth, filterYear, dateFrom, dateTo, activeCategory]);
 
   if (!canView) return (
-    <Layout><div className="fds-theme"><div className="fds-page"><div className="fds-empty"><div className="fds-empty-title">Access Denied</div></div></div></div></Layout>
+    <div className="min-h-screen bg-slate-50"><Navbar /><div className="fds-theme"><div className="fds-page"><div className="fds-empty"><div className="fds-empty-title">Access Denied</div></div></div></div></div>
   );
 
   const openAdd = () => {
@@ -165,7 +165,7 @@ export default function FdsFeesPage() {
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-slate-50"><Navbar />
       <div className="fds-theme">
         <div className="fds-page">
           {/* Header */}
@@ -422,6 +422,6 @@ export default function FdsFeesPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </div>
   );
 }

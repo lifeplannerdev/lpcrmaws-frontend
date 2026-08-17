@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { CalendarCheck, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import Layout from '../../Components/Layout';
+import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, FDS_CATEGORIES } from './fdsApi';
@@ -128,7 +128,7 @@ export default function FdsAttendancePage() {
   const selectedBatchObj = batches.find(b => String(b.id) === String(selectedBatch));
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-slate-50"><Navbar />
       <div className="fds-theme">
         <div className="fds-page">
           <div className="fds-page-header">
@@ -313,6 +313,6 @@ export default function FdsAttendancePage() {
           )}
         </div>
       </div>
-    </Layout>
+    </div>
   );
 }

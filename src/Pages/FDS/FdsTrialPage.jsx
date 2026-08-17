@@ -3,7 +3,7 @@ import {
   Plus, Search, Download, Upload, X, ChevronUp, ChevronDown,
   Edit2, Trash2, Star, Users, CheckCircle
 } from 'lucide-react';
-import Layout from '../../Components/Layout';
+import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, FDS_CATEGORIES, getStatusBadgeClass, downloadExcelFromResponse } from './fdsApi';
@@ -172,7 +172,7 @@ export default function FdsTrialPage() {
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-slate-50"><Navbar />
       <div className="fds-theme">
         <div className="fds-page">
           {/* Header */}
@@ -412,6 +412,6 @@ export default function FdsTrialPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </div>
   );
 }

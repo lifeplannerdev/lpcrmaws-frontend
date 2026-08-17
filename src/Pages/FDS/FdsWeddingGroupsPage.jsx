@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, X, Edit2, Trash2, Sparkles, Users, CheckCircle } from 'lucide-react';
-import Layout from '../../Components/Layout';
+import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, getStatusBadgeClass } from './fdsApi';
@@ -114,7 +114,7 @@ export default function FdsWeddingGroupsPage() {
   };
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-slate-50"><Navbar />
       <div className="fds-theme">
         <div className="fds-page">
           <div className="fds-page-header">
@@ -356,6 +356,6 @@ export default function FdsWeddingGroupsPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </div>
   );
 }

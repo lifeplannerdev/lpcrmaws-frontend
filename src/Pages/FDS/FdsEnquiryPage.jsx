@@ -4,7 +4,7 @@ import {
   Plus, Search, Download, Upload, X, ChevronUp, ChevronDown,
   Eye, Edit2, Trash2, Calendar, Phone, MapPin, Filter, Users
 } from 'lucide-react';
-import Layout from '../../Components/Layout';
+import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, FDS_CATEGORIES, getCategoryBadgeClass, getStatusBadgeClass, downloadExcelFromResponse } from './fdsApi';
@@ -189,7 +189,7 @@ export default function FdsEnquiryPage() {
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-slate-50"><Navbar />
       <div className="fds-theme">
         <div className="fds-page">
           {/* ── Header ── */}
@@ -495,6 +495,6 @@ export default function FdsEnquiryPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </div>
   );
 }

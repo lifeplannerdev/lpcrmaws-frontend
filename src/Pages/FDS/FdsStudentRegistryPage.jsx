@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Plus, Search, Download, Upload, X, Edit2, Trash2, UserCheck, Eye
 } from 'lucide-react';
-import Layout from '../../Components/Layout';
+import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, FDS_CATEGORIES, downloadExcelFromResponse } from './fdsApi';
@@ -172,7 +172,7 @@ export default function FdsStudentRegistryPage() {
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-slate-50"><Navbar />
       <div className="fds-theme">
         <div className="fds-page">
           {/* Header */}
@@ -471,6 +471,6 @@ export default function FdsStudentRegistryPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </div>
   );
 }

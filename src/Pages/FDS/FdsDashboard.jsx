@@ -4,7 +4,7 @@ import {
   Users, Music, TrendingUp, IndianRupee, CalendarCheck,
   UserCheck, Star, AlertCircle, ArrowRight, Sparkles, Activity
 } from 'lucide-react';
-import Layout from '../../Components/Layout';
+import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { fdsApi } from './fdsApi';
 import './fds-theme.css';
@@ -91,7 +91,7 @@ export default function FdsDashboard() {
   );
 
   return (
-    <Layout>
+    <div className="min-h-screen bg-slate-50"><Navbar />
       <div className="fds-theme">
         <div className="fds-page">
           {/* ── Header ── */}
@@ -224,6 +224,6 @@ export default function FdsDashboard() {
           )}
         </div>
       </div>
-    </Layout>
+    </div>
   );
 }
