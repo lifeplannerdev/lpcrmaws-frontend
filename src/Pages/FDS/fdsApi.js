@@ -75,6 +75,9 @@ export const fdsApi = {
   deletePayment: (af, id) => af(`${FDS_BASE}/payments/${id}/`, { method: 'DELETE' }),
   exportPayments: (af, params = {}) => af(`${FDS_BASE}/payments/export_excel/${buildQueryString(params)}`),
 
+  // Fee Accounts
+  feeAccounts: (af, params = {}) => af(`${FDS_BASE}/fee-accounts/${buildQueryString(params)}`),
+
   // Trainers
   trainers: (af) => af(`${FDS_BASE}/trainers/`),
 };

@@ -24,6 +24,9 @@ export default function FdsFeesPage() {
   const canEdit = hasPermission('fds:admin');
   const canView = hasPermission('fds:admin') || hasPermission('fds:view') || hasPermission('fds_fees:view');
 
+  const [mainTab, setMainTab] = useState('ACCOUNTS');
+  const [feeAccounts, setFeeAccounts] = useState([]);
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
   const [payments, setPayments] = useState([]);
   const [summary, setSummary] = useState(null);
   const [feeStructures, setFeeStructures] = useState([]);
@@ -83,13 +86,15 @@ export default function FdsFeesPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [payData, sumData, fsData, stuData, wedData] = await Promise.all([
+      const [payData, sumData, fsData, stuData, wedData, accData] = await Promise.all([
         fdsApi.payments(authFetchJson, buildParams()),
         fdsApi.paymentSummary(authFetchJson, buildParams()),
         fdsApi.feeStructures(authFetchJson, { is_active: true }),
         fdsApi.students(authFetchJson, { is_active: true, page_size: 500 }),
         fdsApi.weddingGroups(authFetchJson, { status: 'CONFIRMED', page_size: 200 }),
+        fdsApi.feeAccounts ? fdsApi.feeAccounts(authFetchJson, buildParams()) : Promise.resolve({results: []}),
       ]);
+      setFeeAccounts(accData.results ?? accData);
       setPayments(payData.results ?? payData);
       setTotal(payData.count ?? (payData.results ? payData.results.length : payData.length));
       setSummary(sumData);
@@ -214,6 +219,12 @@ export default function FdsFeesPage() {
             </div>
           )}
 
+          {/* Main Navigation Tabs */}
+          <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
+            <button className={`fds-btn ${mainTab === 'ACCOUNTS' ? 'fds-btn-primary' : 'fds-btn-secondary'}`} onClick={() => setMainTab('ACCOUNTS')}>Fee Accounts</button>
+            <button className={`fds-btn ${mainTab === 'TRANSACTIONS' ? 'fds-btn-primary' : 'fds-btn-secondary'}`} onClick={() => setMainTab('TRANSACTIONS')}>Transactions History</button>
+          </div>
+
           {/* Category Tabs */}
           <div style={{ marginBottom: 16 }}>
             <div className="fds-tabs">
@@ -244,10 +255,59 @@ export default function FdsFeesPage() {
             <input className="fds-input" type="date" style={{ maxWidth: 140 }} value={dateTo} onChange={e => setDateTo(e.target.value)} />
           </div>
 
-          {/* Table */}
-          <div className="fds-table-wrap">
-            <table className="fds-table">
-              <thead>
+          {/* Accounts Workspace */}
+          {mainTab === 'ACCOUNTS' && (
+            <div className="fds-table-wrap">
+              <table className="fds-table">
+                <thead>
+                  <tr>
+                    <th>Student Name</th>
+                    <th>Package</th>
+                    <th>Total Billed</th>
+                    <th>Total Paid</th>
+                    <th>Balance Due</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40 }}><div className="fds-spinner" style={{ margin: '0 auto' }} /></td></tr>
+                  ) : feeAccounts.length === 0 ? (
+                    <tr><td colSpan={7}><div className="fds-empty"><div className="fds-empty-title">No fee accounts found</div></div></td></tr>
+                  ) : feeAccounts.map(acc => (
+                    <tr key={acc.id}>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{acc.student_name}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--fds-text-muted)' }}>{acc.student_id_code}</div>
+                      </td>
+                      <td>{acc.active_package_detail?.category_display || '—'}</td>
+                      <td style={{ fontWeight: 600 }}>₹{Number(acc.total_due || 0).toLocaleString('en-IN')}</td>
+                      <td style={{ fontWeight: 600, color: 'var(--fds-yoga)' }}>₹{Number(acc.total_paid || 0).toLocaleString('en-IN')}</td>
+                      <td style={{ fontWeight: 600, color: Number(acc.balance_due) > 0 ? '#e74c3c' : 'var(--fds-text)' }}>₹{Number(acc.balance_due || 0).toLocaleString('en-IN')}</td>
+                      <td><span className={`fds-badge fds-badge-${acc.status === 'ACTIVE' ? 'green' : acc.status === 'PARTIAL' ? 'gold' : acc.status === 'OVERDUE' ? 'red' : 'gray'}`}>{acc.status_display || acc.status}</span></td>
+                      <td>
+                        <button className="fds-btn fds-btn-ghost" style={{ fontSize: '0.8rem', padding: '4px 10px', color: 'var(--fds-primary)' }} onClick={() => {
+                          // Pre-fill payment form with this student
+                          setForm({ ...EMPTY_FORM, student: acc.student });
+                          setPaymentTarget('student');
+                          setShowModal(true);
+                        }}>
+                          Pay Now
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Transactions Workspace */}
+          {mainTab === 'TRANSACTIONS' && (
+            <div className="fds-table-wrap">
+              <table className="fds-table">
+                <thead>
                 <tr>
                   <th>Payment ID</th>
                   <th>Pay Date</th>

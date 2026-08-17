@@ -184,82 +184,20 @@ function StudentDetailsModal({ student, onClose, onEdit, canEdit, authFetchJson 
           )}
 
           {activeTab === 'FEES' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {/* Fee Account Dashboard */}
-              {feeAccount ? (
-                <div className="fds-card" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontSize: '1.2rem', fontFamily: 'Cormorant Garamond, serif', fontWeight: 600, color: 'var(--fds-primary)' }}>Fee Account Ledger</div>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--fds-text-muted)', marginTop: 4 }}>
-                        Active Package: <span style={{ color: 'var(--fds-text)', fontWeight: 500 }}>{feeAccount.active_package_detail?.category_display || 'None'}</span>
-                      </div>
-                      <div style={{ marginTop: 8 }}>
-                        <span className={`fds-badge fds-badge-${feeAccount.status === 'ACTIVE' ? 'green' : feeAccount.status === 'PARTIAL' ? 'gold' : feeAccount.status === 'OVERDUE' ? 'red' : feeAccount.status === 'SETTLED' ? 'green' : 'gray'}`} style={{ fontSize: '0.85rem', padding: '4px 10px' }}>
-                          {feeAccount.status_display || feeAccount.status}
-                        </span>
-                      </div>
-                    </div>
-                    {canEdit && (
-                      <div style={{ display: 'flex', gap: 8, flexDirection: 'column', alignItems: 'flex-end' }}>
-                        <button className="fds-btn fds-btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => {
-                          // Close detail modal, open main app navigation to FdsFeesPage or open a specific payment modal?
-                          // For now, we will navigate to FdsFeesPage pre-selecting this student if we had state.
-                          // Actually, navigating is simplest:
-                          window.location.href = '/fds/fees';
-                        }}>
-                          Make Payment
-                        </button>
-                        <button className="fds-btn fds-btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={onEdit}>
-                          Change Package
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginTop: 8 }}>
-                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: 16, borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--fds-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Billed</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 600, marginTop: 4 }}>₹{feeAccount.total_due}</div>
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: 16, borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--fds-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Paid</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#2ecc71', marginTop: 4 }}>₹{feeAccount.total_paid}</div>
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: 16, borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--fds-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Balance Due</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 600, color: feeAccount.balance_due > 0 ? '#e74c3c' : 'var(--fds-text)', marginTop: 4 }}>₹{feeAccount.balance_due}</div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="fds-card" style={{ padding: 20, textAlign: 'center', color: 'var(--fds-text-muted)' }}>
-                  No Fee Account created for this student yet.
-                </div>
-              )}
-
-              {/* Transaction History */}
-              <div>
-                <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: 500 }}>Transaction Ledger</h4>
-                {loading ? <div className="fds-spinner" style={{ margin: '20px auto' }} /> : fees.length === 0 ? <div className="fds-empty">No fee records.</div> : (
-                  <table className="fds-table" style={{ fontSize: '0.85rem' }}>
-                    <thead><tr><th>Date</th><th>Month/Year</th><th>Amount</th><th>Status</th></tr></thead>
-                    <tbody>
-                      {fees.map(f => {
-                          const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-                          return (
-                            <tr key={f.id}>
-                              <td>{f.pay_date}</td>
-                              <td>{f.fee_month ? MONTHS[f.fee_month - 1] : ''} {f.fee_year}</td>
-                              <td style={{ fontWeight: 600 }}>₹{f.paid_amount}</td>
-                              <td><span className={`fds-badge fds-badge-${f.status === 'PAID' ? 'green' : f.status === 'PARTIAL' ? 'gold' : 'red'}`}>{f.status}</span></td>
-                            </tr>
-                          );
-                      })}
-                    </tbody>
-                  </table>
-                )}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', textAlign: 'center', gap: 16 }}>
+              <div style={{ fontSize: '1.3rem', fontFamily: 'Cormorant Garamond, serif', color: 'var(--fds-primary)' }}>
+                Fee Accounts Moved to Fees Dashboard
               </div>
+              <p style={{ color: 'var(--fds-text-muted)', fontSize: '0.9rem', maxWidth: 400, margin: '0 auto' }}>
+                We've upgraded the fee system to a centralized Account Ledger model. All student fee management and transactions are now processed exclusively in the master Fees & Payments page.
+              </p>
+              <button 
+                className="fds-btn fds-btn-primary" 
+                style={{ padding: '10px 24px', fontSize: '0.9rem', marginTop: 10 }}
+                onClick={() => { window.location.href = '/fds/fees'; }}
+              >
+                Go to Fees Workspace
+              </button>
             </div>
           )}
 
