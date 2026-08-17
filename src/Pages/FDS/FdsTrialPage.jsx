@@ -157,6 +157,9 @@ export default function FdsTrialPage() {
         trainer_rating: form.trainer_rating ? parseInt(form.trainer_rating) : null,
         enquiry: form.enquiry || null,
         conducted_by: form.conducted_by || null,
+        time: form.time || null,
+        join_date: form.join_date || null,
+        follow_up_date: form.follow_up_date || null,
       };
       if (editId) await fdsApi.updateTrial(authFetchJson, editId, payload);
       else await fdsApi.createTrial(authFetchJson, payload);

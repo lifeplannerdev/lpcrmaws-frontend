@@ -137,7 +137,12 @@ export default function FdsEnquiryPage() {
     ev.preventDefault();
     setSaving(true);
     try {
-      const payload = { ...form, age: form.age ? parseInt(form.age) : null };
+      const payload = {
+        ...form,
+        age: form.age ? parseInt(form.age) : null,
+        follow_up_1: form.follow_up_1 || null,
+        follow_up_2: form.follow_up_2 || null,
+      };
       if (editId) {
         await fdsApi.updateEnquiry(authFetchJson, editId, payload);
       } else {
