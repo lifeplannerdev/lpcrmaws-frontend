@@ -53,6 +53,7 @@ import FdsBatchManagementPage from './Pages/FDS/FdsBatchManagementPage.jsx';
 import FdsAttendancePage from './Pages/FDS/FdsAttendancePage.jsx';
 import FdsFeesPage from './Pages/FDS/FdsFeesPage.jsx';
 import FdsWeddingGroupsPage from './Pages/FDS/FdsWeddingGroupsPage.jsx';
+import FdsFeePoliciesPage from './Pages/FDS/FdsFeePoliciesPage.jsx';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -150,6 +151,7 @@ export default function App() {
         <Route path="/fds/batches" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsBatchManagementPage /></PermissionRoute>} />
         <Route path="/fds/attendance" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsAttendancePage /></PermissionRoute>} />
         <Route path="/fds/fees" element={<PermissionRoute permissions={['fds:admin','fds:view','fds_fees:view']}><FdsFeesPage /></PermissionRoute>} />
+        <Route path="/fds/fee-policies" element={<PermissionRoute permissions={['fds:admin','fds:view','fds_fees:view']}><FdsFeePoliciesPage /></PermissionRoute>} />
         <Route path="/fds/weddings" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsWeddingGroupsPage /></PermissionRoute>} />
 
         <Route path="*" element={<div>404 Not Found</div>} />

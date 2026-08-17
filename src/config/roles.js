@@ -55,6 +55,7 @@ export const masterNavigation = [
   { id: "fdsBatches",    label: "FDS Batches",      icon: Music,         path: "/fds/batches",   requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
   { id: "fdsAttendance", label: "FDS Attendance",   icon: CalendarCheck, path: "/fds/attendance",requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
   { id: "fdsFees",       label: "FDS Fees",         icon: IndianRupee,   path: "/fds/fees",      requiredPermissions: ["fds:admin","fds:view","fds_fees:view"],group: "fds" },
+  { id: "fdsFeePolicies",label: "FDS Fee Policies", icon: Settings,      path: "/fds/fee-policies",requiredPermissions: ["fds:admin","fds:view","fds_fees:view"],group: "fds" },
   { id: "fdsWeddings",   label: "FDS Weddings 💍",  icon: Heart,         path: "/fds/weddings",  requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
 ];
 

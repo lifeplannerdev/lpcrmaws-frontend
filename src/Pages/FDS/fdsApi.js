@@ -24,6 +24,7 @@ export const fdsApi = {
   createFeeStructure: (af, data) => af(`${FDS_BASE}/fee-structures/`, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
   updateFeeStructure: (af, id, data) => af(`${FDS_BASE}/fee-structures/${id}/`, { method: 'PATCH', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
   deleteFeeStructure: (af, id) => af(`${FDS_BASE}/fee-structures/${id}/`, { method: 'DELETE' }),
+  importFeeStructures: (af, formData) => af(`${FDS_BASE}/fee-structures/import_excel/`, { method: 'POST', body: formData }),
 
   // Batches
   batches: (af, params = {}) => af(`${FDS_BASE}/batches/${buildQueryString(params)}`),
