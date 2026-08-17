@@ -341,7 +341,21 @@ export default function FdsFeesPage() {
                     {paymentTarget === 'student' ? (
                       <div style={{ gridColumn: '1/-1' }}>
                         <label className="fds-label">Student *</label>
-                        <select className="fds-input fds-select" required={paymentTarget === 'student'} value={form.student} onChange={e => setForm(f => ({ ...f, student: e.target.value }))}>
+                        <select className="fds-input fds-select" required={paymentTarget === 'student'} value={form.student} onChange={e => {
+                            const studentId = e.target.value;
+                            const st = students.find(s => String(s.id) === String(studentId));
+                            const updates = { student: studentId };
+                            if (st && st.fee_structure) {
+                              const fsId = typeof st.fee_structure === 'object' ? st.fee_structure.id : st.fee_structure;
+                              const fsObj = feeStructures.find(fs => String(fs.id) === String(fsId));
+                              if (fsObj) {
+                                updates.fees_type = fsObj.id;
+                                updates.total_fees = fsObj.amount;
+                                updates.paid_amount = fsObj.amount;
+                              }
+                            }
+                            setForm(f => ({ ...f, ...updates }));
+                          }}>
                           <option value="">Select Student</option>
                           {students.map(s => <option key={s.id} value={s.id}>{s.name} ({s.student_id})</option>)}
                         </select>
@@ -392,10 +406,18 @@ export default function FdsFeesPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="fds-label">Status</label>
-                      <select className="fds-input fds-select" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                        {PAY_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
+                      <label className="fds-label">Status (Auto)</label>
+                      <div className="fds-input" style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', color: 'var(--fds-text-muted)' }}>
+                        {(() => {
+                          const paid = parseFloat(form.paid_amount || 0);
+                          const total = parseFloat(form.total_fees || 0);
+                          let autoStatus = 'PENDING';
+                          if (paid >= total && total > 0) autoStatus = 'PAID';
+                          else if (paid > 0 && paid < total) autoStatus = 'PARTIAL';
+                          
+                          return <span className={`fds-badge fds-badge-${autoStatus === 'PAID' ? 'green' : autoStatus === 'PARTIAL' ? 'gold' : 'red'}`}>{autoStatus}</span>;
+                        })()}
+                      </div>
                     </div>
                     <div style={{ gridColumn: '1/-1' }}>
                       <label className="fds-label">PDF Link / Receipt URL</label>

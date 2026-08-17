@@ -180,14 +180,17 @@ function StudentDetailsModal({ student, onClose, onEdit, canEdit, authFetchJson 
                 <table className="fds-table" style={{ fontSize: '0.85rem' }}>
                   <thead><tr><th>Date</th><th>Month/Year</th><th>Amount</th><th>Status</th></tr></thead>
                   <tbody>
-                    {fees.map(f => (
-                      <tr key={f.id}>
-                        <td>{f.payment_date}</td>
-                        <td>{f.for_month} {f.for_year}</td>
-                        <td style={{ fontWeight: 600 }}>₹{f.amount}</td>
-                        <td><span className={`fds-badge fds-badge-${f.status === 'PAID' ? 'green' : 'gold'}`}>{f.status}</span></td>
-                      </tr>
-                    ))}
+                    {fees.map(f => {
+                        const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                        return (
+                          <tr key={f.id}>
+                            <td>{f.pay_date}</td>
+                            <td>{f.fee_month ? MONTHS[f.fee_month - 1] : ''} {f.fee_year}</td>
+                            <td style={{ fontWeight: 600 }}>₹{f.paid_amount}</td>
+                            <td><span className={`fds-badge fds-badge-${f.status === 'PAID' ? 'green' : f.status === 'PARTIAL' ? 'gold' : 'red'}`}>{f.status}</span></td>
+                          </tr>
+                        );
+                    })}
                   </tbody>
                 </table>
               )}
