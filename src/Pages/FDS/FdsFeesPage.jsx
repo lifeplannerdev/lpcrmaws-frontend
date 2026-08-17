@@ -363,7 +363,8 @@ export default function FdsFeesPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+          )}
 
           {totalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 16 }}>
