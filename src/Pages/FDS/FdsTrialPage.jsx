@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  Plus, Search, Download, Upload, X, ChevronUp, ChevronDown,
-  Edit2, Trash2, Star, Users, CheckCircle
-} from 'lucide-react';
+import { Plus, Search, Download, Upload, X, ChevronUp, ChevronDown, Edit2, Trash2, Star, Users, CheckCircle } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
@@ -65,6 +63,26 @@ export default function FdsTrialPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location.state?.enquiry) {
+      const e = location.state.enquiry;
+      setForm({
+        ...EMPTY_FORM,
+        name: e.name || '',
+        phone: e.phone || '',
+        location: e.location || '',
+        class_category: e.class_interest || 'DANCE',
+        age: e.age || '',
+        enquiry: e.id || '',
+      });
+      setShowModal(true);
+      // Clear state so it doesn't reopen on reload
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, navigate]);
 
   const authFetch = useCallback(async (url, opts = {}) => {
     let token = accessToken;
