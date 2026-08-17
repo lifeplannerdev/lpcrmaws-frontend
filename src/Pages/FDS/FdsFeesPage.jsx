@@ -351,7 +351,23 @@ export default function FdsFeesPage() {
                               if (fsObj) {
                                 updates.fees_type = fsObj.id;
                                 updates.total_fees = fsObj.amount;
-                                updates.paid_amount = fsObj.amount;
+                                
+                                // Smart Autofill for remaining balance
+                                const month = updates.fee_month || form.fee_month || new Date().getMonth() + 1;
+                                const year = updates.fee_year || form.fee_year || new Date().getFullYear();
+                                const previousPayments = payments.filter(p => 
+                                  String(p.student) === String(studentId) && 
+                                  String(p.fee_month) === String(month) && 
+                                  String(p.fee_year) === String(year)
+                                );
+                                
+                                if (previousPayments.length > 0) {
+                                  const alreadyPaid = previousPayments.reduce((sum, p) => sum + parseFloat(p.paid_amount || 0), 0);
+                                  const balance = Math.max(0, parseFloat(fsObj.amount) - alreadyPaid);
+                                  updates.paid_amount = balance.toFixed(2);
+                                } else {
+                                  updates.paid_amount = fsObj.amount;
+                                }
                               }
                             }
                             setForm(f => ({ ...f, ...updates }));
@@ -382,7 +398,25 @@ export default function FdsFeesPage() {
                     </div>
                     <div>
                       <label className="fds-label">Fee Month</label>
-                      <select className="fds-input fds-select" value={form.fee_month} onChange={e => setForm(f => ({ ...f, fee_month: e.target.value }))}>
+                      <select className="fds-input fds-select" value={form.fee_month} onChange={e => {
+                          const newMonth = e.target.value;
+                          setForm(f => {
+                            if (f.student && f.total_fees) {
+                              const previousPayments = payments.filter(p => 
+                                String(p.student) === String(f.student) && 
+                                String(p.fee_month) === String(newMonth) && 
+                                String(p.fee_year) === String(f.fee_year) &&
+                                String(p.id) !== String(editId)
+                              );
+                              if (previousPayments.length > 0) {
+                                const alreadyPaid = previousPayments.reduce((sum, p) => sum + parseFloat(p.paid_amount || 0), 0);
+                                const balance = Math.max(0, parseFloat(f.total_fees) - alreadyPaid);
+                                return { ...f, fee_month: newMonth, paid_amount: balance.toFixed(2) };
+                              }
+                            }
+                            return { ...f, fee_month: newMonth };
+                          });
+                        }}>
                         <option value="">N/A</option>
                         {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
                       </select>
