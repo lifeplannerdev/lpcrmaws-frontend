@@ -252,6 +252,7 @@ export default function TaskCreationPage() {
                   >
                     <option value="LP">LP Group</option>
                     <option value="FLAG">FLAG</option>
+                    <option value="FDS">FDS — Dance Studio</option>
                   </select>
                 </div>
               )}

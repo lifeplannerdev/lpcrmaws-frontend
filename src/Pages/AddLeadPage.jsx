@@ -32,7 +32,7 @@ export default function AddLeadPage() {
     budget: ''
   });
 
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -106,7 +106,7 @@ export default function AddLeadPage() {
       location: formData.location?.trim() || null,
       priority: formData.priority,
       status: formData.status,
-      remarks: formData.remarks?.trim() || '',
+      remarks: formData.remarks?.trim() ? `[${(await import('date-fns')).format(new Date(), 'dd/MM/yyyy HH:mm')}] ${user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : (user?.username || 'User')}: ${formData.remarks.trim()}` : '',
       assigned_to: formData.assignedTo ? parseInt(formData.assignedTo) : null,
       interested_country: formData.interestedCountry?.trim() || null,
       interested_course: formData.interestedCourse?.trim() || null,

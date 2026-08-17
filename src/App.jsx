@@ -45,6 +45,14 @@ import ProcessingStudentsPage from "./Pages/ProcessingStudentsPage.jsx";
 import FeedsPage from "./Pages/FeedsPage.jsx";
 import ProgramsPage from "./Pages/ProgramsPage.jsx";
 import VoxbayAIPage from "./Pages/VoxbayAIPage.jsx";
+import FdsDashboard from './Pages/FDS/FdsDashboard.jsx';
+import FdsEnquiryPage from './Pages/FDS/FdsEnquiryPage.jsx';
+import FdsTrialPage from './Pages/FDS/FdsTrialPage.jsx';
+import FdsStudentRegistryPage from './Pages/FDS/FdsStudentRegistryPage.jsx';
+import FdsBatchManagementPage from './Pages/FDS/FdsBatchManagementPage.jsx';
+import FdsAttendancePage from './Pages/FDS/FdsAttendancePage.jsx';
+import FdsFeesPage from './Pages/FDS/FdsFeesPage.jsx';
+import FdsWeddingGroupsPage from './Pages/FDS/FdsWeddingGroupsPage.jsx';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -132,7 +140,18 @@ export default function App() {
         <Route path="/roles" element={<PermissionRoute permissions={['staff:edit_any', 'staff:edit_tenant']}><RoleManagementPage /></PermissionRoute>} />
         <Route path="/credentials" element={<PermissionRoute resources={['credentials']}><CredentialsVault /></PermissionRoute>} />
         <Route path="/programs" element={<PermissionRoute permissions={['programs:view', 'programs:manage']}><ProgramsPage /></PermissionRoute>} />
-        <Route path="/voxbay-ai" element={<PermissionRoute permissions={['voxbay_ai:admin']}><VoxbayAIPage /></PermissionRoute>} />
+        <Route path="/voxbay-ai" element={<PermissionRoute permissions={['voxbay_ai:admin', 'voxbay_ai:read_own']}><VoxbayAIPage /></PermissionRoute>} />
+
+        {/* ── FDS: FILMAATIC Dance Studio ── */}
+        <Route path="/fds" element={<PermissionRoute permissions={['fds:admin','fds:view','fds_fees:view']}><FdsDashboard /></PermissionRoute>} />
+        <Route path="/fds/enquiries" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsEnquiryPage /></PermissionRoute>} />
+        <Route path="/fds/trials" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsTrialPage /></PermissionRoute>} />
+        <Route path="/fds/students" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsStudentRegistryPage /></PermissionRoute>} />
+        <Route path="/fds/batches" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsBatchManagementPage /></PermissionRoute>} />
+        <Route path="/fds/attendance" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsAttendancePage /></PermissionRoute>} />
+        <Route path="/fds/fees" element={<PermissionRoute permissions={['fds:admin','fds:view','fds_fees:view']}><FdsFeesPage /></PermissionRoute>} />
+        <Route path="/fds/weddings" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsWeddingGroupsPage /></PermissionRoute>} />
+
         <Route path="*" element={<div>404 Not Found</div>} />
       </Routes>
     </Router>

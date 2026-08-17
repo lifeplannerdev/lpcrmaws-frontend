@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { CalendarClock, MessageSquare, Send, Loader2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { format } from 'date-fns';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -13,6 +15,8 @@ export default function LeadQuickActions({ leadId, authFetch, onActionComplete }
   const [followupDate, setFollowupDate] = useState('');
   const [followupTime, setFollowupTime] = useState('');
 
+  const { user } = useAuth();
+
   const handleAddRemark = async () => {
     if (!remarkText.trim()) return;
     setActionLoading(true);
@@ -21,9 +25,13 @@ export default function LeadQuickActions({ leadId, authFetch, onActionComplete }
       if (!leadRes.ok) throw new Error('Failed to fetch lead');
       const leadData = await leadRes.json();
       
+      const timestamp = format(new Date(), 'dd/MM/yyyy HH:mm');
+      const username = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : (user?.username || 'User');
+      const formattedRemark = `[${timestamp}] ${username}: ${remarkText.trim()}`;
+      
       const newRemarks = leadData.remarks 
-        ? `${leadData.remarks}\n\n[${new Date().toLocaleString()}] ${remarkText}`
-        : remarkText;
+        ? `${leadData.remarks}\n\n${formattedRemark}`
+        : formattedRemark;
 
       const res = await authFetch(`${API_BASE_URL}/leads/${leadId}/`, {
         method: 'PATCH',

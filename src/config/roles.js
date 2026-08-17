@@ -13,7 +13,11 @@ import {
   IndianRupee,
   Key,
   Settings,
-  BookOpen
+  BookOpen,
+  Sparkles,
+  Music,
+  Star,
+  Heart
 } from "lucide-react";
 
 export const masterNavigation = [
@@ -39,9 +43,19 @@ export const masterNavigation = [
   { id: "roles", label: "Role Management", icon: ShieldAlert, path: "/roles", requiredResource: "staff", requiredPermissions: ["staff:edit_any", "staff:edit_tenant"] },
   { id: "credentials", label: "Credentials Vault", icon: Key, path: "/credentials", requiredResource: "credentials" },
   { id: "call", label: "Voxbay", icon: PhoneCall, path: "/call-analytics", requiredResource: "voxbay" },
-  { id: "voxbay_ai", label: "Voxbay AI", icon: PhoneCall, path: "/voxbay-ai", requiredPermissions: ["voxbay_ai:admin"] },
+  { id: "voxbay_ai", label: "Voxbay AI", icon: PhoneCall, path: "/voxbay-ai", requiredPermissions: ["voxbay_ai:admin", "voxbay_ai:read_own"] },
   { id: "feeds", label: "Feeds", icon: UserCheck, path: "/feeds" },
   { id: "programs", label: "Programs", icon: BookOpen, path: "/programs", requiredResource: "programs" },
+
+  // ── FDS: FILMAATIC Dance Studio ──
+  { id: "fds",           label: "FDS — Studio",     icon: Sparkles,      path: "/fds",          requiredPermissions: ["fds:admin","fds:view","fds_fees:view"],  group: "fds" },
+  { id: "fdsEnquiry",    label: "FDS Enquiries",    icon: Users,         path: "/fds/enquiries", requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
+  { id: "fdsTrial",      label: "FDS Trials",       icon: Star,          path: "/fds/trials",    requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
+  { id: "fdsStudents",   label: "FDS Students",     icon: GraduationCap, path: "/fds/students",  requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
+  { id: "fdsBatches",    label: "FDS Batches",      icon: Music,         path: "/fds/batches",   requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
+  { id: "fdsAttendance", label: "FDS Attendance",   icon: CalendarCheck, path: "/fds/attendance",requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
+  { id: "fdsFees",       label: "FDS Fees",         icon: IndianRupee,   path: "/fds/fees",      requiredPermissions: ["fds:admin","fds:view","fds_fees:view"],group: "fds" },
+  { id: "fdsWeddings",   label: "FDS Weddings 💍",  icon: Heart,         path: "/fds/weddings",  requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
 ];
 
 export const getFilteredMenu = (hasAnyPermission, hasPermission, user) => {
