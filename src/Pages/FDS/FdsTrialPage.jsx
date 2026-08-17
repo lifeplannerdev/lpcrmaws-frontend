@@ -63,6 +63,7 @@ export default function FdsTrialPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [enquiries, setEnquiries] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -112,13 +113,15 @@ export default function FdsTrialPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [data, statsData] = await Promise.all([
+      const [data, statsData, enqData] = await Promise.all([
         fdsApi.trials(authFetchJson, buildParams()),
         fdsApi.trialStats(authFetchJson),
+        fdsApi.enquiries(authFetchJson, { joined: false, page_size: 150 }),
       ]);
       setTrials(data.results ?? data);
       setTotal(data.count ?? (data.results ? data.results.length : data.length));
       setStats(statsData);
+      setEnquiries(enqData.results ?? enqData);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [authFetchJson, buildParams]);
@@ -321,6 +324,15 @@ export default function FdsTrialPage() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
+                        {t.has_student ? (
+                          <span className="fds-badge fds-badge-green" style={{ fontSize: '0.65rem' }}>Student</span>
+                        ) : null}
+                        {!t.has_student && canEdit && (
+                          <button className="fds-btn fds-btn-ghost" style={{ padding: '4px 8px', fontSize: '0.75rem', color: '#27ae60' }}
+                            onClick={(ev) => { ev.stopPropagation(); navigate('/fds/students', { state: { sourceData: t, sourceType: 'trial' } }); }}>
+                            + Join
+                          </button>
+                        )}
                         {canEdit && (
                           <>
                             <button className="fds-btn fds-btn-ghost" style={{ padding: '4px 8px' }} onClick={() => openEdit(t)}><Edit2 size={13} /></button>
@@ -356,6 +368,29 @@ export default function FdsTrialPage() {
               <form onSubmit={handleSave}>
                 <div className="fds-modal-body">
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    {!editId && (
+                      <div style={{ gridColumn: '1/-1' }}>
+                        <label className="fds-label">Select Enquiry (Optional)</label>
+                        <select className="fds-input fds-select" value={form.enquiry} onChange={e => {
+                          const eq = enquiries.find(x => x.id.toString() === e.target.value);
+                          if (eq) {
+                            setForm(f => ({
+                              ...f,
+                              enquiry: eq.id, name: eq.name, phone: eq.phone || '',
+                              location: eq.location || '', class_category: eq.class_interest || 'DANCE',
+                              age: eq.age || ''
+                            }));
+                          } else {
+                            setForm(f => ({ ...f, enquiry: '' }));
+                          }
+                        }}>
+                          <option value="">-- No Enquiry (Direct Trial) --</option>
+                          {enquiries.map(eq => (
+                            <option key={eq.id} value={eq.id}>{eq.enquiry_id} - {eq.name} ({eq.phone})</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                     <div style={{ gridColumn: '1/-1' }}>
                       <label className="fds-label">Name *</label>
                       <input className="fds-input" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />

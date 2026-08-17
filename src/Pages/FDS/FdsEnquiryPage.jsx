@@ -360,7 +360,9 @@ export default function FdsEnquiryPage() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        {e.has_trial ? (
+                        {e.has_student ? (
+                          <span className="fds-badge fds-badge-green" style={{ fontSize: '0.65rem' }}>Student</span>
+                        ) : e.has_trial ? (
                           <span className="fds-badge fds-badge-gold" style={{ fontSize: '0.65rem' }}>Has Trial</span>
                         ) : canEdit ? (
                           <button className="fds-btn fds-btn-ghost" style={{ padding: '4px 8px', fontSize: '0.75rem' }}
@@ -368,6 +370,12 @@ export default function FdsEnquiryPage() {
                             + Trial
                           </button>
                         ) : null}
+                        {!e.has_student && canEdit && (
+                          <button className="fds-btn fds-btn-ghost" style={{ padding: '4px 8px', fontSize: '0.75rem', color: '#27ae60' }}
+                            onClick={(ev) => { ev.stopPropagation(); navigate('/fds/students', { state: { sourceData: e, sourceType: 'enquiry' } }); }}>
+                            + Join
+                          </button>
+                        )}
                         {canEdit && (
                           <>
                             <button className="fds-btn fds-btn-ghost" style={{ padding: '4px 8px' }} onClick={(ev) => { ev.stopPropagation(); openEdit(e); }}>

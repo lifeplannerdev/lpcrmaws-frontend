@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  Plus, Search, Download, Upload, X, Edit2, Trash2, UserCheck, Eye
-} from 'lucide-react';
+import { Plus, Search, Download, Upload, X, Edit2, Trash2, UserCheck, Eye } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
@@ -17,7 +16,193 @@ const EMPTY_FORM = {
   medical_condition: '', media_consent: false, pickup_person_1_no: '',
   can_leave_alone: false, admission_fee_paid_date: '', fee_structure: '',
   is_active: true, student_type: 'REGULAR',
+  enquiry: '', trial: '',
 };
+
+function StudentDetailsModal({ student, onClose, onEdit, canEdit, authFetchJson }) {
+  const [activeTab, setActiveTab] = useState('OVERVIEW');
+  const [attendance, setAttendance] = useState([]);
+  const [fees, setFees] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'ATTENDANCE' && attendance.length === 0) {
+      setLoading(true);
+      fdsApi.attendance(authFetchJson, { student: student.id, page_size: 50 })
+        .then(res => setAttendance(res.results || res))
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    }
+    if (activeTab === 'FEES' && fees.length === 0) {
+      setLoading(true);
+      fdsApi.payments(authFetchJson, { student: student.id, page_size: 50 })
+        .then(res => setFees(res.results || res))
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    }
+  }, [activeTab, student.id, authFetchJson, attendance.length, fees.length]);
+
+  return (
+    <div className="fds-modal-overlay" onClick={onClose}>
+      <div className="fds-modal fds-modal-lg" onClick={e => e.stopPropagation()} style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column' }}>
+        <div className="fds-modal-header" style={{ paddingBottom: 0, borderBottom: 'none' }}>
+          <div>
+            <div className="fds-modal-title" style={{ fontSize: '1.5rem' }}>{student.name}</div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--fds-text-muted)' }}>{student.student_id} • <span className={`fds-badge fds-badge-${student.class_category?.toLowerCase()}`}>{student.class_category}</span></div>
+          </div>
+          <button className="fds-btn fds-btn-ghost" onClick={onClose}><X size={20} /></button>
+        </div>
+
+        {/* Tabs Navigation */}
+        <div style={{ display: 'flex', gap: 24, borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '0 24px', marginTop: 16 }}>
+          {['OVERVIEW', 'PIPELINE', 'ATTENDANCE', 'FEES'].map(tab => (
+            <button key={tab} 
+              onClick={() => setActiveTab(tab)}
+              style={{
+                background: 'none', border: 'none', color: activeTab === tab ? 'var(--fds-primary)' : 'var(--fds-text-muted)',
+                padding: '12px 0', fontSize: '0.85rem', fontWeight: activeTab === tab ? 600 : 400,
+                borderBottom: activeTab === tab ? '2px solid var(--fds-primary)' : '2px solid transparent',
+                cursor: 'pointer', transition: 'all 0.2s'
+              }}>
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        <div className="fds-modal-body" style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+          {activeTab === 'OVERVIEW' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {[
+                ['Batch', student.batch_detail?.name || '—'],
+                ['Joining Date', student.joining_date],
+                ['Age / DOB', `${student.age ?? '—'} / ${student.date_of_birth || '—'}`],
+                ['Gender', student.gender || '—'],
+                ['Contact', student.contact_no || '—'],
+                ['WhatsApp', student.whatsapp_no || '—'],
+                ['Parent', student.parent_name || '—'],
+                ['Emergency', student.emergency_contact_no || '—'],
+                ['Pickup Person', student.pickup_person_1_no || '—'],
+                ['Media Consent', student.media_consent ? 'Yes ✓' : 'No'],
+                ['Can Leave Alone', student.can_leave_alone ? 'Yes' : 'No'],
+                ['Fee Type', student.fee_structure_detail?.category_display || '—'],
+                ['Admission Paid', student.admission_fee_paid_date || '—'],
+              ].map(([label, val]) => (
+                <div key={label}>
+                  <div className="fds-label" style={{ fontSize: '0.75rem' }}>{label}</div>
+                  <div style={{ color: 'var(--fds-text)', fontSize: '0.95rem' }}>{val}</div>
+                </div>
+              ))}
+              {student.medical_condition && (
+                <div style={{ gridColumn: '1/-1', marginTop: 8 }}>
+                  <div className="fds-label" style={{ color: '#e74c3c' }}>Medical Condition</div>
+                  <div style={{ color: '#ff7675', fontSize: '0.95rem', background: 'rgba(231,76,60,0.1)', padding: 12, borderRadius: 6 }}>
+                    {student.medical_condition}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'PIPELINE' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              {/* Enquiry Card */}
+              {student.enquiry_detail ? (
+                <div className="fds-card" style={{ padding: 20 }}>
+                  <div style={{ fontSize: '1.1rem', color: 'var(--fds-primary)', marginBottom: 12, fontFamily: 'Cormorant Garamond, serif' }}>Initial Enquiry</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div><span className="fds-label">Enquiry ID</span> <div>{student.enquiry_detail.enquiry_id}</div></div>
+                    <div><span className="fds-label">Date</span> <div>{student.enquiry_detail.date}</div></div>
+                    <div><span className="fds-label">Source</span> <div>{student.enquiry_detail.source_display || student.enquiry_detail.source}</div></div>
+                    <div><span className="fds-label">Location</span> <div>{student.enquiry_detail.location || '—'}</div></div>
+                    <div style={{ gridColumn: '1/-1' }}><span className="fds-label">Remarks</span> <div>{student.enquiry_detail.remarks || '—'}</div></div>
+                  </div>
+                </div>
+              ) : (
+                <div className="fds-empty" style={{ padding: 20 }}>No Enquiry record linked.</div>
+              )}
+
+              {/* Trial Card */}
+              {student.trial_detail ? (
+                <div className="fds-card" style={{ padding: 20 }}>
+                  <div style={{ fontSize: '1.1rem', color: 'var(--fds-gold)', marginBottom: 12, fontFamily: 'Cormorant Garamond, serif' }}>Trial Record</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div><span className="fds-label">Trial ID</span> <div>{student.trial_detail.trial_id}</div></div>
+                    <div><span className="fds-label">Date & Time</span> <div>{student.trial_detail.date} {student.trial_detail.time || ''}</div></div>
+                    <div><span className="fds-label">Trainer Rating</span> <div>{student.trial_detail.trainer_rating ? `${student.trial_detail.trainer_rating}/5` : '—'}</div></div>
+                    <div><span className="fds-label">Fee Quoted</span> <div>₹{student.trial_detail.fee_quoted}</div></div>
+                    <div style={{ gridColumn: '1/-1' }}><span className="fds-label">Feedback</span> <div>{student.trial_detail.feedback || '—'}</div></div>
+                  </div>
+                </div>
+              ) : (
+                <div className="fds-empty" style={{ padding: 20 }}>No Trial record linked.</div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'ATTENDANCE' && (
+            <div>
+              {/* Summary */}
+              {student.attendance_summary && (
+                <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+                  {[
+                    { label: 'Total Classes', val: student.attendance_summary.total, color: 'var(--fds-primary)' },
+                    { label: 'Present', val: student.attendance_summary.present, color: 'var(--fds-yoga)' },
+                    { label: 'Absent', val: student.attendance_summary.absent, color: '#e74c3c' },
+                    { label: '% Present', val: `${student.attendance_summary.percentage}%`, color: 'var(--fds-dance)' },
+                  ].map(({ label, val, color }) => (
+                    <div key={label} className="fds-card" style={{ padding: '12px', textAlign: 'center', flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: '1.4rem', color }}>{val}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--fds-text-muted)' }}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {loading ? <div className="fds-spinner" style={{ margin: '20px auto' }} /> : attendance.length === 0 ? <div className="fds-empty">No attendance records.</div> : (
+                <table className="fds-table" style={{ fontSize: '0.85rem' }}>
+                  <thead><tr><th>Date</th><th>Status</th><th>Notes</th></tr></thead>
+                  <tbody>
+                    {attendance.map(a => (
+                      <tr key={a.id}>
+                        <td>{a.date}</td>
+                        <td><span className={`fds-badge fds-badge-${a.status === 'PRESENT' ? 'green' : a.status === 'ABSENT' ? 'red' : 'gray'}`}>{a.status}</span></td>
+                        <td style={{ color: 'var(--fds-text-muted)' }}>{a.notes || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'FEES' && (
+            <div>
+              {loading ? <div className="fds-spinner" style={{ margin: '20px auto' }} /> : fees.length === 0 ? <div className="fds-empty">No fee records.</div> : (
+                <table className="fds-table" style={{ fontSize: '0.85rem' }}>
+                  <thead><tr><th>Date</th><th>Month/Year</th><th>Amount</th><th>Status</th></tr></thead>
+                  <tbody>
+                    {fees.map(f => (
+                      <tr key={f.id}>
+                        <td>{f.payment_date}</td>
+                        <td>{f.for_month} {f.for_year}</td>
+                        <td style={{ fontWeight: 600 }}>₹{f.amount}</td>
+                        <td><span className={`fds-badge fds-badge-${f.status === 'PAID' ? 'green' : 'gold'}`}>{f.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+        </div>
+        <div className="fds-modal-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <button className="fds-btn fds-btn-secondary" onClick={onClose}>Close</button>
+          {canEdit && <button className="fds-btn fds-btn-primary" onClick={onEdit}>Edit Student</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function FdsStudentRegistryPage() {
   const { accessToken, refreshAccessToken } = useAuth();
@@ -49,6 +234,35 @@ export default function FdsStudentRegistryPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location.state?.sourceData) {
+      const data = location.state.sourceData;
+      const type = location.state.sourceType; // 'enquiry' or 'trial'
+      
+      const dobFromAge = data.age ? (() => {
+        const d = new Date();
+        d.setFullYear(d.getFullYear() - data.age);
+        return d.toISOString().split('T')[0];
+      })() : '';
+
+      setForm({
+        ...EMPTY_FORM,
+        name: data.name || '',
+        contact_no: data.phone || data.whatsapp_no || '',
+        whatsapp_no: data.whatsapp_no || data.phone || '',
+        date_of_birth: dobFromAge,
+        enquiry: type === 'enquiry' ? data.id : (data.enquiry || ''),
+        trial: type === 'trial' ? data.id : '',
+      });
+      setShowModal(true);
+      // Clear route state so it doesn't reopen on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, navigate]);
 
   const authFetch = useCallback(async (url, opts = {}) => {
     let token = accessToken;
@@ -126,6 +340,10 @@ export default function FdsStudentRegistryPage() {
         ...form,
         batch: form.batch || null,
         fee_structure: form.fee_structure || null,
+        enquiry: form.enquiry || null,
+        trial: form.trial || null,
+        date_of_birth: form.date_of_birth || null,
+        admission_fee_paid_date: form.admission_fee_paid_date || null,
       };
       if (editId) await fdsApi.updateStudent(authFetchJson, editId, payload);
       else await fdsApi.createStudent(authFetchJson, payload);
@@ -403,72 +621,13 @@ export default function FdsStudentRegistryPage() {
 
         {/* Detail Modal */}
         {showDetail && (
-          <div className="fds-modal-overlay" onClick={() => setShowDetail(null)}>
-            <div className="fds-modal fds-modal-lg" onClick={e => e.stopPropagation()}>
-              <div className="fds-modal-header">
-                <div>
-                  <div className="fds-modal-title">{showDetail.name}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--fds-text-muted)' }}>{showDetail.student_id}</div>
-                </div>
-                <button className="fds-btn fds-btn-ghost" onClick={() => setShowDetail(null)}><X size={18} /></button>
-              </div>
-              <div className="fds-modal-body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  {[
-                    ['Class Category', showDetail.class_category || '—'],
-                    ['Batch', showDetail.batch_detail?.name || '—'],
-                    ['Joining Date', showDetail.joining_date],
-                    ['Age', showDetail.age ?? '—'],
-                    ['Gender', showDetail.gender || '—'],
-                    ['Contact', showDetail.contact_no || '—'],
-                    ['WhatsApp', showDetail.whatsapp_no || '—'],
-                    ['Parent', showDetail.parent_name || '—'],
-                    ['Emergency', showDetail.emergency_contact_no || '—'],
-                    ['Pickup Person', showDetail.pickup_person_1_no || '—'],
-                    ['Media Consent', showDetail.media_consent ? 'Yes ✓' : 'No'],
-                    ['Can Leave Alone', showDetail.can_leave_alone ? 'Yes' : 'No'],
-                    ['Fee Type', showDetail.fee_structure_detail?.category_display || '—'],
-                    ['Admission Paid', showDetail.admission_fee_paid_date || '—'],
-                  ].map(([label, val]) => (
-                    <div key={label}>
-                      <div className="fds-label">{label}</div>
-                      <div style={{ color: 'var(--fds-text)', fontSize: '0.9rem' }}>{val}</div>
-                    </div>
-                  ))}
-                  {showDetail.medical_condition && (
-                    <div style={{ gridColumn: '1/-1' }}>
-                      <div className="fds-label">Medical Condition</div>
-                      <div style={{ color: '#e74c3c', fontSize: '0.9rem' }}>{showDetail.medical_condition}</div>
-                    </div>
-                  )}
-                </div>
-                {/* Attendance Summary */}
-                {showDetail.attendance_summary && (
-                  <div style={{ marginTop: 20 }}>
-                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.1rem', color: 'var(--fds-primary)', marginBottom: 10 }}>Attendance Summary</div>
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                      {[
-                        { label: 'Total', val: showDetail.attendance_summary.total, color: 'var(--fds-primary)' },
-                        { label: 'Present', val: showDetail.attendance_summary.present, color: 'var(--fds-yoga)' },
-                        { label: 'Absent', val: showDetail.attendance_summary.absent, color: '#e74c3c' },
-                        { label: 'Leave', val: showDetail.attendance_summary.leave, color: '#e67e22' },
-                        { label: '% Present', val: `${showDetail.attendance_summary.percentage}%`, color: 'var(--fds-dance)' },
-                      ].map(({ label, val, color }) => (
-                        <div key={label} className="fds-card" style={{ padding: '10px 16px', textAlign: 'center', flex: 1, minWidth: 80 }}>
-                          <div style={{ fontWeight: 700, fontSize: '1.2rem', color }}>{val}</div>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--fds-text-muted)' }}>{label}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="fds-modal-footer">
-                <button className="fds-btn fds-btn-secondary" onClick={() => setShowDetail(null)}>Close</button>
-                {canEdit && <button className="fds-btn fds-btn-primary" onClick={() => { setShowDetail(null); openEdit(showDetail); }}>Edit Student</button>}
-              </div>
-            </div>
-          </div>
+          <StudentDetailsModal
+            student={showDetail}
+            onClose={() => setShowDetail(null)}
+            onEdit={() => { setShowDetail(null); openEdit(showDetail); }}
+            canEdit={canEdit}
+            authFetchJson={authFetchJson}
+          />
         )}
       </div>
     </div>
