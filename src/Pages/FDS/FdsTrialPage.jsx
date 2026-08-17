@@ -46,6 +46,7 @@ export default function FdsTrialPage() {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
 
+  const [viewTab, setViewTab] = useState('ACTIVE');
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -102,14 +103,23 @@ export default function FdsTrialPage() {
     const p = { page, page_size: PAGE_SIZE };
     if (activeCategory !== 'ALL') p.class_category = activeCategory;
     if (search) p.search = search;
-    if (filterStatus) p.status = filterStatus;
+    if (filterStatus) {
+      p.status = filterStatus;
+    } else {
+      if (viewTab === 'ACTIVE') {
+        p.converted = 'false';
+        p.status__in = 'SCHEDULED';
+      } else {
+        p.status__in = 'COMPLETED,NO_SHOW,CANCELLED';
+      }
+    }
     if (filterConverted !== '') p.converted = filterConverted;
     if (dateFrom) p.date_from = dateFrom;
     if (dateTo) p.date_to = dateTo;
     if (followUpDue) p.follow_up_due = 'true';
     p.ordering = sortDir === 'asc' ? sortField : `-${sortField}`;
     return p;
-  }, [page, activeCategory, search, filterStatus, filterConverted, dateFrom, dateTo, followUpDue, sortField, sortDir]);
+  }, [page, activeCategory, search, filterStatus, filterConverted, dateFrom, dateTo, followUpDue, sortField, sortDir, viewTab]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -247,6 +257,16 @@ export default function FdsTrialPage() {
 
           {/* Filter Bar */}
           <div className="fds-filter-bar">
+            <div style={{ display: 'flex', gap: 5 }}>
+              <button
+                className={`fds-btn ${viewTab === 'ACTIVE' ? 'fds-btn-primary' : 'fds-btn-secondary'}`}
+                onClick={() => setViewTab('ACTIVE')}
+              >Active Trials</button>
+              <button
+                className={`fds-btn ${viewTab === 'PAST' ? 'fds-btn-primary' : 'fds-btn-secondary'}`}
+                onClick={() => setViewTab('PAST')}
+              >Past Trials</button>
+            </div>
             <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
               <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--fds-text-faint)' }} />
               <input className="fds-search-input" placeholder="Search name, phone..." value={search} onChange={e => setSearch(e.target.value)} />

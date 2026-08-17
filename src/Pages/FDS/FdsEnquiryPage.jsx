@@ -49,6 +49,7 @@ export default function FdsEnquiryPage() {
   const [total, setTotal] = useState(0);
 
   // Filters
+  const [viewTab, setViewTab] = useState('ACTIVE');
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -90,14 +91,18 @@ export default function FdsEnquiryPage() {
     const p = { page, page_size: PAGE_SIZE };
     if (activeCategory !== 'ALL') p.class_interest = activeCategory;
     if (search) p.search = search;
-    if (filterStatus) p.status = filterStatus;
+    if (filterStatus) {
+      p.status = filterStatus;
+    } else {
+      p.status__in = viewTab === 'ACTIVE' ? 'NEW,CONTACTED' : 'TRIAL_SCHEDULED,CONVERTED,LOST';
+    }
     if (filterSource) p.source = filterSource;
     if (dateFrom) p.date_from = dateFrom;
     if (dateTo)   p.date_to   = dateTo;
     if (followUpDue) p.follow_up_due = 'true';
     p.ordering = sortDir === 'asc' ? sortField : `-${sortField}`;
     return p;
-  }, [page, activeCategory, search, filterStatus, filterSource, dateFrom, dateTo, followUpDue, sortField, sortDir]);
+  }, [page, activeCategory, search, filterStatus, filterSource, dateFrom, dateTo, followUpDue, sortField, sortDir, viewTab]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -267,6 +272,16 @@ export default function FdsEnquiryPage() {
 
           {/* ── Filter Bar ── */}
           <div className="fds-filter-bar">
+            <div style={{ display: 'flex', gap: 5 }}>
+              <button
+                className={`fds-btn ${viewTab === 'ACTIVE' ? 'fds-btn-primary' : 'fds-btn-secondary'}`}
+                onClick={() => setViewTab('ACTIVE')}
+              >Active Enquiries</button>
+              <button
+                className={`fds-btn ${viewTab === 'PAST' ? 'fds-btn-primary' : 'fds-btn-secondary'}`}
+                onClick={() => setViewTab('PAST')}
+              >Past Enquiries</button>
+            </div>
             <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
               <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--fds-text-faint)' }} />
               <input
@@ -486,11 +501,6 @@ export default function FdsEnquiryPage() {
                     <div>
                       <label className="fds-label">Follow Up 2</label>
                       <input className="fds-input" type="date" value={form.follow_up_2} onChange={e => setForm(f => ({ ...f, follow_up_2: e.target.value }))} />
-                    </div>
-                    {/* Joined */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <label className="fds-label" style={{ marginBottom: 0 }}>Joined?</label>
-                      <input type="checkbox" checked={form.joined} onChange={e => setForm(f => ({ ...f, joined: e.target.checked }))} style={{ width: 16, height: 16, accentColor: 'var(--fds-primary)' }} />
                     </div>
                     {/* Remarks */}
                     <div style={{ gridColumn: '1/-1' }}>
