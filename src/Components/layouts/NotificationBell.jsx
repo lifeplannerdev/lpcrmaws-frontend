@@ -1,11 +1,13 @@
 // Components/layouts/NotificationBell.jsx
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, CheckCheck, Trash2, ClipboardList, UserPlus, MessageSquare } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, CheckCheck, Trash2, ClipboardList, UserPlus, MessageSquare, FileText } from 'lucide-react';
 
 const iconMap = {
   task: <ClipboardList size={14} className="text-indigo-500" />,
   lead: <UserPlus size={14} className="text-emerald-500" />,
   chat: <MessageSquare size={14} className="text-blue-500" />,
+  report: <FileText size={14} className="text-orange-500" />
 };
 
 const timeAgo = (date) => {
@@ -19,6 +21,7 @@ const timeAgo = (date) => {
 const NotificationBell = ({ notifications, unreadCount, onClearNotifications, onMarkRead }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const navigate = useNavigate();
 
   // Close on outside click
   useEffect(() => {
@@ -30,6 +33,29 @@ const NotificationBell = ({ notifications, unreadCount, onClearNotifications, on
   const handleOpen = () => {
     setOpen(v => !v);
     if (!open) onMarkRead(); // mark as read when opened
+  };
+
+  const handleNotificationClick = (n) => {
+    setOpen(false);
+    if (!n.related_id) return;
+    
+    let route = '';
+    const type = n.type?.toLowerCase() || '';
+    const msg = n.message?.toLowerCase() || '';
+
+    if (type === 'report' || msg.includes('report')) {
+      route = `/reports/view/${n.related_id}`;
+    } else if (type === 'task' || msg.includes('task')) {
+      route = `/tasks/${n.related_id}`;
+    } else if (type === 'lead' || msg.includes('lead')) {
+      route = `/leads/view/${n.related_id}`;
+    } else if (type === 'chat' || msg.includes('chat') || msg.includes('message')) {
+      route = `/chat`;
+    }
+    
+    if (route) {
+      navigate(route);
+    }
   };
 
   return (
@@ -69,18 +95,28 @@ const NotificationBell = ({ notifications, unreadCount, onClearNotifications, on
                 No notifications yet
               </div>
             ) : (
-              notifications.map((n) => (
-                <div key={n.id} className="flex items-start gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition">
-                  <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    {iconMap[n.type]}
-                  </div>
+              notifications.map((n) => {
+                const type = n.type?.toLowerCase() || '';
+                const msg = n.message?.toLowerCase() || '';
+                const displayIcon = iconMap[n.type] || (msg.includes('report') ? iconMap.report : null);
+                
+                return (
+                  <div 
+                    key={n.id} 
+                    onClick={() => handleNotificationClick(n)}
+                    className="flex items-start gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition cursor-pointer"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      {displayIcon}
+                    </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-800 leading-snug">{n.message}</p>
                     {n.by && <p className="text-xs text-gray-400 mt-0.5">by {n.by}</p>}
                     <p className="text-[10px] text-gray-300 mt-1">{timeAgo(n.time)}</p>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
