@@ -73,7 +73,12 @@ export default function LoginPage() {
           refresh: data.refresh,  
           user: data.user 
         });
-                navigate('/');
+        
+        if (data.user.company === 'FDS') {
+          navigate('/fds');
+        } else {
+          navigate('/');
+        }
         
       } catch (err) {
         console.error('❌ Login error:', err.message);

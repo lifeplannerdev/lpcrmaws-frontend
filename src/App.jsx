@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from './context/AuthContext';
 import { usePermissions } from './context/PermissionsContext';
@@ -82,6 +83,16 @@ const PermissionRoute = ({ children, resources = [], permissions = [], roles = [
 };
 
 export default function App() {
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    if (user?.company === 'FDS') {
+      document.body.classList.add('fds-theme-global');
+    } else {
+      document.body.classList.remove('fds-theme-global');
+    }
+  }, [user]);
+
   return (
     <Router>
       <Routes>

@@ -110,6 +110,18 @@ const Navbar = () => {
   return (
     <div className="bg-white p-4 shadow-md">
       <div className="max-w-7xl mx-auto">
+        {user?.company === 'FDS' && (
+          <div 
+            className="flex justify-center mb-4 pb-3 border-b border-gray-200 cursor-pointer hover:opacity-90 transition-opacity" 
+            onClick={() => handleNavigation('/fds')}
+          >
+            <img 
+              src="/fds_logo.jpeg" 
+              alt="FILMAATIC Dance Studio" 
+              className="h-20 object-contain drop-shadow-md rounded-lg mix-blend-multiply fds-theme-global:mix-blend-normal fds-theme-global:bg-white p-1"
+            />
+          </div>
+        )}
         <DesktopNavbar
           navItems={navItems}
           isActive={isActive}

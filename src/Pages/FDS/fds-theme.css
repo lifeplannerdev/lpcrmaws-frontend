@@ -523,3 +523,56 @@
   .fds-table-wrap { overflow-x: auto; }
   .fds-modal { max-width: 100%; margin: 12px; }
 }
+
+/* ============================================================
+   GLOBAL OVERRIDES FOR FILMAATIC DANCE STUDIO
+   This applies to all standard CRM pages when user.company === 'FDS'
+   ============================================================ */
+
+body.fds-theme-global {
+  background-color: var(--fds-bg) !important;
+  color: var(--fds-text) !important;
+  background-image: none !important;
+}
+
+/* Force standard white cards to dark cinema surface */
+body.fds-theme-global .bg-white,
+body.fds-theme-global .bg-gray-50,
+body.fds-theme-global .bg-slate-50,
+body.fds-theme-global .bg-indigo-50 {
+  background-color: var(--fds-surface) !important;
+  border-color: var(--fds-border) !important;
+  color: var(--fds-text) !important;
+}
+
+/* Specific text color overrides */
+body.fds-theme-global .text-gray-900,
+body.fds-theme-global .text-gray-800,
+body.fds-theme-global .text-gray-700 {
+  color: var(--fds-text) !important;
+}
+
+body.fds-theme-global .text-gray-600,
+body.fds-theme-global .text-gray-500,
+body.fds-theme-global .text-gray-400 {
+  color: var(--fds-text-muted) !important;
+}
+
+/* Input fields and borders */
+body.fds-theme-global input,
+body.fds-theme-global select,
+body.fds-theme-global textarea {
+  background-color: var(--fds-surface-2) !important;
+  color: var(--fds-text) !important;
+  border-color: var(--fds-border) !important;
+}
+
+body.fds-theme-global .border-gray-200,
+body.fds-theme-global .border-gray-100 {
+  border-color: var(--fds-border) !important;
+}
+
+body.fds-theme-global .shadow-md,
+body.fds-theme-global .shadow-sm {
+  box-shadow: var(--fds-shadow) !important;
+}

@@ -129,7 +129,8 @@ const ProfessionalInfoSection = React.memo(({ formData, errors, onChange, branch
             icon={Building}
             options={[
               { value: 'LP', label: 'LP Group' },
-              { value: 'FLAG', label: 'FLAG' }
+              { value: 'FLAG', label: 'FLAG' },
+              { value: 'FDS', label: 'FILMAATIC Dance Studio' }
             ]}
             className="px-4 py-3 border-2 rounded-xl font-medium"
           />
