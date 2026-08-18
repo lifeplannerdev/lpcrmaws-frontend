@@ -101,38 +101,48 @@ const Navbar = () => {
     }),
   });
 
-  const navItems = getFilteredMenu(hasAnyPermission, hasPermission, user);
+  const baseNavItems = getFilteredMenu(hasAnyPermission, hasPermission, user);
+  const navItems = baseNavItems.map(item => {
+    if (user?.company === 'FDS' && item.path === '/') {
+      return { ...item, path: '/fds', label: 'FDS Studio' };
+    }
+    return item;
+  });
   const handleNavigation = (path) => { navigate(path); setIsMobileMenuOpen(false); };
   const handleLogout = async () => { await logout(); navigate('/login'); };
   const handleChatOpen = () => { navigate('/chat'); setIsMobileMenuOpen(false); };
   const isActive = (path) => location.pathname === path;
 
+  const isFds = user?.company === 'FDS';
+
   return (
-    <div className="bg-white p-4 shadow-md">
-      <div className="max-w-7xl mx-auto">
-        {user?.company === 'FDS' && (
+    <div className={`p-4 shadow-md ${isFds ? 'bg-[#1C1410] border-b border-[#C9A96E]/20' : 'bg-white'}`}>
+      <div className="max-w-7xl mx-auto flex items-center gap-4">
+        {isFds && (
           <div 
-            className="flex justify-center mb-4 pb-3 border-b border-gray-200 cursor-pointer hover:opacity-90 transition-opacity" 
+            className="flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity mr-2" 
             onClick={() => handleNavigation('/fds')}
           >
             <img 
               src="/fds_logo.jpeg" 
               alt="FILMAATIC Dance Studio" 
-              className="h-20 object-contain drop-shadow-md rounded-lg mix-blend-multiply fds-theme-global:mix-blend-normal fds-theme-global:bg-white p-1"
+              className="h-12 w-auto object-contain rounded-md p-1 bg-white/10 mix-blend-screen"
             />
           </div>
         )}
-        <DesktopNavbar
-          navItems={navItems}
-          isActive={isActive}
-          handleNavigation={handleNavigation}
-          handleLogout={handleLogout}
-          onChatOpen={handleChatOpen}
-          notifications={notifications}
-          unreadCount={unreadCount}
-          onClearNotifications={handleClearNotifications}
-          onMarkRead={handleMarkRead}
-        />
+        <div className="flex-1 w-full">
+          <DesktopNavbar
+            navItems={navItems}
+            isActive={isActive}
+            handleNavigation={handleNavigation}
+            handleLogout={handleLogout}
+            onChatOpen={handleChatOpen}
+            notifications={notifications}
+            unreadCount={unreadCount}
+            onClearNotifications={handleClearNotifications}
+            onMarkRead={handleMarkRead}
+            isFds={isFds}
+          />
         <MobileNavbar
           navItems={navItems}
           isActive={isActive}
@@ -145,7 +155,9 @@ const Navbar = () => {
           unreadCount={unreadCount}
           onClearNotifications={handleClearNotifications}
           onMarkRead={handleMarkRead}
+          isFds={isFds}
         />
+        </div>
       </div>
     </div>
   );

@@ -576,3 +576,53 @@ body.fds-theme-global .shadow-md,
 body.fds-theme-global .shadow-sm {
   box-shadow: var(--fds-shadow) !important;
 }
+
+
+/* Disable glass and light background gradients globally */
+body.fds-theme-global .bg-white\/70,
+body.fds-theme-global .bg-white\/80,
+body.fds-theme-global .bg-white\/90,
+body.fds-theme-global .backdrop-blur-md,
+body.fds-theme-global .backdrop-blur-lg {
+  background-color: var(--fds-surface) !important;
+  backdrop-filter: none !important;
+}
+
+body.fds-theme-global [class*="bg-gradient-to-"] {
+  background-image: none !important;
+}
+
+body.fds-theme-global .min-h-screen {
+  background-color: var(--fds-bg) !important;
+}
+
+/* Force dark color on headings */
+body.fds-theme-global h1, 
+body.fds-theme-global h2, 
+body.fds-theme-global h3 {
+  color: var(--fds-primary) !important;
+}
+
+/* Force dark text on generic text-gray classes */
+body.fds-theme-global .text-gray-900,
+body.fds-theme-global .text-slate-900,
+body.fds-theme-global .text-gray-800,
+body.fds-theme-global .text-slate-800,
+body.fds-theme-global .text-slate-700 {
+  color: var(--fds-text) !important;
+}
+
+body.fds-theme-global .text-gray-600,
+body.fds-theme-global .text-slate-600 {
+  color: var(--fds-text-muted) !important;
+}
+
+body.fds-theme-global .bg-white,
+body.fds-theme-global .bg-gray-50,
+body.fds-theme-global .bg-slate-50,
+body.fds-theme-global .bg-blue-50,
+body.fds-theme-global .bg-indigo-50 {
+  background-color: var(--fds-surface) !important;
+  border-color: var(--fds-border) !important;
+  color: var(--fds-text) !important;
+}
