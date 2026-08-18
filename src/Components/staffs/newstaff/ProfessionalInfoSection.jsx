@@ -118,23 +118,21 @@ const ProfessionalInfoSection = React.memo(({ formData, errors, onChange, branch
           />
         )}
 
-        {hasDualAccess && (
-          <FormField
-            label="Company"
-            name="company"
-            type="select"
-            value={formData.company || ''}
-            onChange={onChange}
-            placeholder="Select a company"
-            icon={Building}
-            options={[
-              { value: 'LP', label: 'LP Group' },
-              { value: 'FLAG', label: 'FLAG' },
-              { value: 'FDS', label: 'FILMAATIC Dance Studio' }
-            ]}
-            className="px-4 py-3 border-2 rounded-xl font-medium"
-          />
-        )}
+        <FormField
+          label="Company"
+          name="company"
+          type="select"
+          value={formData.company || ''}
+          onChange={onChange}
+          placeholder="Select a company"
+          icon={Building}
+          options={[
+            { value: 'LP', label: 'LP Group' },
+            { value: 'FLAG', label: 'FLAG' },
+            { value: 'FDS', label: 'FILMAATIC Dance Studio' }
+          ]}
+          className="px-4 py-3 border-2 rounded-xl font-medium"
+        />
 
         {/* Active Status Premium Toggle */}
         <div className="sm:col-span-2 bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center justify-between">
