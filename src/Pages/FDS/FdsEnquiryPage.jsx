@@ -159,7 +159,7 @@ export default function FdsEnquiryPage() {
       const now = new Date();
       const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       
-      const newRemarkLine = `[${dateStr}] ${userStr}: ${remarkModal.text.trim()}`;
+      const newRemarkLine = `[${dateStr}] ${userStr} (Enquiry): ${remarkModal.text.trim()}`;
       const existingRemarks = remarkModal.enquiry.remarks || '';
       const updatedRemarks = existingRemarks ? `${existingRemarks}\n\n${newRemarkLine}` : newRemarkLine;
       

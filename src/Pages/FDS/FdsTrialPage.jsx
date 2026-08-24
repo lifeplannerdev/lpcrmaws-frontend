@@ -36,9 +36,9 @@ function StarRating({ value, onChange, readOnly = false }) {
 }
 
 export default function FdsTrialPage() {
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
-  const canEdit = hasPermission('fds:admin');
+  const canEdit = hasPermission('fds:admin') || hasPermission('fds:admin_own');
   const fileInputRef = useRef();
 
   const [trials, setTrials] = useState([]);
@@ -64,6 +64,7 @@ export default function FdsTrialPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [remarkModal, setRemarkModal] = useState({ open: false, trial: null, text: '' });
   const [enquiries, setEnquiries] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
@@ -79,6 +80,7 @@ export default function FdsTrialPage() {
         class_category: e.class_interest || 'DANCE',
         age: e.age || '',
         enquiry: e.id || '',
+        remarks: e.remarks || '',
       });
       setShowModal(true);
       // Clear state so it doesn't reopen on reload
@@ -158,6 +160,29 @@ export default function FdsTrialPage() {
     });
     setEditId(t.id);
     setShowModal(true);
+  };
+
+  
+  const handleQuickRemarkSubmit = async (e) => {
+    e.preventDefault();
+    if (!remarkModal.trial || !remarkModal.text.trim()) return;
+    
+    try {
+      const userStr = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : (user?.username || 'User');
+      const now = new Date();
+      const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      
+      const newRemarkLine = `[${dateStr}] ${userStr} (Trial): ${remarkModal.text.trim()}`;
+      const existingRemarks = remarkModal.trial.remarks || '';
+      const updatedRemarks = existingRemarks ? `${existingRemarks}\n\n${newRemarkLine}` : newRemarkLine;
+      
+      await fdsApi.updateTrial(authFetchJson, remarkModal.trial.id, { remarks: updatedRemarks });
+      
+      setRemarkModal({ open: false, trial: null, text: '' });
+      load();
+    } catch (err) {
+      alert('Failed to add remark: ' + err.message);
+    }
   };
 
   const handleSave = async (ev) => {
@@ -303,6 +328,7 @@ export default function FdsTrialPage() {
                     { key: 'status', label: 'Status' },
                     { key: 'converted', label: 'Converted' },
                     { key: 'follow_up_date', label: 'Follow Up' },
+                    { key: 'remarks', label: 'Remarks' },
                     { key: 'actions', label: '' },
                   ].map(({ key, label }) => (
                     <th key={key} onClick={() => !['actions','phone'].includes(key) && handleSort(key)}>
@@ -488,6 +514,36 @@ export default function FdsTrialPage() {
             </div>
           </div>
         )}
+
+        {/* ── Quick Remark Modal ── */}
+        {remarkModal.open && (
+          <div className="fds-modal-overlay" onClick={() => setRemarkModal({ open: false, trial: null, text: '' })}>
+            <div className="fds-modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+              <div className="fds-modal-header">
+                <div className="fds-modal-title">Add Remark</div>
+                <button className="fds-btn fds-btn-ghost" onClick={() => setRemarkModal({ open: false, trial: null, text: '' })}><X size={18} /></button>
+              </div>
+              <form onSubmit={handleQuickRemarkSubmit}>
+                <div className="fds-modal-body">
+                  <textarea 
+                    autoFocus
+                    className="fds-input" 
+                    rows={4} 
+                    placeholder="Type your remark here..."
+                    value={remarkModal.text}
+                    onChange={e => setRemarkModal(prev => ({ ...prev, text: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="fds-modal-footer">
+                  <button type="button" className="fds-btn fds-btn-secondary" onClick={() => setRemarkModal({ open: false, trial: null, text: '' })}>Cancel</button>
+                  <button type="submit" className="fds-btn fds-btn-primary">Save Remark</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
