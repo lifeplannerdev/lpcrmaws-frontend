@@ -200,7 +200,7 @@ export default function FdsEnquiryPage() {
         if (row.full_name || row['full_name.1']) {
           // Video Leads format
           const name = row.full_name || row['full_name.1'] || '';
-          let phone = row.phone_number || row['phone_number.1'] || '';
+          let phone = String(row.phone_number || row['phone_number.1'] || '');
           if (phone.startsWith('p:')) phone = phone.substring(2);
           const email = row.email || row['email.1'] || '';
           const sourceRaw = row.source || row['source.1'] || '';
