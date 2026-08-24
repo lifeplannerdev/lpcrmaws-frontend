@@ -48,15 +48,15 @@ export const masterNavigation = [
   { id: "programs", label: "Programs", icon: BookOpen, path: "/programs", requiredResource: "programs" },
 
   // ── FDS: FILMAATIC Dance Studio ──
-  { id: "fds",           label: "FDS — Studio",     icon: Sparkles,      path: "/fds",          requiredPermissions: ["fds:admin","fds:view","fds_fees:view"],  group: "fds" },
-  { id: "fdsEnquiry",    label: "FDS Enquiries",    icon: Users,         path: "/fds/enquiries", requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
-  { id: "fdsTrial",      label: "FDS Trials",       icon: Star,          path: "/fds/trials",    requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
-  { id: "fdsStudents",   label: "FDS Students",     icon: GraduationCap, path: "/fds/students",  requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
-  { id: "fdsBatches",    label: "FDS Batches",      icon: Music,         path: "/fds/batches",   requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
-  { id: "fdsAttendance", label: "FDS Attendance",   icon: CalendarCheck, path: "/fds/attendance",requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
-  { id: "fdsFees",       label: "FDS Fees",         icon: IndianRupee,   path: "/fds/fees",      requiredPermissions: ["fds:admin","fds:view","fds_fees:view"],group: "fds" },
-  { id: "fdsFeePolicies",label: "FDS Fee Policies", icon: Settings,      path: "/fds/fee-policies",requiredPermissions: ["fds:admin","fds:view","fds_fees:view"],group: "fds" },
-  { id: "fdsWeddings",   label: "FDS Weddings 💍",  icon: Heart,         path: "/fds/weddings",  requiredPermissions: ["fds:admin","fds:view"],                group: "fds" },
+  { id: "fds",           label: "FDS — Studio",     icon: Sparkles,      path: "/fds",          requiredPermissions: ["fds:admin","fds:admin_own","fds:view","fds_fees:view"],  group: "fds" },
+  { id: "fdsEnquiry",    label: "FDS Enquiries",    icon: Users,         path: "/fds/enquiries", requiredPermissions: ["fds:admin","fds:admin_own","fds:view"],                group: "fds" },
+  { id: "fdsTrial",      label: "FDS Trials",       icon: Star,          path: "/fds/trials",    requiredPermissions: ["fds:admin","fds:admin_own","fds:view"],                group: "fds" },
+  { id: "fdsStudents",   label: "FDS Students",     icon: GraduationCap, path: "/fds/students",  requiredPermissions: ["fds:admin","fds:admin_own","fds:view"],                group: "fds" },
+  { id: "fdsBatches",    label: "FDS Batches",      icon: Music,         path: "/fds/batches",   requiredPermissions: ["fds:admin","fds:admin_own","fds:view"],                group: "fds" },
+  { id: "fdsAttendance", label: "FDS Attendance",   icon: CalendarCheck, path: "/fds/attendance",requiredPermissions: ["fds:admin","fds:admin_own","fds:view"],                group: "fds" },
+  { id: "fdsFees",       label: "FDS Fees",         icon: IndianRupee,   path: "/fds/fees",      requiredPermissions: ["fds:admin","fds:admin_own","fds:view","fds_fees:view"],group: "fds" },
+  { id: "fdsFeePolicies",label: "FDS Fee Policies", icon: Settings,      path: "/fds/fee-policies",requiredPermissions: ["fds:admin","fds:admin_own","fds:view","fds_fees:view"],group: "fds" },
+  { id: "fdsWeddings",   label: "FDS Weddings 💍",  icon: Heart,         path: "/fds/weddings",  requiredPermissions: ["fds:admin","fds:admin_own","fds:view"],                group: "fds" },
 ];
 
 export const getFilteredMenu = (hasAnyPermission, hasPermission, user) => {

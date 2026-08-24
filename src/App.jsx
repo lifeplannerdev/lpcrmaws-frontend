@@ -155,15 +155,15 @@ export default function App() {
         <Route path="/voxbay-ai" element={<PermissionRoute permissions={['voxbay_ai:admin', 'voxbay_ai:read_own']}><VoxbayAIPage /></PermissionRoute>} />
 
         {/* ── FDS: FILMAATIC Dance Studio ── */}
-        <Route path="/fds" element={<PermissionRoute permissions={['fds:admin','fds:view','fds_fees:view']}><FdsDashboard /></PermissionRoute>} />
-        <Route path="/fds/enquiries" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsEnquiryPage /></PermissionRoute>} />
-        <Route path="/fds/trials" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsTrialPage /></PermissionRoute>} />
-        <Route path="/fds/students" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsStudentRegistryPage /></PermissionRoute>} />
-        <Route path="/fds/batches" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsBatchManagementPage /></PermissionRoute>} />
-        <Route path="/fds/attendance" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsAttendancePage /></PermissionRoute>} />
-        <Route path="/fds/fees" element={<PermissionRoute permissions={['fds:admin','fds:view','fds_fees:view']}><FdsFeesPage /></PermissionRoute>} />
-        <Route path="/fds/fee-policies" element={<PermissionRoute permissions={['fds:admin','fds:view','fds_fees:view']}><FdsFeePoliciesPage /></PermissionRoute>} />
-        <Route path="/fds/weddings" element={<PermissionRoute permissions={['fds:admin','fds:view']}><FdsWeddingGroupsPage /></PermissionRoute>} />
+        <Route path="/fds" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view']}><FdsDashboard /></PermissionRoute>} />
+        <Route path="/fds/enquiries" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view']}><FdsEnquiryPage /></PermissionRoute>} />
+        <Route path="/fds/trials" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view']}><FdsTrialPage /></PermissionRoute>} />
+        <Route path="/fds/students" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view']}><FdsStudentRegistryPage /></PermissionRoute>} />
+        <Route path="/fds/batches" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view']}><FdsBatchManagementPage /></PermissionRoute>} />
+        <Route path="/fds/attendance" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view']}><FdsAttendancePage /></PermissionRoute>} />
+        <Route path="/fds/fees" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view']}><FdsFeesPage /></PermissionRoute>} />
+        <Route path="/fds/fee-policies" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view']}><FdsFeePoliciesPage /></PermissionRoute>} />
+        <Route path="/fds/weddings" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view']}><FdsWeddingGroupsPage /></PermissionRoute>} />
 
         <Route path="*" element={<div>404 Not Found</div>} />
       </Routes>
