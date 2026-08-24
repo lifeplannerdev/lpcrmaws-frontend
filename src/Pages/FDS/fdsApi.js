@@ -40,6 +40,8 @@ export const fdsApi = {
   updateEnquiry: (af, id, data) => af(`${FDS_BASE}/enquiries/${id}/`, { method: 'PATCH', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
   deleteEnquiry: (af, id) => af(`${FDS_BASE}/enquiries/${id}/`, { method: 'DELETE' }),
   exportEnquiries: (af, params = {}) => af(`${FDS_BASE}/enquiries/export_excel/${buildQueryString(params)}`),
+  bulkImportEnquiries: (af, data) => af(`${FDS_BASE}/enquiries/bulk_import_excel/`, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
+
 
   // Trials
   trials: (af, params = {}) => af(`${FDS_BASE}/trials/${buildQueryString(params)}`),

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import * as XLSX from 'xlsx'; { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Download, Upload, X, ChevronUp, ChevronDown,
@@ -40,7 +41,7 @@ export default function FdsEnquiryPage() {
   const { accessToken, refreshAccessToken } = useAuth();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
-  const canEdit = hasPermission('fds:admin');
+  const canEdit = hasPermission('fds:admin') || hasPermission('fds:admin_own');
   const fileInputRef = useRef();
 
   const [enquiries, setEnquiries] = useState([]);
@@ -54,6 +55,7 @@ export default function FdsEnquiryPage() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterSource, setFilterSource] = useState('');
+  const [filterLocation, setFilterLocation] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo]   = useState('');
   const [followUpDue, setFollowUpDue] = useState(false);
@@ -69,6 +71,11 @@ export default function FdsEnquiryPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  // Import Preview Modal
+  const [showImportPreview, setShowImportPreview] = useState(false);
+  const [importRows, setImportRows] = useState([]);
+  const [importLoading, setImportLoading] = useState(false);
 
   const authFetch = useCallback(async (url, opts = {}) => {
     let token = accessToken;
@@ -97,6 +104,7 @@ export default function FdsEnquiryPage() {
       p.status__in = viewTab === 'ACTIVE' ? 'NEW,CONTACTED' : 'TRIAL_SCHEDULED,CONVERTED,LOST';
     }
     if (filterSource) p.source = filterSource;
+    if (filterLocation) p.location = filterLocation;
     if (dateFrom) p.date_from = dateFrom;
     if (dateTo)   p.date_to   = dateTo;
     if (followUpDue) p.follow_up_due = 'true';
@@ -177,26 +185,92 @@ export default function FdsEnquiryPage() {
   const handleImport = async (ev) => {
     const file = ev.target.files[0];
     if (!file) return;
-    const fd = new FormData();
-    fd.append('file', file);
+    
+    setImportLoading(true);
     try {
-      const token = accessToken || await refreshAccessToken();
-      const res = await fetch(`${API_BASE_URL}/fds/enquiries/import_excel/`, {
-        method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd,
-      });
-      const data = await res.json();
-      alert(`Import complete: ${data.created} created, ${data.skipped} skipped.`);
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+      // Transform data based on detected format
+      const parsedRows = jsonData.map(row => {
+        // Detect "Video Leads" format vs standard format
+        if (row.full_name || row['full_name.1']) {
+          // Video Leads format
+          const name = row.full_name || row['full_name.1'] || '';
+          let phone = row.phone_number || row['phone_number.1'] || '';
+          if (phone.startsWith('p:')) phone = phone.substring(2);
+          const email = row.email || row['email.1'] || '';
+          const sourceRaw = row.source || row['source.1'] || '';
+          const source = sourceRaw.toLowerCase().includes('ig') || sourceRaw.toLowerCase().includes('instagram') ? 'INSTAGRAM' : (sourceRaw.toLowerCase().includes('fb') || sourceRaw.toLowerCase().includes('facebook') ? 'FACEBOOK' : 'OTHER');
+          
+          return {
+            name,
+            phone,
+            whatsapp_no: phone,
+            source,
+            remarks: email ? `Email: ${email}` : '',
+            date: new Date().toISOString().split('T')[0],
+            class_interest: 'DANCE',
+          };
+        } else {
+          // Assume standard format
+          let dateStr = row.Date || row.date;
+          if (typeof dateStr === 'number') {
+            dateStr = new Date(Math.round((dateStr - 25569) * 86400 * 1000)).toISOString().split('T')[0];
+          } else if (!dateStr) {
+            dateStr = new Date().toISOString().split('T')[0];
+          } else if (typeof dateStr === 'string' && dateStr.includes('/')) {
+              const parts = dateStr.split('/');
+              if (parts.length === 3) dateStr = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+          }
+          return {
+            name: row.Name || row.name || '',
+            date: dateStr,
+            location: row.Location || row.location || '',
+            age: row.Age || row.age || null,
+            phone: row.Phone || row.phone || '',
+            whatsapp_no: row["What's App no."] || row.whatsapp_no || '',
+            preferred_timing: row['Preffered Timing'] || row.preferred_timing || '',
+            source: row.Source || row.source || 'WALK_IN',
+            remarks: row['Remarks / Concerns'] || row.remarks || '',
+            class_interest: row['Class Interest'] || row.class_interest || 'DANCE'
+          };
+        }
+      }).filter(r => r.name);
+
+      setImportRows(parsedRows);
+      setShowImportPreview(true);
+    } catch (e) {
+      alert('Failed to parse Excel file: ' + e.message);
+    } finally {
+      setImportLoading(false);
+      ev.target.value = '';
+    }
+  };
+
+  const submitImport = async () => {
+    setImportLoading(true);
+    try {
+      const res = await fdsApi.bulkImportEnquiries(authFetchJson, { records: importRows });
+      alert(`Import complete: ${res.created} created.`);
+      setShowImportPreview(false);
       load();
-    } catch (e) { alert('Import failed'); }
-    ev.target.value = '';
+    } catch (e) {
+      alert('Import failed: ' + e.message);
+    } finally {
+      setImportLoading(false);
+    }
   };
 
   const clearFilters = () => {
-    setSearch(''); setFilterStatus(''); setFilterSource('');
+    setSearch(''); setFilterStatus(''); setFilterSource(''); setFilterLocation('');
     setDateFrom(''); setDateTo(''); setFollowUpDue(false);
     setActiveCategory('ALL');
   };
-  const hasFilters = search || filterStatus || filterSource || dateFrom || dateTo || followUpDue || activeCategory !== 'ALL';
+  const hasFilters = search || filterStatus || filterSource || filterLocation || dateFrom || dateTo || followUpDue || activeCategory !== 'ALL';
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -299,6 +373,9 @@ export default function FdsEnquiryPage() {
               <option value="">All Sources</option>
               {SOURCES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
             </select>
+            {hasPermission('fds:admin') && (
+              <input className="fds-input" placeholder="Location..." style={{ maxWidth: 120 }} value={filterLocation} onChange={e => setFilterLocation(e.target.value)} />
+            )}
             <input className="fds-input" type="date" style={{ maxWidth: 140 }} value={dateFrom} onChange={e => setDateFrom(e.target.value)} placeholder="From" />
             <input className="fds-input" type="date" style={{ maxWidth: 140 }} value={dateTo} onChange={e => setDateTo(e.target.value)} placeholder="To" />
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: followUpDue ? 'var(--fds-primary)' : 'var(--fds-text-muted)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
@@ -516,6 +593,51 @@ export default function FdsEnquiryPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {showImportPreview && (
+          <div className="fds-modal-overlay" onClick={() => !importLoading && setShowImportPreview(false)}>
+            <div className="fds-modal" style={{ maxWidth: 800 }} onClick={e => e.stopPropagation()}>
+              <div className="fds-modal-header">
+                <div className="fds-modal-title">Import Preview</div>
+                <button className="fds-btn fds-btn-ghost" disabled={importLoading} onClick={() => setShowImportPreview(false)}><X size={18} /></button>
+              </div>
+              <div className="fds-modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                <p style={{ marginBottom: 16, color: 'var(--fds-text-muted)' }}>Found {importRows.length} valid rows to import.</p>
+                <table className="fds-table" style={{ fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Phone</th>
+                      <th>Source</th>
+                      <th>Class</th>
+                      <th>Remarks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importRows.slice(0, 20).map((r, i) => (
+                      <tr key={i}>
+                        <td style={{ fontWeight: 600 }}>{r.name}</td>
+                        <td>{r.phone}</td>
+                        <td>{r.source}</td>
+                        <td>{r.class_interest}</td>
+                        <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.remarks}</td>
+                      </tr>
+                    ))}
+                    {importRows.length > 20 && (
+                      <tr><td colSpan={5} style={{ textAlign: 'center', fontStyle: 'italic', color: 'var(--fds-text-faint)' }}>... and {importRows.length - 20} more rows</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="fds-modal-footer">
+                <button className="fds-btn fds-btn-secondary" disabled={importLoading} onClick={() => setShowImportPreview(false)}>Cancel</button>
+                <button className="fds-btn fds-btn-primary" disabled={importLoading} onClick={submitImport}>
+                  {importLoading ? 'Importing...' : 'Confirm Import'}
+                </button>
+              </div>
             </div>
           </div>
         )}
