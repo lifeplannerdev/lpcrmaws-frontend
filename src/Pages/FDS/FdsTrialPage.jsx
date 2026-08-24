@@ -179,7 +179,7 @@ export default function FdsTrialPage() {
       await fdsApi.updateTrial(authFetchJson, remarkModal.trial.id, { remarks: updatedRemarks });
       
       setRemarkModal({ open: false, trial: null, text: '' });
-      load();
+      setTrials(prev => prev.map(x => x.id === remarkModal.trial.id ? { ...x, remarks: updatedRemarks } : x));
     } catch (err) {
       alert('Failed to add remark: ' + err.message);
     }
@@ -327,7 +327,7 @@ export default function FdsTrialPage() {
                     { key: 'trainer_rating', label: 'Rating' },
                     { key: 'status', label: 'Status' },
                     { key: 'converted', label: 'Converted' },
-                    { key: 'follow_up_date', label: 'Follow Up' },
+                    
                     { key: 'remarks', label: 'Remarks' },
                     { key: 'actions', label: '' },
                   ].map(({ key, label }) => (
@@ -339,36 +339,7 @@ export default function FdsTrialPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40 }}><div className="fds-spinner" style={{ margin: '0 auto' }} /></td></tr>
-                ) : trials.length === 0 ? (
-                  <tr><td colSpan={11}><div className="fds-empty"><div className="fds-empty-title">No trials found</div></div></td></tr>
-                ) : trials.map(t => (
-                  <tr key={t.id}>
-                    <td><span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--fds-primary)' }}>{t.trial_id}</span></td>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{t.date}</div>
-                      {t.time && <div style={{ fontSize: '0.75rem', color: 'var(--fds-text-muted)' }}>{t.time}</div>}
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{t.name}</div>
-                      {t.age && <div style={{ fontSize: '0.75rem', color: 'var(--fds-text-muted)' }}>Age {t.age}</div>}
-                    </td>
-                    <td><span className={`fds-badge fds-badge-${t.class_category?.toLowerCase()}`}>{t.class_category}</span></td>
-                    <td style={{ fontSize: '0.82rem' }}>{t.phone || '—'}</td>
-                    <td style={{ fontWeight: 600, color: 'var(--fds-primary)' }}>₹{Number(t.fee_quoted || 0).toLocaleString('en-IN')}</td>
-                    <td>
-                      {t.trainer_rating ? <StarRating value={parseInt(t.trainer_rating)} readOnly /> : <span style={{ color: 'var(--fds-text-faint)' }}>—</span>}
-                    </td>
-                    <td><span className={`fds-badge ${getStatusBadgeClass(t.status)}`}>{t.status?.replace('_', ' ')}</span></td>
-                    <td>
-                      {t.converted
-                        ? <span className="fds-badge fds-badge-green"><CheckCircle size={10} /> Yes</span>
-                        : <span className="fds-badge fds-badge-gray">No</span>
-                      }
-                    </td>
-                    <td style={{ fontSize: '0.78rem', color: t.follow_up_date && t.follow_up_date < today ? '#e74c3c' : 'var(--fds-text-muted)' }}>
-                      {t.follow_up_date || '—'}
-                    </td>
+                  <tr>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         {t.has_student ? (

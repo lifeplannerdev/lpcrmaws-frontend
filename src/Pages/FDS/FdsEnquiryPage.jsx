@@ -166,7 +166,7 @@ export default function FdsEnquiryPage() {
       await fdsApi.updateEnquiry(authFetchJson, remarkModal.enquiry.id, { remarks: updatedRemarks });
       
       setRemarkModal({ open: false, enquiry: null, text: '' });
-      load();
+      setEnquiries(prev => prev.map(enq => enq.id === remarkModal.enquiry.id ? { ...enq, remarks: updatedRemarks } : enq));
     } catch (err) {
       alert('Failed to add remark: ' + err.message);
     }
@@ -427,7 +427,7 @@ export default function FdsEnquiryPage() {
                     { key: 'location', label: 'Location' },
                     { key: 'source', label: 'Source' },
                     { key: 'status', label: 'Status' },
-                    { key: 'follow_up_1', label: 'Follow Up' },
+                    
                     { key: 'remarks', label: 'Remarks' },
                     { key: 'actions', label: '' },
                   ].map(({ key, label }) => (
@@ -472,7 +472,23 @@ export default function FdsEnquiryPage() {
                     </td>
                     <td style={{ fontSize: '0.82rem', color: 'var(--fds-text-muted)' }}>{e.location || '—'}</td>
                     <td style={{ fontSize: '0.82rem', color: 'var(--fds-text-muted)' }}>{e.source_display || e.source}</td>
-                    <td><StatusPill status={e.status} /></td>
+                    <td>
+                      <select 
+                        className={`fds-badge ${getStatusBadgeClass(e.status)}`}
+                        style={{ border: 'none', appearance: 'none', cursor: 'pointer', outline: 'none', fontWeight: 600, textAlign: 'center' }}
+                        value={e.status || ''}
+                        onClick={(ev) => ev.stopPropagation()}
+                        onChange={async (ev) => {
+                          const newStatus = ev.target.value;
+                          try {
+                            await fdsApi.updateEnquiry(authFetchJson, e.id, { status: newStatus });
+                            setEnquiries(prev => prev.map(enq => enq.id === e.id ? { ...enq, status: newStatus } : enq));
+                          } catch (err) { alert('Failed to update status'); }
+                        }}
+                      >
+                        {STATUSES.map(s => <option key={s} value={s} style={{ color: '#000', background: '#fff' }}>{s.replace('_', ' ')}</option>)}
+                      </select>
+                    </td>
                     <td style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)' }}>
                       {e.follow_up_1 && <div style={{ color: e.follow_up_1 < new Date().toISOString().split('T')[0] ? '#e74c3c' : 'inherit' }}>{e.follow_up_1}</div>}
                       {e.follow_up_2 && <div style={{ opacity: 0.7 }}>{e.follow_up_2}</div>}
