@@ -479,7 +479,7 @@ export default function FdsEnquiryPage() {
                     </td>
                     <td style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)', maxWidth: 180 }}>
                       <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 4 }} title={e.remarks}>
-                        {e.remarks || 'No remarks'}
+                        {e.remarks ? e.remarks.split('\n\n').pop() : 'No remarks'}
                       </div>
                       <button 
                         className="fds-btn fds-btn-ghost" 
@@ -645,6 +645,11 @@ export default function FdsEnquiryPage() {
               </div>
               <form onSubmit={handleQuickRemarkSubmit}>
                 <div className="fds-modal-body">
+                  {remarkModal.enquiry?.remarks && (
+                    <div style={{ marginBottom: 12, maxHeight: 200, overflowY: 'auto', fontSize: '0.8rem', padding: '8px 12px', background: 'var(--fds-surface)', borderRadius: 6, whiteSpace: 'pre-wrap', border: '1px solid var(--fds-border)' }}>
+                      {remarkModal.enquiry.remarks}
+                    </div>
+                  )}
                   <textarea 
                     autoFocus
                     className="fds-input" 

@@ -525,6 +525,11 @@ export default function FdsTrialPage() {
               </div>
               <form onSubmit={handleQuickRemarkSubmit}>
                 <div className="fds-modal-body">
+                  {remarkModal.trial?.remarks && (
+                    <div style={{ marginBottom: 12, maxHeight: 200, overflowY: 'auto', fontSize: '0.8rem', padding: '8px 12px', background: 'var(--fds-surface)', borderRadius: 6, whiteSpace: 'pre-wrap', border: '1px solid var(--fds-border)' }}>
+                      {remarkModal.trial.remarks}
+                    </div>
+                  )}
                   <textarea 
                     autoFocus
                     className="fds-input" 
