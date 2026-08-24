@@ -23,7 +23,7 @@ function StatusCycleBtn({ status, onChange }) {
 export default function FdsAttendancePage() {
   const { accessToken, refreshAccessToken } = useAuth();
   const { hasPermission } = usePermissions();
-  const canEdit = hasPermission('fds:admin');
+  const canEdit = hasPermission('fds:admin') || hasPermission('fds:admin_own');
 
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [batches, setBatches] = useState([]);

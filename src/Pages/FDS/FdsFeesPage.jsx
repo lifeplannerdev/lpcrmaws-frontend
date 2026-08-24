@@ -21,7 +21,7 @@ const EMPTY_FORM = {
 export default function FdsFeesPage() {
   const { accessToken, refreshAccessToken } = useAuth();
   const { hasPermission } = usePermissions();
-  const canEdit = hasPermission('fds:admin');
+  const canEdit = hasPermission('fds:admin') || hasPermission('fds:admin_own');
   const canView = hasPermission('fds:admin') || hasPermission('fds:view') || hasPermission('fds_fees:view');
 
   const [mainTab, setMainTab] = useState('ACCOUNTS');

@@ -214,7 +214,7 @@ function StudentDetailsModal({ student, onClose, onEdit, canEdit, authFetchJson 
 export default function FdsStudentRegistryPage() {
   const { accessToken, refreshAccessToken } = useAuth();
   const { hasPermission } = usePermissions();
-  const canEdit = hasPermission('fds:admin');
+  const canEdit = hasPermission('fds:admin') || hasPermission('fds:admin_own');
   const fileInputRef = useRef();
 
   const [students, setStudents] = useState([]);

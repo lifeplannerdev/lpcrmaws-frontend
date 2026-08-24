@@ -26,7 +26,7 @@ const PKG_COLORS = { BASIC: 'var(--fds-dance)', COUPLE: 'var(--fds-zumba)', PREM
 export default function FdsWeddingGroupsPage() {
   const { accessToken, refreshAccessToken } = useAuth();
   const { hasPermission } = usePermissions();
-  const canEdit = hasPermission('fds:admin');
+  const canEdit = hasPermission('fds:admin') || hasPermission('fds:admin_own');
 
   const [groups, setGroups] = useState([]);
   const [batches, setBatches] = useState([]);

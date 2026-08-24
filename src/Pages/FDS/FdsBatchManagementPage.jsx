@@ -19,7 +19,7 @@ const EMPTY_FORM = {
 export default function FdsBatchManagementPage() {
   const { accessToken, refreshAccessToken } = useAuth();
   const { hasPermission } = usePermissions();
-  const canEdit = hasPermission('fds:admin');
+  const canEdit = hasPermission('fds:admin') || hasPermission('fds:admin_own');
 
   const [batches, setBatches] = useState([]);
   const [trainers, setTrainers] = useState([]);
