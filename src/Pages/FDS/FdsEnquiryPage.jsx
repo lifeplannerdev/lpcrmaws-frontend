@@ -489,10 +489,7 @@ export default function FdsEnquiryPage() {
                         {STATUSES.map(s => <option key={s} value={s} style={{ color: '#000', background: '#fff' }}>{s.replace('_', ' ')}</option>)}
                       </select>
                     </td>
-                    <td style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)' }}>
-                      {e.follow_up_1 && <div style={{ color: e.follow_up_1 < new Date().toISOString().split('T')[0] ? '#e74c3c' : 'inherit' }}>{e.follow_up_1}</div>}
-                      {e.follow_up_2 && <div style={{ opacity: 0.7 }}>{e.follow_up_2}</div>}
-                    </td>
+
                     <td style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)', maxWidth: 180 }}>
                       <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 4 }} title={e.remarks}>
                         {e.remarks ? e.remarks.split('\n\n').pop() : 'No remarks'}

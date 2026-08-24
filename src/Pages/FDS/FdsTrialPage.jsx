@@ -339,7 +339,61 @@ export default function FdsTrialPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr>
+                  <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40 }}><div className="fds-spinner" style={{ margin: '0 auto' }} /></td></tr>
+                ) : trials.length === 0 ? (
+                  <tr><td colSpan={11}><div className="fds-empty"><div className="fds-empty-title">No trials found</div></div></td></tr>
+                ) : trials.map(t => (
+                  <tr key={t.id}>
+                    <td><span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--fds-primary)' }}>{t.trial_id}</span></td>
+                    <td>
+                      <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{t.date}</div>
+                      {t.time && <div style={{ fontSize: '0.75rem', color: 'var(--fds-text-muted)' }}>{t.time}</div>}
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{t.name}</div>
+                      {t.age && <div style={{ fontSize: '0.75rem', color: 'var(--fds-text-muted)' }}>Age {t.age}</div>}
+                    </td>
+                    <td><span className={`fds-badge fds-badge-${t.class_category?.toLowerCase()}`}>{t.class_category}</span></td>
+                    <td style={{ fontSize: '0.82rem' }}>{t.phone || '—'}</td>
+                    <td style={{ fontWeight: 600, color: 'var(--fds-primary)' }}>₹{Number(t.fee_quoted || 0).toLocaleString('en-IN')}</td>
+                    <td>
+                      {t.trainer_rating ? <StarRating value={parseInt(t.trainer_rating)} readOnly /> : <span style={{ color: 'var(--fds-text-faint)' }}>—</span>}
+                    </td>
+                    <td>
+                      <select 
+                        className={`fds-badge ${getStatusBadgeClass(t.status)}`}
+                        style={{ border: 'none', appearance: 'none', cursor: 'pointer', outline: 'none', fontWeight: 600, textAlign: 'center' }}
+                        value={t.status || ''}
+                        onClick={(ev) => ev.stopPropagation()}
+                        onChange={async (ev) => {
+                          const newStatus = ev.target.value;
+                          try {
+                            await fdsApi.updateTrial(authFetchJson, t.id, { status: newStatus });
+                            setTrials(prev => prev.map(x => x.id === t.id ? { ...x, status: newStatus } : x));
+                          } catch (err) { alert('Failed to update status'); }
+                        }}
+                      >
+                        {STATUSES.map(s => <option key={s} value={s} style={{ color: '#000', background: '#fff' }}>{s.replace('_', ' ')}</option>)}
+                      </select>
+                    </td>
+                    <td>
+                      {t.converted
+                        ? <span className="fds-badge fds-badge-green"><CheckCircle size={10} /> Yes</span>
+                        : <span className="fds-badge fds-badge-gray">No</span>
+                      }
+                    </td>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)', maxWidth: 180 }}>
+                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 4 }} title={t.remarks}>
+                        {t.remarks ? t.remarks.split('\n\n').pop() : 'No remarks'}
+                      </div>
+                      <button 
+                        className="fds-btn fds-btn-ghost" 
+                        style={{ padding: 0, fontSize: '0.7rem', color: 'var(--fds-primary)' }}
+                        onClick={(ev) => { ev.stopPropagation(); setRemarkModal({ open: true, trial: t, text: '' }); }}
+                      >
+                        + Add Remark
+                      </button>
+                    </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         {t.has_student ? (
