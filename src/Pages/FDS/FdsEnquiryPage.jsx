@@ -38,7 +38,7 @@ function SortIcon({ field, sortField, sortDir }) {
 }
 
 export default function FdsEnquiryPage() {
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const canEdit = hasPermission('fds:admin') || hasPermission('fds:admin_own');
@@ -71,6 +71,7 @@ export default function FdsEnquiryPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [remarkModal, setRemarkModal] = useState({ open: false, enquiry: null, text: '' });
 
   // Import Preview Modal
   const [showImportPreview, setShowImportPreview] = useState(false);
@@ -146,6 +147,29 @@ export default function FdsEnquiryPage() {
     });
     setEditId(e.id);
     setShowModal(true);
+  };
+
+  
+  const handleQuickRemarkSubmit = async (e) => {
+    e.preventDefault();
+    if (!remarkModal.enquiry || !remarkModal.text.trim()) return;
+    
+    try {
+      const userStr = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : (user?.username || 'User');
+      const now = new Date();
+      const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      
+      const newRemarkLine = `[${dateStr}] ${userStr}: ${remarkModal.text.trim()}`;
+      const existingRemarks = remarkModal.enquiry.remarks || '';
+      const updatedRemarks = existingRemarks ? `${existingRemarks}\n\n${newRemarkLine}` : newRemarkLine;
+      
+      await fdsApi.updateEnquiry(authFetchJson, remarkModal.enquiry.id, { remarks: updatedRemarks });
+      
+      setRemarkModal({ open: false, enquiry: null, text: '' });
+      load();
+    } catch (err) {
+      alert('Failed to add remark: ' + err.message);
+    }
   };
 
   const handleSave = async (ev) => {
@@ -404,6 +428,7 @@ export default function FdsEnquiryPage() {
                     { key: 'source', label: 'Source' },
                     { key: 'status', label: 'Status' },
                     { key: 'follow_up_1', label: 'Follow Up' },
+                    { key: 'remarks', label: 'Remarks' },
                     { key: 'actions', label: '' },
                   ].map(({ key, label }) => (
                     <th key={key} onClick={() => key !== 'actions' && handleSort(key)}>
@@ -451,6 +476,18 @@ export default function FdsEnquiryPage() {
                     <td style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)' }}>
                       {e.follow_up_1 && <div style={{ color: e.follow_up_1 < new Date().toISOString().split('T')[0] ? '#e74c3c' : 'inherit' }}>{e.follow_up_1}</div>}
                       {e.follow_up_2 && <div style={{ opacity: 0.7 }}>{e.follow_up_2}</div>}
+                    </td>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)', maxWidth: 180 }}>
+                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 4 }} title={e.remarks}>
+                        {e.remarks || 'No remarks'}
+                      </div>
+                      <button 
+                        className="fds-btn fds-btn-ghost" 
+                        style={{ padding: 0, fontSize: '0.7rem', color: 'var(--fds-primary)' }}
+                        onClick={(ev) => { ev.stopPropagation(); setRemarkModal({ open: true, enquiry: e, text: '' }); }}
+                      >
+                        + Add Remark
+                      </button>
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
@@ -591,6 +628,36 @@ export default function FdsEnquiryPage() {
                   <button type="submit" className="fds-btn fds-btn-primary" disabled={saving}>
                     {saving ? 'Saving...' : editId ? 'Update' : 'Create Enquiry'}
                   </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+
+        {/* ── Quick Remark Modal ── */}
+        {remarkModal.open && (
+          <div className="fds-modal-overlay" onClick={() => setRemarkModal({ open: false, enquiry: null, text: '' })}>
+            <div className="fds-modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+              <div className="fds-modal-header">
+                <div className="fds-modal-title">Add Remark</div>
+                <button className="fds-btn fds-btn-ghost" onClick={() => setRemarkModal({ open: false, enquiry: null, text: '' })}><X size={18} /></button>
+              </div>
+              <form onSubmit={handleQuickRemarkSubmit}>
+                <div className="fds-modal-body">
+                  <textarea 
+                    autoFocus
+                    className="fds-input" 
+                    rows={4} 
+                    placeholder="Type your remark here..."
+                    value={remarkModal.text}
+                    onChange={e => setRemarkModal(prev => ({ ...prev, text: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="fds-modal-footer">
+                  <button type="button" className="fds-btn fds-btn-secondary" onClick={() => setRemarkModal({ open: false, enquiry: null, text: '' })}>Cancel</button>
+                  <button type="submit" className="fds-btn fds-btn-primary">Save Remark</button>
                 </div>
               </form>
             </div>
