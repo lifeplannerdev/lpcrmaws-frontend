@@ -109,7 +109,7 @@ export default function FdsEnquiryPage() {
     if (dateFrom) p.date_from = dateFrom;
     if (dateTo)   p.date_to   = dateTo;
     if (followUpDue) p.follow_up_due = 'true';
-    p.ordering = sortDir === 'asc' ? sortField : `-${sortField}`;
+    p.ordering = sortDir === 'asc' ? `${sortField},id` : `-${sortField},-id`;
     return p;
   }, [page, activeCategory, search, filterStatus, filterSource, dateFrom, dateTo, followUpDue, sortField, sortDir, viewTab]);
 
