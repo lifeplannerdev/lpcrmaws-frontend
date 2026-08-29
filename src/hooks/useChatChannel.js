@@ -10,6 +10,18 @@ export const useChatChannel = (conversationId, onNewMessage, onMessagesDelivered
   const { pusher, isReady } = usePusher();
   const channelRef = useRef(null);
 
+  const onNewMessageRef = useRef(onNewMessage);
+  const onMessagesDeliveredRef = useRef(onMessagesDelivered);
+  const onMessagesReadRef = useRef(onMessagesRead);
+  const onMessageDeletedRef = useRef(onMessageDeleted);
+
+  useEffect(() => {
+    onNewMessageRef.current = onNewMessage;
+    onMessagesDeliveredRef.current = onMessagesDelivered;
+    onMessagesReadRef.current = onMessagesRead;
+    onMessageDeletedRef.current = onMessageDeleted;
+  });
+
   useEffect(() => {
     if (!isReady || !pusher || !conversationId) return;
 
@@ -17,19 +29,19 @@ export const useChatChannel = (conversationId, onNewMessage, onMessagesDelivered
     channelRef.current = pusher.subscribe(channelName);
 
     channelRef.current.bind('new-message', (data) => {
-      onNewMessage?.(data);
+      onNewMessageRef.current?.(data);
     });
 
     channelRef.current.bind('messages-delivered', (data) => {
-      onMessagesDelivered?.(data);
+      onMessagesDeliveredRef.current?.(data);
     });
 
     channelRef.current.bind('messages-read', (data) => {
-      onMessagesRead?.(data);
+      onMessagesReadRef.current?.(data);
     });
 
     channelRef.current.bind('message-deleted', (data) => {
-      onMessageDeleted?.(data);
+      onMessageDeletedRef.current?.(data);
     });
 
     return () => {
@@ -38,3 +50,4 @@ export const useChatChannel = (conversationId, onNewMessage, onMessagesDelivered
     };
   }, [isReady, pusher, conversationId]);
 };
+

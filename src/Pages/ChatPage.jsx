@@ -474,8 +474,11 @@ const ChatPage = () => {
   }, [selectedConv]);
 
   const handleNewMessage = useCallback((data) => {
+    const targetConvId = data.conversation_id || selectedConv?.id;
+    if (!targetConvId) return;
+
     setMessages((prev) => {
-      const convMsgs = prev[selectedConv.id] || [];
+      const convMsgs = prev[targetConvId] || [];
       let foundOptimistic = false;
       const nextMsgs = convMsgs.map(m => {
         if (m.client_id && m.client_id === data.client_id) {
@@ -485,25 +488,25 @@ const ChatPage = () => {
         return m;
       });
       if (foundOptimistic) {
-        return { ...prev, [selectedConv.id]: nextMsgs };
+        return { ...prev, [targetConvId]: nextMsgs };
       }
       if (convMsgs.some((m) => m.id === data.id)) return prev;
       return {
         ...prev,
-        [selectedConv.id]: [...convMsgs, data],
+        [targetConvId]: [...convMsgs, data],
       };
     });
 
     // Notify delivered if we are not the sender
     if (data.sender?.id !== user?.id) {
-      markMessagesDelivered(selectedConv.id);
-      if (selectedConv) markMessagesRead(selectedConv.id);
+      markMessagesDelivered(targetConvId);
+      if (selectedConv?.id === targetConvId) markMessagesRead(targetConvId);
     }
 
     // Update sidebar last message
     setConversations((prev) =>
       prev.map((c) =>
-        c.id === selectedConv.id
+        c.id === targetConvId
           ? { ...c, last_message: data }
           : c
       )
