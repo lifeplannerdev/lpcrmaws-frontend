@@ -158,6 +158,37 @@ export default function LeadsPage() {
   const [filterCampaign, setFilterCampaign]   = useState('');
   const [filterToday, setFilterToday]         = useState(false);
   const [companyFilter, setCompanyFilter]     = useState('');
+
+  // Real-time synchronization event listener from LiveCallModal
+  useEffect(() => {
+    const handleLeadUpdated = (e) => {
+      const updated = e.detail;
+      if (updated?.id) {
+        setLeads(prev => prev.map(l => l.id === updated.id ? { ...l, ...updated } : l));
+      }
+      fetchLeadsRef.current?.();
+    };
+    const handleLeadCreated = (e) => {
+      const created = e.detail;
+      if (created?.id) {
+        setLeads(prev => [created, ...prev.filter(l => l.id !== created.id)]);
+      }
+      fetchLeadsRef.current?.();
+    };
+    const handleRefresh = () => {
+      fetchLeadsRef.current?.();
+    };
+
+    window.addEventListener('leadUpdated', handleLeadUpdated);
+    window.addEventListener('leadCreated', handleLeadCreated);
+    window.addEventListener('refreshLeads', handleRefresh);
+
+    return () => {
+      window.removeEventListener('leadUpdated', handleLeadUpdated);
+      window.removeEventListener('leadCreated', handleLeadCreated);
+      window.removeEventListener('refreshLeads', handleRefresh);
+    };
+  }, []);
   const [viewMode, setViewMode]               = useState('list'); // 'list' | 'kanban'
   const [loading, setLoading]                 = useState(false);
   const [initialLoad, setInitialLoad]         = useState(true);

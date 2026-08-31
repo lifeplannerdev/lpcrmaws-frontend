@@ -74,6 +74,41 @@ export default function LiveCallModal() {
     }
   }, [activeCall?.id, activeCall?.status, activeCall?.connectedAt, activeCall?.startedAt, activeCall?.endedAt, activeCall?.duration]);
 
+  // Dynamic background verification for phone number if activeCall was marked as isNewLead
+  useEffect(() => {
+    if (!activeCall || !activeCall.phone || !activeCall.isNewLead) return;
+    const cleanPhone = String(activeCall.phone).replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) return;
+
+    let isMounted = true;
+    const searchDigits = cleanPhone.slice(-10);
+
+    authFetch(`${apiBaseUrl}/leads/?search=${searchDigits}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!isMounted || !data) return;
+        let list = [];
+        if (data.results && Array.isArray(data.results.leads)) list = data.results.leads;
+        else if (data.results && Array.isArray(data.results)) list = data.results;
+        else if (Array.isArray(data)) list = data;
+
+        const match = list.find(l => {
+          const lp = String(l.phone || '').replace(/\D/g, '');
+          return lp.endsWith(searchDigits) || lp === cleanPhone;
+        });
+
+        if (match) {
+          activeCall.isNewLead = false;
+          activeCall.leadId = match.id;
+          activeCall.leadName = match.name;
+          setExistingLeadData(match);
+        }
+      })
+      .catch(err => console.error('[LiveCallModal] Check phone error:', err));
+
+    return () => { isMounted = false; };
+  }, [activeCall?.id, activeCall?.phone, activeCall?.isNewLead, authFetch, apiBaseUrl]);
+
   // Fetch full details & remarks history if it's an existing lead
   useEffect(() => {
     if (!activeCall || activeCall.isNewLead || !activeCall.leadId) {
@@ -170,12 +205,13 @@ export default function LiveCallModal() {
     try {
       const rawRemarks = formData.remarks?.trim() || '';
       const formattedRemark = rawRemarks ? formatRemarkText(rawRemarks) : '';
+      const cleanPhoneDigits = String(activeCall.phone || '').replace(/\D/g, '');
 
       if (activeCall.isNewLead) {
         // 1. Create New Lead with formatted remarks
         const payload = {
           name: formData.name.trim(),
-          phone: activeCall.phone,
+          phone: cleanPhoneDigits || activeCall.phone,
           status: formData.status || 'ENQUIRY',
           priority: formData.priority || 'MEDIUM',
           source: formData.source || 'VOXBAY CALL',
@@ -200,6 +236,7 @@ export default function LiveCallModal() {
 
         const createdLead = await res.json();
         const createdId = createdLead.id || createdLead.lead?.id;
+        const leadObj = createdLead.lead || createdLead;
 
         // Add follow-up if date or remarks present
         if (createdId && (formattedRemark || formData.follow_up_date)) {
@@ -208,7 +245,7 @@ export default function LiveCallModal() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               lead: createdId,
-              phone_number: activeCall.phone,
+              phone_number: cleanPhoneDigits || activeCall.phone,
               name: formData.name,
               follow_up_date: formData.follow_up_date || new Date().toISOString().split('T')[0],
               follow_up_time: formData.follow_up_time || null,
@@ -219,6 +256,10 @@ export default function LiveCallModal() {
             }),
           });
         }
+
+        // Real-time synchronization event dispatch
+        window.dispatchEvent(new CustomEvent('leadCreated', { detail: leadObj }));
+        window.dispatchEvent(new CustomEvent('refreshLeads'));
 
         toast.success(`🎉 Lead "${formData.name}" created successfully!`);
       } else {
@@ -254,7 +295,7 @@ export default function LiveCallModal() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               lead: leadId,
-              phone_number: activeCall.phone,
+              phone_number: cleanPhoneDigits || activeCall.phone,
               name: existingLeadData?.name || activeCall.leadName,
               follow_up_date: formData.follow_up_date || new Date().toISOString().split('T')[0],
               follow_up_time: formData.follow_up_time || null,
@@ -265,6 +306,20 @@ export default function LiveCallModal() {
             }),
           });
         }
+
+        // Real-time synchronization event dispatch
+        window.dispatchEvent(new CustomEvent('leadUpdated', { 
+          detail: { 
+            id: leadId, 
+            remarks: updatedRemarks, 
+            status: formData.status,
+            priority: formData.priority,
+            interested_country: formData.interested_country,
+            interested_course: formData.interested_course,
+            location: formData.location,
+          } 
+        }));
+        window.dispatchEvent(new CustomEvent('refreshLeads'));
 
         toast.success(`💾 Remarks & Lead status updated for ${existingLeadData?.name || activeCall.leadName}!`);
       }

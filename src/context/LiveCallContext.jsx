@@ -12,31 +12,39 @@ export const LiveCallProvider = ({ children }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
-  // Helper to get currently focused call
-  const activeCall = calls.find(c => c.id === activeCallId) || calls[0] || null;
+  // Extract and clean phone digits from payload
+  const extractPhone = (data) => {
+    const raw = data.caller_number || data.callerNumber || data.callernumber || data.phone || data.phone_number || data.destination || data.destination_number || data.calledNumber || data.callerid || data.number || '';
+    const digits = String(raw).replace(/\D/g, '');
+    return digits || raw || '';
+  };
 
   // Add or update a call
   const upsertCall = useCallback((callData) => {
     const callUuid = callData.call_uuid || callData.id || `call_${Date.now()}`;
-    
+    const cleanPhone = extractPhone(callData);
+    const isIncoming = (callData.call_type || 'incoming') === 'incoming';
+    const isNew = callData.is_new_lead !== undefined ? Boolean(callData.is_new_lead) : !callData.lead_id;
+    const defaultLeadName = callData.lead_name || callData.leadName || (isNew ? `Voxbay ${isIncoming ? 'Incoming' : 'Outgoing'} - ${cleanPhone}` : 'Existing Lead');
+
     setCalls(prevCalls => {
       const existingIndex = prevCalls.findIndex(c => c.id === callUuid);
-      const isNew = existingIndex === -1;
+      const isFirstTime = existingIndex === -1;
       
       const updatedCall = {
         id: callUuid,
-        phone: callData.caller_number || callData.phone || 'Unknown Number',
+        phone: cleanPhone,
         leadId: callData.lead_id || callData.leadId || null,
-        leadName: callData.lead_name || callData.leadName || (callData.is_new_lead ? `New Caller (${callData.caller_number || ''})` : 'Existing Lead'),
-        isNewLead: callData.is_new_lead !== undefined ? Boolean(callData.is_new_lead) : !callData.lead_id,
+        leadName: defaultLeadName,
+        isNewLead: isNew,
         callType: callData.call_type || 'incoming',
         status: callData.event_type === 'answered' || callData.callevent === 'connect' || callData.callevent === 'answer' ? 'connected' : (callData.status || 'ringing'),
-        startedAt: isNew ? Date.now() : (prevCalls[existingIndex].startedAt || Date.now()),
-        connectedAt: (callData.event_type === 'answered' || callData.callevent === 'connect') ? Date.now() : (isNew ? null : prevCalls[existingIndex].connectedAt),
-        endedAt: callData.event_type === 'ended' ? Date.now() : (isNew ? null : prevCalls[existingIndex].endedAt),
-        duration: callData.duration !== undefined ? callData.duration : (isNew ? 0 : prevCalls[existingIndex].duration || 0),
-        recordingUrl: callData.recording_url || (isNew ? null : prevCalls[existingIndex].recordingUrl),
-        assignedHandler: callData.assigned_handler || (isNew ? null : prevCalls[existingIndex].assignedHandler),
+        startedAt: isFirstTime ? Date.now() : (prevCalls[existingIndex].startedAt || Date.now()),
+        connectedAt: (callData.event_type === 'answered' || callData.callevent === 'connect') ? Date.now() : (isFirstTime ? null : prevCalls[existingIndex].connectedAt),
+        endedAt: callData.event_type === 'ended' ? Date.now() : (isFirstTime ? null : prevCalls[existingIndex].endedAt),
+        duration: callData.duration !== undefined ? callData.duration : (isFirstTime ? 0 : prevCalls[existingIndex].duration || 0),
+        recordingUrl: callData.recording_url || (isFirstTime ? null : prevCalls[existingIndex].recordingUrl),
+        assignedHandler: callData.assigned_handler || (isFirstTime ? null : prevCalls[existingIndex].assignedHandler),
         leadDetails: {
           status: callData.lead_status || 'ENQUIRY',
           priority: callData.lead_priority || 'MEDIUM',
@@ -44,10 +52,10 @@ export const LiveCallProvider = ({ children }) => {
           interested_country: callData.interested_country || '',
           interested_course: callData.interested_course || '',
           location: callData.location || '',
-          ...(isNew ? {} : prevCalls[existingIndex].leadDetails),
+          ...(isFirstTime ? {} : prevCalls[existingIndex].leadDetails),
         },
-        formData: isNew ? {
-          name: callData.lead_name || (callData.is_new_lead ? `Lead - ${callData.caller_number || ''}` : ''),
+        formData: isFirstTime ? {
+          name: isNew ? defaultLeadName : (callData.lead_name || ''),
           status: callData.lead_status || 'ENQUIRY',
           priority: callData.lead_priority || 'MEDIUM',
           program: callData.program || '',
@@ -61,7 +69,7 @@ export const LiveCallProvider = ({ children }) => {
         } : prevCalls[existingIndex].formData,
       };
 
-      if (isNew) {
+      if (isFirstTime) {
         return [...prevCalls, updatedCall];
       } else {
         const next = [...prevCalls];
@@ -158,19 +166,24 @@ export const LiveCallProvider = ({ children }) => {
     setIsMinimized(false);
   }, []);
 
+  // Helper to get currently focused call
+  const activeCall = calls.find(c => c.id === activeCallId) || calls[0] || null;
+
   // Manual Trigger for Testing / Simulating incoming or outgoing call
   const simulateCall = useCallback(({ phone = '9876543210', isNewLead = false, leadId = null, leadName = 'Akash Sharma', callType = 'incoming', status = 'connected' } = {}) => {
     const testUuid = `sim_${Date.now()}`;
+    const cleanPhone = String(phone).replace(/\D/g, '') || '9876543210';
+    const isIncoming = callType === 'incoming';
     const payload = {
       call_uuid: testUuid,
-      caller_number: phone,
+      caller_number: cleanPhone,
       agent_extension: user?.voxbay_extension || '101',
       call_type: callType,
       callevent: status === 'connected' ? 'connect' : 'ringing',
       event_type: status === 'connected' ? 'answered' : 'ringing',
       is_new_lead: isNewLead,
       lead_id: isNewLead ? null : (leadId || 101),
-      lead_name: isNewLead ? `New Caller (+91 ${phone})` : leadName,
+      lead_name: isNewLead ? `Voxbay ${isIncoming ? 'Incoming' : 'Outgoing'} - ${cleanPhone}` : leadName,
       lead_status: 'ENQUIRY',
       lead_priority: 'HIGH',
       program: 'Film Making Diploma',

@@ -227,15 +227,33 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
   useEffect(() => {
     const handleOpenModal = (e) => setRemarkModalLead(e.detail);
     const handleCall = (e) => initiateCall(e.detail);
+    const handleLeadUpdated = (e) => {
+      const updated = e.detail;
+      if (updated?.id) {
+        setLocalLeads(prev => prev.map(l => l.id === updated.id ? { ...l, ...updated } : l));
+        if (onUpdateLead) onUpdateLead(updated);
+      }
+    };
+    const handleLeadCreated = (e) => {
+      const created = e.detail;
+      if (created?.id) {
+        setLocalLeads(prev => [created, ...prev.filter(l => l.id !== created.id)]);
+        if (onUpdateLead) onUpdateLead(created);
+      }
+    };
     
     window.addEventListener('openRemarkModal', handleOpenModal);
     window.addEventListener('initiateVoxbayCall', handleCall);
+    window.addEventListener('leadUpdated', handleLeadUpdated);
+    window.addEventListener('leadCreated', handleLeadCreated);
     
     return () => {
       window.removeEventListener('openRemarkModal', handleOpenModal);
       window.removeEventListener('initiateVoxbayCall', handleCall);
+      window.removeEventListener('leadUpdated', handleLeadUpdated);
+      window.removeEventListener('leadCreated', handleLeadCreated);
     };
-  }, [initiateCall]);
+  }, [initiateCall, onUpdateLead]);
 
   const handleRemarkSubmit = async (leadToUpdate, newRemarkText) => {
     const timestamp = format(new Date(), 'dd/MM/yyyy HH:mm');
