@@ -55,6 +55,7 @@ import FdsAttendancePage from './Pages/FDS/FdsAttendancePage.jsx';
 import FdsFeesPage from './Pages/FDS/FdsFeesPage.jsx';
 import FdsWeddingGroupsPage from './Pages/FDS/FdsWeddingGroupsPage.jsx';
 import FdsFeePoliciesPage from './Pages/FDS/FdsFeePoliciesPage.jsx';
+import LiveCallModal from './Components/voxbay/LiveCallModal.jsx';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -83,7 +84,7 @@ const PermissionRoute = ({ children, resources = [], permissions = [], roles = [
 };
 
 export default function App() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   
   useEffect(() => {
     if (user?.company === 'FDS') {
@@ -95,6 +96,7 @@ export default function App() {
 
   return (
     <Router>
+      {isAuthenticated && <LiveCallModal />}
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<ProtectedRoute><DashboardOverview /></ProtectedRoute>} />

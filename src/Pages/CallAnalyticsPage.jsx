@@ -13,6 +13,8 @@ import UniqueMissedCallsTable from '../Components/voxbay/UniqueMissedCallsTable'
 import CallLogsTable from '../Components/voxbay/CallLogsTable';
 import VoxbaySettingsTab from '../Components/voxbay/VoxbaySettingsTab';
 import VoxbayReportsTab from '../Components/voxbay/VoxbayReportsTab';
+import { useLiveCall } from '../context/LiveCallContext';
+import { Sparkles } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -461,6 +463,7 @@ export default function CallAnalyticsPage() {
   const { user, accessToken } = useAuth();
   const userRole = user?.role_names?.length ? user.role_names.join(', ') : (user?.user_role || '');
 
+  const { simulateCall } = useLiveCall();
   const agentMap = useAgentMap(accessToken);
   const [dateRange,   setDateRange]   = useState('today');
   const [customStart, setCustomStart] = useState('');
@@ -545,6 +548,25 @@ export default function CallAnalyticsPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Live Call Dossier Test Simulators */}
+            <div className="flex items-center gap-1 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 rounded-xl p-1 shadow-sm">
+              <button
+                onClick={() => simulateCall({ phone: '9876543210', isNewLead: true, callType: 'incoming' })}
+                className="px-2.5 py-1 text-[11px] font-bold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/60 rounded-lg flex items-center gap-1 transition-all"
+                title="Test Fresh Lead Call Popup"
+              >
+                <Sparkles size={12} className="text-purple-500" /> Test New Lead Call
+              </button>
+              <span className="text-purple-300 dark:text-purple-700">|</span>
+              <button
+                onClick={() => simulateCall({ phone: '918089040107', isNewLead: false, leadId: 1, leadName: 'Test Student Rahul', callType: 'incoming' })}
+                className="px-2.5 py-1 text-[11px] font-bold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/60 rounded-lg flex items-center gap-1 transition-all"
+                title="Test Existing Lead Call Dossier"
+              >
+                <Sparkles size={12} className="text-purple-500" /> Test Existing Lead
+              </button>
+            </div>
+
             <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border ${anyError ? 'bg-red-50 border-red-200 text-red-500' : 'bg-emerald-50 border-emerald-200 text-emerald-600'}`}>
               {anyError ? <WifiOff size={11}/> : <Wifi size={11}/>}
               {anyError ? 'Offline' : `${totalLogs.toLocaleString()} records`}

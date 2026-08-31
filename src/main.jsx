@@ -6,7 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import { PusherProvider } from './context/PusherContext';
 import { PermissionsProvider } from './context/PermissionsContext';
 import { ApiProvider } from './context/ApiContext';
-
+import { LiveCallProvider } from './context/LiveCallContext';
 
 // Unregister any rogue/legacy service workers to prevent cache pollution
 if ('serviceWorker' in navigator) {
@@ -23,7 +23,9 @@ createRoot(document.getElementById('root')).render(
       <PermissionsProvider>
         <ApiProvider>
           <PusherProvider>
-            <App />
+            <LiveCallProvider>
+              <App />
+            </LiveCallProvider>
           </PusherProvider>
         </ApiProvider>
       </PermissionsProvider>
