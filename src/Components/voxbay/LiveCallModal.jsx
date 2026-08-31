@@ -145,6 +145,20 @@ export default function LiveCallModal() {
     return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
+  // Standard CRM Remark Formatter: [DD/MM/YYYY HH:mm] Staff Name: Remark text
+  const formatRemarkText = (rawText) => {
+    if (!rawText || !rawText.trim()) return '';
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const timestamp = `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+    const staffName = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : (user?.username || 'Staff');
+    return `[${timestamp}] ${staffName}: ${rawText.trim()}`;
+  };
+
   // Submit Handler
   const handleSave = async () => {
     if (activeCall.isNewLead && !formData.name?.trim()) {
@@ -154,8 +168,11 @@ export default function LiveCallModal() {
 
     setSaving(true);
     try {
+      const rawRemarks = formData.remarks?.trim() || '';
+      const formattedRemark = rawRemarks ? formatRemarkText(rawRemarks) : '';
+
       if (activeCall.isNewLead) {
-        // 1. Create New Lead
+        // 1. Create New Lead with formatted remarks
         const payload = {
           name: formData.name.trim(),
           phone: activeCall.phone,
@@ -166,7 +183,7 @@ export default function LiveCallModal() {
           interested_country: formData.interested_country || '',
           interested_course: formData.interested_course || '',
           location: formData.location || '',
-          remarks: formData.remarks || '',
+          remarks: formattedRemark,
           assigned_to: user?.id || null,
         };
 
@@ -185,7 +202,7 @@ export default function LiveCallModal() {
         const createdId = createdLead.id || createdLead.lead?.id;
 
         // Add follow-up if date or remarks present
-        if (createdId && (formData.remarks || formData.follow_up_date)) {
+        if (createdId && (formattedRemark || formData.follow_up_date)) {
           await authFetch(`${apiBaseUrl}/followups/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -198,31 +215,40 @@ export default function LiveCallModal() {
               followup_type: 'call',
               status: formData.follow_up_date ? 'pending' : 'contacted',
               priority: (formData.priority || 'medium').toLowerCase(),
-              notes: formData.remarks || 'Call logged via Live Call Dossier',
+              notes: formattedRemark || 'Call logged via Live Call Dossier',
             }),
           });
         }
 
         toast.success(`🎉 Lead "${formData.name}" created successfully!`);
       } else {
-        // 2. Existing Lead: Update Lead & Record Follow-up Remark
+        // 2. Existing Lead: Append to existing remarks in standard CRM format & Record Follow-up
         const leadId = activeCall.leadId;
+        const existingRemarks = existingLeadData?.remarks || '';
+        const updatedRemarks = existingRemarks && formattedRemark
+          ? `${existingRemarks}\n\n${formattedRemark}`
+          : (formattedRemark || existingRemarks);
 
-        // Update Lead status/country/course if changed
+        // Update Lead status/country/course/location/remarks
+        const updatePayload = {
+          status: formData.status,
+          priority: formData.priority,
+          interested_country: formData.interested_country,
+          interested_course: formData.interested_course,
+          location: formData.location,
+        };
+        if (formattedRemark) {
+          updatePayload.remarks = updatedRemarks;
+        }
+
         await authFetch(`${apiBaseUrl}/leads/${leadId}/update/`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            status: formData.status,
-            priority: formData.priority,
-            interested_country: formData.interested_country,
-            interested_course: formData.interested_course,
-            location: formData.location,
-          }),
+          body: JSON.stringify(updatePayload),
         });
 
         // Add Follow-up Remark
-        if (formData.remarks || formData.follow_up_date) {
+        if (formattedRemark || formData.follow_up_date) {
           await authFetch(`${apiBaseUrl}/followups/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -235,7 +261,7 @@ export default function LiveCallModal() {
               followup_type: 'call',
               status: formData.follow_up_date ? 'pending' : 'contacted',
               priority: (formData.priority || 'medium').toLowerCase(),
-              notes: formData.remarks || 'Call remarks logged via Live Call Dossier',
+              notes: formattedRemark || 'Call remarks logged via Live Call Dossier',
             }),
           });
         }
@@ -681,32 +707,41 @@ export default function LiveCallModal() {
                 <div className="bg-white dark:bg-slate-800/90 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-700/80 shadow-sm flex flex-col max-h-[360px]">
                   <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-2.5 mb-3">
                     <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                      <History size={15} className="text-purple-600" /> Previous Remarks & Conversation History ({pastRemarks.length})
+                      <History size={15} className="text-purple-600" /> Previous Remarks & Conversation History
                     </h4>
                     {loadingHistory && <Loader2 size={13} className="animate-spin text-purple-600" />}
                   </div>
 
-                  <div className="overflow-y-auto space-y-2.5 pr-1 flex-1">
+                  <div className="overflow-y-auto space-y-3 pr-1 flex-1">
+                    {existingLeadData?.remarks && (
+                      <div className="whitespace-pre-wrap text-xs text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900/80 p-3.5 rounded-xl border border-slate-200/60 dark:border-slate-800 font-mono leading-relaxed shadow-inner">
+                        {existingLeadData.remarks}
+                      </div>
+                    )}
+
                     {pastRemarks.length > 0 ? (
-                      pastRemarks.map((rem, idx) => (
-                        <div key={rem.id || idx} className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800/80 text-xs">
-                          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                            <span className="text-purple-600 dark:text-purple-400 font-bold">
-                              👤 {rem.assigned_to_name || rem.assigned_to?.username || 'Counselor'}
-                            </span>
-                            <span className="font-mono">{formatPastDate(rem.follow_up_date || rem.created_at)}</span>
+                      <div className="space-y-2 pt-1">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Follow-up Log</p>
+                        {pastRemarks.map((rem, idx) => (
+                          <div key={rem.id || idx} className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/80 text-xs">
+                            <div className="flex items-center justify-between text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                              <span className="text-purple-600 dark:text-purple-400 font-bold">
+                                👤 {rem.assigned_to_name || rem.assigned_to?.username || 'Counselor'}
+                              </span>
+                              <span className="font-mono">{formatPastDate(rem.follow_up_date || rem.created_at)}</span>
+                            </div>
+                            <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                              {rem.notes || rem.remarks || 'No notes provided'}
+                            </p>
                           </div>
-                          <p className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-                            {rem.notes || rem.remarks || 'No notes provided'}
-                          </p>
-                        </div>
-                      ))
-                    ) : (
+                        ))}
+                      </div>
+                    ) : !existingLeadData?.remarks ? (
                       <div className="text-center py-6 text-slate-400 text-xs flex flex-col items-center gap-1">
                         <MessageSquare size={24} className="text-slate-300 dark:text-slate-700" />
                         No previous remarks recorded for this lead yet.
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
