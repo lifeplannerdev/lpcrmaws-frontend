@@ -238,13 +238,14 @@ export default function LiveCallModal() {
         const createdId = createdLead.id || createdLead.lead?.id;
         const leadObj = createdLead.lead || createdLead;
 
-        // Add follow-up if date or remarks present
-        if (createdId && (formattedRemark || formData.follow_up_date)) {
+        // Add or update follow-up if date or remarks present
+        if (createdId && (formattedRemark || formData.follow_up_date || activeCall.duration || activeCall.recordingUrl)) {
           await authFetch(`${apiBaseUrl}/followups/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               lead: createdId,
+              call_uuid: activeCall.id,
               phone_number: cleanPhoneDigits || activeCall.phone,
               name: formData.name,
               follow_up_date: formData.follow_up_date || new Date().toISOString().split('T')[0],
@@ -253,6 +254,8 @@ export default function LiveCallModal() {
               status: formData.follow_up_date ? 'pending' : 'contacted',
               priority: (formData.priority || 'medium').toLowerCase(),
               notes: formattedRemark || 'Call logged via Live Call Dossier',
+              duration: activeCall.duration || 0,
+              recording_url: activeCall.recordingUrl || null,
             }),
           });
         }
@@ -288,13 +291,14 @@ export default function LiveCallModal() {
           body: JSON.stringify(updatePayload),
         });
 
-        // Add Follow-up Remark
-        if (formattedRemark || formData.follow_up_date) {
+        // Add or update Follow-up Remark (merging with existing CDR follow-up if present)
+        if (formattedRemark || formData.follow_up_date || activeCall.duration || activeCall.recordingUrl) {
           await authFetch(`${apiBaseUrl}/followups/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               lead: leadId,
+              call_uuid: activeCall.id,
               phone_number: cleanPhoneDigits || activeCall.phone,
               name: existingLeadData?.name || activeCall.leadName,
               follow_up_date: formData.follow_up_date || new Date().toISOString().split('T')[0],
@@ -303,6 +307,8 @@ export default function LiveCallModal() {
               status: formData.follow_up_date ? 'pending' : 'contacted',
               priority: (formData.priority || 'medium').toLowerCase(),
               notes: formattedRemark || 'Call remarks logged via Live Call Dossier',
+              duration: activeCall.duration || 0,
+              recording_url: activeCall.recordingUrl || null,
             }),
           });
         }

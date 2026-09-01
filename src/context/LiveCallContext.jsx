@@ -12,11 +12,17 @@ export const LiveCallProvider = ({ children }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
-  // Extract and clean phone digits from payload
-  const extractPhone = (data) => {
-    const raw = data.caller_number || data.callerNumber || data.callernumber || data.phone || data.phone_number || data.destination || data.destination_number || data.calledNumber || data.callerid || data.number || '';
-    const digits = String(raw).replace(/\D/g, '');
-    return digits || raw || '';
+  // Helper to compare phone numbers by matching clean digits or last 10 digits
+  const isSamePhone = (p1, p2) => {
+    if (!p1 || !p2) return false;
+    const clean1 = String(p1).replace(/\D/g, '');
+    const clean2 = String(p2).replace(/\D/g, '');
+    if (!clean1 || !clean2) return false;
+    if (clean1 === clean2) return true;
+    if (clean1.length >= 10 && clean2.length >= 10) {
+      return clean1.slice(-10) === clean2.slice(-10);
+    }
+    return false;
   };
 
   // Add or update a call
@@ -27,24 +33,41 @@ export const LiveCallProvider = ({ children }) => {
     const isNew = callData.is_new_lead !== undefined ? Boolean(callData.is_new_lead) : !callData.lead_id;
     const defaultLeadName = callData.lead_name || callData.leadName || (isNew ? `Voxbay ${isIncoming ? 'Incoming' : 'Outgoing'} - ${cleanPhone}` : 'Existing Lead');
 
+    let resolvedCallId = callUuid;
+
     setCalls(prevCalls => {
-      const existingIndex = prevCalls.findIndex(c => c.id === callUuid);
+      // 1. Find by exact UUID
+      let existingIndex = prevCalls.findIndex(c => c.id === callUuid);
+      // 2. If not found by UUID, find by phone number to unify click-to-call and webhook events
+      if (existingIndex === -1 && cleanPhone) {
+        existingIndex = prevCalls.findIndex(c => isSamePhone(c.phone, cleanPhone));
+      }
+
       const isFirstTime = existingIndex === -1;
+      const prevCall = !isFirstTime ? prevCalls[existingIndex] : null;
+
+      if (prevCall && prevCall.id !== callUuid) {
+        resolvedCallId = callUuid;
+      } else if (prevCall) {
+        resolvedCallId = prevCall.id;
+      }
       
       const updatedCall = {
         id: callUuid,
-        phone: cleanPhone,
-        leadId: callData.lead_id || callData.leadId || null,
-        leadName: defaultLeadName,
-        isNewLead: isNew,
-        callType: callData.call_type || 'incoming',
-        status: callData.event_type === 'answered' || callData.callevent === 'connect' || callData.callevent === 'answer' ? 'connected' : (callData.status || 'ringing'),
-        startedAt: isFirstTime ? Date.now() : (prevCalls[existingIndex].startedAt || Date.now()),
-        connectedAt: (callData.event_type === 'answered' || callData.callevent === 'connect') ? Date.now() : (isFirstTime ? null : prevCalls[existingIndex].connectedAt),
-        endedAt: callData.event_type === 'ended' ? Date.now() : (isFirstTime ? null : prevCalls[existingIndex].endedAt),
-        duration: callData.duration !== undefined ? callData.duration : (isFirstTime ? 0 : prevCalls[existingIndex].duration || 0),
-        recordingUrl: callData.recording_url || (isFirstTime ? null : prevCalls[existingIndex].recordingUrl),
-        assignedHandler: callData.assigned_handler || (isFirstTime ? null : prevCalls[existingIndex].assignedHandler),
+        phone: cleanPhone || (prevCall?.phone ?? ''),
+        leadId: callData.lead_id || callData.leadId || prevCall?.leadId || null,
+        leadName: (callData.lead_name && !callData.lead_name.startsWith('Voxbay ')) 
+          ? callData.lead_name 
+          : (prevCall?.leadName && !prevCall.leadName.startsWith('Voxbay ') ? prevCall.leadName : defaultLeadName),
+        isNewLead: prevCall ? (callData.is_new_lead !== undefined ? Boolean(callData.is_new_lead) : prevCall.isNewLead) : isNew,
+        callType: callData.call_type || prevCall?.callType || 'incoming',
+        status: callData.event_type === 'answered' || callData.callevent === 'connect' || callData.callevent === 'answer' ? 'connected' : (callData.status || prevCall?.status || 'ringing'),
+        startedAt: isFirstTime ? Date.now() : (prevCall.startedAt || Date.now()),
+        connectedAt: (callData.event_type === 'answered' || callData.callevent === 'connect') ? (prevCall?.connectedAt || Date.now()) : (isFirstTime ? null : prevCall.connectedAt),
+        endedAt: callData.event_type === 'ended' ? Date.now() : (isFirstTime ? null : prevCall.endedAt),
+        duration: callData.duration !== undefined ? callData.duration : (isFirstTime ? 0 : prevCall.duration || 0),
+        recordingUrl: callData.recording_url || (isFirstTime ? null : prevCall.recordingUrl),
+        assignedHandler: callData.assigned_handler || (isFirstTime ? null : prevCall.assignedHandler),
         leadDetails: {
           status: callData.lead_status || 'ENQUIRY',
           priority: callData.lead_priority || 'MEDIUM',
@@ -52,7 +75,7 @@ export const LiveCallProvider = ({ children }) => {
           interested_country: callData.interested_country || '',
           interested_course: callData.interested_course || '',
           location: callData.location || '',
-          ...(isFirstTime ? {} : prevCalls[existingIndex].leadDetails),
+          ...(isFirstTime ? {} : prevCall.leadDetails),
         },
         formData: isFirstTime ? {
           name: isNew ? defaultLeadName : (callData.lead_name || ''),
@@ -66,7 +89,7 @@ export const LiveCallProvider = ({ children }) => {
           remarks: '',
           follow_up_date: '',
           follow_up_time: '',
-        } : prevCalls[existingIndex].formData,
+        } : prevCall.formData,
       };
 
       if (isFirstTime) {
@@ -78,7 +101,7 @@ export const LiveCallProvider = ({ children }) => {
       }
     });
 
-    setActiveCallId(callUuid);
+    setActiveCallId(resolvedCallId);
   }, []);
 
   // Handle incoming call / ringing / connected webhook event
@@ -106,21 +129,34 @@ export const LiveCallProvider = ({ children }) => {
     setIsMinimized(false);
   }, [upsertCall]);
 
-  // Handle call ended event (from CDR) - Updates status and recording without closing modal
+  // Handle call ended event (from CDR) - Updates status and recording without closing modal or disturbing user notes
   const handleCallEndedEvent = useCallback((data) => {
-    if (!data || !data.call_uuid) return;
-    setCalls(prevCalls => prevCalls.map(c => {
-      if (c.id === data.call_uuid) {
-        return {
-          ...c,
-          status: 'ended',
-          endedAt: Date.now(),
-          duration: data.duration !== undefined ? data.duration : c.duration,
-          recordingUrl: data.recording_url || c.recordingUrl,
-        };
+    if (!data) return;
+    const callUuid = data.call_uuid || data.id;
+    const cleanPhone = extractPhone(data);
+
+    setCalls(prevCalls => {
+      let idx = -1;
+      if (callUuid) {
+        idx = prevCalls.findIndex(c => c.id === callUuid);
       }
-      return c;
-    }));
+      if (idx === -1 && cleanPhone) {
+        idx = prevCalls.findIndex(c => isSamePhone(c.phone, cleanPhone));
+      }
+
+      if (idx === -1) return prevCalls;
+
+      const next = [...prevCalls];
+      next[idx] = {
+        ...next[idx],
+        id: callUuid || next[idx].id,
+        status: 'ended',
+        endedAt: Date.now(),
+        duration: data.duration !== undefined ? data.duration : next[idx].duration,
+        recordingUrl: data.recording_url || next[idx].recordingUrl,
+      };
+      return next;
+    });
   }, []);
 
   // Listen to user Pusher channel
