@@ -12,6 +12,14 @@ export const LiveCallProvider = ({ children }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
+  // Extract and clean phone digits from payload
+  const extractPhone = (data) => {
+    if (!data) return '';
+    const raw = data.caller_number || data.callerNumber || data.callernumber || data.phone || data.phone_number || data.destination || data.destination_number || data.calledNumber || data.callerid || data.number || '';
+    const digits = String(raw).replace(/\D/g, '');
+    return digits || raw || '';
+  };
+
   // Helper to compare phone numbers by matching clean digits or last 10 digits
   const isSamePhone = (p1, p2) => {
     if (!p1 || !p2) return false;
