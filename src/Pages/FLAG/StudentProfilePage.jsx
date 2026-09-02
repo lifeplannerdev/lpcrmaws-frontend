@@ -50,15 +50,17 @@ export default function StudentProfilePage() {
       setAttendance((attendanceData.results !== undefined ? attendanceData.results : (Array.isArray(attendanceData) ? attendanceData : [])));
       
       // Fetch fee account if it exists
-      if (studentData.fee_account_id) {
-        try {
-          const feeRes = await fetch(`${API_BASE_URL}/fees/accounts/${studentData.fee_account_id}/`, { headers: { Authorization: `Bearer ${token}` } });
-          if (feeRes.ok) {
-            setFeeAccount(await feeRes.json());
+      try {
+        const feeRes = await fetch(`${API_BASE_URL}/fees/accounts/?student=${id}`, { headers: { Authorization: `Bearer ${token}` } });
+        if (feeRes.ok) {
+          const feeAccounts = await feeRes.json();
+          const accs = feeAccounts.results !== undefined ? feeAccounts.results : (Array.isArray(feeAccounts) ? feeAccounts : []);
+          if (accs.length > 0) {
+            setFeeAccount(accs[0]);
           }
-        } catch (e) {
-          console.error('Failed to fetch fee account', e);
         }
+      } catch (e) {
+        console.error('Failed to fetch fee account', e);
       }
     } catch (err) {
       console.error(err);
@@ -296,31 +298,150 @@ export default function StudentProfilePage() {
             )}
 
             {activeTab === 'fees' && (
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-6">Fee Information</h3>
-                {feeAccount ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200">
-                      <p className="text-sm text-gray-500 mb-1">Fee Policy</p>
-                      <p className="font-bold text-gray-900">{feeAccount.plan_name || feeAccount.plan_code || 'Custom'}</p>
-                    </div>
-                    <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200">
-                      <p className="text-sm text-gray-500 mb-1">Total Due</p>
-                      <p className="font-bold text-gray-900">₹{feeAccount.total_due}</p>
-                    </div>
-                    <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-200">
-                      <p className="text-sm text-indigo-600 mb-1">Total Paid</p>
-                      <p className="font-bold text-indigo-900">₹{feeAccount.total_paid}</p>
-                    </div>
-                    <div className={`${feeAccount.overdue_amount > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'} p-5 rounded-2xl border`}>
-                      <p className={`text-sm mb-1 ${feeAccount.overdue_amount > 0 ? 'text-red-600' : 'text-green-600'}`}>{feeAccount.overdue_amount > 0 ? 'Overdue Amount' : 'Balance Due'}</p>
-                      <p className={`font-bold ${feeAccount.overdue_amount > 0 ? 'text-red-900' : 'text-green-900'}`}>₹{feeAccount.overdue_amount > 0 ? feeAccount.overdue_amount : feeAccount.balance_due}</p>
-                    </div>
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Fee Account & Payment Status</h3>
+                    <p className="text-sm text-gray-500">Live fee schedule, installment breakdown, and transaction records.</p>
                   </div>
+                  {feeAccount && (
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      feeAccount.status === 'SETTLED' ? 'bg-green-100 text-green-800 border border-green-200' :
+                      feeAccount.status === 'OVERDUE' ? 'bg-red-100 text-red-800 border border-red-200' :
+                      feeAccount.status === 'PARTIAL' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                      feeAccount.status === 'RESTRUCTURED' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                      'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                    }`}>
+                      {feeAccount.status}
+                    </span>
+                  )}
+                </div>
+
+                {feeAccount ? (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200">
+                        <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Plan</p>
+                        <p className="font-bold text-gray-900 text-base">{feeAccount.plan_name || feeAccount.plan_code || 'Custom'}</p>
+                        <p className="text-xs text-gray-400 mt-1 capitalize">{feeAccount.plan_type?.toLowerCase()}</p>
+                      </div>
+                      <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200">
+                        <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Total Fee</p>
+                        <p className="font-bold text-gray-900 text-lg">₹{Number(feeAccount.total_due || 0).toLocaleString('en-IN')}</p>
+                        <p className="text-xs text-gray-400 mt-1">Reg: ₹{Number(feeAccount.registration_amount || 0).toLocaleString('en-IN')}</p>
+                      </div>
+                      <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-200">
+                        <p className="text-xs text-emerald-600 uppercase font-semibold mb-1">Total Paid</p>
+                        <p className="font-bold text-emerald-900 text-lg">₹{Number(feeAccount.total_paid || 0).toLocaleString('en-IN')}</p>
+                        <p className="text-xs text-emerald-600 mt-1">{feeAccount.payments?.length || 0} payment(s)</p>
+                      </div>
+                      <div className={`${Number(feeAccount.overdue_amount || 0) > 0 ? 'bg-red-50 border-red-200 text-red-900' : 'bg-indigo-50 border-indigo-200 text-indigo-900'} p-5 rounded-2xl border`}>
+                        <p className={`text-xs uppercase font-semibold mb-1 ${Number(feeAccount.overdue_amount || 0) > 0 ? 'text-red-600' : 'text-indigo-600'}`}>
+                          {Number(feeAccount.overdue_amount || 0) > 0 ? 'Overdue' : 'Balance Due'}
+                        </p>
+                        <p className="font-bold text-lg">
+                          ₹{Number(feeAccount.overdue_amount > 0 ? feeAccount.overdue_amount : feeAccount.balance_due || 0).toLocaleString('en-IN')}
+                        </p>
+                        <p className="text-xs mt-1 opacity-75">
+                          {feeAccount.next_due_date ? `Next due: ${new Date(feeAccount.next_due_date).toLocaleDateString()}` : 'No upcoming dues'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Installments Breakdown */}
+                    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                      <div className="px-6 py-4 bg-gray-50/80 border-b border-gray-100 flex justify-between items-center">
+                        <h4 className="font-bold text-gray-900 text-sm">Scheduled Installments</h4>
+                        <span className="text-xs text-gray-500 font-medium">{feeAccount.installments?.length || 0} Installments</span>
+                      </div>
+                      {(!feeAccount.installments || feeAccount.installments.length === 0) ? (
+                        <div className="p-6 text-center text-sm text-gray-500">No installment schedule generated for this plan.</div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-sm">
+                            <thead className="bg-gray-50/50 text-xs uppercase text-gray-500 border-b border-gray-100">
+                              <tr>
+                                <th className="px-6 py-3 font-semibold">#</th>
+                                <th className="px-6 py-3 font-semibold">Due Date</th>
+                                <th className="px-6 py-3 font-semibold">Scheduled</th>
+                                <th className="px-6 py-3 font-semibold">Paid</th>
+                                <th className="px-6 py-3 font-semibold text-center">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {feeAccount.installments.map((inst, idx) => (
+                                <tr key={inst.id || idx} className="hover:bg-slate-50/50">
+                                  <td className="px-6 py-3.5 font-bold text-gray-700">Installment {inst.sequence || idx + 1}</td>
+                                  <td className="px-6 py-3.5 text-gray-600">{inst.due_date ? new Date(inst.due_date).toLocaleDateString() : 'N/A'}</td>
+                                  <td className="px-6 py-3.5 font-semibold text-gray-900">₹{Number(inst.scheduled_amount || 0).toLocaleString('en-IN')}</td>
+                                  <td className="px-6 py-3.5 font-semibold text-emerald-700">₹{Number(inst.paid_amount || 0).toLocaleString('en-IN')}</td>
+                                  <td className="px-6 py-3.5 text-center">
+                                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                      inst.status === 'PAID' ? 'bg-emerald-100 text-emerald-800' :
+                                      inst.status === 'OVERDUE' ? 'bg-red-100 text-red-800' :
+                                      inst.status === 'PARTIAL' ? 'bg-amber-100 text-amber-800' :
+                                      'bg-slate-100 text-slate-700'
+                                    }`}>
+                                      {inst.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Payment Transactions */}
+                    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                      <div className="px-6 py-4 bg-gray-50/80 border-b border-gray-100 flex justify-between items-center">
+                        <h4 className="font-bold text-gray-900 text-sm">Payment History</h4>
+                        <span className="text-xs text-gray-500 font-medium">{feeAccount.payments?.length || 0} Transactions</span>
+                      </div>
+                      {(!feeAccount.payments || feeAccount.payments.length === 0) ? (
+                        <div className="p-6 text-center text-sm text-gray-500">No payments recorded yet.</div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-sm">
+                            <thead className="bg-gray-50/50 text-xs uppercase text-gray-500 border-b border-gray-100">
+                              <tr>
+                                <th className="px-6 py-3 font-semibold">Date</th>
+                                <th className="px-6 py-3 font-semibold">Amount</th>
+                                <th className="px-6 py-3 font-semibold">Method</th>
+                                <th className="px-6 py-3 font-semibold">Reference</th>
+                                <th className="px-6 py-3 font-semibold">Notes</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {feeAccount.payments.map((p, idx) => (
+                                <tr key={p.id || idx} className="hover:bg-slate-50/50">
+                                  <td className="px-6 py-3.5 text-gray-700">{p.payment_date ? new Date(p.payment_date).toLocaleDateString() : 'N/A'}</td>
+                                  <td className="px-6 py-3.5 font-bold text-emerald-700">₹{Number(p.amount || 0).toLocaleString('en-IN')}</td>
+                                  <td className="px-6 py-3.5 text-gray-600 font-medium">{p.payment_method}</td>
+                                  <td className="px-6 py-3.5 text-gray-500 text-xs">{p.reference || '-'}</td>
+                                  <td className="px-6 py-3.5 text-gray-500 text-xs">{p.notes || '-'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 ) : (
-                  <div className="text-center py-8">
-                    <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-500 font-medium">No Fee Account Created</p>
+                  <div className="bg-slate-50 rounded-3xl p-12 text-center border border-dashed border-gray-200">
+                    <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-3" />
+                    <h4 className="text-base font-bold text-gray-900">No Fee Account Created</h4>
+                    <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">
+                      This student is enrolled but does not have an active fee account assigned yet.
+                    </p>
+                    <a
+                      href="/fees"
+                      className="inline-flex items-center gap-2 mt-5 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors shadow-sm"
+                    >
+                      Go to Fees Management
+                    </a>
                   </div>
                 )}
               </div>

@@ -156,7 +156,7 @@ export default function FeesManagementPage() {
         fetch(`${API_BASE_URL}/fees/summary/`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`${API_BASE_URL}/students/attendances/?approval_status=PENDING`, {
+        fetch(`${API_BASE_URL}/students/attendance-records/?status=pending`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`${API_BASE_URL}/fees/policy/`, {
@@ -167,20 +167,20 @@ export default function FeesManagementPage() {
         }),
       ]);
 
-      const templatesData = await templatesRes.json();
-      const accountsData = await accountsRes.json();
-      const studentsData = await studentsRes.json();
-      const summaryJson = await summaryRes.json();
-      const pendingData = await pendingRes.json();
-      const policyData = policyRes ? await policyRes.json().catch(()=>({})) : {};
-      const pendingStudentsData = await pendingStudentsRes.json();
+      const templatesData = templatesRes.ok ? await templatesRes.json().catch(() => []) : [];
+      const accountsData = accountsRes.ok ? await accountsRes.json().catch(() => []) : [];
+      const studentsData = studentsRes.ok ? await studentsRes.json().catch(() => []) : [];
+      const summaryJson = summaryRes.ok ? await summaryRes.json().catch(() => []) : [];
+      const pendingData = pendingRes.ok ? await pendingRes.json().catch(() => []) : [];
+      const policyData = policyRes && policyRes.ok ? await policyRes.json().catch(() => ({})) : {};
+      const pendingStudentsData = pendingStudentsRes.ok ? await pendingStudentsRes.json().catch(() => []) : [];
 
-      setTemplates(Array.isArray(templatesData) ? templatesData : []);
-      setAccounts(Array.isArray(accountsData) ? accountsData : []);
-      setStudents(Array.isArray(studentsData) ? studentsData : []);
-      setSummaryData(Array.isArray(summaryJson) ? summaryJson : []);
-      setPendingAttendances(pendingData.results || pendingData || []);
-      setPendingStudents(Array.isArray(pendingStudentsData) ? pendingStudentsData : []);
+      setTemplates(templatesData.results !== undefined ? templatesData.results : (Array.isArray(templatesData) ? templatesData : []));
+      setAccounts(accountsData.results !== undefined ? accountsData.results : (Array.isArray(accountsData) ? accountsData : []));
+      setStudents(studentsData.results !== undefined ? studentsData.results : (Array.isArray(studentsData) ? studentsData : []));
+      setSummaryData(summaryJson.results !== undefined ? summaryJson.results : (Array.isArray(summaryJson) ? summaryJson : []));
+      setPendingAttendances(pendingData.results !== undefined ? pendingData.results : (Array.isArray(pendingData) ? pendingData : []));
+      setPendingStudents(pendingStudentsData.results !== undefined ? pendingStudentsData.results : (Array.isArray(pendingStudentsData) ? pendingStudentsData : []));
       if(policyData.company) setFeePolicy(policyData);
       if (!selectedAccountId && Array.isArray(accountsData) && accountsData.length > 0) {
         setSelectedAccountId(accountsData[0].id);
@@ -554,17 +554,16 @@ export default function FeesManagementPage() {
   const handleApproveAttendance = async (attendanceId) => {
     try {
       const token = await getToken();
-      const res = await fetch(`${API_BASE_URL}/students/attendances/${attendanceId}/regularize/`, {
-        method: 'POST',
+      const res = await fetch(`${API_BASE_URL}/students/attendance-records/${attendanceId}/`, {
+        method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
+        body: JSON.stringify({ status: 'present' })
       });
-      if (!res.ok) throw new Error('Regularization failed');
-      // Optimistically remove from list
-      setPendingAttendances(prev => prev.filter(a => a.id !== attendanceId));
+      if (!res.ok) throw new Error('Failed to regularize attendance');
       setMessage({ type: 'success', text: 'Attendance regularized successfully.' });
-    } catch {
-      setMessage({ type: 'error', text: 'Failed to regularize attendance.' });
+      fetchData();
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
     }
   };
 
@@ -786,7 +785,7 @@ export default function FeesManagementPage() {
                         <div>
                           <h3 className="text-lg font-bold text-gray-900">{record.student_name}</h3>
                           <div className="text-sm text-gray-500 mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                            <span>Date: <span className="font-semibold text-gray-700">{record.date}</span></span>
+                            <span>Date: <span className="font-semibold text-gray-700">{record.session_date || record.date}</span></span>
                             <span>Status Marked: <span className="font-semibold text-gray-700">{record.status}</span></span>
                             {record.trainer_name && (
                               <span>Trainer: <span className="font-semibold text-gray-700">{record.trainer_name}</span></span>
