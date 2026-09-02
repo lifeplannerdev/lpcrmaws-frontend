@@ -24,9 +24,10 @@ export default function AttendancePage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      setBatches(Array.isArray(data) ? data : []);
-      if (Array.isArray(data) && data.length > 0) {
-        setSelectedBatch(data[0].id);
+      const fetchedBatches = (data.results !== undefined ? data.results : (Array.isArray(data) ? data : []));
+      setBatches(fetchedBatches);
+      if (fetchedBatches.length > 0) {
+        setSelectedBatch(fetchedBatches[0].id);
       }
     } catch (err) {
       console.error(err);
@@ -54,7 +55,7 @@ export default function AttendancePage() {
       });
       const data = await res.json();
       
-      const stData = Array.isArray(data) ? data : [];
+      const stData = (data.results !== undefined ? data.results : (Array.isArray(data) ? data : []));
       setStudents(stData);
       
       const initialAtt = {};

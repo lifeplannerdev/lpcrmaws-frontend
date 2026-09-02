@@ -26,7 +26,7 @@ export default function BatchDetailPage() {
       const batchData = await batchRes.json();
       const studentsData = await studentsRes.json();
       setBatch(batchData);
-      setStudents(Array.isArray(studentsData) ? studentsData : []);
+      setStudents((studentsData.results !== undefined ? studentsData.results : (Array.isArray(studentsData) ? studentsData : [])));
     } catch (err) {
       console.error(err);
     } finally {

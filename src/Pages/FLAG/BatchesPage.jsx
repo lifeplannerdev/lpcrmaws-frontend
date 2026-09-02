@@ -24,7 +24,7 @@ export default function BatchesPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      setBatches(Array.isArray(data) ? data : []);
+      setBatches((data.results !== undefined ? data.results : (Array.isArray(data) ? data : [])));
     } catch (err) {
       console.error('Error fetching batches:', err);
     } finally {

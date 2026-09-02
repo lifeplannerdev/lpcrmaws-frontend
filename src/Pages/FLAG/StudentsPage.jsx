@@ -26,7 +26,7 @@ export default function StudentsPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      setStudents(Array.isArray(data) ? data : []);
+      setStudents((data.results !== undefined ? data.results : (Array.isArray(data) ? data : [])));
     } catch (err) {
       console.error('Error fetching students:', err);
     } finally {

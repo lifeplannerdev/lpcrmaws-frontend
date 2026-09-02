@@ -30,8 +30,8 @@ export default function StudentProfilePage() {
       const examsData = await examsRes.json();
 
       setStudent(studentData);
-      setHistory(Array.isArray(historyData) ? historyData : []);
-      setExams(Array.isArray(examsData) ? examsData : []);
+      setHistory((historyData.results !== undefined ? historyData.results : (Array.isArray(historyData) ? historyData : [])));
+      setExams((examsData.results !== undefined ? examsData.results : (Array.isArray(examsData) ? examsData : [])));
     } catch (err) {
       console.error(err);
     } finally {

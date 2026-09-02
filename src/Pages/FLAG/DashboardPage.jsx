@@ -27,8 +27,8 @@ export default function DashboardPage() {
       const batches = await batchesRes.json();
       
       setStats({
-        totalStudents: Array.isArray(students) ? students.length : 0,
-        activeBatches: Array.isArray(batches) ? batches.length : 0,
+        totalStudents: students.count !== undefined ? students.count : (Array.isArray(students) ? students.length : 0),
+        activeBatches: batches.count !== undefined ? batches.count : (Array.isArray(batches) ? batches.length : 0),
         pendingAttendances: 0, 
       });
     } catch (err) {

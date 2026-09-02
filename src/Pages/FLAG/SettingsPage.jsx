@@ -30,10 +30,10 @@ export default function SettingsPage() {
         fetch(`${API_BASE_URL}/students/attendance-policies/`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       setData({
-        grades: await gradesRes.json().then(d => Array.isArray(d) ? d : []),
-        campuses: await campusesRes.json().then(d => Array.isArray(d) ? d : []),
-        packages: await packagesRes.json().then(d => Array.isArray(d) ? d : []),
-        policies: await policiesRes.json().then(d => Array.isArray(d) ? d : []),
+        grades: await gradesRes.json().then(d => (d.results !== undefined ? d.results : (Array.isArray(d) ? d : []))),
+        campuses: await campusesRes.json().then(d => (d.results !== undefined ? d.results : (Array.isArray(d) ? d : []))),
+        packages: await packagesRes.json().then(d => (d.results !== undefined ? d.results : (Array.isArray(d) ? d : []))),
+        policies: await policiesRes.json().then(d => (d.results !== undefined ? d.results : (Array.isArray(d) ? d : []))),
       });
     } catch (err) {
       console.error(err);
