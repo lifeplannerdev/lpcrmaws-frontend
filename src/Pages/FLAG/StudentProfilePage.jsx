@@ -14,6 +14,7 @@ export default function StudentProfilePage() {
   const [exams, setExams] = useState([]);
   const [feeAccount, setFeeAccount] = useState(null);
   const [attendance, setAttendance] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('current'); // 'current', 'history', 'exams', 'fees', 'attendance'
   
   // Modal state
@@ -344,7 +345,7 @@ export default function StudentProfilePage() {
                       <tbody className="divide-y divide-gray-100">
                         {attendance.map((rec) => (
                           <tr key={rec.id} className="hover:bg-slate-50">
-                            <td className="px-6 py-4 font-medium text-gray-900">{new Date(rec.date).toLocaleDateString()}</td>
+                            <td className="px-6 py-4 font-medium text-gray-900">{new Date(rec.session_date).toLocaleDateString()}</td>
                             <td className="px-6 py-4 text-gray-500">{rec.batch_name}</td>
                             <td className="px-6 py-4 text-gray-500">{rec.session_type}</td>
                             <td className="px-6 py-4 text-center">

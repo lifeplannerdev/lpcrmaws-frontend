@@ -14,7 +14,10 @@ export default function AttendancePage() {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('mark'); // 'mark', 'view'
   const [attendanceData, setAttendanceData] = useState({});
+  const [viewAttendanceRecords, setViewAttendanceRecords] = useState([]);
+  const [expandedStudent, setExpandedStudent] = useState(null);
 
   const fetchInitialData = async () => {
     try {
@@ -42,9 +45,13 @@ export default function AttendancePage() {
 
   useEffect(() => {
     if (selectedBatch) {
-      loadBatchStudents();
+      if (activeTab === 'mark') {
+        loadBatchStudents();
+      } else {
+        loadBatchStudentsAndViewData();
+      }
     }
-  }, [selectedBatch, date]);
+  }, [selectedBatch, date, activeTab]);
 
   const loadBatchStudents = async () => {
     try {
@@ -64,6 +71,31 @@ export default function AttendancePage() {
       });
       setAttendanceData(initialAtt);
 
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadBatchStudentsAndViewData = async () => {
+    try {
+      setLoading(true);
+      const token = accessToken || await refreshAccessToken();
+      
+      const [studentsRes, attendanceRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/students/students/?batch=${selectedBatch}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/students/attendance-records/?session__batch=${selectedBatch}`, { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+      
+      const sData = await studentsRes.json();
+      const aData = await attendanceRes.json();
+      
+      const stData = (sData.results !== undefined ? sData.results : (Array.isArray(sData) ? sData : []));
+      const attData = (aData.results !== undefined ? aData.results : (Array.isArray(aData) ? aData : []));
+      
+      setStudents(stData);
+      setViewAttendanceRecords(attData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -139,9 +171,25 @@ export default function AttendancePage() {
       <div className="flex-grow p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
           
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Mark Attendance</h1>
-            <p className="text-sm text-gray-500 mt-1">Record daily attendance for batches</p>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Attendance Management</h1>
+              <p className="text-sm text-gray-500 mt-1">Record and view attendance for batches</p>
+            </div>
+            <div className="flex bg-white p-1 rounded-xl shadow-sm border border-gray-100">
+              <button 
+                onClick={() => setActiveTab('mark')}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'mark' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                Mark Attendance
+              </button>
+              <button 
+                onClick={() => setActiveTab('view')}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'view' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                View Attendance
+              </button>
+            </div>
           </div>
 
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 flex flex-col md:flex-row gap-4 items-end">
@@ -158,15 +206,17 @@ export default function AttendancePage() {
               </select>
             </div>
             
-            <div className="w-full md:w-1/4">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Date</label>
-              <input 
-                type="date" 
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </div>
+            {activeTab === 'mark' && (
+              <div className="w-full md:w-1/4">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Date</label>
+                <input 
+                  type="date" 
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           {loading ? (
@@ -177,9 +227,9 @@ export default function AttendancePage() {
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12 text-center">
               <Info className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <h3 className="text-lg font-medium text-gray-900">No active students</h3>
-              <p className="text-sm text-gray-500 mt-1">This batch has no students to mark attendance for.</p>
+              <p className="text-sm text-gray-500 mt-1">This batch has no students.</p>
             </div>
-          ) : (
+          ) : activeTab === 'mark' ? (
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                 <h3 className="text-lg font-bold text-gray-900">Attendance Grid</h3>
@@ -248,6 +298,91 @@ export default function AttendancePage() {
                   {saving && <Loader2 size={16} className="animate-spin" />}
                   Save Attendance
                 </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+                <h3 className="text-lg font-bold text-gray-900">Attendance Overview</h3>
+              </div>
+              <div className="p-0 overflow-x-auto">
+                <table className="w-full text-left whitespace-nowrap">
+                  <thead className="bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-500">
+                    <tr>
+                      <th className="px-6 py-4 font-semibold">Student</th>
+                      <th className="px-6 py-4 font-semibold text-center">Total Classes</th>
+                      <th className="px-6 py-4 font-semibold text-center">Present</th>
+                      <th className="px-6 py-4 font-semibold text-center">Percentage</th>
+                      <th className="px-6 py-4 font-semibold text-right">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {students.map(student => {
+                      const studentRecords = viewAttendanceRecords.filter(r => r.student === student.id);
+                      const totalClasses = studentRecords.length;
+                      const presentClasses = studentRecords.filter(r => r.status === 'present').length;
+                      const percentage = totalClasses > 0 ? Math.round((presentClasses / totalClasses) * 100) : 0;
+                      
+                      const isExpanded = expandedStudent === student.id;
+
+                      return (
+                        <React.Fragment key={student.id}>
+                          <tr className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-4 font-semibold text-gray-900">{student.name}</td>
+                            <td className="px-6 py-4 text-center text-gray-600">{totalClasses}</td>
+                            <td className="px-6 py-4 text-center text-gray-600">{presentClasses}</td>
+                            <td className="px-6 py-4 text-center">
+                              <span className={`inline-block px-3 py-1 font-bold text-sm rounded-lg ${percentage >= 75 ? 'bg-green-100 text-green-700' : percentage >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                                {percentage}%
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <button 
+                                onClick={() => setExpandedStudent(isExpanded ? null : student.id)}
+                                className="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
+                              >
+                                {isExpanded ? 'Hide Records' : 'View Records'}
+                              </button>
+                            </td>
+                          </tr>
+                          
+                          {isExpanded && (
+                            <tr className="bg-slate-50/50">
+                              <td colSpan="5" className="px-8 py-6">
+                                {studentRecords.length === 0 ? (
+                                  <p className="text-sm text-gray-500">No records found for this student.</p>
+                                ) : (
+                                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                                    <table className="w-full text-sm text-left">
+                                      <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
+                                        <tr>
+                                          <th className="px-4 py-3">Date</th>
+                                          <th className="px-4 py-3">Status</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-gray-100">
+                                        {studentRecords.sort((a,b) => new Date(b.session_date) - new Date(a.session_date)).map(rec => (
+                                          <tr key={rec.id}>
+                                            <td className="px-4 py-3 text-gray-700">{new Date(rec.session_date).toLocaleDateString()}</td>
+                                            <td className="px-4 py-3">
+                                              {rec.status === 'present' ? <span className="text-green-600 font-semibold text-xs bg-green-50 px-2 py-1 rounded">Present</span> :
+                                               rec.status === 'absent' ? <span className="text-red-600 font-semibold text-xs bg-red-50 px-2 py-1 rounded">Absent</span> :
+                                               <span className="text-gray-600 font-semibold text-xs bg-gray-50 px-2 py-1 rounded capitalize">{rec.status}</span>}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

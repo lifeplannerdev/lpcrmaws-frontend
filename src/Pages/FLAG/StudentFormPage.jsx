@@ -45,9 +45,13 @@ export default function StudentFormPage() {
           fetch(`${API_BASE_URL}/students/batches/`, { headers })
         ]);
         
-        setCampuses(await cRes.json());
-        setPackages(await pRes.json());
-        setBatches(await bRes.json());
+        const cData = await cRes.json();
+        const pData = await pRes.json();
+        const bData = await bRes.json();
+        
+        setCampuses(cData.results !== undefined ? cData.results : (Array.isArray(cData) ? cData : []));
+        setPackages(pData.results !== undefined ? pData.results : (Array.isArray(pData) ? pData : []));
+        setBatches(bData.results !== undefined ? bData.results : (Array.isArray(bData) ? bData : []));
       } catch (err) {
         console.error("Failed to fetch lookups", err);
       } finally {
