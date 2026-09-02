@@ -54,8 +54,10 @@ import LiveCallModal from './Components/voxbay/LiveCallModal.jsx';
 // ── FLAG: German Language Training ──
 import FlagDashboard from './Pages/FLAG/DashboardPage.jsx';
 import FlagBatchesPage from './Pages/FLAG/BatchesPage.jsx';
+import FlagBatchFormPage from './Pages/FLAG/BatchFormPage.jsx';
 import FlagBatchDetailPage from './Pages/FLAG/BatchDetailPage.jsx';
 import FlagStudentsPage from './Pages/FLAG/StudentsPage.jsx';
+import FlagStudentFormPage from './Pages/FLAG/StudentFormPage.jsx';
 import FlagStudentProfilePage from './Pages/FLAG/StudentProfilePage.jsx';
 import FlagAttendancePage from './Pages/FLAG/AttendancePage.jsx';
 import FlagSettingsPage from './Pages/FLAG/SettingsPage.jsx';
@@ -163,8 +165,10 @@ export default function App() {
         {/* ── FLAG: German Language Training ── */}
         <Route path="/flag" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view','flag:fees']}><FlagDashboard /></PermissionRoute>} />
         <Route path="/flag/batches" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view']}><FlagBatchesPage /></PermissionRoute>} />
+        <Route path="/flag/batches/new" element={<PermissionRoute permissions={['flag:admin','flag:trainer']}><FlagBatchFormPage /></PermissionRoute>} />
         <Route path="/flag/batches/:id" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view']}><FlagBatchDetailPage /></PermissionRoute>} />
         <Route path="/flag/students" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view']}><FlagStudentsPage /></PermissionRoute>} />
+        <Route path="/flag/students/new" element={<PermissionRoute permissions={['flag:admin']}><FlagStudentFormPage /></PermissionRoute>} />
         <Route path="/flag/students/:id" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view']}><FlagStudentProfilePage /></PermissionRoute>} />
         <Route path="/flag/attendance" element={<PermissionRoute permissions={['flag:admin','flag:trainer']}><FlagAttendancePage /></PermissionRoute>} />
         <Route path="/flag/settings" element={<PermissionRoute permissions={['flag:admin']}><FlagSettingsPage /></PermissionRoute>} />
