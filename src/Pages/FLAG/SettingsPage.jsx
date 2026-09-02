@@ -233,7 +233,7 @@ export default function SettingsPage() {
                           </div>
                           <p className="text-sm text-gray-500 mb-4">{pkg.description || 'No description'}</p>
                           <div className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-1 rounded inline-block">
-                            Requires: {pkg.required_grades.map(g => g.name).join(', ') || 'None'}
+                            Grade Range: {pkg.grade_range || (pkg.starting_grade && pkg.ending_grade ? `${pkg.starting_grade} → ${pkg.ending_grade}` : 'All Grades')}
                           </div>
                         </div>
                       ))}

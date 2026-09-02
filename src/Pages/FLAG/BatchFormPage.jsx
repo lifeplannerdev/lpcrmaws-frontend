@@ -46,10 +46,15 @@ export default function BatchFormPage() {
           fetch(`${API_BASE_URL}/students/attendance-policies/`, { headers })
         ]);
         
-        setCampuses(await cRes.json());
-        setPackages(await pRes.json());
-        setGrades(await gRes.json());
-        setPolicies(await polRes.json());
+        const cData = await cRes.json();
+        const pData = await pRes.json();
+        const gData = await gRes.json();
+        const polData = await polRes.json();
+        
+        setCampuses(cData.results !== undefined ? cData.results : (Array.isArray(cData) ? cData : []));
+        setPackages(pData.results !== undefined ? pData.results : (Array.isArray(pData) ? pData : []));
+        setGrades(gData.results !== undefined ? gData.results : (Array.isArray(gData) ? gData : []));
+        setPolicies(polData.results !== undefined ? polData.results : (Array.isArray(polData) ? polData : []));
       } catch (err) {
         console.error("Failed to fetch lookups", err);
       } finally {
