@@ -22,12 +22,6 @@ import ReportViewPage from "./Pages/ReportViewPage.jsx";
 
 import MyReportsPage from "./Pages/MyReportsPage.jsx";
 import ReportTimingSettingsPage from "./Pages/ReportTimingSettingsPage.jsx";
-import StudentRegistryPage from "./Pages/Students/StudentRegistryPage.jsx";
-import BatchManagementPage from "./Pages/Students/BatchManagementPage.jsx";
-import BatchAttendancePage from "./Pages/Students/BatchAttendancePage.jsx";
-import TrainerStudentsPage from "./Pages/Students/TrainerStudentsPage.jsx";
-import AttendanceReportsPage from "./Pages/Students/AttendanceReportsPage.jsx";
-import StudentDetailPage from "./Pages/Students/StudentDetailPage.jsx";
 
 
 import AttendanceDocumentsPage from "./Pages/AttendanceDocumentsPage.jsx";
@@ -56,6 +50,15 @@ import FdsFeesPage from './Pages/FDS/FdsFeesPage.jsx';
 import FdsWeddingGroupsPage from './Pages/FDS/FdsWeddingGroupsPage.jsx';
 import FdsFeePoliciesPage from './Pages/FDS/FdsFeePoliciesPage.jsx';
 import LiveCallModal from './Components/voxbay/LiveCallModal.jsx';
+
+// ── FLAG: German Language Training ──
+import FlagDashboard from './Pages/FLAG/DashboardPage.jsx';
+import FlagBatchesPage from './Pages/FLAG/BatchesPage.jsx';
+import FlagBatchDetailPage from './Pages/FLAG/BatchDetailPage.jsx';
+import FlagStudentsPage from './Pages/FLAG/StudentsPage.jsx';
+import FlagStudentProfilePage from './Pages/FLAG/StudentProfilePage.jsx';
+import FlagAttendancePage from './Pages/FLAG/AttendancePage.jsx';
+import FlagSettingsPage from './Pages/FLAG/SettingsPage.jsx';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -128,17 +131,7 @@ export default function App() {
 
         <Route path="/processing-students" element={<PermissionRoute resources={['processing_students']}><ProcessingStudentsPage /></PermissionRoute>} />
         
-        {/* New Students Module */}
-        {/* Accounts Pages */}
-        <Route path="/registry" element={<PermissionRoute permissions={['students:registry_manage']}><StudentRegistryPage /></PermissionRoute>} />
-        
-        
-        {/* Trainer Pages */}
-        <Route path="/academic-batches" element={<PermissionRoute permissions={['students:batch_manage']}><BatchManagementPage /></PermissionRoute>} />
-        <Route path="/attendance/mark" element={<PermissionRoute permissions={['attendance:mark']}><BatchAttendancePage /></PermissionRoute>} />
-        <Route path="/attendance/reports" element={<PermissionRoute permissions={['attendance:mark', 'attendance:approvals']}><AttendanceReportsPage /></PermissionRoute>} />
-        <Route path="/my-students" element={<PermissionRoute permissions={['attendance:mark']}><TrainerStudentsPage /></PermissionRoute>} />
-        <Route path="/my-students/:id" element={<ProtectedRoute><StudentDetailPage /></ProtectedRoute>} />
+
 
         <Route path="/hr/attendance" element={<PermissionRoute resources={['staff']}><AttendanceDocumentsPage /></PermissionRoute>} />
         <Route path="/hr/penalties" element={<PermissionRoute resources={['penalties']}><PenaltyManagementPage /></PermissionRoute>} />
@@ -166,6 +159,15 @@ export default function App() {
         <Route path="/fds/fees" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view']}><FdsFeesPage /></PermissionRoute>} />
         <Route path="/fds/fee-policies" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view']}><FdsFeePoliciesPage /></PermissionRoute>} />
         <Route path="/fds/weddings" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view']}><FdsWeddingGroupsPage /></PermissionRoute>} />
+
+        {/* ── FLAG: German Language Training ── */}
+        <Route path="/flag" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view','flag:fees']}><FlagDashboard /></PermissionRoute>} />
+        <Route path="/flag/batches" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view']}><FlagBatchesPage /></PermissionRoute>} />
+        <Route path="/flag/batches/:id" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view']}><FlagBatchDetailPage /></PermissionRoute>} />
+        <Route path="/flag/students" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view']}><FlagStudentsPage /></PermissionRoute>} />
+        <Route path="/flag/students/:id" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view']}><FlagStudentProfilePage /></PermissionRoute>} />
+        <Route path="/flag/attendance" element={<PermissionRoute permissions={['flag:admin','flag:trainer']}><FlagAttendancePage /></PermissionRoute>} />
+        <Route path="/flag/settings" element={<PermissionRoute permissions={['flag:admin']}><FlagSettingsPage /></PermissionRoute>} />
 
         <Route path="*" element={<div>404 Not Found</div>} />
       </Routes>

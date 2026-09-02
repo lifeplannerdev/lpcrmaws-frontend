@@ -40,6 +40,7 @@ export default function FeesManagementPage() {
   const [students, setStudents] = useState([]);
   const [summaryData, setSummaryData] = useState([]);
   const [pendingAttendances, setPendingAttendances] = useState([]);
+  const [pendingStudents, setPendingStudents] = useState([]);
   const [selectedAccountId, setSelectedAccountId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -142,7 +143,7 @@ export default function FeesManagementPage() {
       const token = await getToken();
       if (!token) return;
 
-      const [templatesRes, accountsRes, studentsRes, summaryRes, pendingRes, policyRes] = await Promise.all([
+      const [templatesRes, accountsRes, studentsRes, summaryRes, pendingRes, policyRes, pendingStudentsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/fees/catalog/`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
@@ -161,6 +162,9 @@ export default function FeesManagementPage() {
         fetch(`${API_BASE_URL}/fees/policy/`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
+        fetch(`${API_BASE_URL}/fees/students/?pending_only=true`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
       const templatesData = await templatesRes.json();
@@ -169,12 +173,14 @@ export default function FeesManagementPage() {
       const summaryJson = await summaryRes.json();
       const pendingData = await pendingRes.json();
       const policyData = policyRes ? await policyRes.json().catch(()=>({})) : {};
+      const pendingStudentsData = await pendingStudentsRes.json();
 
       setTemplates(Array.isArray(templatesData) ? templatesData : []);
       setAccounts(Array.isArray(accountsData) ? accountsData : []);
       setStudents(Array.isArray(studentsData) ? studentsData : []);
       setSummaryData(Array.isArray(summaryJson) ? summaryJson : []);
       setPendingAttendances(pendingData.results || pendingData || []);
+      setPendingStudents(Array.isArray(pendingStudentsData) ? pendingStudentsData : []);
       if(policyData.company) setFeePolicy(policyData);
       if (!selectedAccountId && Array.isArray(accountsData) && accountsData.length > 0) {
         setSelectedAccountId(accountsData[0].id);
@@ -674,6 +680,7 @@ export default function FeesManagementPage() {
           <button onClick={() => setMainTab('accounts')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'accounts' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Accounts & Payments</button>
           <button onClick={() => setMainTab('grid')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'grid' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Spreadsheet View</button>
           <button onClick={() => setMainTab('pending_attendances')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'pending_attendances' ? 'bg-orange-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Pending Attendances {pendingAttendances.length > 0 && <span className="ml-1 bg-white text-orange-600 px-2 py-0.5 rounded-full text-xs">{pendingAttendances.length}</span>}</button>
+          <button onClick={() => setMainTab('pending_students')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'pending_students' ? 'bg-red-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Pending Students {pendingStudents.length > 0 && <span className="ml-1 bg-white text-red-600 px-2 py-0.5 rounded-full text-xs">{pendingStudents.length}</span>}</button>
           <button onClick={() => setMainTab('all_fees')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'all_fees' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>All Fees</button>
           <button onClick={() => setMainTab('catalog')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'catalog' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Fee Catalog</button>
           <button onClick={() => setMainTab('policies')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'policies' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Settings & Policies</button>
@@ -691,7 +698,61 @@ export default function FeesManagementPage() {
           </div>
         )}
 
-        
+        {mainTab === 'pending_students' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Pending Students (No Fee Account)</h2>
+                  <p className="text-sm text-gray-500">Students enrolled in FLAG but missing an active fee account.</p>
+                </div>
+                {pendingStudents.length > 0 && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 text-sm font-bold rounded-xl border border-red-200">
+                    <AlertTriangle size={14} />
+                    {pendingStudents.length} Missing
+                  </span>
+                )}
+              </div>
+
+              {pendingStudents.length === 0 ? (
+                <div className="py-16 text-center flex flex-col items-center gap-3">
+                  <ShieldCheck size={48} className="text-green-400 opacity-60" />
+                  <h3 className="text-lg font-bold text-gray-800">All clear!</h3>
+                  <p className="text-sm text-gray-500">Every student has a fee account created.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {pendingStudents.map(student => (
+                    <div key={student.id} className="p-4 rounded-2xl border border-gray-200 bg-white hover:border-indigo-300 transition-colors shadow-sm">
+                      <div className="flex flex-col h-full">
+                        <div className="flex-1">
+                          <h4 className="font-bold text-gray-900 text-lg">{student.name}</h4>
+                          <p className="text-sm text-gray-500">{student.phone}</p>
+                          <div className="mt-2 space-y-1">
+                            <p className="text-xs text-gray-500"><span className="font-medium text-gray-700">Batch:</span> {student.batch_name || 'N/A'}</p>
+                            <p className="text-xs text-gray-500"><span className="font-medium text-gray-700">Campus:</span> {student.branch_name || 'N/A'}</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-gray-100 flex gap-2">
+                          <button
+                            onClick={() => {
+                              setCreateForm(prev => ({ ...prev, student: student.id }));
+                              setIsCreateModalOpen(true);
+                            }}
+                            className="w-full flex justify-center items-center gap-2 py-2 px-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-semibold transition-colors"
+                          >
+                            <Plus size={16} /> Create Account
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {mainTab === 'pending_attendances' && (
           <div className="space-y-6">
             <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">

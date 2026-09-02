@@ -57,6 +57,13 @@ export const masterNavigation = [
   { id: "fdsFees",       label: "FDS Fees",         icon: IndianRupee,   path: "/fds/fees",      requiredPermissions: ["fds:admin","fds:admin_own","fds:view","fds_fees:view"],group: "fds" },
   { id: "fdsFeePolicies",label: "FDS Fee Policies", icon: Settings,      path: "/fds/fee-policies",requiredPermissions: ["fds:admin","fds:admin_own","fds:view","fds_fees:view"],group: "fds" },
   { id: "fdsWeddings",   label: "FDS Weddings 💍",  icon: Heart,         path: "/fds/weddings",  requiredPermissions: ["fds:admin","fds:admin_own","fds:view"],                group: "fds" },
+
+  // ── FLAG: German Language Training ──
+  { id: "flag",          label: "FLAG Dashboard",   icon: FileText,      path: "/flag",          requiredPermissions: ["flag:admin","flag:trainer","flag:view","flag:fees"],  group: "flag" },
+  { id: "flagBatches",   label: "FLAG Batches",     icon: BookOpen,      path: "/flag/batches",  requiredPermissions: ["flag:admin","flag:trainer","flag:view"],                group: "flag" },
+  { id: "flagStudents",  label: "FLAG Students",    icon: Users,         path: "/flag/students", requiredPermissions: ["flag:admin","flag:trainer","flag:view"],                group: "flag" },
+  { id: "flagAttendance",label: "FLAG Attendance",  icon: CalendarCheck, path: "/flag/attendance",requiredPermissions: ["flag:admin","flag:trainer"],                          group: "flag" },
+  { id: "flagSettings",  label: "FLAG Settings",    icon: Settings,      path: "/flag/settings", requiredPermissions: ["flag:admin"],                                         group: "flag" },
 ];
 
 export const getFilteredMenu = (hasAnyPermission, hasPermission, user) => {
