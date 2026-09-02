@@ -174,7 +174,7 @@ export default function StudentProfilePage() {
                             <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md font-bold">Enrolled</span>
                           )}
                         </h4>
-                        <p className="text-sm text-gray-500 mt-1">From {new Date(h.joined_date).toLocaleDateString()} {h.left_date ? `to ${new Date(h.left_date).toLocaleDateString()}` : '(Current)'}</p>
+                        <p className="text-sm text-gray-500 mt-1">From {new Date(h.from_date).toLocaleDateString()} {h.to_date ? `to ${new Date(h.to_date).toLocaleDateString()}` : '(Current)'}</p>
                         {h.reason && <p className="text-sm text-gray-700 mt-2 bg-gray-50 p-3 rounded-xl border border-gray-100">{h.reason}</p>}
                       </div>
                     ))}
