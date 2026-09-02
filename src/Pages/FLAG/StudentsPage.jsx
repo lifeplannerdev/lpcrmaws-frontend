@@ -133,14 +133,14 @@ export default function StudentsPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {student.has_pending_fees ? (
-                            <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
-                              Overdue
-                            </span>
+                          {student.fee_status === 'NO_ACCOUNT' ? (
+                            <span className="text-gray-600 font-semibold bg-gray-50 px-2 py-1 rounded-md text-xs border border-gray-200">No Account</span>
+                          ) : student.fee_status === 'OVERDUE' ? (
+                            <span className="text-red-600 font-semibold bg-red-50 px-2 py-1 rounded-md text-xs border border-red-100">Overdue</span>
+                          ) : student.fee_status === 'SETTLED' ? (
+                            <span className="text-green-600 font-semibold bg-green-50 px-2 py-1 rounded-md text-xs border border-green-100">Settled</span>
                           ) : (
-                            <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">
-                              Clear
-                            </span>
+                            <span className="text-indigo-600 font-semibold bg-indigo-50 px-2 py-1 rounded-md text-xs border border-indigo-100">{student.fee_status}</span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">

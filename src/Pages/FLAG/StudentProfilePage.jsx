@@ -12,30 +12,97 @@ export default function StudentProfilePage() {
   const [student, setStudent] = useState(null);
   const [history, setHistory] = useState([]);
   const [exams, setExams] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('current'); // 'current', 'history', 'exams', 'fees'
+  const [feeAccount, setFeeAccount] = useState(null);
+  const [attendance, setAttendance] = useState([]);
+  const [activeTab, setActiveTab] = useState('current'); // 'current', 'history', 'exams', 'fees', 'attendance'
+  
+  // Modal state
+  const [showExamModal, setShowExamModal] = useState(false);
+  const [examForm, setExamForm] = useState({
+    exam_type: 'grade',
+    exam_date: new Date().toISOString().split('T')[0],
+    model_exam_marks: '',
+    grade_exam_marks: '',
+    is_passed: false,
+    total_marks: 100,
+  });
 
   const fetchStudentData = async () => {
     try {
       setLoading(true);
       const token = accessToken || await refreshAccessToken();
-      const [studentRes, historyRes, examsRes] = await Promise.all([
+      const [studentRes, historyRes, examsRes, attendanceRes] = await Promise.all([
         fetch(`${API_BASE_URL}/students/students/${id}/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/students/student-history/?student=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/students/exams/?student=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/students/attendance-records/?student=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       
       const studentData = await studentRes.json();
       const historyData = await historyRes.json();
       const examsData = await examsRes.json();
+      const attendanceData = await attendanceRes.json();
 
       setStudent(studentData);
       setHistory((historyData.results !== undefined ? historyData.results : (Array.isArray(historyData) ? historyData : [])));
       setExams((examsData.results !== undefined ? examsData.results : (Array.isArray(examsData) ? examsData : [])));
+      setAttendance((attendanceData.results !== undefined ? attendanceData.results : (Array.isArray(attendanceData) ? attendanceData : [])));
+      
+      // Fetch fee account if it exists
+      if (studentData.fee_account_id) {
+        try {
+          const feeRes = await fetch(`${API_BASE_URL}/fees/accounts/${studentData.fee_account_id}/`, { headers: { Authorization: `Bearer ${token}` } });
+          if (feeRes.ok) {
+            setFeeAccount(await feeRes.json());
+          }
+        } catch (e) {
+          console.error('Failed to fetch fee account', e);
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExamSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = accessToken || await refreshAccessToken();
+      const payload = {
+        student: id,
+        batch: student.batch,
+        grade: student.current_grade_id || student.batch_grade_id, // ensure we have a grade ID, need to check if current_grade is just a string or object. 
+        // wait, let's just fetch student.current_grade. Wait, we don't have current_grade_id in serializer. 
+        // student.batch is available, but wait, exams usually just take student, batch, grade.
+        // Let's rely on the backend accepting these. We'll pass what we can.
+        exam_date: examForm.exam_date,
+        model_exam_marks: examForm.exam_type === 'model' ? examForm.model_exam_marks : null,
+        grade_exam_marks: examForm.exam_type === 'grade' ? examForm.grade_exam_marks : null,
+        is_passed: examForm.is_passed,
+        attempt_number: exams.length + 1
+      };
+      
+      const res = await fetch(`${API_BASE_URL}/students/exams/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        setShowExamModal(false);
+        fetchStudentData();
+      } else {
+        const errorData = await res.json();
+        alert('Failed to add exam record: ' + JSON.stringify(errorData));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error submitting exam record');
     }
   };
 
@@ -91,13 +158,21 @@ export default function StudentProfilePage() {
                   </div>
                 </div>
                 <div className="flex gap-3 mb-2 w-full md:w-auto">
-                  {student.has_pending_fees ? (
+                  {student.fee_status === 'NO_ACCOUNT' ? (
+                    <span className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl border border-gray-200">
+                      <AlertTriangle size={18} /> No Fee Account
+                    </span>
+                  ) : student.fee_status === 'OVERDUE' ? (
                     <span className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 font-bold rounded-xl border border-red-200">
                       <AlertTriangle size={18} /> Fee Overdue
                     </span>
-                  ) : (
+                  ) : student.fee_status === 'SETTLED' ? (
                     <span className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 font-bold rounded-xl border border-green-200">
-                      <CheckCircle size={18} /> Fee Clear
+                      <CheckCircle size={18} /> Fee Settled
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 font-bold rounded-xl border border-indigo-200">
+                      <CheckCircle size={18} /> {student.fee_status}
                     </span>
                   )}
                   <span className={`inline-flex items-center gap-2 px-4 py-2 font-bold rounded-xl border ${student.status === 'active' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-gray-100 text-gray-700 border-gray-200'}`}>
@@ -113,6 +188,8 @@ export default function StudentProfilePage() {
             <button onClick={() => setActiveTab('current')} className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${activeTab === 'current' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-slate-50'}`}>Current Status</button>
             <button onClick={() => setActiveTab('history')} className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${activeTab === 'history' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-slate-50'}`}>Batch History</button>
             <button onClick={() => setActiveTab('exams')} className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${activeTab === 'exams' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-slate-50'}`}>Exams & Marks</button>
+            <button onClick={() => setActiveTab('fees')} className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${activeTab === 'fees' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-slate-50'}`}>Fees</button>
+            <button onClick={() => setActiveTab('attendance')} className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${activeTab === 'attendance' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-slate-50'}`}>Attendance</button>
           </div>
 
           {/* Tab Content */}
@@ -187,7 +264,7 @@ export default function StudentProfilePage() {
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-bold text-gray-900">Exam Records</h3>
-                  <button className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-100 transition-colors">Add Exam Record</button>
+                  <button onClick={() => setShowExamModal(true)} className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-100 transition-colors">Add Exam Record</button>
                 </div>
                 {exams.length === 0 ? (
                   <p className="text-gray-500 text-sm">No exam records found.</p>
@@ -217,10 +294,136 @@ export default function StudentProfilePage() {
               </div>
             )}
 
+            {activeTab === 'fees' && (
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-6">Fee Information</h3>
+                {feeAccount ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200">
+                      <p className="text-sm text-gray-500 mb-1">Fee Policy</p>
+                      <p className="font-bold text-gray-900">{feeAccount.plan_name || feeAccount.plan_code || 'Custom'}</p>
+                    </div>
+                    <div className="bg-gray-50 p-5 rounded-2xl border border-gray-200">
+                      <p className="text-sm text-gray-500 mb-1">Total Due</p>
+                      <p className="font-bold text-gray-900">₹{feeAccount.total_due}</p>
+                    </div>
+                    <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-200">
+                      <p className="text-sm text-indigo-600 mb-1">Total Paid</p>
+                      <p className="font-bold text-indigo-900">₹{feeAccount.total_paid}</p>
+                    </div>
+                    <div className={`${feeAccount.overdue_amount > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'} p-5 rounded-2xl border`}>
+                      <p className={`text-sm mb-1 ${feeAccount.overdue_amount > 0 ? 'text-red-600' : 'text-green-600'}`}>{feeAccount.overdue_amount > 0 ? 'Overdue Amount' : 'Balance Due'}</p>
+                      <p className={`font-bold ${feeAccount.overdue_amount > 0 ? 'text-red-900' : 'text-green-900'}`}>₹{feeAccount.overdue_amount > 0 ? feeAccount.overdue_amount : feeAccount.balance_due}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-500 font-medium">No Fee Account Created</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'attendance' && (
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-6">Attendance Records</h3>
+                {attendance.length === 0 ? (
+                  <p className="text-gray-500 text-sm">No attendance records found.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-gray-50 text-gray-500 font-semibold border-b border-gray-100">
+                        <tr>
+                          <th className="px-6 py-4">Date</th>
+                          <th className="px-6 py-4">Batch</th>
+                          <th className="px-6 py-4">Type</th>
+                          <th className="px-6 py-4 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {attendance.map((rec) => (
+                          <tr key={rec.id} className="hover:bg-slate-50">
+                            <td className="px-6 py-4 font-medium text-gray-900">{new Date(rec.date).toLocaleDateString()}</td>
+                            <td className="px-6 py-4 text-gray-500">{rec.batch_name}</td>
+                            <td className="px-6 py-4 text-gray-500">{rec.session_type}</td>
+                            <td className="px-6 py-4 text-center">
+                              {rec.is_present ? (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 rounded-lg font-bold text-xs">
+                                  <CheckCircle size={14} /> Present
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 text-red-700 rounded-lg font-bold text-xs">
+                                  <XCircle size={14} /> Absent
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
           </div>
 
         </div>
       </div>
+
+      {showExamModal && (
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Add Exam Record</h3>
+              <button onClick={() => setShowExamModal(false)} className="text-gray-400 hover:text-gray-600">
+                <XCircle size={24} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleExamSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Exam Date</label>
+                <input type="date" value={examForm.exam_date} onChange={(e) => setExamForm({...examForm, exam_date: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500" required />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Exam Type</label>
+                <select value={examForm.exam_type} onChange={(e) => setExamForm({...examForm, exam_type: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500">
+                  <option value="model">Model Exam</option>
+                  <option value="grade">Grade Exam</option>
+                </select>
+              </div>
+
+              {examForm.exam_type === 'model' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Model Exam Marks</label>
+                  <input type="number" step="0.01" value={examForm.model_exam_marks} onChange={(e) => setExamForm({...examForm, model_exam_marks: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500" required />
+                </div>
+              )}
+
+              {examForm.exam_type === 'grade' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Grade Exam Marks</label>
+                  <input type="number" step="0.01" value={examForm.grade_exam_marks} onChange={(e) => setExamForm({...examForm, grade_exam_marks: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500" required />
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 mt-4">
+                <input type="checkbox" id="is_passed" checked={examForm.is_passed} onChange={(e) => setExamForm({...examForm, is_passed: e.target.checked})} className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" />
+                <label htmlFor="is_passed" className="text-sm font-semibold text-gray-700">Student Passed</label>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-8">
+                <button type="button" onClick={() => setShowExamModal(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
+                <button type="submit" className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">Save Record</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

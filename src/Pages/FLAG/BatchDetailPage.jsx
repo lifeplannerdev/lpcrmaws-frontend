@@ -158,10 +158,14 @@ export default function BatchDetailPage() {
                           <td className="px-6 py-4 font-medium text-gray-900">{student.name}</td>
                           <td className="px-6 py-4 text-gray-500">{student.phone || 'N/A'}</td>
                           <td className="px-6 py-4">
-                            {student.has_pending_fees ? (
+                            {student.fee_status === 'NO_ACCOUNT' ? (
+                              <span className="text-gray-600 font-semibold bg-gray-50 px-2 py-1 rounded-md text-xs border border-gray-200">No Account</span>
+                            ) : student.fee_status === 'OVERDUE' ? (
                               <span className="text-red-600 font-semibold bg-red-50 px-2 py-1 rounded-md text-xs border border-red-100">Overdue</span>
+                            ) : student.fee_status === 'SETTLED' ? (
+                              <span className="text-green-600 font-semibold bg-green-50 px-2 py-1 rounded-md text-xs border border-green-100">Settled</span>
                             ) : (
-                              <span className="text-green-600 font-semibold bg-green-50 px-2 py-1 rounded-md text-xs border border-green-100">Clear</span>
+                              <span className="text-indigo-600 font-semibold bg-indigo-50 px-2 py-1 rounded-md text-xs border border-indigo-100">{student.fee_status}</span>
                             )}
                           </td>
                           <td className="px-6 py-4 text-right">
