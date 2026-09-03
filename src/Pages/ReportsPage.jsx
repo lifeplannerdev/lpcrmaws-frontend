@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Components/layouts/Navbar';
@@ -85,7 +86,10 @@ const ReportRow = React.memo(({ report, isLate, getStatusBadge, navigate, downlo
 
 export default function ReportsPage() {
   const { accessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
+
+  const isKochiOnly = hasPermission('reports:kochi') && !hasPermission('reports:read_all') && !user?.is_superuser;
 
   const [dateRange, setDateRange] = useState('this-month');
   const [recentReports, setRecentReports] = useState([]);
@@ -306,6 +310,11 @@ export default function ReportsPage() {
                 Reports & Analytics
               </h1>
               <p className="text-gray-600 text-lg">Review and manage all submitted reports</p>
+              {isKochiOnly && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-full mt-2">
+                  📍 Kochi Branch Staff Reports Only
+                </span>
+              )}
             </div>
             <CompanySwitcher activeCompany={companyFilter} onChange={setCompanyFilter} />
           </div>
@@ -338,7 +347,12 @@ export default function ReportsPage() {
         {/* Reports Table */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">All Reports</h2>
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+              All Reports
+              {isKochiOnly && (
+                <span className="text-xs font-semibold px-2.5 py-1 bg-indigo-100 text-indigo-800 rounded-lg">KOCHI</span>
+              )}
+            </h2>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleExportCSV}

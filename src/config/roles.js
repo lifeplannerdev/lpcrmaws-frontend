@@ -38,7 +38,7 @@ export const masterNavigation = [
   { id: "candidates", label: "Candidates", icon: Users, path: "/candidates", requiredResource: "candidates" },
   { id: "assets", label: "Assets", icon: Monitor, path: "/hr/assets", requiredResource: "assets" },
   { id: "myReports", label: "My Reports", icon: FileText, path: "/myreports" },
-  { id: "reports", label: "Staff Reports", icon: FileText, path: "/daily/reports", requiredResource: "reports", requiredPermissions: ["reports:read_all", "reports:documentation"], requiredRoles: ['ADM_MANAGER', 'ADM_COUNSELLOR', 'FLAG_COORDINATOR'] },
+  { id: "reports", label: "Staff Reports", icon: FileText, path: "/daily/reports", requiredResource: "reports", requiredPermissions: ["reports:read_all", "reports:documentation", "reports:kochi"], requiredRoles: ['ADM_MANAGER', 'ADM_COUNSELLOR', 'FLAG_COORDINATOR'] },
   { id: "reportSettings", label: "Report Settings", icon: Settings, path: "/admin/reports/settings", requiredResource: "report_settings", requiredSpecificPermission: "report_settings:manage", requiredRoles: ['ADM_MANAGER'] },
   { id: "roles", label: "Role Management", icon: ShieldAlert, path: "/roles", requiredResource: "staff", requiredPermissions: ["staff:edit_any", "staff:edit_tenant"] },
   { id: "credentials", label: "Credentials Vault", icon: Key, path: "/credentials", requiredResource: "credentials" },
