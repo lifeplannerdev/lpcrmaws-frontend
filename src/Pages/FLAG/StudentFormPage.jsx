@@ -221,15 +221,16 @@ export default function StudentFormPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Assign Trainer (Optional)</label>
-                  <select name="trainer" value={formData.trainer} onChange={handleChange} className="w-full border border-indigo-200 bg-indigo-50/20 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 font-medium">
-                    <option value="">No Trainer Assigned (Unassigned)</option>
-                    {trainers.map(t => (
-                      <option key={t.id} value={t.id}>
-                        {t.name || t.username} {t.email ? `(${t.email})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Batch Trainer</label>
+                  <div className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-gray-700 font-medium text-sm">
+                    {(() => {
+                      const selBatch = batches.find(b => String(b.id) === String(formData.batch));
+                      return selBatch ? (selBatch.trainer_name || 'Unassigned on Batch') : 'No Batch Selected';
+                    })()}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Trainer is assigned directly at the batch level.
+                  </p>
                 </div>
 
                 <div>

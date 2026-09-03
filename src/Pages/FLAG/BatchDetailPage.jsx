@@ -13,7 +13,9 @@ export default function BatchDetailPage() {
   const { hasPermission } = usePermissions();
   const [batch, setBatch] = useState(null);
   const [students, setStudents] = useState([]);
+  const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [savingTrainer, setSavingTrainer] = useState(false);
   const canEdit = hasPermission('flag:admin') || hasPermission('flag:trainer');
   const [activeTab, setActiveTab] = useState('students'); // 'students', 'promote', 'demote'
   const [promotionLoading, setPromotionLoading] = useState(false);
@@ -22,18 +24,51 @@ export default function BatchDetailPage() {
     try {
       setLoading(true);
       const token = accessToken || await refreshAccessToken();
-      const [batchRes, studentsRes] = await Promise.all([
+      const [batchRes, studentsRes, trainersRes] = await Promise.all([
         fetch(`${API_BASE_URL}/students/batches/${id}/`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/students/students/?batch=${id}`, { headers: { Authorization: `Bearer ${token}` } })
+        fetch(`${API_BASE_URL}/students/students/?batch=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/students/trainers/`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
       ]);
       const batchData = await batchRes.json();
       const studentsData = await studentsRes.json();
+      if (trainersRes && trainersRes.ok) {
+        const trainersData = await trainersRes.json();
+        setTrainers(trainersData.results !== undefined ? trainersData.results : (Array.isArray(trainersData) ? trainersData : []));
+      }
       setBatch(batchData);
       setStudents((studentsData.results !== undefined ? studentsData.results : (Array.isArray(studentsData) ? studentsData : [])));
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAssignBatchTrainer = async (trainerId) => {
+    try {
+      setSavingTrainer(true);
+      const token = accessToken || await refreshAccessToken();
+      const res = await fetch(`${API_BASE_URL}/students/batches/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          trainer: trainerId ? Number(trainerId) : null
+        })
+      });
+      if (res.ok) {
+        await fetchBatch();
+      } else {
+        const error = await res.json();
+        alert('Failed to assign trainer: ' + JSON.stringify(error));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error assigning trainer to batch');
+    } finally {
+      setSavingTrainer(false);
     }
   };
 
@@ -127,9 +162,33 @@ export default function BatchDetailPage() {
                 <p className="text-gray-500 mt-1 flex items-center gap-2">
                   <Users size={16} /> Campus: {batch.campus_name}
                 </p>
-                <p className="text-gray-500 mt-1 flex items-center gap-2">
-                  <UserCheck size={16} /> Trainer: <span className="font-semibold text-gray-900">{batch.trainer_name || 'Unassigned'}</span>
-                </p>
+                <div className="text-gray-600 mt-2 flex flex-wrap items-center gap-2">
+                  <span className="flex items-center gap-1.5 font-medium text-sm">
+                    <UserCheck size={16} className="text-indigo-600" /> Assigned Trainer:
+                  </span>
+                  {canEdit ? (
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={batch.trainer || ''}
+                        onChange={(e) => handleAssignBatchTrainer(e.target.value)}
+                        disabled={savingTrainer}
+                        className="text-xs bg-indigo-50/70 border border-indigo-200 text-indigo-900 font-semibold rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                      >
+                        <option value="">Unassigned (No Trainer)</option>
+                        {trainers.map(t => (
+                          <option key={t.id} value={t.id}>
+                            {t.name || t.username} {t.email ? `(${t.email})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      {savingTrainer && <Loader2 size={14} className="animate-spin text-indigo-600" />}
+                    </div>
+                  ) : (
+                    <span className="font-semibold text-gray-900 text-sm">
+                      {batch.trainer_name || 'Unassigned'}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 {canEdit && (

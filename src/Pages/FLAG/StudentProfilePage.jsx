@@ -278,25 +278,19 @@ export default function StudentProfilePage() {
                         <span className="text-gray-600 text-sm font-medium">Assigned Trainer</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        {canEdit ? (
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={student.trainer || ''}
-                              onChange={(e) => handleQuickAssignTrainer(e.target.value)}
-                              disabled={assigningTrainer}
-                              className="text-xs bg-indigo-50/60 border border-indigo-200 text-indigo-900 font-semibold rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                            >
-                              <option value="">No Trainer (Unassigned)</option>
-                              {trainers.map(t => (
-                                <option key={t.id} value={t.id}>{t.name || t.username}</option>
-                              ))}
-                            </select>
-                            {assigningTrainer && <Loader2 size={14} className="animate-spin text-indigo-600" />}
-                          </div>
+                        <span className="font-semibold text-gray-900 text-sm">
+                          {student.trainer_name || 'Unassigned'}
+                        </span>
+                        {student.batch ? (
+                          <Link
+                            to={`/flag/batches/${student.batch}`}
+                            className="text-xs text-indigo-600 hover:text-indigo-800 underline font-medium"
+                            title="Trainers are assigned via the Academic Batch"
+                          >
+                            (via {student.batch_name})
+                          </Link>
                         ) : (
-                          <span className="font-semibold text-gray-900 text-sm">
-                            {student.trainer_name || 'Unassigned'}
-                          </span>
+                          <span className="text-xs text-gray-400 italic">(No Batch)</span>
                         )}
                       </div>
                     </div>
