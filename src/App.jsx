@@ -166,6 +166,7 @@ export default function App() {
         <Route path="/flag" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view','flag:fees']}><FlagDashboard /></PermissionRoute>} />
         <Route path="/flag/batches" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view']}><FlagBatchesPage /></PermissionRoute>} />
         <Route path="/flag/batches/new" element={<PermissionRoute permissions={['flag:admin','flag:trainer']}><FlagBatchFormPage /></PermissionRoute>} />
+        <Route path="/flag/batches/:id/edit" element={<PermissionRoute permissions={['flag:admin','flag:trainer']}><FlagBatchFormPage /></PermissionRoute>} />
         <Route path="/flag/batches/:id" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view']}><FlagBatchDetailPage /></PermissionRoute>} />
         <Route path="/flag/students" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view']}><FlagStudentsPage /></PermissionRoute>} />
         <Route path="/flag/students/new" element={<PermissionRoute permissions={['flag:admin']}><FlagStudentFormPage /></PermissionRoute>} />

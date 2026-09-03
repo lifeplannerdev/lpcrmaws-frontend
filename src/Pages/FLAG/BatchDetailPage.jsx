@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionsContext';
 import { useParams, Link } from 'react-router-dom';
-import { BookOpen, Users, Settings, ArrowUpCircle, ArrowDownCircle, AlertTriangle, Loader2, Check } from 'lucide-react';
+import { BookOpen, Users, Settings, ArrowUpCircle, ArrowDownCircle, AlertTriangle, Loader2, Check, UserCheck, Edit } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function BatchDetailPage() {
   const { id } = useParams();
   const { accessToken, refreshAccessToken } = useAuth();
+  const { hasPermission } = usePermissions();
   const [batch, setBatch] = useState(null);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const canEdit = hasPermission('flag:admin') || hasPermission('flag:trainer');
   const [activeTab, setActiveTab] = useState('students'); // 'students', 'promote', 'demote'
   const [promotionLoading, setPromotionLoading] = useState(false);
 
@@ -124,9 +127,23 @@ export default function BatchDetailPage() {
                 <p className="text-gray-500 mt-1 flex items-center gap-2">
                   <Users size={16} /> Campus: {batch.campus_name}
                 </p>
+                <p className="text-gray-500 mt-1 flex items-center gap-2">
+                  <UserCheck size={16} /> Trainer: <span className="font-semibold text-gray-900">{batch.trainer_name || 'Unassigned'}</span>
+                </p>
               </div>
-              <div className={`px-4 py-2 rounded-xl text-sm font-bold ${batch.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'}`}>
-                {batch.status.toUpperCase()}
+              <div className="flex items-center gap-3">
+                {canEdit && (
+                  <Link
+                    to={`/flag/batches/${batch.id}/edit`}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm font-semibold rounded-xl hover:bg-indigo-100 transition-colors"
+                  >
+                    <Edit size={16} />
+                    Edit Batch
+                  </Link>
+                )}
+                <div className={`px-4 py-2 rounded-xl text-sm font-bold ${batch.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'}`}>
+                  {batch.status.toUpperCase()}
+                </div>
               </div>
             </div>
           </div>

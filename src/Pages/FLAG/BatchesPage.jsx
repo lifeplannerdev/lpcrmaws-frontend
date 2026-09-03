@@ -8,13 +8,14 @@ import { Link, useNavigate } from 'react-router-dom';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function BatchesPage() {
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const canEdit = hasPermission('flag:admin') || hasPermission('flag:trainer');
+  const isTrainerOnly = (hasPermission('flag:trainer') || user?.role_names?.includes('TRAINER')) && !hasPermission('flag:admin') && !user?.is_superuser;
 
   const fetchBatches = async () => {
     try {
@@ -51,6 +52,11 @@ export default function BatchesPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Academic Batches</h1>
               <p className="text-sm text-gray-500 mt-1">Manage and track all German training batches</p>
+              {isTrainerOnly && (
+                <span className="inline-flex items-center px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold rounded-lg mt-1.5">
+                  My Assigned Batches
+                </span>
+              )}
             </div>
             {canEdit && (
               <Link 

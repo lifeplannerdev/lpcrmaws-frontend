@@ -9,7 +9,7 @@ import EditStudentModal from './EditStudentModal';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function StudentsPage() {
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
@@ -20,6 +20,7 @@ export default function StudentsPage() {
   // Only FLAG Admin can create students, or if it's open to processing, we check the role.
   const canCreate = hasPermission('flag:admin');
   const canEdit = hasPermission('flag:admin') || hasPermission('flag:trainer');
+  const isTrainerOnly = (hasPermission('flag:trainer') || user?.role_names?.includes('TRAINER')) && !hasPermission('flag:admin') && !user?.is_superuser;
 
   const fetchStudents = async () => {
     try {
@@ -44,7 +45,8 @@ export default function StudentsPage() {
   const filteredStudents = students.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     (s.phone && s.phone.includes(searchTerm)) ||
-    (s.batch_name && s.batch_name.toLowerCase().includes(searchTerm.toLowerCase()))
+    (s.batch_name && s.batch_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (s.campus_name && s.campus_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -57,6 +59,11 @@ export default function StudentsPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Student Directory</h1>
               <p className="text-sm text-gray-500 mt-1">Manage and view all enrolled German students</p>
+              {isTrainerOnly && (
+                <span className="inline-flex items-center px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold rounded-lg mt-1.5">
+                  My Assigned Students
+                </span>
+              )}
             </div>
             {canCreate && (
               <Link 
