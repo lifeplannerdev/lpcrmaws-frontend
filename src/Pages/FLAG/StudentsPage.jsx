@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
-import { Users, Search, Plus, Filter, Loader2, AlertTriangle, GraduationCap } from 'lucide-react';
+import { Users, Search, Plus, Filter, Loader2, AlertTriangle, GraduationCap, Edit } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import EditStudentModal from './EditStudentModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -14,9 +15,11 @@ export default function StudentsPage() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingStudent, setEditingStudent] = useState(null);
   
   // Only FLAG Admin can create students, or if it's open to processing, we check the role.
   const canCreate = hasPermission('flag:admin');
+  const canEdit = hasPermission('flag:admin') || hasPermission('flag:trainer');
 
   const fetchStudents = async () => {
     try {
@@ -124,6 +127,9 @@ export default function StudentsPage() {
                           <div className="flex flex-col">
                             <span className="font-medium text-gray-900">{student.batch_name || 'Unassigned'}</span>
                             <span className="text-xs text-gray-500">{student.campus_name || 'No Campus'}</span>
+                            {student.trainer_name && (
+                              <span className="text-[11px] text-indigo-600 font-semibold mt-0.5">Trainer: {student.trainer_name}</span>
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -144,12 +150,23 @@ export default function StudentsPage() {
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <button
-                            onClick={() => navigate(`/flag/students/${student.id}`)}
-                            className="text-indigo-600 hover:text-indigo-900 font-semibold text-sm"
-                          >
-                            View Profile
-                          </button>
+                          <div className="flex items-center justify-end gap-3">
+                            {canEdit && (
+                              <button
+                                onClick={() => setEditingStudent(student)}
+                                className="inline-flex items-center gap-1 text-slate-600 hover:text-indigo-600 font-semibold text-sm transition-colors"
+                              >
+                                <Edit size={14} />
+                                Edit
+                              </button>
+                            )}
+                            <button
+                              onClick={() => navigate(`/flag/students/${student.id}`)}
+                              className="text-indigo-600 hover:text-indigo-900 font-semibold text-sm"
+                            >
+                              View Profile
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -160,6 +177,14 @@ export default function StudentsPage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Student Modal */}
+      <EditStudentModal
+        student={editingStudent}
+        isOpen={Boolean(editingStudent)}
+        onClose={() => setEditingStudent(null)}
+        onSuccess={() => fetchStudents()}
+      />
     </div>
   );
 }

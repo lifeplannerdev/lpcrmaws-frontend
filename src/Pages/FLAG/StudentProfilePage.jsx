@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionsContext';
 import { useParams, Link } from 'react-router-dom';
-import { User, Phone, MapPin, Calendar, Award, CheckCircle, XCircle, AlertTriangle, BookOpen, Clock, Loader2, RefreshCw } from 'lucide-react';
+import { User, Phone, MapPin, Calendar, Award, CheckCircle, XCircle, AlertTriangle, BookOpen, Clock, Loader2, RefreshCw, Edit, UserCheck } from 'lucide-react';
+import EditStudentModal from './EditStudentModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function StudentProfilePage() {
   const { id } = useParams();
   const { accessToken, refreshAccessToken } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canEdit = hasPermission('flag:admin') || hasPermission('flag:trainer');
+
   const [student, setStudent] = useState(null);
   const [history, setHistory] = useState([]);
   const [exams, setExams] = useState([]);
@@ -17,6 +22,11 @@ export default function StudentProfilePage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('current'); // 'current', 'history', 'exams', 'fees', 'attendance'
   
+  // Edit & Trainer Assignment state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [trainers, setTrainers] = useState([]);
+  const [assigningTrainer, setAssigningTrainer] = useState(false);
+
   // Modal state
   const [showExamModal, setShowExamModal] = useState(false);
   const [examForm, setExamForm] = useState({
@@ -32,17 +42,22 @@ export default function StudentProfilePage() {
     try {
       setLoading(true);
       const token = accessToken || await refreshAccessToken();
-      const [studentRes, historyRes, examsRes, attendanceRes] = await Promise.all([
+      const [studentRes, historyRes, examsRes, attendanceRes, trainersRes] = await Promise.all([
         fetch(`${API_BASE_URL}/students/students/${id}/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/students/student-history/?student=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/students/exams/?student=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/students/attendance-records/?student=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/students/trainers/`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
       ]);
       
       const studentData = await studentRes.json();
       const historyData = await historyRes.json();
       const examsData = await examsRes.json();
       const attendanceData = await attendanceRes.json();
+      if (trainersRes && trainersRes.ok) {
+        const trainersData = await trainersRes.json();
+        setTrainers(trainersData.results !== undefined ? trainersData.results : (Array.isArray(trainersData) ? trainersData : []));
+      }
 
       setStudent(studentData);
       setHistory((historyData.results !== undefined ? historyData.results : (Array.isArray(historyData) ? historyData : [])));
@@ -66,6 +81,39 @@ export default function StudentProfilePage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleQuickAssignTrainer = async (trainerId) => {
+    try {
+      setAssigningTrainer(true);
+      const token = accessToken || await refreshAccessToken();
+      const res = await fetch(`${API_BASE_URL}/students/students/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          trainer: trainerId ? Number(trainerId) : null
+        })
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setStudent(prev => ({
+          ...prev,
+          trainer: updated.trainer,
+          trainer_name: updated.trainer_name
+        }));
+      } else {
+        alert('Failed to assign trainer');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error assigning trainer');
+    } finally {
+      setAssigningTrainer(false);
     }
   };
 
@@ -160,7 +208,16 @@ export default function StudentProfilePage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-3 mb-2 w-full md:w-auto">
+                <div className="flex flex-wrap items-center gap-3 mb-2 w-full md:w-auto">
+                  {canEdit && (
+                    <button
+                      onClick={() => setShowEditModal(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm text-sm"
+                    >
+                      <Edit size={16} />
+                      Edit Student
+                    </button>
+                  )}
                   {student.fee_status === 'NO_ACCOUNT' ? (
                     <span className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl border border-gray-200">
                       <AlertTriangle size={18} /> No Fee Account
@@ -215,6 +272,34 @@ export default function StudentProfilePage() {
                       <span className="text-gray-500">Package</span>
                       <span className="font-semibold text-gray-900">{student.package_name || 'None'}</span>
                     </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-100 gap-2 pt-1">
+                      <div className="flex items-center gap-1.5">
+                        <UserCheck size={16} className="text-indigo-500" />
+                        <span className="text-gray-600 text-sm font-medium">Assigned Trainer</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {canEdit ? (
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={student.trainer || ''}
+                              onChange={(e) => handleQuickAssignTrainer(e.target.value)}
+                              disabled={assigningTrainer}
+                              className="text-xs bg-indigo-50/60 border border-indigo-200 text-indigo-900 font-semibold rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                            >
+                              <option value="">No Trainer (Unassigned)</option>
+                              {trainers.map(t => (
+                                <option key={t.id} value={t.id}>{t.name || t.username}</option>
+                              ))}
+                            </select>
+                            {assigningTrainer && <Loader2 size={14} className="animate-spin text-indigo-600" />}
+                          </div>
+                        ) : (
+                          <span className="font-semibold text-gray-900 text-sm">
+                            {student.trainer_name || 'Unassigned'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -223,11 +308,11 @@ export default function StudentProfilePage() {
                   <div className="space-y-4">
                     <div className="flex justify-between pb-3 border-b border-gray-100">
                       <span className="text-gray-500">Joined On</span>
-                      <span className="font-semibold text-gray-900">{new Date(student.created_at).toLocaleDateString()}</span>
+                      <span className="font-semibold text-gray-900">{student.joined_date ? new Date(student.joined_date).toLocaleDateString() : (student.created_at ? new Date(student.created_at).toLocaleDateString() : 'N/A')}</span>
                     </div>
                     <div className="flex justify-between pb-3 border-b border-gray-100">
                       <span className="text-gray-500">Last Updated</span>
-                      <span className="font-semibold text-gray-900">{new Date(student.updated_at).toLocaleDateString()}</span>
+                      <span className="font-semibold text-gray-900">{student.updated_at ? new Date(student.updated_at).toLocaleDateString() : (student.joined_date ? new Date(student.joined_date).toLocaleDateString() : (student.created_at ? new Date(student.created_at).toLocaleDateString() : 'N/A'))}</span>
                     </div>
                   </div>
                 </div>
@@ -545,6 +630,14 @@ export default function StudentProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Edit Student Modal */}
+      <EditStudentModal
+        student={student}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSuccess={() => fetchStudentData()}
+      />
 
     </div>
   );
