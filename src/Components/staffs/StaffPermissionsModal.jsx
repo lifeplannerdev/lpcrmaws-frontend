@@ -16,6 +16,7 @@ const PERMISSION_OPTIONS = [
   { id: 'tasks:read_own', label: 'View My Tasks', group: 'Tasks' },
   { id: 'tasks:edit_any', label: 'Edit & Assign Tasks', group: 'Tasks' },
   { id: 'reports:read_all', label: 'View Staff Reports (All)', group: 'Reports' },
+  { id: 'reports:sales_all', label: 'View Staff Reports (Sales: ADM, BMCO, FLAG)', group: 'Reports' },
   { id: 'reports:kochi', label: 'View Staff Reports (Kochi Only)', group: 'Reports' },
   { id: 'reports:documentation', label: 'View Documentation Reports', group: 'Reports' },
   { id: 'reports:read_own', label: 'View My Reports', group: 'Reports' },

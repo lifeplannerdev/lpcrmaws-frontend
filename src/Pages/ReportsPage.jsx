@@ -90,6 +90,7 @@ export default function ReportsPage() {
   const navigate = useNavigate();
 
   const isKochiOnly = hasPermission('reports:kochi') && !hasPermission('reports:read_all') && !user?.is_superuser;
+  const isSalesOnly = hasPermission('reports:sales_all') && !hasPermission('reports:read_all') && !user?.is_superuser;
 
   const [dateRange, setDateRange] = useState('this-month');
   const [recentReports, setRecentReports] = useState([]);
@@ -325,6 +326,11 @@ export default function ReportsPage() {
                   📍 Kochi Branch Staff Reports Only
                 </span>
               )}
+              {isSalesOnly && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-full mt-2">
+                  📊 Sales Team Reports Only (ADM, BMCO, FLAG)
+                </span>
+              )}
             </div>
             <CompanySwitcher activeCompany={companyFilter} onChange={handleCompanyChange} />
           </div>
@@ -361,6 +367,9 @@ export default function ReportsPage() {
               All Reports
               {isKochiOnly && (
                 <span className="text-xs font-semibold px-2.5 py-1 bg-indigo-100 text-indigo-800 rounded-lg">KOCHI</span>
+              )}
+              {isSalesOnly && (
+                <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg">SALES</span>
               )}
             </h2>
             <div className="flex items-center gap-3">
