@@ -13,8 +13,16 @@ const CompanySwitcher = ({ activeCompany, onChange, showAll = false }) => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
 
-  // Only show the switcher if the user has cross-company access, reports:kochi, or reports:sales_all
-  if (!user || (!hasPermission('staff:access_flag') && !hasPermission('reports:kochi') && !hasPermission('reports:sales_all'))) {
+  // Only show the switcher if the user is admin/superuser, has cross-company access, reports:kochi, or reports:sales_all
+  const canSwitchCompany = 
+    user?.is_superuser || 
+    user?.role === 'ADMIN' || 
+    (Array.isArray(user?.roles) && user.roles.includes('ADMIN')) || 
+    hasPermission('staff:access_flag') || 
+    hasPermission('reports:kochi') || 
+    hasPermission('reports:sales_all');
+
+  if (!user || !canSwitchCompany) {
     return null;
   }
 
