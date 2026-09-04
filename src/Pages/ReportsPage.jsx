@@ -132,13 +132,23 @@ export default function ReportsPage() {
   const fetchEmployees = async () => {
     if (!accessToken) return;
     try {
-      const res = await axios.get(`${API_BASE}/staffs/?is_active=true`, {
+      const params = { is_active: true };
+      if (companyFilter && companyFilter !== 'all') {
+        params.company = companyFilter;
+      }
+      const res = await axios.get(`${API_BASE}/staffs/`, {
+        params,
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       setEmployees(res.data.results || res.data || []);
     } catch (err) {
       console.error('Failed to fetch employees:', err);
     }
+  };
+
+  const handleCompanyChange = (newCompany) => {
+    setCompanyFilter(newCompany);
+    setSelectedEmployee('all');
   };
 
   const fetchReports = async (pageNumber = 1) => {
@@ -189,7 +199,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     fetchEmployees();
-  }, [accessToken]);
+  }, [accessToken, companyFilter]);
 
   useEffect(() => {
     fetchStats();
@@ -316,7 +326,7 @@ export default function ReportsPage() {
                 </span>
               )}
             </div>
-            <CompanySwitcher activeCompany={companyFilter} onChange={setCompanyFilter} />
+            <CompanySwitcher activeCompany={companyFilter} onChange={handleCompanyChange} />
           </div>
         </div>
 

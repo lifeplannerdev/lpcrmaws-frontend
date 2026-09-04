@@ -13,8 +13,8 @@ const CompanySwitcher = ({ activeCompany, onChange, showAll = false }) => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
 
-  // Only show the switcher if the user has cross-company access
-  if (!user || !hasPermission('staff:access_flag')) {
+  // Only show the switcher if the user has cross-company access or reports:kochi
+  if (!user || (!hasPermission('staff:access_flag') && !hasPermission('reports:kochi'))) {
     return null;
   }
 
