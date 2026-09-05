@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
@@ -210,7 +210,6 @@ export default function StaffAnalysisPage() {
   const [customDate, setCustomDate] = useState('');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
-  const [selectedEmployee, setSelectedEmployee] = useState('all');
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [selectedSources, setSelectedSources] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -241,7 +240,6 @@ export default function StaffAnalysisPage() {
         params.set('date_preset', 'all_time');
       }
 
-      if (selectedEmployee && selectedEmployee !== 'all') params.set('employee_id', selectedEmployee);
       if (selectedStatuses.length) params.set('status', selectedStatuses.join(','));
       if (selectedSources.length) params.set('source', selectedSources.join(','));
 
@@ -256,7 +254,7 @@ export default function StaffAnalysisPage() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, datePreset, customDate, customStart, customEnd, selectedEmployee, selectedStatuses, selectedSources]);
+  }, [accessToken, datePreset, customDate, customStart, customEnd, selectedStatuses, selectedSources]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -478,7 +476,7 @@ export default function StaffAnalysisPage() {
               <UserCheck size={13} /> Employees
             </h3>
             <button
-              onClick={() => { setFocusedEmployee(null); setSelectedEmployee('all'); }}
+              onClick={() => setFocusedEmployee(null)}
               className={`w-full text-left p-3 rounded-2xl border-2 text-sm font-bold transition-all ${
                 !focusedEmployee ? 'border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-gray-100 text-gray-600 hover:border-indigo-200'
               }`}
@@ -495,10 +493,7 @@ export default function StaffAnalysisPage() {
                 key={empData.employee.id}
                 data={empData}
                 isSelected={focusedEmployee === empData.employee.id}
-                onClick={() => {
-                  setFocusedEmployee(prev => prev === empData.employee.id ? null : empData.employee.id);
-                  setSelectedEmployee(String(empData.employee.id));
-                }}
+                onClick={() => setFocusedEmployee(prev => prev === empData.employee.id ? null : empData.employee.id)}
               />
             ))}
           </div>
