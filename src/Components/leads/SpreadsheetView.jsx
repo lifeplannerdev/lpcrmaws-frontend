@@ -220,7 +220,11 @@ import { useVoxbayCall } from '../../hooks/useVoxbayCall';
 
 export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isReportMode = false, onLeadsChange }) {
   const { user } = useAuth();
-  const [localLeads, setLocalLeads] = useState(leads || []);
+  const [localLeads, setLocalLeads] = useState(() => {
+    const incoming = [...(leads || [])];
+    incoming.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    return incoming;
+  });
   const [remarkModalLead, setRemarkModalLead] = useState(null);
   const { initiateCall } = useVoxbayCall();
 
@@ -230,14 +234,22 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
     const handleLeadUpdated = (e) => {
       const updated = e.detail;
       if (updated?.id) {
-        setLocalLeads(prev => prev.map(l => l.id === updated.id ? { ...l, ...updated } : l));
+        setLocalLeads(prev => {
+          const next = prev.map(l => l.id === updated.id ? { ...l, ...updated } : l);
+          if (isReportMode && onLeadsChange) onLeadsChange(next);
+          return next;
+        });
         if (onUpdateLead) onUpdateLead(updated);
       }
     };
     const handleLeadCreated = (e) => {
       const created = e.detail;
       if (created?.id) {
-        setLocalLeads(prev => [created, ...prev.filter(l => l.id !== created.id)]);
+        setLocalLeads(prev => {
+          const next = [created, ...prev.filter(l => l.id !== created.id)];
+          if (isReportMode && onLeadsChange) onLeadsChange(next);
+          return next;
+        });
         if (onUpdateLead) onUpdateLead(created);
       }
     };
@@ -253,7 +265,7 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
       window.removeEventListener('leadUpdated', handleLeadUpdated);
       window.removeEventListener('leadCreated', handleLeadCreated);
     };
-  }, [initiateCall, onUpdateLead]);
+  }, [initiateCall, onUpdateLead, isReportMode, onLeadsChange]);
 
   const handleRemarkSubmit = async (leadToUpdate, newRemarkText) => {
     const timestamp = format(new Date(), 'dd/MM/yyyy HH:mm');
@@ -274,7 +286,11 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
       if (response.ok) {
         const data = await response.json();
         const updatedLead = data.lead || data;
-        setLocalLeads(prev => prev.map(l => l.id === leadToUpdate.id ? updatedLead : l));
+        setLocalLeads(prev => {
+          const next = prev.map(l => l.id === leadToUpdate.id ? updatedLead : l);
+          if (isReportMode && onLeadsChange) onLeadsChange(next);
+          return next;
+        });
         if (onUpdateLead) onUpdateLead(updatedLead);
         setRemarkModalLead(null);
       } else {
@@ -298,18 +314,6 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
       return [...uniqueTempRows, ...incoming];
     });
   }, [leads]);
-
-  const lastEmittedRef = useRef();
-
-  // Push updates upwards if in report mode
-  useEffect(() => {
-    if (isReportMode && onLeadsChange) {
-      if (lastEmittedRef.current !== localLeads) {
-        lastEmittedRef.current = localLeads;
-        onLeadsChange(localLeads);
-      }
-    }
-  }, [localLeads, isReportMode, onLeadsChange]);
   
   // Track updates to push to backend
   const handleRowsChange = async (newRows, { indexes, column }) => {
@@ -322,6 +326,9 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
 
     // Update local state immediately
     setLocalLeads(newRows);
+    if (isReportMode && onLeadsChange) {
+      onLeadsChange(newRows);
+    }
 
     // If an existing lead was selected, auto-create a Follow-up for today so it stays in the Daily Agenda
     if (justLinkedExistingLead && !isReportMode) {
@@ -414,7 +421,11 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
       status: 'ENQUIRY',
       isNew: true
     };
-    setLocalLeads([newRow, ...localLeads]);
+    const updated = [newRow, ...localLeads];
+    setLocalLeads(updated);
+    if (isReportMode && onLeadsChange) {
+      onLeadsChange(updated);
+    }
   };
 
   // Render Unified View for both Admin and Employee

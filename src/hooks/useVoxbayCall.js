@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useApi } from '../context/ApiContext';
 import { useLiveCall } from '../context/LiveCallContext';
 import toast from 'react-hot-toast';
@@ -8,7 +8,7 @@ export function useVoxbayCall() {
   const { upsertCall, setIsModalOpen, setIsMinimized } = useLiveCall();
   const [callingNumber, setCallingNumber] = useState(null);
 
-  const initiateCall = async (phoneNumber, leadData = null) => {
+  const initiateCall = useCallback(async (phoneNumber, leadData = null) => {
     if (!phoneNumber) return;
     
     // Normalize phone number for Voxbay if it's exactly 10 digits
@@ -61,7 +61,7 @@ export function useVoxbayCall() {
     } finally {
       setCallingNumber(null);
     }
-  };
+  }, [authFetch, apiBaseUrl, upsertCall, setIsModalOpen, setIsMinimized]);
 
   return { initiateCall, callingNumber };
 }

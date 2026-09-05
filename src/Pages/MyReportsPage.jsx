@@ -81,11 +81,13 @@ function SalesDailyAgendaGrid({ formData, setFormData, authFetch, isEditing = fa
   const lastReportTextRef = useRef(formData.report_text || '');
 
   useEffect(() => {
-    const existing = parseExistingLeads();
-    if (!existing || existing.length === 0) {
-      fetchFresh();
+    if (!isEditing) {
+      const existing = parseExistingLeads();
+      if (!existing || existing.length === 0) {
+        fetchFresh();
+      }
     }
-  }, []);
+  }, [isEditing]);
 
   const fetchFresh = async (existingLeads = null) => {
     try {
