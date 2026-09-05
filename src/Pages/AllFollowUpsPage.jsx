@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
+import { useVoxbayCall } from '../hooks/useVoxbayCall';
 import {
   CalendarClock, Phone, MessageSquare, Mail, Users,
   AlertTriangle, ArrowLeft, RefreshCw, Search, SlidersHorizontal,
@@ -76,7 +77,7 @@ const SkeletonCard = () => (
 );
 
 // ── Follow-Up Card ────────────────────────────────────────────────────────────
-const FollowUpCard = ({ item, onStatusChange, onDelete }) => {
+const FollowUpCard = ({ item, onStatusChange, onDelete, onCall }) => {
   const TypeIcon      = TYPE_ICON[item.followup_type]  || Phone;
   const typeColor     = TYPE_COLOR[item.followup_type] || 'bg-gray-100 text-gray-600 border-gray-200';
   const statusColor   = STATUS_COLOR[item.status]      || 'bg-gray-100 text-gray-600';
@@ -178,11 +179,18 @@ const FollowUpCard = ({ item, onStatusChange, onDelete }) => {
         </div>
       )}
 
-      {/* Delete */}
-      <div className="pt-2 border-t border-gray-100">
+      {/* Actions */}
+      <div className="pt-2 border-t border-gray-100 flex gap-1.5">
+        <button
+          onClick={() => onCall(item.phone_number, item)}
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg text-xs font-semibold transition-all"
+        >
+          <Phone size={13} />
+          Call
+        </button>
         <button
           onClick={() => onDelete(item.id)}
-          className="w-full flex items-center justify-center gap-1.5 py-1.5 text-red-500 hover:bg-red-50 rounded-lg text-xs font-semibold transition-all"
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-red-500 hover:bg-red-50 rounded-lg text-xs font-semibold transition-all"
         >
           <Trash2 size={13} />
           Delete
@@ -194,7 +202,7 @@ const FollowUpCard = ({ item, onStatusChange, onDelete }) => {
 
 // ── Section ───────────────────────────────────────────────────────────────────
 const Section = ({ title, subtitle, icon: Icon, iconBg, items, loading,
-                   onStatusChange, onDelete, defaultOpen = true }) => {
+                   onStatusChange, onDelete, onCall, defaultOpen = true }) => {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
@@ -241,6 +249,7 @@ const Section = ({ title, subtitle, icon: Icon, iconBg, items, loading,
                   item={item}
                   onStatusChange={onStatusChange}
                   onDelete={onDelete}
+                  onCall={onCall}
                 />
               ))}
             </div>
@@ -256,6 +265,7 @@ export default function AllFollowUpsPage() {
   const navigate  = useNavigate();
   const { accessToken, refreshAccessToken, loading: authLoading, user } = useAuth();
   const { hasPermission } = usePermissions();
+  const { initiateCall } = useVoxbayCall();
   const tokenRef  = useRef(accessToken);
   useEffect(() => { tokenRef.current = accessToken; }, [accessToken]);
 
@@ -273,8 +283,11 @@ export default function AllFollowUpsPage() {
   const [loadingToday,    setLoadingToday]    = useState(true);
   const [loadingTomorrow, setLoadingTomorrow] = useState(true);
   const [loadingOther,    setLoadingOther]    = useState(true);
+  const [loadingCustom,   setLoadingCustom]   = useState(false);
 
   // Filters
+  const [filterDate,     setFilterDate]     = useState('');
+  const [customItems,    setCustomItems]    = useState([]);
   const [searchTerm,     setSearchTerm]     = useState('');
   const [filterStatus,   setFilterStatus]   = useState('all');
   const [filterType,     setFilterType]     = useState('all');
@@ -348,8 +361,14 @@ export default function AllFollowUpsPage() {
   }, [fetchSection, today, tomorrow]);
 
   useEffect(() => {
-    if (!authLoading && accessToken) loadAll();
-  }, [authLoading, accessToken, loadAll]);
+    if (!authLoading && accessToken) {
+      if (filterDate) {
+        fetchSection({ date: filterDate }, setCustomItems, setLoadingCustom);
+      } else {
+        loadAll();
+      }
+    }
+  }, [authLoading, accessToken, loadAll, filterDate]);
 
   const handleStatusChange = async (id, newStatus) => {
     try {
@@ -363,6 +382,7 @@ export default function AllFollowUpsPage() {
       setTodayItems(updater);
       setTomorrowItems(updater);
       setOtherItems(updater);
+      setCustomItems(updater);
     } catch { alert('Update failed'); }
   };
 
@@ -375,6 +395,7 @@ export default function AllFollowUpsPage() {
       setTodayItems(remover);
       setTomorrowItems(remover);
       setOtherItems(remover);
+      setCustomItems(remover);
     } catch { alert('Delete failed'); }
   };
 
@@ -397,6 +418,7 @@ export default function AllFollowUpsPage() {
 
   const clearFilters = () => {
     setSearchTerm('');
+    setFilterDate('');
     setFilterStatus('all');
     setFilterType('all');
     setFilterPriority('all');
@@ -406,9 +428,12 @@ export default function AllFollowUpsPage() {
   const filteredToday    = applyFilter(todayItems);
   const filteredTomorrow = applyFilter(tomorrowItems);
   const filteredOther    = applyFilter(otherItems);
-  const totalVisible     = filteredToday.length + filteredTomorrow.length + filteredOther.length;
+  const filteredCustom   = applyFilter(customItems);
+  const totalVisible     = filterDate 
+                           ? filteredCustom.length 
+                           : (filteredToday.length + filteredTomorrow.length + filteredOther.length);
   const hasFilters       = searchTerm || filterStatus !== 'all' || filterType !== 'all' ||
-                           filterPriority !== 'all' || filterStaff !== 'all';
+                           filterPriority !== 'all' || filterStaff !== 'all' || filterDate;
 
   const todayLabel    = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
   const tomorrowLabel = new Date(Date.now() + 86400000).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -520,7 +545,15 @@ export default function AllFollowUpsPage() {
             </div>
 
             {/* Dropdowns */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+
+              {/* Date */}
+              <div className="relative">
+                <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500 transition-all font-semibold text-gray-700 bg-white text-sm"
+                  title="Specific Date"
+                />
+              </div>
 
               {/* Status */}
               <div className="relative">
@@ -594,50 +627,70 @@ export default function AllFollowUpsPage() {
 
         {viewMode === 'list' ? (
           <>
-            {/* ── Today ── */}
-            <Section
-              title="Today"
-              subtitle={todayLabel}
-              icon={Star}
-              iconBg="bg-gradient-to-br from-emerald-500 to-teal-600"
-              items={filteredToday}
-              loading={loadingToday}
-              onStatusChange={handleStatusChange}
-              onDelete={handleDelete}
-              defaultOpen={true}
-            />
+            {filterDate ? (
+              <Section
+                title="Selected Date"
+                subtitle={new Date(filterDate).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                icon={CalendarClock}
+                iconBg="bg-gradient-to-br from-indigo-500 to-purple-600"
+                items={filteredCustom}
+                loading={loadingCustom}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDelete}
+                onCall={initiateCall}
+                defaultOpen={true}
+              />
+            ) : (
+              <>
+                {/* ── Today ── */}
+                <Section
+                  title="Today"
+                  subtitle={todayLabel}
+                  icon={Star}
+                  iconBg="bg-gradient-to-br from-emerald-500 to-teal-600"
+                  items={filteredToday}
+                  loading={loadingToday}
+                  onStatusChange={handleStatusChange}
+                  onDelete={handleDelete}
+                  onCall={initiateCall}
+                  defaultOpen={true}
+                />
 
-            {/* ── Tomorrow ── */}
-            <Section
-              title="Tomorrow"
-              subtitle={tomorrowLabel}
-              icon={Sunrise}
-              iconBg="bg-gradient-to-br from-blue-500 to-indigo-600"
-              items={filteredTomorrow}
-              loading={loadingTomorrow}
-              onStatusChange={handleStatusChange}
-              onDelete={handleDelete}
-              defaultOpen={true}
-            />
+                {/* ── Tomorrow ── */}
+                <Section
+                  title="Tomorrow"
+                  subtitle={tomorrowLabel}
+                  icon={Sunrise}
+                  iconBg="bg-gradient-to-br from-blue-500 to-indigo-600"
+                  items={filteredTomorrow}
+                  loading={loadingTomorrow}
+                  onStatusChange={handleStatusChange}
+                  onDelete={handleDelete}
+                  onCall={initiateCall}
+                  defaultOpen={true}
+                />
 
-            {/* ── Upcoming ── */}
-            <Section
-              title="Upcoming"
-              subtitle="After tomorrow"
-              icon={CalendarIcon}
-              iconBg="bg-gradient-to-br from-purple-500 to-pink-600"
-              items={filteredOther}
-              loading={loadingOther}
-              onStatusChange={handleStatusChange}
-              onDelete={handleDelete}
-              defaultOpen={false}
-            />
+                {/* ── Upcoming ── */}
+                <Section
+                  title="Upcoming"
+                  subtitle="After tomorrow"
+                  icon={CalendarIcon}
+                  iconBg="bg-gradient-to-br from-purple-500 to-pink-600"
+                  items={filteredOther}
+                  loading={loadingOther}
+                  onStatusChange={handleStatusChange}
+                  onDelete={handleDelete}
+                  onCall={initiateCall}
+                  defaultOpen={false}
+                />
+              </>
+            )}
           </>
         ) : (
           <div className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100 h-[600px]">
             <Calendar
               localizer={localizer}
-              events={[...filteredToday, ...filteredTomorrow, ...filteredOther].map(item => {
+              events={(filterDate ? filteredCustom : [...filteredToday, ...filteredTomorrow, ...filteredOther]).map(item => {
                 const date = new Date(item.follow_up_date);
                 if (item.follow_up_time) {
                   const [h, m] = item.follow_up_time.split(':');
