@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import Navbar from '../Components/layouts/Navbar';
@@ -56,31 +56,33 @@ function getNextWorkingDate() {
 }
 
 function SalesDailyAgendaGrid({ formData, setFormData, authFetch, isEditing = false }) {
-  const [leads, setLeads] = useState([]);
-  const [syncing, setSyncing] = useState(false);
-
-  useEffect(() => {
-    let initialLeads = null;
+  const parseExistingLeads = useCallback(() => {
     if (formData.report_text && typeof formData.report_text === 'string') {
       const trimmed = formData.report_text.trim();
       if (trimmed.startsWith('[')) {
         try {
           const parsed = JSON.parse(trimmed);
           if (Array.isArray(parsed)) {
-            initialLeads = parsed;
+            return parsed;
           }
         } catch (e) {
           console.error("Could not parse existing leads snapshot:", e);
         }
       }
     }
+    return null;
+  }, [formData.report_text]);
 
-    if (isEditing && initialLeads) {
-      // In editing mode, preserve the exact submitted snapshot!
-      setLeads(initialLeads);
-    } else if (initialLeads && initialLeads.length > 0) {
-      setLeads(initialLeads);
-    } else {
+  const [leads, setLeads] = useState(() => {
+    const existing = parseExistingLeads();
+    return existing || [];
+  });
+  const [syncing, setSyncing] = useState(false);
+  const lastReportTextRef = useRef(formData.report_text || '');
+
+  useEffect(() => {
+    const existing = parseExistingLeads();
+    if (!existing || existing.length === 0) {
       fetchFresh();
     }
   }, []);
@@ -117,9 +119,13 @@ function SalesDailyAgendaGrid({ formData, setFormData, authFetch, isEditing = fa
         fetchedLeads = merged;
       }
       
+      const newJson = JSON.stringify(fetchedLeads);
+      lastReportTextRef.current = newJson;
       setLeads(fetchedLeads);
-      // Initialize report_text with current fetched leads
-      setFormData(prev => ({ ...prev, report_text: JSON.stringify(fetchedLeads) }));
+      setFormData(prev => {
+        if (prev.report_text === newJson) return prev;
+        return { ...prev, report_text: newJson };
+      });
     } catch (err) {
       console.error(err);
     } finally {
@@ -127,13 +133,15 @@ function SalesDailyAgendaGrid({ formData, setFormData, authFetch, isEditing = fa
     }
   };
 
-  const handleLeadsChange = (updatedLeads) => {
-    setLeads(updatedLeads);
-    setFormData(prev => ({
-      ...prev,
-      report_text: JSON.stringify(updatedLeads)
-    }));
-  };
+  const handleLeadsChange = useCallback((updatedLeads) => {
+    const jsonStr = JSON.stringify(updatedLeads);
+    if (lastReportTextRef.current === jsonStr) return;
+    lastReportTextRef.current = jsonStr;
+    setFormData(prev => {
+      if (prev.report_text === jsonStr) return prev;
+      return { ...prev, report_text: jsonStr };
+    });
+  }, [setFormData]);
 
   return (
     <div>
@@ -392,7 +400,7 @@ export default function MyReportsPage() {
       };
       fetchAgenda();
     }
-  }, [showCreateModal, showEditModal, editingReport]);
+  }, [showCreateModal, showEditModal, editingReport?.id, editingReport?.report_date]);
 
   // ── Helper: download via Django proxy ────────────────────────────────────
   const downloadFile = async (attachment) => {

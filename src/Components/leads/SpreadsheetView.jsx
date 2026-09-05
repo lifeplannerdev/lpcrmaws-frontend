@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { DataGrid, renderTextEditor as textEditor } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
 import { format, isToday, parseISO, isSameDay, subDays } from 'date-fns';
@@ -299,12 +299,17 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
     });
   }, [leads]);
 
+  const lastEmittedRef = useRef();
+
   // Push updates upwards if in report mode
   useEffect(() => {
     if (isReportMode && onLeadsChange) {
-      onLeadsChange(localLeads);
+      if (lastEmittedRef.current !== localLeads) {
+        lastEmittedRef.current = localLeads;
+        onLeadsChange(localLeads);
+      }
     }
-  }, [localLeads, isReportMode]);
+  }, [localLeads, isReportMode, onLeadsChange]);
   
   // Track updates to push to backend
   const handleRowsChange = async (newRows, { indexes, column }) => {
