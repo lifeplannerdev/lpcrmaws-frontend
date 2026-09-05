@@ -55,22 +55,31 @@ function getNextWorkingDate() {
   return d;
 }
 
-function SalesDailyAgendaGrid({ formData, setFormData, authFetch }) {
+function SalesDailyAgendaGrid({ formData, setFormData, authFetch, isEditing = false }) {
   const [leads, setLeads] = useState([]);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    const isToday = formData.report_date === getLocalYYYYMMDD();
-    if (formData.report_text && formData.report_text.trim().startsWith('[')) {
-      try {
-        const parsed = JSON.parse(formData.report_text);
-        if (isToday) {
-          fetchFresh(parsed);
-        } else {
-          setLeads(parsed);
+    let initialLeads = null;
+    if (formData.report_text && typeof formData.report_text === 'string') {
+      const trimmed = formData.report_text.trim();
+      if (trimmed.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) {
+            initialLeads = parsed;
+          }
+        } catch (e) {
+          console.error("Could not parse existing leads snapshot:", e);
         }
-      } catch (e) {
-        fetchFresh();
       }
+    }
+
+    if (isEditing && initialLeads) {
+      // In editing mode, preserve the exact submitted snapshot!
+      setLeads(initialLeads);
+    } else if (initialLeads && initialLeads.length > 0) {
+      setLeads(initialLeads);
     } else {
       fetchFresh();
     }
@@ -78,6 +87,7 @@ function SalesDailyAgendaGrid({ formData, setFormData, authFetch }) {
 
   const fetchFresh = async (existingLeads = null) => {
     try {
+      setSyncing(true);
       const data = await authFetch(`${API_BASE_URL}/leads/?daily_agenda=true&page_size=200`);
       let fetchedLeads = [];
       if (data.results && Array.isArray(data.results)) {
@@ -112,10 +122,13 @@ function SalesDailyAgendaGrid({ formData, setFormData, authFetch }) {
       setFormData(prev => ({ ...prev, report_text: JSON.stringify(fetchedLeads) }));
     } catch (err) {
       console.error(err);
+    } finally {
+      setSyncing(false);
     }
   };
 
   const handleLeadsChange = (updatedLeads) => {
+    setLeads(updatedLeads);
     setFormData(prev => ({
       ...prev,
       report_text: JSON.stringify(updatedLeads)
@@ -123,18 +136,60 @@ function SalesDailyAgendaGrid({ formData, setFormData, authFetch }) {
   };
 
   return (
-    <div className="h-96 w-full mt-3 rounded-lg overflow-hidden border border-emerald-200">
-      <SpreadsheetView leads={leads} authFetch={authFetch} isReportMode={true} onLeadsChange={handleLeadsChange} />
+    <div>
+      {isEditing && (
+        <div className="flex items-center justify-between mt-2 mb-1 px-1">
+          <span className="text-xs text-emerald-800 font-semibold">
+            Submitted Leads Snapshot ({leads.length} leads)
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm("Sync latest CRM leads? This will merge newly updated leads from today into your report.")) {
+                fetchFresh(leads);
+              }
+            }}
+            disabled={syncing}
+            className="text-xs font-semibold px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded transition"
+          >
+            {syncing ? "Syncing..." : "Sync Latest CRM Leads"}
+          </button>
+        </div>
+      )}
+      <div className="h-96 w-full mt-2 rounded-lg overflow-hidden border border-emerald-200">
+        <SpreadsheetView leads={leads} authFetch={authFetch} isReportMode={true} onLeadsChange={handleLeadsChange} />
+      </div>
     </div>
   );
 };
 
-function FormFields({ formData, handleInputChange, errors, user, setFormData, authFetch, hasLeadsAccess, morningAgendaText, morningHeading, eveningHeading, nextDayHeading }) {
+function FormFields({ 
+  formData, 
+  handleInputChange, 
+  errors, 
+  user, 
+  setFormData, 
+  authFetch, 
+  hasLeadsAccess, 
+  morningAgendaText, 
+  morningHeading, 
+  eveningHeading, 
+  nextDayHeading,
+  isEditing = false 
+}) {
   const completionPercentage = (() => {
     let score = 0;
     if (formData.next_day_agenda && formData.next_day_agenda.trim().length > 0) score += 50;
     if (hasLeadsAccess) {
-      if ((formData.extraReportText && formData.extraReportText.trim().length > 0) || (formData.report_text && formData.report_text.trim().startsWith('['))) score += 50;
+      let hasLeads = false;
+      try {
+        if (formData.report_text && formData.report_text.trim().startsWith('[')) {
+          const parsed = JSON.parse(formData.report_text.trim());
+          if (Array.isArray(parsed) && parsed.length > 0) hasLeads = true;
+        }
+      } catch (e) {}
+      const hasExtra = formData.extraReportText && formData.extraReportText.trim().length > 0;
+      if (hasLeads || hasExtra) score += 50;
     } else {
       if (formData.report_text && formData.report_text.trim().length > 0) score += 50;
     }
@@ -180,13 +235,13 @@ function FormFields({ formData, handleInputChange, errors, user, setFormData, au
       </div>
       <div className="bg-white/50 border border-emerald-100 rounded-lg p-3 mb-3">
         <span className="block text-xs font-semibold text-emerald-800 uppercase mb-1">Heading</span>
-        <span className="text-sm font-medium text-gray-800">{eveningHeading}</span>
+        <span className="text-sm font-medium text-gray-800">{formData.report_heading || eveningHeading}</span>
       </div>
       
       {hasLeadsAccess ? (
         <div className="bg-white/50 border border-emerald-100 rounded-lg p-3">
           <span className="block text-xs font-semibold text-emerald-800 uppercase mb-1">Daily Leads Snapshot</span>
-          <SalesDailyAgendaGrid formData={formData} setFormData={setFormData} authFetch={authFetch} />
+          <SalesDailyAgendaGrid formData={formData} setFormData={setFormData} authFetch={authFetch} isEditing={isEditing} />
           <p className="text-emerald-700/70 text-xs mt-2 mb-3 text-center">Snapshot is automatically attached to your report.</p>
           
           <div className="border-t border-emerald-200 pt-3 mt-2">
@@ -221,7 +276,7 @@ function FormFields({ formData, handleInputChange, errors, user, setFormData, au
       </div>
       <div className="bg-white/50 border border-teal-100 rounded-lg p-3 mb-3">
         <span className="block text-xs font-semibold text-teal-800 uppercase mb-1">Heading</span>
-        <span className="text-sm font-medium text-gray-800">{nextDayHeading}</span>
+        <span className="text-sm font-medium text-gray-800">{formData.agenda_heading || nextDayHeading}</span>
       </div>
       <div className="bg-white/50 border border-teal-100 rounded-lg p-3">
         <label className="block text-xs font-semibold text-teal-800 uppercase mb-1">Agenda Details</label>
@@ -310,19 +365,34 @@ export default function MyReportsPage() {
   const eveningHeading = `${displayName} | ${roleName} | ${formatHeaderDate(getTodayDate())} | Evening Report`;
   const nextDayHeading = `${displayName} | ${roleName} | ${formatHeaderDate(getNextWorkingDate())} | Next Day Agenda`;
 
+  const [morningAgendaHeading, setMorningAgendaHeading] = useState('');
+
   useEffect(() => {
     if (showCreateModal || showEditModal) {
       const fetchAgenda = async () => {
         try {
-          const data = await fetchWithAuth(`${API_BASE_URL}/reports/next-day-agenda/`);
+          const params = new URLSearchParams();
+          if (showEditModal && editingReport) {
+            if (editingReport.id) params.set('exclude_id', editingReport.id);
+            if (editingReport.report_date) params.set('before_date', editingReport.report_date);
+          } else {
+            params.set('before_date', getLocalYYYYMMDD());
+          }
+          const data = await fetchWithAuth(`${API_BASE_URL}/reports/next-day-agenda/?${params.toString()}`);
           setMorningAgendaText(data?.next_day_agenda || 'No agenda was submitted for today.');
+          if (data?.agenda_heading) {
+            setMorningAgendaHeading(data.agenda_heading);
+          } else {
+            setMorningAgendaHeading('');
+          }
         } catch (err) {
           setMorningAgendaText('No agenda was submitted for today.');
+          setMorningAgendaHeading('');
         }
       };
       fetchAgenda();
     }
-  }, [showCreateModal, showEditModal]);
+  }, [showCreateModal, showEditModal, editingReport]);
 
   // ── Helper: download via Django proxy ────────────────────────────────────
   const downloadFile = async (attachment) => {
@@ -484,8 +554,21 @@ export default function MyReportsPage() {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.name?.trim())        newErrors.name = 'Name is required';
-    const isReportEmpty = hasLeadsAccess ? (!formData.extraReportText?.trim() && formData.report_text === '[]') : !formData.report_text?.trim();
+    if (!formData.name?.trim()) newErrors.name = 'Name is required';
+    let isReportEmpty = false;
+    if (hasLeadsAccess) {
+      const hasExtra = !!formData.extraReportText?.trim();
+      let hasLeads = false;
+      try {
+        if (formData.report_text && formData.report_text.trim().startsWith('[')) {
+          const parsed = JSON.parse(formData.report_text.trim());
+          if (Array.isArray(parsed) && parsed.length > 0) hasLeads = true;
+        }
+      } catch (e) {}
+      isReportEmpty = !hasExtra && !hasLeads;
+    } else {
+      isReportEmpty = !formData.report_text?.trim();
+    }
     if (isReportEmpty && !formData.next_day_agenda?.trim()) {
       newErrors.submit = 'You must submit either an agenda or a report.';
     }
@@ -493,16 +576,19 @@ export default function MyReportsPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const buildFormData = () => {
+  const buildFormData = (isEditing = false) => {
     const submitData = new FormData();
     submitData.append('name', formData.name);
     submitData.append('report_date', formData.report_date);
-    submitData.append('report_heading', eveningHeading);
-    submitData.append('agenda_heading', nextDayHeading);
+    
+    const repHeading = isEditing ? (formData.report_heading || eveningHeading) : eveningHeading;
+    const agnHeading = isEditing ? (formData.agenda_heading || nextDayHeading) : nextDayHeading;
+    submitData.append('report_heading', repHeading);
+    submitData.append('agenda_heading', agnHeading);
     
     let finalReportText = formData.report_text;
     if (hasLeadsAccess) {
-      finalReportText = `[Daily Leads Snapshot]\n${formData.report_text}\n\n[Evening Report]\n${formData.extraReportText || ''}`;
+      finalReportText = `[Daily Leads Snapshot]\n${formData.report_text || '[]'}\n\n[Evening Report]\n${formData.extraReportText || ''}`;
     }
     if (finalReportText) submitData.append('report_text', finalReportText);
     if (formData.next_day_agenda) submitData.append('next_day_agenda', formData.next_day_agenda);
@@ -520,7 +606,7 @@ export default function MyReportsPage() {
       const response = await fetch(`${API_BASE_URL}/reports/create/`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
-        body: buildFormData(),
+        body: buildFormData(false),
       });
 
       if (!response.ok) {
@@ -546,21 +632,27 @@ export default function MyReportsPage() {
       return;
     }
     setEditingReport(report);
-    let parsedReportText = report.report_text || '';
+    let rawText = report.report_text || '';
+    let parsedReportText = rawText;
     let parsedExtraReportText = '';
     
-    if (parsedReportText.startsWith('[Daily Leads Snapshot]\n')) {
-      const parts = parsedReportText.split('\n\n[Evening Report]\n');
-      parsedReportText = parts[0].replace('[Daily Leads Snapshot]\n', '');
-      parsedExtraReportText = parts.length > 1 ? parts[1] : '';
+    if (rawText.includes('[Daily Leads Snapshot]')) {
+      if (rawText.includes('[Evening Report]')) {
+        const parts = rawText.split(/\[Evening Report\]\r?\n?/);
+        parsedReportText = parts[0] ? parts[0].replace(/\[Daily Leads Snapshot\]\r?\n?/, '').trim() : '';
+        parsedExtraReportText = parts.length > 1 ? (parts[1] || '').trim() : '';
+      } else {
+        parsedReportText = rawText.replace(/\[Daily Leads Snapshot\]\r?\n?/, '').trim();
+        parsedExtraReportText = '';
+      }
     }
     
     setFormData({
       name: report.name,
-      report_heading: report.report_heading || '',
+      report_heading: report.report_heading || eveningHeading,
       report_text: parsedReportText,
       extraReportText: parsedExtraReportText,
-      agenda_heading: report.agenda_heading || '',
+      agenda_heading: report.agenda_heading || nextDayHeading,
       report_date: report.report_date,
       next_day_agenda: report.next_day_agenda || '',
       attached_files: []
@@ -578,7 +670,7 @@ export default function MyReportsPage() {
       const response = await fetch(`${API_BASE_URL}/reports/${editingReport.id}/edit/`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}` },
-        body: buildFormData(),
+        body: buildFormData(true),
       });
 
       if (!response.ok) {
@@ -825,7 +917,20 @@ export default function MyReportsPage() {
               </div>
               <div className="p-6">
                 {errors.submit && <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{errors.submit}</div>}
-                <FormFields formData={formData} handleInputChange={handleInputChange} errors={errors} user={user} setFormData={setFormData} authFetch={fetchWithAuth} hasLeadsAccess={hasLeadsAccess} morningAgendaText={morningAgendaText} morningHeading={morningHeading} eveningHeading={eveningHeading} nextDayHeading={nextDayHeading} />
+                <FormFields 
+                  formData={formData} 
+                  handleInputChange={handleInputChange} 
+                  errors={errors} 
+                  user={user} 
+                  setFormData={setFormData} 
+                  authFetch={fetchWithAuth} 
+                  hasLeadsAccess={hasLeadsAccess} 
+                  morningAgendaText={morningAgendaText} 
+                  morningHeading={morningAgendaHeading || morningHeading} 
+                  eveningHeading={eveningHeading} 
+                  nextDayHeading={nextDayHeading} 
+                  isEditing={false}
+                />
                 <FileUploadSection 
                   formData={formData} 
                   errors={errors} 
@@ -858,7 +963,20 @@ export default function MyReportsPage() {
               </div>
               <div className="p-6">
                 {errors.submit && <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{errors.submit}</div>}
-                <FormFields formData={formData} handleInputChange={handleInputChange} errors={errors} user={user} setFormData={setFormData} authFetch={fetchWithAuth} hasLeadsAccess={hasLeadsAccess} morningAgendaText={morningAgendaText} morningHeading={morningHeading} eveningHeading={eveningHeading} nextDayHeading={nextDayHeading} />
+                <FormFields 
+                  formData={formData} 
+                  handleInputChange={handleInputChange} 
+                  errors={errors} 
+                  user={user} 
+                  setFormData={setFormData} 
+                  authFetch={fetchWithAuth} 
+                  hasLeadsAccess={hasLeadsAccess} 
+                  morningAgendaText={morningAgendaText} 
+                  morningHeading={morningAgendaHeading || morningHeading} 
+                  eveningHeading={formData.report_heading || eveningHeading} 
+                  nextDayHeading={formData.agenda_heading || nextDayHeading} 
+                  isEditing={true}
+                />
 
                 {editingReport?.attachments?.length > 0 && (
                   <div className="mt-5">

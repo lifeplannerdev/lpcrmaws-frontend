@@ -101,23 +101,42 @@ export default function ReportViewPage() {
     return <FileText className="w-6 h-6 text-gray-600" />;
   };
 
-  // ✅ FIXED: Download file using direct URL
-  const downloadFile = (attachment) => {
-    if (!attachment?.view_url) {
-      alert('File URL is not available.');
-      return;
+  const downloadFile = async (attachment) => {
+    if (!attachment) return;
+    if (attachment.id) {
+      try {
+        const response = await fetch(
+          `${API_BASE}/reports/attachments/${attachment.id}/download/`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        if (response.ok) {
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = attachment.original_filename || 'download';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+          return;
+        }
+      } catch (err) {
+        console.error('Proxy download failed, falling back to direct URL:', err);
+      }
     }
-    
-    // For direct download, we can use an anchor tag with the download attribute
-    // If it's a cross-origin URL (like S3), the download attribute might just navigate,
-    // but the browser handles it fine (and S3 presigned URLs often have content-disposition set)
-    const link = document.createElement('a');
-    link.href = attachment.view_url;
-    link.target = '_blank'; // Fallback for cross-origin downloads
-    link.download = attachment.original_filename || 'download';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    if (attachment.view_url) {
+      const link = document.createElement('a');
+      link.href = attachment.view_url;
+      link.target = '_blank';
+      link.download = attachment.original_filename || 'download';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      alert('File URL is not available.');
+    }
   };
 
   // ✅ FIXED: View attachment by opening its URL directly
