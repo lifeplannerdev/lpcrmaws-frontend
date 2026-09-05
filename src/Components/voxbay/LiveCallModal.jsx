@@ -12,14 +12,17 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const STATUS_OPTIONS = [
-  { value: 'ENQUIRY', label: 'Enquiry', color: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' },
-  { value: 'CONTACTED', label: 'Contacted', color: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' },
-  { value: 'QUALIFIED', label: 'Qualified', color: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100' },
+  { value: 'ENQUIRY',    label: 'Enquiry',    color: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' },
   { value: 'JOB_ENQUIRY', label: 'Job Enquiry', color: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100' },
-  { value: 'NOT_INTERESTED', label: 'Not Interested', color: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100' },
-  { value: 'CNR', label: 'Could Not Reach', color: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100' },
-  { value: 'REGISTERED', label: 'Registered', color: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' },
+  { value: 'B2B',       label: 'B2B',        color: 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100' },
+  { value: 'COLD_WARM', label: 'Cold Warm',  color: 'bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100' },
+  { value: 'HOT',       label: 'Hot',        color: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100' },
+  { value: 'CLOSED',    label: 'Closed',     color: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100' },
+  { value: 'CONVERTED', label: 'Converted',  color: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' },
 ];
+
+// Statuses that do NOT require a mandatory follow-up date before saving
+const NO_FOLLOWUP_STATUSES = ['CLOSED', 'CONVERTED', 'B2B', 'JOB_ENQUIRY'];
 
 const PRIORITY_OPTIONS = [
   { value: 'LOW', label: 'Low', color: 'text-gray-600 bg-gray-100' },
@@ -194,10 +197,20 @@ export default function LiveCallModal() {
     return `[${timestamp}] ${staffName}: ${rawText.trim()}`;
   };
 
+  // Computed: does this call require a mandatory followup?
+  const currentStatus = formData.status || existingLeadData?.status || 'ENQUIRY';
+  const followupRequired = !NO_FOLLOWUP_STATUSES.includes(currentStatus);
+
   // Submit Handler
   const handleSave = async () => {
     if (activeCall.isNewLead && !formData.name?.trim()) {
       toast.error('Please enter a lead name');
+      return;
+    }
+
+    // Validate mandatory followup (skip for terminal statuses)
+    if (followupRequired && !formData.follow_up_date && !formData.followup_done) {
+      toast.error('📅 Please set a follow-up date or mark this call as "Completed" before saving.');
       return;
     }
 
@@ -290,6 +303,22 @@ export default function LiveCallModal() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updatePayload),
         });
+
+        // Auto-mark any existing pending followup for this lead as 'contacted'
+        try {
+          const pendingRes = await authFetch(`${apiBaseUrl}/followups/?lead=${leadId}&status=pending`);
+          if (pendingRes.ok) {
+            const pendingData = await pendingRes.json();
+            const pendingList = pendingData.results || pendingData || [];
+            for (const pf of pendingList) {
+              await authFetch(`${apiBaseUrl}/followups/${pf.id}/`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'contacted' }),
+              });
+            }
+          }
+        } catch (_) { /* silent — don't block save */ }
 
         // Add or update Follow-up Remark (merging with existing CDR follow-up if present)
         if (formattedRemark || formData.follow_up_date || activeCall.duration || activeCall.recordingUrl) {
@@ -663,16 +692,25 @@ export default function LiveCallModal() {
                     />
                   </div>
 
-                  {/* Schedule Follow Up Date & Time */}
-                  <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/50 space-y-2">
+                  {/* Schedule Follow-up Section — Mandatory unless terminal status */}
+                  <div className={`p-3 rounded-xl border space-y-2 ${
+                    followupRequired
+                      ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700'
+                      : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/70 dark:border-slate-700/50'
+                  }`}>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                      <Calendar size={13} className="text-purple-500" /> Schedule Next Follow-up (Optional)
+                      <Calendar size={13} className={followupRequired ? 'text-amber-500' : 'text-purple-500'} />
+                      {followupRequired ? (
+                        <span>Schedule Next Follow-up <span className="text-rose-500">*</span> <span className="font-normal text-amber-600 dark:text-amber-400">(required)</span></span>
+                      ) : (
+                        <span>Schedule Follow-up <span className="text-slate-400 font-normal">(optional for this status)</span></span>
+                      )}
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <input
                         type="date"
                         value={formData.follow_up_date || ''}
-                        onChange={(e) => handleFieldChange('follow_up_date', e.target.value)}
+                        onChange={(e) => { handleFieldChange('follow_up_date', e.target.value); handleFieldChange('followup_done', false); }}
                         className="text-xs p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 outline-none"
                       />
                       <input
@@ -682,13 +720,25 @@ export default function LiveCallModal() {
                         className="text-xs p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 outline-none"
                       />
                     </div>
+                    {followupRequired && !formData.follow_up_date && (
+                      <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!!formData.followup_done}
+                          onChange={(e) => { handleFieldChange('followup_done', e.target.checked); if (e.target.checked) handleFieldChange('follow_up_date', ''); }}
+                          className="rounded border-gray-300 text-emerald-600"
+                        />
+                        <span>Mark call as completed — no future follow-up needed</span>
+                      </label>
+                    )}
                   </div>
 
                   {/* Submit Button */}
                   <button
                     onClick={handleSave}
-                    disabled={saving}
-                    className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                    disabled={saving || (followupRequired && !formData.follow_up_date && !formData.followup_done)}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={followupRequired && !formData.follow_up_date && !formData.followup_done ? 'Set a follow-up date or mark as completed first' : ''}
                   >
                     {saving ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
                     {saving ? 'Creating Lead...' : '✨ Create Lead & Save Remarks'}
@@ -845,16 +895,25 @@ export default function LiveCallModal() {
                     />
                   </div>
 
-                  {/* Schedule Next Follow-up */}
-                  <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200/70 dark:border-slate-700/50 space-y-2">
+                  {/* Schedule Next Follow-up — Mandatory unless terminal status */}
+                  <div className={`p-3 rounded-xl border space-y-2 ${
+                    followupRequired
+                      ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700'
+                      : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/70 dark:border-slate-700/50'
+                  }`}>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                      <Calendar size={13} className="text-purple-500" /> Next Follow-up Reminder
+                      <Calendar size={13} className={followupRequired ? 'text-amber-500' : 'text-purple-500'} />
+                      {followupRequired ? (
+                        <span>Next Follow-up <span className="text-rose-500">*</span> <span className="font-normal text-amber-600 dark:text-amber-400">(required)</span></span>
+                      ) : (
+                        <span>Next Follow-up <span className="text-slate-400 font-normal">(optional)</span></span>
+                      )}
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <input
                         type="date"
                         value={formData.follow_up_date || ''}
-                        onChange={(e) => handleFieldChange('follow_up_date', e.target.value)}
+                        onChange={(e) => { handleFieldChange('follow_up_date', e.target.value); handleFieldChange('followup_done', false); }}
                         className="text-xs p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 outline-none"
                       />
                       <input
@@ -864,13 +923,25 @@ export default function LiveCallModal() {
                         className="text-xs p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 outline-none"
                       />
                     </div>
+                    {followupRequired && !formData.follow_up_date && (
+                      <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!!formData.followup_done}
+                          onChange={(e) => { handleFieldChange('followup_done', e.target.checked); if (e.target.checked) handleFieldChange('follow_up_date', ''); }}
+                          className="rounded border-gray-300 text-emerald-600"
+                        />
+                        <span>Mark call as completed — no future follow-up needed</span>
+                      </label>
+                    )}
                   </div>
 
                   {/* Action Button */}
                   <button
                     onClick={handleSave}
-                    disabled={saving}
-                    className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                    disabled={saving || (followupRequired && !formData.follow_up_date && !formData.followup_done)}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={followupRequired && !formData.follow_up_date && !formData.followup_done ? 'Set a follow-up date or mark as completed first' : ''}
                   >
                     {saving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
                     {saving ? 'Saving...' : '💾 Save Remarks & Update Status'}

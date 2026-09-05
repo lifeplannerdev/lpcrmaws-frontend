@@ -7,8 +7,7 @@ import { Can } from '../../context/PermissionsContext';
 import RemarkModal from './RemarkModal';
 
 const STATUS_OPTIONS = [
-  'ENQUIRY', 'JOB_ENQUIRY', 'CONTACTED', 'QUALIFIED', 'NOT_INTERESTED',
-  'CONVERTED', 'CNR', 'REGISTERED'
+  'ENQUIRY', 'JOB_ENQUIRY', 'B2B', 'COLD_WARM', 'HOT', 'CLOSED', 'CONVERTED'
 ];
 
 function statusEditor({ row, onRowChange }) {

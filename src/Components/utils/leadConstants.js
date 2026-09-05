@@ -1,11 +1,33 @@
+// ── Canonical Status List (new data entry) ─────────────────────────
 export const statusOptions = [
-  { value: 'ENQUIRY', label: 'Enquiry' },
+  { value: 'ENQUIRY',    label: 'Enquiry' },
   { value: 'JOB_ENQUIRY', label: 'Job Enquiry' },
-  { value: 'QUALIFIED', label: 'Qualified' },
-  { value: 'CONVERTED', label: 'Converted' },
-  { value: 'NOT_INTERESTED', label: 'Not Interested' },
-  { value: 'CNR', label: 'Could Not Reach' }
+  { value: 'B2B',        label: 'B2B' },
+  { value: 'COLD_WARM',  label: 'Cold Warm' },
+  { value: 'HOT',        label: 'Hot' },
+  { value: 'CLOSED',     label: 'Closed' },
+  { value: 'CONVERTED',  label: 'Converted' },
 ];
+
+// ── All statuses including legacy (for Staff Analysis filters) ──────
+export const allStatusOptions = [
+  { value: 'ENQUIRY',       label: 'Enquiry' },
+  { value: 'JOB_ENQUIRY',   label: 'Job Enquiry' },
+  { value: 'B2B',           label: 'B2B' },
+  { value: 'COLD_WARM',     label: 'Cold Warm' },
+  { value: 'HOT',           label: 'Hot' },
+  { value: 'CLOSED',        label: 'Closed' },
+  { value: 'CONVERTED',     label: 'Converted' },
+  // Legacy statuses (kept for historical data)
+  { value: 'CONTACTED',     label: 'Contacted (Legacy)' },
+  { value: 'QUALIFIED',     label: 'Qualified (Legacy)' },
+  { value: 'NOT_INTERESTED', label: 'Not Interested (Legacy)' },
+  { value: 'CNR',           label: 'Could Not Reach (Legacy)' },
+  { value: 'REGISTERED',    label: 'Registered (Legacy)' },
+];
+
+// ── Statuses that do NOT require a mandatory followup ───────────────
+export const NO_FOLLOWUP_STATUSES = ['CLOSED', 'CONVERTED', 'B2B', 'JOB_ENQUIRY'];
 
 export const sourceOptions = [
   { value: 'WHATSAPP', label: 'WhatsApp' },
