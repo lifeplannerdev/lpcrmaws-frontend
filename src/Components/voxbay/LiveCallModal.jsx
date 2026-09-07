@@ -15,7 +15,8 @@ const STATUS_OPTIONS = [
   { value: 'ENQUIRY',    label: 'Enquiry',    color: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' },
   { value: 'JOB_ENQUIRY', label: 'Job Enquiry', color: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100' },
   { value: 'B2B',       label: 'B2B',        color: 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100' },
-  { value: 'COLD_WARM', label: 'Cold Warm',  color: 'bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100' },
+  { value: 'COLD',      label: 'Cold',       color: 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100' },
+  { value: 'WARM',      label: 'Warm',       color: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' },
   { value: 'HOT',       label: 'Hot',        color: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100' },
   { value: 'CLOSED',    label: 'Closed',     color: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100' },
   { value: 'CONVERTED', label: 'Converted',  color: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' },
@@ -776,8 +777,10 @@ export default function LiveCallModal() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                        {existingLeadData?.status || activeCall.leadDetails?.status || 'ENQUIRY'}
+                      <span className={`text-xs font-black px-2.5 py-1 rounded-lg border ${
+                        STATUS_OPTIONS.find(s => s.value === (existingLeadData?.status || activeCall.leadDetails?.status || 'ENQUIRY'))?.color || 'bg-purple-100 text-purple-700 border-purple-200'
+                      }`}>
+                        {STATUS_OPTIONS.find(s => s.value === (existingLeadData?.status || activeCall.leadDetails?.status || 'ENQUIRY'))?.label || (existingLeadData?.status || activeCall.leadDetails?.status || 'ENQUIRY')}
                       </span>
                       {existingLeadData?.id && (
                         <button

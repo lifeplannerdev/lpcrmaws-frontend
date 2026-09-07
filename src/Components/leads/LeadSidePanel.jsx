@@ -48,6 +48,11 @@ export default function LeadSidePanel({ leadId, authFetch, onClose }) {
   const getStatusColor = (status) => ({
     'ENQUIRY':    'bg-blue-100   text-blue-700   border-blue-200',
     'JOB_ENQUIRY':'bg-indigo-100 text-indigo-700 border-indigo-200',
+    'B2B':        'bg-violet-100 text-violet-700 border-violet-200',
+    'COLD':       'bg-sky-100    text-sky-700    border-sky-200',
+    'WARM':       'bg-amber-100  text-amber-700  border-amber-200',
+    'HOT':        'bg-orange-100 text-orange-700 border-orange-200',
+    'CLOSED':     'bg-rose-100   text-rose-700   border-rose-200',
     'CONTACTED':  'bg-yellow-100 text-yellow-700 border-yellow-200',
     'QUALIFIED':  'bg-purple-100 text-purple-700 border-purple-200',
     'CONVERTED':  'bg-green-100  text-green-700  border-green-200',

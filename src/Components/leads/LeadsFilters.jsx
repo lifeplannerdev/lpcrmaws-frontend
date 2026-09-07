@@ -22,6 +22,12 @@ const LeadsFilters = ({
   const statusOptions = [
     { id: 'all', label: 'All Status' },
     { id: 'enquiry', label: 'Enquiry' },
+    { id: 'job_enquiry', label: 'Job Enquiry' },
+    { id: 'b2b', label: 'B2B' },
+    { id: 'cold', label: 'Cold' },
+    { id: 'warm', label: 'Warm' },
+    { id: 'hot', label: 'Hot' },
+    { id: 'closed', label: 'Closed' },
     { id: 'contacted', label: 'Contacted' },
     { id: 'qualified', label: 'Qualified' },
     { id: 'converted', label: 'Converted' },
