@@ -264,7 +264,7 @@ export default function LiveCallModal() {
               follow_up_date: formData.follow_up_date || new Date().toISOString().split('T')[0],
               follow_up_time: formData.follow_up_time || null,
               followup_type: 'call',
-              status: formData.follow_up_date ? 'pending' : 'contacted',
+              status: formData.followup_status || (formData.follow_up_date ? 'pending' : 'contacted'),
               priority: (formData.priority || 'medium').toLowerCase(),
               notes: formattedRemark || 'Call logged via Live Call Dossier',
               duration: activeCall.duration || 0,
@@ -333,7 +333,7 @@ export default function LiveCallModal() {
               follow_up_date: formData.follow_up_date || new Date().toISOString().split('T')[0],
               follow_up_time: formData.follow_up_time || null,
               followup_type: 'call',
-              status: formData.follow_up_date ? 'pending' : 'contacted',
+              status: formData.followup_status || (formData.follow_up_date ? 'pending' : 'contacted'),
               priority: (formData.priority || 'medium').toLowerCase(),
               notes: formattedRemark || 'Call remarks logged via Live Call Dossier',
               duration: activeCall.duration || 0,
@@ -694,42 +694,51 @@ export default function LiveCallModal() {
 
                   {/* Schedule Follow-up Section — Mandatory unless terminal status */}
                   <div className={`p-3 rounded-xl border space-y-2 ${
-                    followupRequired
+                    followupRequired && !formData.follow_up_date && !formData.followup_done
                       ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700'
                       : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/70 dark:border-slate-700/50'
                   }`}>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                       <Calendar size={13} className={followupRequired ? 'text-amber-500' : 'text-purple-500'} />
-                      {followupRequired ? (
-                        <span>Schedule Next Follow-up <span className="text-rose-500">*</span> <span className="font-normal text-amber-600 dark:text-amber-400">(required)</span></span>
-                      ) : (
-                        <span>Schedule Follow-up <span className="text-slate-400 font-normal">(optional for this status)</span></span>
-                      )}
+                      <span>Call Outcome & Next Steps</span>
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="date"
-                        value={formData.follow_up_date || ''}
-                        onChange={(e) => { handleFieldChange('follow_up_date', e.target.value); handleFieldChange('followup_done', false); }}
-                        className="text-xs p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 outline-none"
-                      />
-                      <input
-                        type="time"
-                        value={formData.follow_up_time || ''}
-                        onChange={(e) => handleFieldChange('follow_up_time', e.target.value)}
-                        className="text-xs p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 outline-none"
-                      />
+                    <div className="grid grid-cols-1 gap-2">
+                      <select
+                        value={formData.followup_status || (formData.follow_up_date ? 'pending' : 'contacted')}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handleFieldChange('followup_status', val);
+                          if (val === 'contacted' || val === 'not_interested') {
+                            handleFieldChange('follow_up_date', '');
+                            handleFieldChange('followup_done', true);
+                          } else {
+                            handleFieldChange('followup_done', false);
+                          }
+                        }}
+                        className="text-xs font-bold p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 outline-none"
+                      >
+                        <option value="pending">Schedule Next Follow-up</option>
+                        <option value="rescheduled">Rescheduled</option>
+                        <option value="contacted">Completed (No further follow-up)</option>
+                        <option value="not_interested">Not Interested</option>
+                      </select>
                     </div>
-                    {followupRequired && !formData.follow_up_date && (
-                      <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
+
+                    {['pending', 'rescheduled'].includes(formData.followup_status || (formData.follow_up_date ? 'pending' : 'contacted')) && (
+                      <div className="grid grid-cols-2 gap-2 mt-2">
                         <input
-                          type="checkbox"
-                          checked={!!formData.followup_done}
-                          onChange={(e) => { handleFieldChange('followup_done', e.target.checked); if (e.target.checked) handleFieldChange('follow_up_date', ''); }}
-                          className="rounded border-gray-300 text-emerald-600"
+                          type="date"
+                          value={formData.follow_up_date || ''}
+                          onChange={(e) => { handleFieldChange('follow_up_date', e.target.value); handleFieldChange('followup_done', false); }}
+                          className="text-xs p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 outline-none"
                         />
-                        <span>Mark call as completed — no future follow-up needed</span>
-                      </label>
+                        <input
+                          type="time"
+                          value={formData.follow_up_time || ''}
+                          onChange={(e) => handleFieldChange('follow_up_time', e.target.value)}
+                          className="text-xs p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 outline-none"
+                        />
+                      </div>
                     )}
                   </div>
 
@@ -895,44 +904,70 @@ export default function LiveCallModal() {
                     />
                   </div>
 
+                  {/* Pending Followups Warning */}
+                  {pastRemarks.filter(r => r.status === 'pending').length > 0 && (
+                    <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 p-3 rounded-xl flex items-start gap-2">
+                      <AlertCircle size={16} className="text-amber-600 mt-0.5 shrink-0" />
+                      <div className="text-xs text-amber-800 dark:text-amber-200">
+                        <strong>Existing Follow-ups:</strong> This lead has {pastRemarks.filter(r => r.status === 'pending').length} pending follow-up(s). Saving this call will automatically resolve them as contacted.
+                        <ul className="mt-1.5 list-disc list-inside opacity-80">
+                          {pastRemarks.filter(r => r.status === 'pending').map(pf => (
+                            <li key={pf.id}>
+                              {formatPastDate(pf.follow_up_date)} (Assigned to: {pf.assigned_to_name || pf.assigned_to?.username || 'Counselor'})
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Schedule Next Follow-up — Mandatory unless terminal status */}
                   <div className={`p-3 rounded-xl border space-y-2 ${
-                    followupRequired
+                    followupRequired && !formData.follow_up_date && !formData.followup_done
                       ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700'
                       : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/70 dark:border-slate-700/50'
                   }`}>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                       <Calendar size={13} className={followupRequired ? 'text-amber-500' : 'text-purple-500'} />
-                      {followupRequired ? (
-                        <span>Next Follow-up <span className="text-rose-500">*</span> <span className="font-normal text-amber-600 dark:text-amber-400">(required)</span></span>
-                      ) : (
-                        <span>Next Follow-up <span className="text-slate-400 font-normal">(optional)</span></span>
-                      )}
+                      <span>Call Outcome & Next Steps</span>
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="date"
-                        value={formData.follow_up_date || ''}
-                        onChange={(e) => { handleFieldChange('follow_up_date', e.target.value); handleFieldChange('followup_done', false); }}
-                        className="text-xs p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 outline-none"
-                      />
-                      <input
-                        type="time"
-                        value={formData.follow_up_time || ''}
-                        onChange={(e) => handleFieldChange('follow_up_time', e.target.value)}
-                        className="text-xs p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 outline-none"
-                      />
+                    <div className="grid grid-cols-1 gap-2">
+                      <select
+                        value={formData.followup_status || (formData.follow_up_date ? 'pending' : 'contacted')}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handleFieldChange('followup_status', val);
+                          if (val === 'contacted' || val === 'not_interested') {
+                            handleFieldChange('follow_up_date', '');
+                            handleFieldChange('followup_done', true);
+                          } else {
+                            handleFieldChange('followup_done', false);
+                          }
+                        }}
+                        className="text-xs font-bold p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 outline-none"
+                      >
+                        <option value="pending">Schedule Next Follow-up</option>
+                        <option value="rescheduled">Rescheduled</option>
+                        <option value="contacted">Completed (No further follow-up)</option>
+                        <option value="not_interested">Not Interested</option>
+                      </select>
                     </div>
-                    {followupRequired && !formData.follow_up_date && (
-                      <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
+
+                    {['pending', 'rescheduled'].includes(formData.followup_status || (formData.follow_up_date ? 'pending' : 'contacted')) && (
+                      <div className="grid grid-cols-2 gap-2 mt-2">
                         <input
-                          type="checkbox"
-                          checked={!!formData.followup_done}
-                          onChange={(e) => { handleFieldChange('followup_done', e.target.checked); if (e.target.checked) handleFieldChange('follow_up_date', ''); }}
-                          className="rounded border-gray-300 text-emerald-600"
+                          type="date"
+                          value={formData.follow_up_date || ''}
+                          onChange={(e) => { handleFieldChange('follow_up_date', e.target.value); handleFieldChange('followup_done', false); }}
+                          className="text-xs p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 outline-none"
                         />
-                        <span>Mark call as completed — no future follow-up needed</span>
-                      </label>
+                        <input
+                          type="time"
+                          value={formData.follow_up_time || ''}
+                          onChange={(e) => handleFieldChange('follow_up_time', e.target.value)}
+                          className="text-xs p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 outline-none"
+                        />
+                      </div>
                     )}
                   </div>
 
