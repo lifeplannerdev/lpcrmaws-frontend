@@ -10,7 +10,7 @@ import {
   ChevronDown, ChevronRight, RefreshCw, Search, Filter, Download,
   ArrowUpRight, Minus, X, Calendar, BarChart2, UserCheck, PhoneCall,
   PhoneIncoming, PhoneOutgoing, Clock, MessageSquare, SlidersHorizontal,
-  ChevronLeft
+  ChevronLeft, Sparkles
 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -102,8 +102,33 @@ function LeadRow({ lead, onCall }) {
           </button>
         </td>
         <td className="px-3 py-3">
-          <div className="font-semibold text-sm text-gray-900">{lead.name || '—'}</div>
-          <div className="text-xs text-gray-400 font-mono">{lead.phone}</div>
+          <div className="font-semibold text-sm text-gray-900 flex items-center gap-2">
+            <span>{lead.name || '—'}</span>
+            {lead.lead_tag === 'FRESH' ? (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                <Sparkles size={10} className="text-emerald-600" /> Fresh
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-violet-100 text-violet-800 border border-violet-300">
+                <CalendarClock size={10} className="text-violet-600" /> Follow-up
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span className="text-xs text-gray-400 font-mono">{lead.phone}</span>
+            {lead.latest_followup && (
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${
+                lead.latest_followup.status === 'pending'
+                  ? 'bg-amber-50 text-amber-700 border-amber-300'
+                  : lead.latest_followup.status === 'contacted'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                  : 'bg-gray-50 text-gray-600 border-gray-200'
+              }`}>
+                {lead.latest_followup.status === 'pending' ? '⏳ Due: ' : '✓ Done: '}
+                {lead.latest_followup.follow_up_date}
+              </span>
+            )}
+          </div>
         </td>
         <td className="px-3 py-3">
           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${statusCls}`}>
@@ -189,7 +214,11 @@ function EmployeeCard({ data, isSelected, onClick }) {
       <div className="grid grid-cols-3 gap-1.5 text-center">
         <div className="bg-indigo-50 rounded-lg p-1.5">
           <p className="text-xs font-black text-indigo-700">{summary.total_leads}</p>
-          <p className="text-[10px] text-indigo-500">Leads</p>
+          <p className="text-[10px] text-indigo-500 font-medium">
+            {summary.fresh_leads > 0 && summary.followup_leads > 0
+              ? `${summary.fresh_leads}F · ${summary.followup_leads}FU`
+              : 'Leads'}
+          </p>
         </div>
         <div className="bg-emerald-50 rounded-lg p-1.5">
           <p className="text-xs font-black text-emerald-700">{summary.followups_contacted}</p>
@@ -218,6 +247,7 @@ export default function StaffAnalysisPage() {
   const [selectedSources, setSelectedSources] = useState([]);
   const [selectedCallTypes, setSelectedCallTypes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all'); // 'all', 'fresh', 'followup'
   const [showFilters, setShowFilters] = useState(false);
 
   const [summaryData, setSummaryData] = useState(null);
@@ -248,9 +278,10 @@ export default function StaffAnalysisPage() {
     if (selectedStatuses.length) params.set('status', selectedStatuses.join(','));
     if (selectedSources.length) params.set('source', selectedSources.join(','));
     if (selectedCallTypes.length) params.set('call_type', selectedCallTypes.join(','));
+    if (selectedCategory && selectedCategory !== 'all') params.set('category', selectedCategory);
     if (focusedEmployee) params.set('employee_id', focusedEmployee);
     return params;
-  }, [datePreset, customDate, customStart, customEnd, selectedStatuses, selectedSources, selectedCallTypes, focusedEmployee]);
+  }, [datePreset, customDate, customStart, customEnd, selectedStatuses, selectedSources, selectedCallTypes, selectedCategory, focusedEmployee]);
 
   const fetchSummary = useCallback(async () => {
     setLoadingSummary(true);
@@ -300,13 +331,13 @@ export default function StaffAnalysisPage() {
     fetchSummary();
   }, [datePreset, customDate, customStart, customEnd, selectedStatuses, selectedSources, selectedCallTypes, fetchSummary]);
 
-  // Refetch leads when page, search, or filters change
+  // Refetch leads when page, search, category, or employee change
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
       fetchLeads();
     }, 400);
     return () => clearTimeout(debounceTimer);
-  }, [leadsPage, searchQuery, focusedEmployee, fetchLeads]);
+  }, [leadsPage, searchQuery, focusedEmployee, selectedCategory, fetchLeads]);
 
   const visibleEmployees = summaryData?.employees?.filter(e => e.summary.total_leads > 0 || e.summary.followups_total > 0) || [];
   const gs = summaryData?.grand_summary || {};
@@ -526,12 +557,48 @@ export default function StaffAnalysisPage() {
 
           {/* Leads Table */}
           <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[800px]">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between shrink-0">
-              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+            <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2">
                 <PhoneCall size={16} className="text-indigo-500" />
-                {focusedData ? `${focusedData.employee.full_name} — Leads` : 'All Leads'}
+                <h3 className="font-bold text-gray-900 text-sm">
+                  {focusedData ? `${focusedData.employee.full_name} — Leads` : 'All Leads'}
+                </h3>
                 <span className="text-xs font-normal text-gray-400">({leadsData.count} records)</span>
-              </h3>
+              </div>
+
+              {/* Category Filter Tabs: All, Fresh, Follow-up */}
+              <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-xl">
+                <button
+                  onClick={() => { setSelectedCategory('all'); setLeadsPage(1); }}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                    selectedCategory === 'all'
+                      ? 'bg-white text-indigo-700 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  All ({leadsData.count})
+                </button>
+                <button
+                  onClick={() => { setSelectedCategory('fresh'); setLeadsPage(1); }}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1 ${
+                    selectedCategory === 'fresh'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-emerald-700 hover:text-emerald-900'
+                  }`}
+                >
+                  <Sparkles size={11} /> Fresh Leads
+                </button>
+                <button
+                  onClick={() => { setSelectedCategory('followup'); setLeadsPage(1); }}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1 ${
+                    selectedCategory === 'followup'
+                      ? 'bg-violet-600 text-white shadow-sm'
+                      : 'text-violet-700 hover:text-violet-900'
+                  }`}
+                >
+                  <CalendarClock size={11} /> Follow-ups
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto">
