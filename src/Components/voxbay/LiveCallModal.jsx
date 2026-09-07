@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, Clock, User, 
+  Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, PhoneCall, Clock, User, 
   MapPin, Globe, BookOpen, Calendar, Tag, Shield, CheckCircle2, 
   X, Minus, Maximize2, Minimize2, Copy, Check, MessageSquare, 
   History, ExternalLink, Loader2, Sparkles, AlertCircle, PlusCircle, Layers
@@ -8,6 +8,7 @@ import {
 import { useLiveCall } from '../../context/LiveCallContext';
 import { useApi } from '../../context/ApiContext';
 import { useAuth } from '../../context/AuthContext';
+import { useVoxbayCall } from '../../hooks/useVoxbayCall';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -46,11 +47,13 @@ export default function LiveCallModal() {
 
   const { authFetch, apiBaseUrl } = useApi();
   const { user } = useAuth();
+  const { initiateCall } = useVoxbayCall();
   const navigate = useNavigate();
 
   // Local state
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isDialing, setIsDialing] = useState(false);
   const [existingLeadData, setExistingLeadData] = useState(null);
   const [pastRemarks, setPastRemarks] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -61,6 +64,9 @@ export default function LiveCallModal() {
     if (!activeCall) return;
 
     const calculateDuration = () => {
+      if (activeCall.status === 'ready' || activeCall.status === 'idle') {
+        return 0;
+      }
       if (activeCall.status === 'ended') {
         return activeCall.duration || (activeCall.endedAt && activeCall.startedAt ? Math.round((activeCall.endedAt - activeCall.startedAt) / 1000) : 0);
       }
@@ -70,13 +76,39 @@ export default function LiveCallModal() {
 
     setTimerSeconds(calculateDuration());
 
-    if (activeCall.status !== 'ended') {
+    if (activeCall.status !== 'ended' && activeCall.status !== 'ready' && activeCall.status !== 'idle') {
       const interval = setInterval(() => {
         setTimerSeconds(calculateDuration());
       }, 1000);
       return () => clearInterval(interval);
     }
   }, [activeCall?.id, activeCall?.status, activeCall?.connectedAt, activeCall?.startedAt, activeCall?.endedAt, activeCall?.duration]);
+
+  // Handler to dial this lead directly via Voxbay
+  const handleMakeCall = async (phoneToCall) => {
+    const num = phoneToCall || activeCall?.phone;
+    if (!num) {
+      toast.error('No phone number available to call');
+      return;
+    }
+    setIsDialing(true);
+    try {
+      await initiateCall(num, {
+        id: existingLeadData?.id || activeCall.leadId,
+        name: existingLeadData?.name || activeCall.leadName,
+        status: (activeCall.formData && activeCall.formData.status) || existingLeadData?.status,
+        program: existingLeadData?.program,
+        interested_country: existingLeadData?.interested_country,
+        interested_course: existingLeadData?.interested_course,
+        location: existingLeadData?.location,
+        priority: (activeCall.formData && activeCall.formData.priority) || existingLeadData?.priority,
+      });
+    } catch (err) {
+      console.error('Call dial error:', err);
+    } finally {
+      setIsDialing(false);
+    }
+  };
 
   // Dynamic background verification for phone number if activeCall was marked as isNewLead
   useEffect(() => {
@@ -387,6 +419,8 @@ export default function LiveCallModal() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-amber-500"></span>
             </span>
+          ) : (activeCall.status === 'ready' || activeCall.status === 'idle') ? (
+            <span className="inline-flex rounded-full h-3.5 w-3.5 bg-blue-500"></span>
           ) : (
             <span className="inline-flex rounded-full h-3.5 w-3.5 bg-slate-400"></span>
           )}
@@ -455,7 +489,7 @@ export default function LiveCallModal() {
                       : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-700/50'
                   }`}
                 >
-                  <span className={`h-2 w-2 rounded-full ${c.status === 'connected' ? 'bg-emerald-400 animate-pulse' : c.status === 'ringing' ? 'bg-amber-400' : 'bg-slate-400'}`} />
+                  <span className={`h-2 w-2 rounded-full ${c.status === 'connected' ? 'bg-emerald-400 animate-pulse' : c.status === 'ringing' ? 'bg-amber-400' : (c.status === 'ready' || c.status === 'idle') ? 'bg-blue-400' : 'bg-slate-400'}`} />
                   <span>{c.isNewLead ? `New (${c.phone?.slice(-4) || index + 1})` : (c.leadName || c.phone)}</span>
                   <span
                     onClick={(e) => { e.stopPropagation(); closeCall(c.id); }}
@@ -497,6 +531,11 @@ export default function LiveCallModal() {
                     <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
                     Ringing Agent...
                   </span>
+                ) : (activeCall.status === 'ready' || activeCall.status === 'idle') ? (
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-blue-300 bg-blue-950/80 border border-blue-700/60 px-2.5 py-0.5 rounded-full">
+                    <PhoneCall size={12} className="text-blue-400" />
+                    Ready to Call
+                  </span>
                 ) : (
                   <span className="flex items-center gap-1.5 text-xs font-bold text-slate-300 bg-slate-800/80 border border-slate-700 px-2.5 py-0.5 rounded-full">
                     <CheckCircle2 size={12} className="text-slate-400" />
@@ -526,8 +565,29 @@ export default function LiveCallModal() {
             </div>
           </div>
 
-          {/* Right Header: Stopwatch Timer & Window Controls */}
+          {/* Right Header: Make Call Button, Stopwatch Timer & Window Controls */}
           <div className="flex items-center gap-3 ml-auto">
+            {activeCall.phone && (
+              <button
+                onClick={() => handleMakeCall(activeCall.phone)}
+                disabled={isDialing}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white text-xs font-black rounded-xl shadow-lg shadow-emerald-600/30 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                title="Click to dial this lead via Voxbay"
+              >
+                {isDialing ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>Connecting...</span>
+                  </>
+                ) : (
+                  <>
+                    <PhoneCall size={15} />
+                    <span>Make Call</span>
+                  </>
+                )}
+              </button>
+            )}
+
             <div className="flex items-center gap-2 bg-slate-900/90 border border-purple-500/30 px-3.5 py-1.5 rounded-xl shadow-inner">
               <Clock size={15} className="text-emerald-400 animate-spin-slow" />
               <span className="font-mono text-base font-black text-emerald-400">
@@ -565,9 +625,23 @@ export default function LiveCallModal() {
               {/* Left Form: Lead Information */}
               <div className="lg:col-span-7 space-y-4">
                 <div className="bg-white dark:bg-slate-800/90 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-4">
-                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-2.5">
-                    <User size={16} className="text-purple-600" /> New Lead Information
-                  </h4>
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-2.5">
+                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                      <User size={16} className="text-purple-600" /> New Lead Information
+                    </h4>
+                    {activeCall.phone && (
+                      <button
+                        type="button"
+                        onClick={() => handleMakeCall(activeCall.phone)}
+                        disabled={isDialing}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                        title="Click to dial this number via Voxbay"
+                      >
+                        {isDialing ? <Loader2 size={12} className="animate-spin" /> : <PhoneCall size={12} />}
+                        <span>Make Call</span>
+                      </button>
+                    )}
+                  </div>
 
                   {/* Name Input */}
                   <div>
@@ -777,6 +851,18 @@ export default function LiveCallModal() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {activeCall.phone && (
+                        <button
+                          type="button"
+                          onClick={() => handleMakeCall(activeCall.phone)}
+                          disabled={isDialing}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                          title="Click to dial this lead via Voxbay"
+                        >
+                          {isDialing ? <Loader2 size={12} className="animate-spin" /> : <PhoneCall size={12} />}
+                          <span>Make Call</span>
+                        </button>
+                      )}
                       <span className={`text-xs font-black px-2.5 py-1 rounded-lg border ${
                         STATUS_OPTIONS.find(s => s.value === (existingLeadData?.status || activeCall.leadDetails?.status || 'ENQUIRY'))?.color || 'bg-purple-100 text-purple-700 border-purple-200'
                       }`}>

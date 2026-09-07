@@ -4,6 +4,7 @@ import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useVoxbayCall } from '../hooks/useVoxbayCall';
+import { useLiveCall } from '../context/LiveCallContext';
 import {
   CalendarClock, Phone, MessageSquare, Mail, Users,
   AlertTriangle, ArrowLeft, RefreshCw, Search, SlidersHorizontal,
@@ -77,13 +78,16 @@ const SkeletonCard = () => (
 );
 
 // ── Follow-Up Card ────────────────────────────────────────────────────────────
-const FollowUpCard = ({ item, onStatusChange, onRescheduleClick, onDelete, onCall }) => {
+const FollowUpCard = ({ item, onStatusChange, onRescheduleClick, onDelete, onCall, onCardClick }) => {
   const TypeIcon      = TYPE_ICON[item.followup_type]  || Phone;
   const typeColor     = TYPE_COLOR[item.followup_type] || 'bg-gray-100 text-gray-600 border-gray-200';
   const statusColor   = STATUS_COLOR[item.status]      || 'bg-gray-100 text-gray-600';
   const statusLabel   = STATUS_LABEL[item.status]      || item.status;
   const priorityColor = PRIORITY_COLOR[item.priority]  || PRIORITY_COLOR.medium;
   const [typeBg, typeText] = typeColor.split(' ');
+
+  const displayName = item.lead_name || item.name || item.processing_student_name || (typeof item.lead === 'object' ? item.lead?.name : '') || 'Lead';
+  const displayPhone = item.lead_phone || item.phone_number || (typeof item.lead === 'object' ? item.lead?.phone : '') || '';
 
   const assignedName = item.assigned_to
     ? (item.assigned_to.first_name
@@ -92,31 +96,39 @@ const FollowUpCard = ({ item, onStatusChange, onRescheduleClick, onDelete, onCal
     : null;
 
   return (
-    <div className={`group bg-white rounded-2xl border-2 p-4 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${
-      item.is_overdue
-        ? 'border-red-200 bg-red-50/30'
-        : 'border-gray-100 hover:border-indigo-200'
-    }`}>
+    <div 
+      onClick={() => onCardClick ? onCardClick(item) : null}
+      className={`group bg-white rounded-2xl border-2 p-4 transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 cursor-pointer relative ${
+        item.is_overdue
+          ? 'border-red-200 bg-red-50/30 hover:border-red-300'
+          : 'border-gray-100 hover:border-indigo-300'
+      }`}
+    >
       {/* Top */}
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2.5">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center border flex-shrink-0 ${typeColor}`}>
+      <div className="flex items-start justify-between gap-2 mb-2.5">
+        <div className="flex items-start gap-2.5 min-w-0">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center border flex-shrink-0 mt-0.5 ${typeColor}`}>
             <TypeIcon size={16} />
           </div>
-          <div>
-            <p className="font-bold text-gray-900 text-sm leading-tight">
-              {item.name || item.phone_number}
+          <div className="min-w-0">
+            <p className="font-bold text-gray-900 text-sm leading-tight group-hover:text-indigo-600 transition-colors truncate" title={displayName}>
+              {displayName}
             </p>
-            {item.name && (
-              <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                <Phone size={10} />
-                {item.phone_number}
+            {displayPhone && (
+              <p className="text-xs text-gray-500 font-mono flex items-center gap-1 mt-0.5">
+                <Phone size={10} className="text-gray-400 shrink-0" />
+                <span className="truncate">{displayPhone}</span>
+              </p>
+            )}
+            {(item.lead_program || item.processing_student_program) && (
+              <p className="text-[11px] text-purple-700 bg-purple-50 border border-purple-100 px-1.5 py-0.5 rounded font-medium truncate mt-1 inline-block max-w-full">
+                {item.lead_program || item.processing_student_program}
               </p>
             )}
             {assignedName && (
-              <p className="text-xs text-indigo-500 flex items-center gap-1 mt-0.5 font-semibold">
-                <UserCheck size={10} />
-                {assignedName}
+              <p className="text-[11px] text-indigo-600 flex items-center gap-1 mt-1 font-semibold">
+                <UserCheck size={11} className="text-indigo-500 shrink-0" />
+                <span className="truncate">Counselor: {assignedName}</span>
               </p>
             )}
           </div>
@@ -150,6 +162,11 @@ const FollowUpCard = ({ item, onStatusChange, onRescheduleClick, onDelete, onCal
         <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${typeBg} ${typeText}`}>
           {item.followup_type?.charAt(0).toUpperCase() + item.followup_type?.slice(1)}
         </span>
+        {item.lead_status && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+            {item.lead_status}
+          </span>
+        )}
       </div>
 
       {/* Notes */}
@@ -161,16 +178,16 @@ const FollowUpCard = ({ item, onStatusChange, onRescheduleClick, onDelete, onCal
 
       {/* Quick actions */}
       {item.status === 'pending' && (
-        <div className="flex gap-1.5 mb-2.5">
+        <div className="flex gap-1.5 mb-2.5" onClick={e => e.stopPropagation()}>
           <button
-            onClick={() => onStatusChange(item.id, 'contacted')}
+            onClick={(e) => { e.stopPropagation(); onStatusChange(item.id, 'contacted'); }}
             className="flex-1 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-bold rounded-lg border border-green-200 transition-all flex items-center justify-center gap-1"
           >
             <CheckCircle size={12} />
             Contacted
           </button>
           <button
-            onClick={() => onRescheduleClick ? onRescheduleClick(item) : onStatusChange(item.id, 'rescheduled')}
+            onClick={(e) => { e.stopPropagation(); onRescheduleClick ? onRescheduleClick(item) : onStatusChange(item.id, 'rescheduled'); }}
             className="flex-1 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 transition-all flex items-center justify-center gap-1"
           >
             <Clock size={12} />
@@ -180,16 +197,22 @@ const FollowUpCard = ({ item, onStatusChange, onRescheduleClick, onDelete, onCal
       )}
 
       {/* Actions */}
-      <div className="pt-2 border-t border-gray-100 flex gap-1.5">
+      <div className="pt-2 border-t border-gray-100 flex gap-1.5" onClick={e => e.stopPropagation()}>
         <button
-          onClick={() => onCall(item.phone_number, item)}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg text-xs font-semibold transition-all"
+          onClick={(e) => {
+            e.stopPropagation();
+            onCall ? onCall(displayPhone, item) : (onCardClick && onCardClick(item));
+          }}
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-all border border-indigo-200/60"
         >
           <Phone size={13} />
           Call
         </button>
         <button
-          onClick={() => onDelete(item.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(item.id);
+          }}
           className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-red-500 hover:bg-red-50 rounded-lg text-xs font-semibold transition-all"
         >
           <Trash2 size={13} />
@@ -202,7 +225,7 @@ const FollowUpCard = ({ item, onStatusChange, onRescheduleClick, onDelete, onCal
 
 // ── Section ───────────────────────────────────────────────────────────────────
 const Section = ({ title, subtitle, icon: Icon, iconBg, items, loading,
-                   onStatusChange, onRescheduleClick, onDelete, onCall, defaultOpen = true }) => {
+                   onStatusChange, onRescheduleClick, onDelete, onCall, onCardClick, defaultOpen = true }) => {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
@@ -251,6 +274,7 @@ const Section = ({ title, subtitle, icon: Icon, iconBg, items, loading,
                   onRescheduleClick={onRescheduleClick}
                   onDelete={onDelete}
                   onCall={onCall}
+                  onCardClick={onCardClick}
                 />
               ))}
             </div>
@@ -267,6 +291,7 @@ export default function AllFollowUpsPage() {
   const { accessToken, refreshAccessToken, loading: authLoading, user } = useAuth();
   const { hasPermission } = usePermissions();
   const { initiateCall } = useVoxbayCall();
+  const { upsertCall, setIsModalOpen, setIsMinimized } = useLiveCall();
   const tokenRef  = useRef(accessToken);
   useEffect(() => { tokenRef.current = accessToken; }, [accessToken]);
 
@@ -449,11 +474,77 @@ export default function AllFollowUpsPage() {
     }
   };
 
+  // Open Live Call Modal populated with lead dossier & Make Call button
+  const handleOpenFollowUpCall = useCallback((item) => {
+    if (!item) return;
+    const leadId = item.lead || item.lead_id || (typeof item.lead === 'object' ? item.lead?.id : null);
+    const phone = item.lead_phone || item.phone_number || (typeof item.lead === 'object' ? item.lead?.phone : '') || '';
+    const name = item.lead_name || item.name || item.processing_student_name || (typeof item.lead === 'object' ? item.lead?.name : '') || 'Lead';
+    const cleanPhone = String(phone).replace(/\D/g, '');
+
+    const callPayload = {
+      id: `followup_${item.id}_${cleanPhone || Date.now()}`,
+      call_uuid: `followup_${item.id}_${cleanPhone || Date.now()}`,
+      phone: phone,
+      caller_number: phone,
+      call_type: 'outgoing',
+      status: 'ready',
+      is_new_lead: !leadId,
+      lead_id: leadId,
+      lead_name: name,
+      lead_status: item.lead_status || 'ENQUIRY',
+      lead_priority: (item.priority || 'MEDIUM').toUpperCase(),
+      program: item.lead_program || item.processing_student_program || '',
+      interested_country: item.lead_country || '',
+      interested_course: item.lead_course || '',
+      location: item.lead_location || '',
+      assigned_handler: item.assigned_to?.first_name 
+        ? `${item.assigned_to.first_name} ${item.assigned_to.last_name || ''}`.trim() 
+        : (item.assigned_to?.username || ''),
+      notes: item.notes || '',
+      formData: {
+        name: name,
+        status: item.lead_status || 'ENQUIRY',
+        priority: (item.priority || 'MEDIUM').toUpperCase(),
+        program: item.lead_program || item.processing_student_program || '',
+        location: item.lead_location || '',
+        interested_country: item.lead_country || '',
+        interested_course: item.lead_course || '',
+        remarks: item.notes ? `[Follow-up Notes]: ${item.notes}` : '',
+        follow_up_date: item.follow_up_date || '',
+        follow_up_time: item.follow_up_time || '',
+      }
+    };
+
+    upsertCall(callPayload);
+    setIsModalOpen(true);
+    setIsMinimized(false);
+  }, [upsertCall, setIsModalOpen, setIsMinimized]);
+
+  // Click-to-call action on card: dials via Voxbay and opens live modal
+  const handleCallFollowUp = useCallback((phone, item) => {
+    if (phone) {
+      initiateCall(phone, {
+        id: item?.lead || item?.lead_id || (typeof item?.lead === 'object' ? item?.lead?.id : null),
+        name: item?.lead_name || item?.name || item?.processing_student_name || '',
+        status: item?.lead_status || 'ENQUIRY',
+        priority: item?.priority || 'MEDIUM',
+        program: item?.lead_program || '',
+      });
+    } else if (item) {
+      handleOpenFollowUpCall(item);
+    }
+  }, [initiateCall, handleOpenFollowUpCall]);
+
   const applyFilter = (items) => items.filter(item => {
     const q = searchTerm.toLowerCase();
+    const dName = (item.lead_name || item.name || item.processing_student_name || '').toLowerCase();
+    const dPhone = (item.lead_phone || item.phone_number || '').toLowerCase();
+    const dProg = (item.lead_program || item.processing_student_program || '').toLowerCase();
     const matchSearch = !q ||
-      (item.name || '').toLowerCase().includes(q) ||
-      (item.phone_number || '').includes(q) ||
+      dName.includes(q) ||
+      dPhone.includes(q) ||
+      dProg.includes(q) ||
       (item.notes || '').toLowerCase().includes(q);
     const matchStaff = filterStaff === 'all' ||
       String(item.assigned_to?.id) === String(filterStaff);
@@ -695,7 +786,8 @@ export default function AllFollowUpsPage() {
                   setRescheduleNotes('');
                 }}
                 onDelete={handleDelete}
-                onCall={initiateCall}
+                onCall={handleCallFollowUp}
+                onCardClick={handleOpenFollowUpCall}
                 defaultOpen={true}
               />
             ) : (
@@ -716,7 +808,8 @@ export default function AllFollowUpsPage() {
                     setRescheduleNotes('');
                   }}
                   onDelete={handleDelete}
-                  onCall={initiateCall}
+                  onCall={handleCallFollowUp}
+                  onCardClick={handleOpenFollowUpCall}
                   defaultOpen={true}
                 />
 
@@ -736,7 +829,8 @@ export default function AllFollowUpsPage() {
                     setRescheduleNotes('');
                   }}
                   onDelete={handleDelete}
-                  onCall={initiateCall}
+                  onCall={handleCallFollowUp}
+                  onCardClick={handleOpenFollowUpCall}
                   defaultOpen={true}
                 />
 
@@ -756,7 +850,8 @@ export default function AllFollowUpsPage() {
                     setRescheduleNotes('');
                   }}
                   onDelete={handleDelete}
-                  onCall={initiateCall}
+                  onCall={handleCallFollowUp}
+                  onCardClick={handleOpenFollowUpCall}
                   defaultOpen={true}
                 />
 
@@ -776,7 +871,8 @@ export default function AllFollowUpsPage() {
                     setRescheduleNotes('');
                   }}
                   onDelete={handleDelete}
-                  onCall={initiateCall}
+                  onCall={handleCallFollowUp}
+                  onCardClick={handleOpenFollowUpCall}
                   defaultOpen={false}
                 />
               </>
@@ -792,8 +888,9 @@ export default function AllFollowUpsPage() {
                   const [h, m] = item.follow_up_time.split(':');
                   date.setHours(h, m);
                 }
+                const calName = item.lead_name || item.name || item.processing_student_name || item.phone_number || 'Lead';
                 return {
-                  title: `${item.name || item.phone_number} (${item.followup_type})`,
+                  title: `${calName} (${item.followup_type})`,
                   start: date,
                   end: new Date(date.getTime() + 60*60*1000), // + 1 hour
                   resource: item
@@ -802,8 +899,9 @@ export default function AllFollowUpsPage() {
               startAccessor="start"
               endAccessor="end"
               style={{ height: '100%' }}
+              onSelectEvent={(event) => event.resource && handleOpenFollowUpCall(event.resource)}
               eventPropGetter={(event) => ({
-                className: `text-xs font-semibold !bg-indigo-500 text-white border-none rounded p-1 shadow-sm`
+                className: `text-xs font-semibold !bg-indigo-500 text-white border-none rounded p-1 shadow-sm cursor-pointer`
               })}
             />
           </div>
@@ -824,9 +922,9 @@ export default function AllFollowUpsPage() {
               </div>
 
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                <p className="text-xs text-slate-500">Lead Contact</p>
-                <p className="text-sm font-bold text-slate-800">{rescheduleItem.name || 'Lead'}</p>
-                <p className="text-xs font-mono text-indigo-600">{rescheduleItem.phone_number}</p>
+                <p className="text-xs text-slate-500 font-semibold">Lead Contact</p>
+                <p className="text-sm font-bold text-slate-800">{rescheduleItem.lead_name || rescheduleItem.name || rescheduleItem.processing_student_name || 'Lead'}</p>
+                <p className="text-xs font-mono text-indigo-600 font-semibold">{rescheduleItem.lead_phone || rescheduleItem.phone_number || ''}</p>
               </div>
 
               <div>
