@@ -18,7 +18,8 @@ import {
   Music,
   Star,
   Heart,
-  BarChart2
+  BarChart2,
+  Download
 } from "lucide-react";
 
 export const masterNavigation = [
@@ -46,6 +47,7 @@ export const masterNavigation = [
   { id: "call", label: "Voxbay", icon: PhoneCall, path: "/call-analytics", requiredResource: "voxbay" },
   { id: "voxbay_ai", label: "Voxbay AI", icon: PhoneCall, path: "/voxbay-ai", requiredPermissions: ["voxbay_ai:admin", "voxbay_ai:read_own"] },
   { id: "staffAnalysis", label: "Staff Analysis", icon: BarChart2, path: "/staff-analysis", requiredPermissions: ["staff_analysis:admin"] },
+  { id: "exportData", label: "Data Export & Import", icon: Download, path: "/export-data", requiredResource: "leads" },
   { id: "feeds", label: "Feeds", icon: UserCheck, path: "/feeds" },
   { id: "programs", label: "Programs", icon: BookOpen, path: "/programs", requiredResource: "programs" },
 

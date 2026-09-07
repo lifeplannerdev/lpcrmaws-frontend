@@ -77,7 +77,7 @@ const SkeletonCard = () => (
 );
 
 // ── Follow-Up Card ────────────────────────────────────────────────────────────
-const FollowUpCard = ({ item, onStatusChange, onDelete, onCall }) => {
+const FollowUpCard = ({ item, onStatusChange, onRescheduleClick, onDelete, onCall }) => {
   const TypeIcon      = TYPE_ICON[item.followup_type]  || Phone;
   const typeColor     = TYPE_COLOR[item.followup_type] || 'bg-gray-100 text-gray-600 border-gray-200';
   const statusColor   = STATUS_COLOR[item.status]      || 'bg-gray-100 text-gray-600';
@@ -170,7 +170,7 @@ const FollowUpCard = ({ item, onStatusChange, onDelete, onCall }) => {
             Contacted
           </button>
           <button
-            onClick={() => onStatusChange(item.id, 'rescheduled')}
+            onClick={() => onRescheduleClick ? onRescheduleClick(item) : onStatusChange(item.id, 'rescheduled')}
             className="flex-1 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 transition-all flex items-center justify-center gap-1"
           >
             <Clock size={12} />
@@ -202,7 +202,7 @@ const FollowUpCard = ({ item, onStatusChange, onDelete, onCall }) => {
 
 // ── Section ───────────────────────────────────────────────────────────────────
 const Section = ({ title, subtitle, icon: Icon, iconBg, items, loading,
-                   onStatusChange, onDelete, onCall, defaultOpen = true }) => {
+                   onStatusChange, onRescheduleClick, onDelete, onCall, defaultOpen = true }) => {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
@@ -248,6 +248,7 @@ const Section = ({ title, subtitle, icon: Icon, iconBg, items, loading,
                   key={item.id}
                   item={item}
                   onStatusChange={onStatusChange}
+                  onRescheduleClick={onRescheduleClick}
                   onDelete={onDelete}
                   onCall={onCall}
                 />
@@ -276,14 +277,23 @@ export default function AllFollowUpsPage() {
 
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
 
+  const [overdueItems,  setOverdueItems]  = useState([]);
   const [todayItems,    setTodayItems]    = useState([]);
   const [tomorrowItems, setTomorrowItems] = useState([]);
   const [otherItems,    setOtherItems]    = useState([]);
 
+  const [loadingOverdue,  setLoadingOverdue]  = useState(true);
   const [loadingToday,    setLoadingToday]    = useState(true);
   const [loadingTomorrow, setLoadingTomorrow] = useState(true);
   const [loadingOther,    setLoadingOther]    = useState(true);
   const [loadingCustom,   setLoadingCustom]   = useState(false);
+
+  // Reschedule Modal State
+  const [rescheduleItem, setRescheduleItem] = useState(null);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleTime, setRescheduleTime] = useState('');
+  const [rescheduleNotes, setRescheduleNotes] = useState('');
+  const [isRescheduling, setIsRescheduling] = useState(false);
 
   // Filters
   const [filterDate,     setFilterDate]     = useState('');
@@ -350,25 +360,31 @@ export default function AllFollowUpsPage() {
   }, [authFetch]);
 
   const loadAll = useCallback(() => {
-    fetchSection({ date: today },   setTodayItems,    setLoadingToday);
-    fetchSection({ date: tomorrow }, setTomorrowItems, setLoadingTomorrow);
-    const farFuture = toLocalISO(new Date(Date.now() + 365 * 86400000));
+    const baseParams = {};
+    if (filterStaff && filterStaff !== 'all') {
+      baseParams.assigned_to = filterStaff;
+    }
+    fetchSection({ ...baseParams, overdue: 'true' }, setOverdueItems,  setLoadingOverdue);
+    fetchSection({ ...baseParams, date: today },     setTodayItems,    setLoadingToday);
+    fetchSection({ ...baseParams, date: tomorrow },  setTomorrowItems, setLoadingTomorrow);
+    const farFuture = toLocalISO(new Date(Date.now() + 60 * 86400000));
     fetchSection(
-      { start_date: toLocalISO(new Date(Date.now() + 2 * 86400000)), end_date: farFuture },
+      { ...baseParams, start_date: toLocalISO(new Date(Date.now() + 2 * 86400000)), end_date: farFuture },
       setOtherItems,
       setLoadingOther
     );
-  }, [fetchSection, today, tomorrow]);
+  }, [fetchSection, today, tomorrow, filterStaff]);
 
   useEffect(() => {
     if (!authLoading && accessToken) {
       if (filterDate) {
-        fetchSection({ date: filterDate }, setCustomItems, setLoadingCustom);
+        const baseParams = filterStaff && filterStaff !== 'all' ? { assigned_to: filterStaff } : {};
+        fetchSection({ ...baseParams, date: filterDate }, setCustomItems, setLoadingCustom);
       } else {
         loadAll();
       }
     }
-  }, [authLoading, accessToken, loadAll, filterDate]);
+  }, [authLoading, accessToken, loadAll, filterDate, filterStaff]);
 
   const handleStatusChange = async (id, newStatus) => {
     try {
@@ -379,6 +395,7 @@ export default function AllFollowUpsPage() {
       if (!res.ok) { alert('Update failed'); return; }
       const saved = await res.json();
       const updater = prev => prev.map(i => i.id === saved.id ? saved : i);
+      setOverdueItems(updater);
       setTodayItems(updater);
       setTomorrowItems(updater);
       setOtherItems(updater);
@@ -392,11 +409,44 @@ export default function AllFollowUpsPage() {
       const res = await authFetch(`${API_BASE_URL}/followups/${id}/`, { method: 'DELETE' });
       if (!res.ok) { alert('Delete failed'); return; }
       const remover = prev => prev.filter(i => i.id !== id);
+      setOverdueItems(remover);
       setTodayItems(remover);
       setTomorrowItems(remover);
       setOtherItems(remover);
       setCustomItems(remover);
     } catch { alert('Delete failed'); }
+  };
+
+  const handleConfirmReschedule = async () => {
+    if (!rescheduleItem || !rescheduleDate) return;
+    setIsRescheduling(true);
+    try {
+      const payload = {
+        status: 'rescheduled',
+        follow_up_date: rescheduleDate,
+      };
+      if (rescheduleTime) payload.follow_up_time = rescheduleTime;
+      if (rescheduleNotes) {
+        payload.notes = rescheduleItem.notes
+          ? `${rescheduleItem.notes}\n[Rescheduled to ${rescheduleDate}]: ${rescheduleNotes}`
+          : `[Rescheduled to ${rescheduleDate}]: ${rescheduleNotes}`;
+      }
+
+      const res = await authFetch(`${API_BASE_URL}/followups/${rescheduleItem.id}/`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error('Failed to reschedule');
+      
+      setRescheduleItem(null);
+      loadAll();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to reschedule follow-up');
+    } finally {
+      setIsRescheduling(false);
+    }
   };
 
   const applyFilter = (items) => items.filter(item => {
@@ -425,13 +475,14 @@ export default function AllFollowUpsPage() {
     setFilterStaff('all');
   };
 
+  const filteredOverdue  = applyFilter(overdueItems);
   const filteredToday    = applyFilter(todayItems);
   const filteredTomorrow = applyFilter(tomorrowItems);
   const filteredOther    = applyFilter(otherItems);
   const filteredCustom   = applyFilter(customItems);
   const totalVisible     = filterDate 
                            ? filteredCustom.length 
-                           : (filteredToday.length + filteredTomorrow.length + filteredOther.length);
+                           : (filteredOverdue.length + filteredToday.length + filteredTomorrow.length + filteredOther.length);
   const hasFilters       = searchTerm || filterStatus !== 'all' || filterType !== 'all' ||
                            filterPriority !== 'all' || filterStaff !== 'all' || filterDate;
 
@@ -471,7 +522,7 @@ export default function AllFollowUpsPage() {
                   All Follow-Ups
                 </h1>
               </div>
-              <p className="text-gray-500 ml-[52px] text-sm">Today · Tomorrow · Upcoming</p>
+              <p className="text-gray-500 ml-[52px] text-sm">Overdue · Today · Tomorrow · Upcoming</p>
             </div>
             <div className="flex gap-2">
               <div className="flex bg-gray-100 p-1 rounded-xl">
@@ -495,10 +546,10 @@ export default function AllFollowUpsPage() {
 
               <button
                 onClick={loadAll}
-                disabled={loadingToday && loadingTomorrow && loadingOther}
+                disabled={loadingOverdue || loadingToday || loadingTomorrow || loadingOther}
                 className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 hover:border-indigo-400 rounded-xl text-sm font-semibold text-gray-600 hover:text-indigo-600 transition-all"
               >
-                <RefreshCw size={16} className={(loadingToday || loadingTomorrow || loadingOther) ? 'animate-spin' : ''} />
+                <RefreshCw size={16} className={(loadingOverdue || loadingToday || loadingTomorrow || loadingOther) ? 'animate-spin' : ''} />
                 Refresh
               </button>
             </div>
@@ -508,10 +559,11 @@ export default function AllFollowUpsPage() {
         {/* Summary chips */}
         <div className="flex flex-wrap gap-3 mb-6">
           {[
+            { label: 'Overdue',  value: overdueItems.length,  color: 'bg-rose-50 text-rose-700 border-rose-200' },
             { label: 'Today',    value: todayItems.length,    color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
             { label: 'Tomorrow', value: tomorrowItems.length, color: 'bg-blue-50 text-blue-700 border-blue-200' },
             { label: 'Upcoming', value: otherItems.length,    color: 'bg-purple-50 text-purple-700 border-purple-200' },
-            { label: 'Total',    value: todayItems.length + tomorrowItems.length + otherItems.length, color: 'bg-gray-100 text-gray-700 border-gray-200' },
+            { label: 'Total',    value: overdueItems.length + todayItems.length + tomorrowItems.length + otherItems.length, color: 'bg-gray-100 text-gray-700 border-gray-200' },
           ].map(({ label, value, color }) => (
             <div key={label} className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-semibold text-sm ${color}`}>
               <span className="text-xl font-bold">{value}</span>
@@ -636,12 +688,38 @@ export default function AllFollowUpsPage() {
                 items={filteredCustom}
                 loading={loadingCustom}
                 onStatusChange={handleStatusChange}
+                onRescheduleClick={item => {
+                  setRescheduleItem(item);
+                  setRescheduleDate(today);
+                  setRescheduleTime(item.follow_up_time || '');
+                  setRescheduleNotes('');
+                }}
                 onDelete={handleDelete}
                 onCall={initiateCall}
                 defaultOpen={true}
               />
             ) : (
               <>
+                {/* ── Overdue / Previous Dates Pending Dues ── */}
+                <Section
+                  title="Overdue / Previous Pending Dues"
+                  subtitle="Pending follow-ups scheduled for previous dates that require immediate action"
+                  icon={AlertTriangle}
+                  iconBg="bg-gradient-to-br from-rose-500 to-red-600"
+                  items={filteredOverdue}
+                  loading={loadingOverdue}
+                  onStatusChange={handleStatusChange}
+                  onRescheduleClick={item => {
+                    setRescheduleItem(item);
+                    setRescheduleDate(today);
+                    setRescheduleTime(item.follow_up_time || '');
+                    setRescheduleNotes('');
+                  }}
+                  onDelete={handleDelete}
+                  onCall={initiateCall}
+                  defaultOpen={true}
+                />
+
                 {/* ── Today ── */}
                 <Section
                   title="Today"
@@ -651,6 +729,12 @@ export default function AllFollowUpsPage() {
                   items={filteredToday}
                   loading={loadingToday}
                   onStatusChange={handleStatusChange}
+                  onRescheduleClick={item => {
+                    setRescheduleItem(item);
+                    setRescheduleDate(today);
+                    setRescheduleTime(item.follow_up_time || '');
+                    setRescheduleNotes('');
+                  }}
                   onDelete={handleDelete}
                   onCall={initiateCall}
                   defaultOpen={true}
@@ -665,6 +749,12 @@ export default function AllFollowUpsPage() {
                   items={filteredTomorrow}
                   loading={loadingTomorrow}
                   onStatusChange={handleStatusChange}
+                  onRescheduleClick={item => {
+                    setRescheduleItem(item);
+                    setRescheduleDate(tomorrow);
+                    setRescheduleTime(item.follow_up_time || '');
+                    setRescheduleNotes('');
+                  }}
                   onDelete={handleDelete}
                   onCall={initiateCall}
                   defaultOpen={true}
@@ -679,6 +769,12 @@ export default function AllFollowUpsPage() {
                   items={filteredOther}
                   loading={loadingOther}
                   onStatusChange={handleStatusChange}
+                  onRescheduleClick={item => {
+                    setRescheduleItem(item);
+                    setRescheduleDate(tomorrow);
+                    setRescheduleTime(item.follow_up_time || '');
+                    setRescheduleNotes('');
+                  }}
                   onDelete={handleDelete}
                   onCall={initiateCall}
                   defaultOpen={false}
@@ -690,7 +786,7 @@ export default function AllFollowUpsPage() {
           <div className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100 h-[600px]">
             <Calendar
               localizer={localizer}
-              events={(filterDate ? filteredCustom : [...filteredToday, ...filteredTomorrow, ...filteredOther]).map(item => {
+              events={(filterDate ? filteredCustom : [...filteredOverdue, ...filteredToday, ...filteredTomorrow, ...filteredOther]).map(item => {
                 const date = new Date(item.follow_up_date);
                 if (item.follow_up_time) {
                   const [h, m] = item.follow_up_time.split(':');
@@ -710,6 +806,78 @@ export default function AllFollowUpsPage() {
                 className: `text-xs font-semibold !bg-indigo-500 text-white border-none rounded p-1 shadow-sm`
               })}
             />
+          </div>
+        )}
+
+        {/* Reschedule Modal Dialog */}
+        {rescheduleItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b pb-3">
+                <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <Clock size={18} className="text-indigo-600" />
+                  Reschedule Follow-up
+                </h3>
+                <button onClick={() => setRescheduleItem(null)} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <p className="text-xs text-slate-500">Lead Contact</p>
+                <p className="text-sm font-bold text-slate-800">{rescheduleItem.name || 'Lead'}</p>
+                <p className="text-xs font-mono text-indigo-600">{rescheduleItem.phone_number}</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">New Follow-up Date *</label>
+                <input
+                  type="date"
+                  min={today}
+                  value={rescheduleDate}
+                  onChange={e => setRescheduleDate(e.target.value)}
+                  className="w-full text-sm p-2.5 border rounded-xl outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">New Follow-up Time (Optional)</label>
+                <input
+                  type="time"
+                  value={rescheduleTime}
+                  onChange={e => setRescheduleTime(e.target.value)}
+                  className="w-full text-sm p-2.5 border rounded-xl outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Reschedule Notes / Reason (Optional)</label>
+                <textarea
+                  rows={3}
+                  value={rescheduleNotes}
+                  onChange={e => setRescheduleNotes(e.target.value)}
+                  placeholder="e.g., Lead asked to call back tomorrow afternoon after 3 PM..."
+                  className="w-full text-xs p-2.5 border rounded-xl outline-none focus:border-indigo-500 resize-none"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setRescheduleItem(null)}
+                  disabled={isRescheduling}
+                  className="flex-1 py-2.5 border border-gray-200 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmReschedule}
+                  disabled={isRescheduling || !rescheduleDate}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all disabled:opacity-50"
+                >
+                  {isRescheduling ? 'Rescheduling...' : 'Save New Schedule'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

@@ -437,6 +437,17 @@ const LeadsPageHeader = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <Can perform="leads:read_any">
+              <button
+                onClick={() => navigate('/export-data')}
+                className="group relative bg-white border-2 border-slate-200 hover:border-indigo-400 text-slate-700 hover:text-indigo-600 px-4 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+                title="Open Data Center (Export & Import)"
+              >
+                <Download size={18} className="group-hover:-translate-y-0.5 transition-transform duration-300 text-indigo-500" />
+                <span>Export Reports</span>
+              </button>
+            </Can>
+
             <Can perform="leads:create">
               <button
                 onClick={() => setShowPasteModal(true)}
