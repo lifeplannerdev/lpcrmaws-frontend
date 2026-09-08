@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
-import { getFilteredMenu } from '../../config/roles';
+import { getFilteredMenu, getCategorizedMenu } from '../../config/roles';
 import DesktopNavbar from './DesktopNavbar';
 import MobileNavbar from './MobileNavbar';
+import CommandPalette from './CommandPalette';
 import { useUserChannel } from '../../hooks/useUserChannel';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -15,8 +16,21 @@ const Navbar = () => {
   const { user, logout, accessToken, refreshAccessToken } = useAuth();
   const { hasAnyPermission, hasPermission } = usePermissions();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Global Ctrl+K / Cmd+K listener
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const getToken = useCallback(async () => {
     return accessToken || await refreshAccessToken();
@@ -108,6 +122,9 @@ const Navbar = () => {
     }
     return item;
   });
+
+  const categorizedNav = getCategorizedMenu(navItems, user);
+
   const handleNavigation = (path) => { navigate(path); setIsMobileMenuOpen(false); };
   const handleLogout = async () => { await logout(); navigate('/login'); };
   const handleChatOpen = () => { navigate('/chat'); setIsMobileMenuOpen(false); };
@@ -116,8 +133,8 @@ const Navbar = () => {
   const isFds = user?.company === 'FDS';
 
   return (
-    <div className={`p-4 shadow-md ${isFds ? 'bg-[#1C1410] border-b border-[#C9A96E]/20' : 'bg-white'}`}>
-      <div className="max-w-7xl mx-auto flex items-center gap-4">
+    <div className={`p-3 lg:p-4 shadow-sm transition-colors ${isFds ? 'bg-[#1C1410] border-b border-[#C9A96E]/20' : 'bg-white border-b border-gray-100'}`}>
+      <div className="max-w-[1600px] mx-auto flex items-center gap-4">
         {isFds && (
           <div 
             className="flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity mr-2" 
@@ -130,9 +147,10 @@ const Navbar = () => {
             />
           </div>
         )}
-        <div className="flex-1 w-full">
+        <div className="flex-1 w-full min-w-0">
           <DesktopNavbar
             navItems={navItems}
+            categorizedNav={categorizedNav}
             isActive={isActive}
             handleNavigation={handleNavigation}
             handleLogout={handleLogout}
@@ -142,23 +160,35 @@ const Navbar = () => {
             onClearNotifications={handleClearNotifications}
             onMarkRead={handleMarkRead}
             isFds={isFds}
+            onOpenSearch={() => setIsSearchOpen(true)}
           />
-        <MobileNavbar
-          navItems={navItems}
-          isActive={isActive}
-          handleNavigation={handleNavigation}
-          handleLogout={handleLogout}
-          isMobileMenuOpen={isMobileMenuOpen}
-          setIsMobileMenuOpen={setIsMobileMenuOpen}
-          onChatOpen={handleChatOpen}
-          notifications={notifications}
-          unreadCount={unreadCount}
-          onClearNotifications={handleClearNotifications}
-          onMarkRead={handleMarkRead}
-          isFds={isFds}
-        />
+          <MobileNavbar
+            navItems={navItems}
+            categorizedNav={categorizedNav}
+            isActive={isActive}
+            handleNavigation={handleNavigation}
+            handleLogout={handleLogout}
+            isMobileMenuOpen={isMobileMenuOpen}
+            setIsMobileMenuOpen={setIsMobileMenuOpen}
+            onChatOpen={handleChatOpen}
+            notifications={notifications}
+            unreadCount={unreadCount}
+            onClearNotifications={handleClearNotifications}
+            onMarkRead={handleMarkRead}
+            isFds={isFds}
+            onOpenSearch={() => setIsSearchOpen(true)}
+          />
         </div>
       </div>
+
+      {/* Global Spotlight Search Palette */}
+      <CommandPalette
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        items={navItems}
+        onNavigate={handleNavigation}
+        isFds={isFds}
+      />
     </div>
   );
 };
