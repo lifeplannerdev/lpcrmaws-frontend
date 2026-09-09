@@ -97,6 +97,8 @@ export const LiveCallProvider = ({ children }) => {
           remarks: '',
           follow_up_date: '',
           follow_up_time: '',
+          followup_status: 'pending',
+          followup_done: false,
         } : prevCall.formData,
       };
 

@@ -496,6 +496,20 @@ export default function AllFollowUpsPage() {
     }
   }, [authLoading, accessToken, loadAll, loadPast, filterDate, filterStaff, activeTab, fetchSection]);
 
+  // Real-time synchronization when a call or follow-up is logged/completed elsewhere
+  useEffect(() => {
+    const handleRemoteRefresh = () => {
+      loadAll();
+      loadPast();
+    };
+    window.addEventListener('refreshFollowups', handleRemoteRefresh);
+    window.addEventListener('refreshLeads', handleRemoteRefresh);
+    return () => {
+      window.removeEventListener('refreshFollowups', handleRemoteRefresh);
+      window.removeEventListener('refreshLeads', handleRemoteRefresh);
+    };
+  }, [loadAll, loadPast]);
+
   const handleStatusChange = async (id, newStatus) => {
     try {
       const res = await authFetch(`${API_BASE_URL}/followups/${id}/`, {
