@@ -5,11 +5,13 @@ import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useVoxbayCall } from '../hooks/useVoxbayCall';
 import { useLiveCall } from '../context/LiveCallContext';
+import toast from 'react-hot-toast';
 import {
   CalendarClock, Phone, MessageSquare, Mail, Users,
   AlertTriangle, ArrowLeft, RefreshCw, Search, SlidersHorizontal,
-  CheckCircle, Clock, Trash2, X, ChevronDown, ChevronUp,
-  Calendar as CalendarIcon, Sunrise, Star, UserCheck, LayoutList
+  CheckCircle, CheckCircle2, Clock, Trash2, X, ChevronDown, ChevronUp,
+  Calendar as CalendarIcon, Sunrise, Star, UserCheck, LayoutList,
+  History, Archive, Sparkles
 } from 'lucide-react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
@@ -31,12 +33,14 @@ const TYPE_COLOR = {
 const STATUS_COLOR = {
   pending:        'bg-yellow-100 text-yellow-700',
   contacted:      'bg-green-100 text-green-700',
+  completed:      'bg-emerald-100 text-emerald-700',
   not_interested: 'bg-red-100 text-red-700',
   rescheduled:    'bg-indigo-100 text-indigo-700',
 };
 const STATUS_LABEL = {
   pending:        'Pending',
   contacted:      'Contacted',
+  completed:      'Completed',
   not_interested: 'Not Interested',
   rescheduled:    'Rescheduled',
 };
@@ -95,13 +99,28 @@ const FollowUpCard = ({ item, onStatusChange, onRescheduleClick, onDelete, onCal
         : item.assigned_to.username)
     : null;
 
+  const isCompleted = item.status !== 'pending' || item.lead_status === 'CLOSED' || item.lead_status === 'CONVERTED';
+
+  // Extract clean notes and recording if present
+  let notesText = item.notes || '';
+  let recordingUrl = item.recording_url || null;
+  if (notesText) {
+    const recMatch = notesText.match(/(?:\[Audio Recording:\s*|Recording:\s*)(https?:\/\/[^\s\]]+)/i);
+    if (recMatch) {
+      if (!recordingUrl) recordingUrl = recMatch[1];
+      notesText = notesText.replace(recMatch[0], '').replace(/\[\]/, '').trim();
+    }
+  }
+
   return (
     <div 
       onClick={() => onCardClick ? onCardClick(item) : null}
       className={`group bg-white rounded-2xl border-2 p-4 transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 cursor-pointer relative ${
-        item.is_overdue
+        item.is_overdue && !isCompleted
           ? 'border-red-200 bg-red-50/30 hover:border-red-300'
-          : 'border-gray-100 hover:border-indigo-300'
+          : isCompleted
+            ? 'border-gray-200/80 hover:border-emerald-300 bg-gradient-to-b from-white to-slate-50/40'
+            : 'border-gray-100 hover:border-indigo-300'
       }`}
     >
       {/* Top */}
@@ -133,7 +152,7 @@ const FollowUpCard = ({ item, onStatusChange, onRescheduleClick, onDelete, onCal
             )}
           </div>
         </div>
-        {item.is_overdue && (
+        {item.is_overdue && !isCompleted && (
           <span className="flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-lg text-xs font-bold border border-red-200 flex-shrink-0">
             <AlertTriangle size={10} />
             Overdue
@@ -141,15 +160,22 @@ const FollowUpCard = ({ item, onStatusChange, onRescheduleClick, onDelete, onCal
         )}
       </div>
 
-      {/* Time */}
-      {item.follow_up_time && (
-        <div className="flex items-center gap-1.5 mb-2.5">
-          <Clock size={12} className="text-orange-500" />
-          <span className="text-xs font-semibold text-gray-600">
-            {formatTime(item.follow_up_time)}
+      {/* Time / Date info */}
+      <div className="flex items-center gap-2 mb-2.5 flex-wrap">
+        {item.follow_up_time && (
+          <div className="flex items-center gap-1">
+            <Clock size={12} className="text-orange-500" />
+            <span className="text-xs font-semibold text-gray-600">
+              {formatTime(item.follow_up_time)}
+            </span>
+          </div>
+        )}
+        {item.follow_up_date && (
+          <span className="text-[11px] font-mono text-gray-400">
+            {new Date(item.follow_up_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
           </span>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Badges */}
       <div className="flex flex-wrap gap-1.5 mb-3">
@@ -163,32 +189,46 @@ const FollowUpCard = ({ item, onStatusChange, onRescheduleClick, onDelete, onCal
           {item.followup_type?.charAt(0).toUpperCase() + item.followup_type?.slice(1)}
         </span>
         {item.lead_status && (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-            {item.lead_status}
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+            item.lead_status === 'CLOSED'
+              ? 'bg-rose-50 text-rose-700 border-rose-200'
+              : item.lead_status === 'CONVERTED'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-slate-100 text-slate-700 border-slate-200'
+          }`}>
+            Lead: {item.lead_status}
           </span>
         )}
       </div>
 
       {/* Notes */}
-      {item.notes && (
-        <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 mb-3 line-clamp-2">
-          {item.notes}
+      {notesText && (
+        <p className="text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 mb-2.5 line-clamp-2">
+          {notesText}
         </p>
       )}
 
-      {/* Quick actions */}
-      {item.status === 'pending' && (
+      {/* Recording audio player */}
+      {recordingUrl && (
+        <div className="mb-2.5" onClick={e => e.stopPropagation()}>
+          <audio controls src={recordingUrl} className="h-7 w-full rounded-lg" preload="none" />
+        </div>
+      )}
+
+      {/* Quick actions for Pending items */}
+      {!isCompleted && item.status === 'pending' && (
         <div className="flex gap-1.5 mb-2.5" onClick={e => e.stopPropagation()}>
           <button
             onClick={(e) => { e.stopPropagation(); onStatusChange(item.id, 'contacted'); }}
-            className="flex-1 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-bold rounded-lg border border-green-200 transition-all flex items-center justify-center gap-1"
+            className="flex-1 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-bold rounded-lg border border-green-200 transition-all flex items-center justify-center gap-1 cursor-pointer"
+            title="Mark as completed/contacted and move to Past Follow-ups"
           >
             <CheckCircle size={12} />
             Contacted
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onRescheduleClick ? onRescheduleClick(item) : onStatusChange(item.id, 'rescheduled'); }}
-            className="flex-1 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 transition-all flex items-center justify-center gap-1"
+            className="flex-1 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 transition-all flex items-center justify-center gap-1 cursor-pointer"
           >
             <Clock size={12} />
             Reschedule
@@ -196,27 +236,55 @@ const FollowUpCard = ({ item, onStatusChange, onRescheduleClick, onDelete, onCal
         </div>
       )}
 
-      {/* Actions */}
+      {/* Completion info for Past items */}
+      {isCompleted && (
+        <div className="flex items-center justify-between gap-1 mb-2.5 px-2.5 py-1.5 bg-emerald-50/70 border border-emerald-200/80 rounded-xl text-emerald-800 text-xs font-semibold">
+          <span className="flex items-center gap-1.5">
+            <CheckCircle2 size={13} className="text-emerald-600" />
+            <span>{item.status === 'contacted' ? 'Contacted / Completed' : item.status === 'not_interested' ? 'Not Interested' : (statusLabel || 'Completed')}</span>
+          </span>
+          {item.updated_at && (
+            <span className="text-[10px] text-emerald-600 font-mono opacity-80">
+              {new Date(item.updated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Actions bar */}
       <div className="pt-2 border-t border-gray-100 flex gap-1.5" onClick={e => e.stopPropagation()}>
         <button
           onClick={(e) => {
             e.stopPropagation();
             onCall ? onCall(displayPhone, item) : (onCardClick && onCardClick(item));
           }}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-all border border-indigo-200/60"
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-all border border-indigo-200/60 cursor-pointer"
         >
           <Phone size={13} />
           Call
         </button>
+        {isCompleted && onRescheduleClick && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRescheduleClick(item);
+            }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-xs font-bold transition-all border border-purple-200/60 cursor-pointer"
+            title="Schedule a new follow-up for this lead"
+          >
+            <Clock size={13} />
+            Follow up again
+          </button>
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation();
             onDelete(item.id);
           }}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-red-500 hover:bg-red-50 rounded-lg text-xs font-semibold transition-all"
+          className="px-2 py-1.5 text-red-500 hover:bg-red-50 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+          title="Delete"
         >
           <Trash2 size={13} />
-          Delete
         </button>
       </div>
     </div>
@@ -297,20 +365,24 @@ export default function AllFollowUpsPage() {
 
   const isAdmin = hasPermission('staff:view_any') || hasPermission('staff:access_flag');
 
-  const today    = toLocalISO(new Date());
-  const tomorrow = toLocalISO(new Date(Date.now() + 86400000));
+  const today     = toLocalISO(new Date());
+  const tomorrow  = toLocalISO(new Date(Date.now() + 86400000));
+  const yesterday = toLocalISO(new Date(Date.now() - 86400000));
 
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
+  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'past'
+  const [viewMode,  setViewMode]  = useState('list'); // 'list' | 'calendar'
 
   const [overdueItems,  setOverdueItems]  = useState([]);
   const [todayItems,    setTodayItems]    = useState([]);
   const [tomorrowItems, setTomorrowItems] = useState([]);
   const [otherItems,    setOtherItems]    = useState([]);
+  const [pastItems,     setPastItems]     = useState([]);
 
   const [loadingOverdue,  setLoadingOverdue]  = useState(true);
   const [loadingToday,    setLoadingToday]    = useState(true);
   const [loadingTomorrow, setLoadingTomorrow] = useState(true);
   const [loadingOther,    setLoadingOther]    = useState(true);
+  const [loadingPast,     setLoadingPast]     = useState(false);
   const [loadingCustom,   setLoadingCustom]   = useState(false);
 
   // Reschedule Modal State
@@ -385,7 +457,7 @@ export default function AllFollowUpsPage() {
   }, [authFetch]);
 
   const loadAll = useCallback(() => {
-    const baseParams = {};
+    const baseParams = { tab: 'active' };
     if (filterStaff && filterStaff !== 'all') {
       baseParams.assigned_to = filterStaff;
     }
@@ -400,16 +472,29 @@ export default function AllFollowUpsPage() {
     );
   }, [fetchSection, today, tomorrow, filterStaff]);
 
+  const loadPast = useCallback(() => {
+    const baseParams = { tab: 'past' };
+    if (filterStaff && filterStaff !== 'all') {
+      baseParams.assigned_to = filterStaff;
+    }
+    fetchSection(baseParams, setPastItems, setLoadingPast);
+  }, [fetchSection, filterStaff]);
+
   useEffect(() => {
     if (!authLoading && accessToken) {
       if (filterDate) {
         const baseParams = filterStaff && filterStaff !== 'all' ? { assigned_to: filterStaff } : {};
-        fetchSection({ ...baseParams, date: filterDate }, setCustomItems, setLoadingCustom);
+        if (activeTab === 'active') {
+          fetchSection({ ...baseParams, tab: 'active', date: filterDate }, setCustomItems, setLoadingCustom);
+        } else {
+          fetchSection({ ...baseParams, tab: 'past', date: filterDate }, setPastItems, setLoadingPast);
+        }
       } else {
         loadAll();
+        loadPast();
       }
     }
-  }, [authLoading, accessToken, loadAll, filterDate, filterStaff]);
+  }, [authLoading, accessToken, loadAll, loadPast, filterDate, filterStaff, activeTab, fetchSection]);
 
   const handleStatusChange = async (id, newStatus) => {
     try {
@@ -417,29 +502,47 @@ export default function AllFollowUpsPage() {
         method: 'PUT',
         body: JSON.stringify({ status: newStatus }),
       });
-      if (!res.ok) { alert('Update failed'); return; }
+      if (!res.ok) { toast.error('Update failed'); return; }
       const saved = await res.json();
-      const updater = prev => prev.map(i => i.id === saved.id ? saved : i);
-      setOverdueItems(updater);
-      setTodayItems(updater);
-      setTomorrowItems(updater);
-      setOtherItems(updater);
-      setCustomItems(updater);
-    } catch { alert('Update failed'); }
+
+      // If marked contacted/completed/not_interested:
+      // Remove immediately from active lists and move to past follow-ups tab!
+      if (['contacted', 'completed', 'not_interested'].includes(newStatus)) {
+        const remover = prev => prev.filter(i => i.id !== id);
+        setOverdueItems(remover);
+        setTodayItems(remover);
+        setTomorrowItems(remover);
+        setOtherItems(remover);
+        setCustomItems(remover);
+
+        // Prepend to past followups list
+        setPastItems(prev => [saved, ...prev.filter(i => i.id !== id)]);
+        toast.success(`Follow-up marked as ${STATUS_LABEL[newStatus] || newStatus} and moved to Past Follow-ups.`);
+      } else {
+        const updater = prev => prev.map(i => i.id === saved.id ? saved : i);
+        setOverdueItems(updater);
+        setTodayItems(updater);
+        setTomorrowItems(updater);
+        setOtherItems(updater);
+        setCustomItems(updater);
+      }
+    } catch { toast.error('Update failed'); }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this follow-up?')) return;
     try {
       const res = await authFetch(`${API_BASE_URL}/followups/${id}/`, { method: 'DELETE' });
-      if (!res.ok) { alert('Delete failed'); return; }
+      if (!res.ok) { toast.error('Delete failed'); return; }
       const remover = prev => prev.filter(i => i.id !== id);
       setOverdueItems(remover);
       setTodayItems(remover);
       setTomorrowItems(remover);
       setOtherItems(remover);
       setCustomItems(remover);
-    } catch { alert('Delete failed'); }
+      setPastItems(remover);
+      toast.success('Follow-up deleted successfully.');
+    } catch { toast.error('Delete failed'); }
   };
 
   const handleConfirmReschedule = async () => {
@@ -466,9 +569,11 @@ export default function AllFollowUpsPage() {
       
       setRescheduleItem(null);
       loadAll();
+      loadPast();
+      toast.success('Follow-up rescheduled successfully.');
     } catch (err) {
       console.error(err);
-      alert('Failed to reschedule follow-up');
+      toast.error('Failed to reschedule follow-up');
     } finally {
       setIsRescheduling(false);
     }
@@ -571,11 +676,20 @@ export default function AllFollowUpsPage() {
   const filteredTomorrow = applyFilter(tomorrowItems);
   const filteredOther    = applyFilter(otherItems);
   const filteredCustom   = applyFilter(customItems);
-  const totalVisible     = filterDate 
-                           ? filteredCustom.length 
-                           : (filteredOverdue.length + filteredToday.length + filteredTomorrow.length + filteredOther.length);
-  const hasFilters       = searchTerm || filterStatus !== 'all' || filterType !== 'all' ||
-                           filterPriority !== 'all' || filterStaff !== 'all' || filterDate;
+  const filteredPast     = applyFilter(pastItems);
+
+  const activeTotalCount = overdueItems.length + todayItems.length + tomorrowItems.length + otherItems.length;
+  const pastTotalCount   = pastItems.length;
+
+  const pastTodayItems     = filteredPast.filter(i => i.follow_up_date === today);
+  const pastYesterdayItems = filteredPast.filter(i => i.follow_up_date === yesterday);
+  const pastEarlierItems   = filteredPast.filter(i => i.follow_up_date !== today && i.follow_up_date !== yesterday);
+
+  const totalVisible = activeTab === 'active'
+    ? (filterDate ? filteredCustom.length : (filteredOverdue.length + filteredToday.length + filteredTomorrow.length + filteredOther.length))
+    : filteredPast.length;
+  const hasFilters   = searchTerm || filterStatus !== 'all' || filterType !== 'all' ||
+                       filterPriority !== 'all' || filterStaff !== 'all' || filterDate;
 
   const todayLabel    = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
   const tomorrowLabel = new Date(Date.now() + 86400000).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -595,7 +709,7 @@ export default function AllFollowUpsPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
 
         {/* Page header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-gray-500 hover:text-gray-800 mb-4 transition-colors text-sm font-medium"
@@ -613,13 +727,13 @@ export default function AllFollowUpsPage() {
                   All Follow-Ups
                 </h1>
               </div>
-              <p className="text-gray-500 ml-[52px] text-sm">Overdue · Today · Tomorrow · Upcoming</p>
+              <p className="text-gray-500 ml-[52px] text-sm">Overdue · Today · Tomorrow · Upcoming · Past Records</p>
             </div>
             <div className="flex gap-2">
               <div className="flex bg-gray-100 p-1 rounded-xl">
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
                     viewMode === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -627,7 +741,7 @@ export default function AllFollowUpsPage() {
                 </button>
                 <button
                   onClick={() => setViewMode('calendar')}
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
                     viewMode === 'calendar' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -636,31 +750,82 @@ export default function AllFollowUpsPage() {
               </div>
 
               <button
-                onClick={loadAll}
-                disabled={loadingOverdue || loadingToday || loadingTomorrow || loadingOther}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 hover:border-indigo-400 rounded-xl text-sm font-semibold text-gray-600 hover:text-indigo-600 transition-all"
+                onClick={() => { loadAll(); loadPast(); }}
+                disabled={loadingOverdue || loadingToday || loadingTomorrow || loadingOther || loadingPast}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 hover:border-indigo-400 rounded-xl text-sm font-semibold text-gray-600 hover:text-indigo-600 transition-all cursor-pointer"
               >
-                <RefreshCw size={16} className={(loadingOverdue || loadingToday || loadingTomorrow || loadingOther) ? 'animate-spin' : ''} />
+                <RefreshCw size={16} className={(loadingOverdue || loadingToday || loadingTomorrow || loadingOther || loadingPast) ? 'animate-spin' : ''} />
                 Refresh
               </button>
             </div>
           </div>
         </div>
 
+        {/* Main Tab Switcher: Active vs Past */}
+        <div className="flex items-center gap-2 mb-6 border-b border-gray-200">
+          <button
+            onClick={() => { setActiveTab('active'); setFilterDate(''); }}
+            className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'active'
+                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/60 rounded-t-xl'
+                : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-100/60 rounded-t-xl'
+            }`}
+          >
+            <Clock size={16} />
+            <span>Active Follow-Ups</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+              activeTab === 'active' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'
+            }`}>
+              {activeTotalCount}
+            </span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('past'); setFilterDate(''); }}
+            className={`flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'past'
+                ? 'border-emerald-600 text-emerald-600 bg-emerald-50/60 rounded-t-xl'
+                : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-100/60 rounded-t-xl'
+            }`}
+          >
+            <CheckCircle2 size={16} />
+            <span>Past Follow-Ups</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+              activeTab === 'past' ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-700'
+            }`}>
+              {pastTotalCount}
+            </span>
+          </button>
+        </div>
+
         {/* Summary chips */}
         <div className="flex flex-wrap gap-3 mb-6">
-          {[
-            { label: 'Overdue',  value: overdueItems.length,  color: 'bg-rose-50 text-rose-700 border-rose-200' },
-            { label: 'Today',    value: todayItems.length,    color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-            { label: 'Tomorrow', value: tomorrowItems.length, color: 'bg-blue-50 text-blue-700 border-blue-200' },
-            { label: 'Upcoming', value: otherItems.length,    color: 'bg-purple-50 text-purple-700 border-purple-200' },
-            { label: 'Total',    value: overdueItems.length + todayItems.length + tomorrowItems.length + otherItems.length, color: 'bg-gray-100 text-gray-700 border-gray-200' },
-          ].map(({ label, value, color }) => (
-            <div key={label} className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-semibold text-sm ${color}`}>
-              <span className="text-xl font-bold">{value}</span>
-              <span className="opacity-75 text-xs uppercase tracking-wide">{label}</span>
-            </div>
-          ))}
+          {activeTab === 'active' ? (
+            [
+              { label: 'Overdue',  value: overdueItems.length,  color: 'bg-rose-50 text-rose-700 border-rose-200' },
+              { label: 'Today',    value: todayItems.length,    color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+              { label: 'Tomorrow', value: tomorrowItems.length, color: 'bg-blue-50 text-blue-700 border-blue-200' },
+              { label: 'Upcoming', value: otherItems.length,    color: 'bg-purple-50 text-purple-700 border-purple-200' },
+              { label: 'Total Active', value: activeTotalCount, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+            ].map(({ label, value, color }) => (
+              <div key={label} className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-semibold text-sm ${color}`}>
+                <span className="text-xl font-bold">{value}</span>
+                <span className="opacity-75 text-xs uppercase tracking-wide">{label}</span>
+              </div>
+            ))
+          ) : (
+            [
+              { label: 'Total Past', value: pastItems.length, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+              { label: 'Today Completed', value: pastTodayItems.length, color: 'bg-blue-50 text-blue-700 border-blue-200' },
+              { label: 'Closed Leads', value: pastItems.filter(i => i.lead_status === 'CLOSED').length, color: 'bg-rose-50 text-rose-700 border-rose-200' },
+              { label: 'Contacted', value: pastItems.filter(i => i.status === 'contacted').length, color: 'bg-purple-50 text-purple-700 border-purple-200' },
+            ].map(({ label, value, color }) => (
+              <div key={label} className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-semibold text-sm ${color}`}>
+                <span className="text-xl font-bold">{value}</span>
+                <span className="opacity-75 text-xs uppercase tracking-wide">{label}</span>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Filters */}
@@ -675,7 +840,7 @@ export default function AllFollowUpsPage() {
               />
               <input
                 type="text"
-                placeholder="Search by name, phone, or notes…"
+                placeholder={activeTab === 'active' ? "Search active follow-ups by name, phone, or notes…" : "Search past follow-ups by name, phone, or notes…"}
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full pl-11 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-medium text-gray-800 placeholder:text-gray-400"
@@ -703,10 +868,18 @@ export default function AllFollowUpsPage() {
                 <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
                   className="appearance-none w-full px-4 py-2.5 pr-9 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500 transition-all font-semibold text-gray-700 bg-white text-sm">
                   <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="contacted">Contacted</option>
-                  <option value="not_interested">Not Interested</option>
-                  <option value="rescheduled">Rescheduled</option>
+                  {activeTab === 'active' ? (
+                    <>
+                      <option value="pending">Pending</option>
+                      <option value="rescheduled">Rescheduled</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="contacted">Contacted</option>
+                      <option value="completed">Completed</option>
+                      <option value="not_interested">Not Interested</option>
+                    </>
+                  )}
                 </select>
                 <SlidersHorizontal className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
               </div>
@@ -754,7 +927,7 @@ export default function AllFollowUpsPage() {
 
               {/* Clear */}
               <button onClick={clearFilters}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-gray-200 rounded-xl hover:bg-red-50 hover:border-red-300 font-semibold text-gray-600 hover:text-red-600 transition-all text-sm">
+                className="flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-gray-200 rounded-xl hover:bg-red-50 hover:border-red-300 font-semibold text-gray-600 hover:text-red-600 transition-all text-sm cursor-pointer">
                 <X size={15} />
                 Clear Filters
               </button>
@@ -770,111 +943,209 @@ export default function AllFollowUpsPage() {
 
         {viewMode === 'list' ? (
           <>
-            {filterDate ? (
-              <Section
-                title="Selected Date"
-                subtitle={new Date(filterDate).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                icon={CalendarClock}
-                iconBg="bg-gradient-to-br from-indigo-500 to-purple-600"
-                items={filteredCustom}
-                loading={loadingCustom}
-                onStatusChange={handleStatusChange}
-                onRescheduleClick={item => {
-                  setRescheduleItem(item);
-                  setRescheduleDate(today);
-                  setRescheduleTime(item.follow_up_time || '');
-                  setRescheduleNotes('');
-                }}
-                onDelete={handleDelete}
-                onCall={handleCallFollowUp}
-                onCardClick={handleOpenFollowUpCall}
-                defaultOpen={true}
-              />
-            ) : (
+            {activeTab === 'active' ? (
               <>
-                {/* ── Overdue / Previous Dates Pending Dues ── */}
-                <Section
-                  title="Overdue / Previous Pending Dues"
-                  subtitle="Pending follow-ups scheduled for previous dates that require immediate action"
-                  icon={AlertTriangle}
-                  iconBg="bg-gradient-to-br from-rose-500 to-red-600"
-                  items={filteredOverdue}
-                  loading={loadingOverdue}
-                  onStatusChange={handleStatusChange}
-                  onRescheduleClick={item => {
-                    setRescheduleItem(item);
-                    setRescheduleDate(today);
-                    setRescheduleTime(item.follow_up_time || '');
-                    setRescheduleNotes('');
-                  }}
-                  onDelete={handleDelete}
-                  onCall={handleCallFollowUp}
-                  onCardClick={handleOpenFollowUpCall}
-                  defaultOpen={true}
-                />
+                {filterDate ? (
+                  <Section
+                    title="Selected Date"
+                    subtitle={new Date(filterDate).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    icon={CalendarClock}
+                    iconBg="bg-gradient-to-br from-indigo-500 to-purple-600"
+                    items={filteredCustom}
+                    loading={loadingCustom}
+                    onStatusChange={handleStatusChange}
+                    onRescheduleClick={item => {
+                      setRescheduleItem(item);
+                      setRescheduleDate(today);
+                      setRescheduleTime(item.follow_up_time || '');
+                      setRescheduleNotes('');
+                    }}
+                    onDelete={handleDelete}
+                    onCall={handleCallFollowUp}
+                    onCardClick={handleOpenFollowUpCall}
+                    defaultOpen={true}
+                  />
+                ) : (
+                  <>
+                    {/* ── Overdue / Previous Dates Pending Dues ── */}
+                    <Section
+                      title="Overdue / Previous Pending Dues"
+                      subtitle="Pending follow-ups scheduled for previous dates that require immediate action"
+                      icon={AlertTriangle}
+                      iconBg="bg-gradient-to-br from-rose-500 to-red-600"
+                      items={filteredOverdue}
+                      loading={loadingOverdue}
+                      onStatusChange={handleStatusChange}
+                      onRescheduleClick={item => {
+                        setRescheduleItem(item);
+                        setRescheduleDate(today);
+                        setRescheduleTime(item.follow_up_time || '');
+                        setRescheduleNotes('');
+                      }}
+                      onDelete={handleDelete}
+                      onCall={handleCallFollowUp}
+                      onCardClick={handleOpenFollowUpCall}
+                      defaultOpen={true}
+                    />
 
-                {/* ── Today ── */}
-                <Section
-                  title="Today"
-                  subtitle={todayLabel}
-                  icon={Star}
-                  iconBg="bg-gradient-to-br from-emerald-500 to-teal-600"
-                  items={filteredToday}
-                  loading={loadingToday}
-                  onStatusChange={handleStatusChange}
-                  onRescheduleClick={item => {
-                    setRescheduleItem(item);
-                    setRescheduleDate(today);
-                    setRescheduleTime(item.follow_up_time || '');
-                    setRescheduleNotes('');
-                  }}
-                  onDelete={handleDelete}
-                  onCall={handleCallFollowUp}
-                  onCardClick={handleOpenFollowUpCall}
-                  defaultOpen={true}
-                />
+                    {/* ── Today ── */}
+                    <Section
+                      title="Today"
+                      subtitle={todayLabel}
+                      icon={Star}
+                      iconBg="bg-gradient-to-br from-emerald-500 to-teal-600"
+                      items={filteredToday}
+                      loading={loadingToday}
+                      onStatusChange={handleStatusChange}
+                      onRescheduleClick={item => {
+                        setRescheduleItem(item);
+                        setRescheduleDate(today);
+                        setRescheduleTime(item.follow_up_time || '');
+                        setRescheduleNotes('');
+                      }}
+                      onDelete={handleDelete}
+                      onCall={handleCallFollowUp}
+                      onCardClick={handleOpenFollowUpCall}
+                      defaultOpen={true}
+                    />
 
-                {/* ── Tomorrow ── */}
-                <Section
-                  title="Tomorrow"
-                  subtitle={tomorrowLabel}
-                  icon={Sunrise}
-                  iconBg="bg-gradient-to-br from-blue-500 to-indigo-600"
-                  items={filteredTomorrow}
-                  loading={loadingTomorrow}
-                  onStatusChange={handleStatusChange}
-                  onRescheduleClick={item => {
-                    setRescheduleItem(item);
-                    setRescheduleDate(tomorrow);
-                    setRescheduleTime(item.follow_up_time || '');
-                    setRescheduleNotes('');
-                  }}
-                  onDelete={handleDelete}
-                  onCall={handleCallFollowUp}
-                  onCardClick={handleOpenFollowUpCall}
-                  defaultOpen={true}
-                />
+                    {/* ── Tomorrow ── */}
+                    <Section
+                      title="Tomorrow"
+                      subtitle={tomorrowLabel}
+                      icon={Sunrise}
+                      iconBg="bg-gradient-to-br from-blue-500 to-indigo-600"
+                      items={filteredTomorrow}
+                      loading={loadingTomorrow}
+                      onStatusChange={handleStatusChange}
+                      onRescheduleClick={item => {
+                        setRescheduleItem(item);
+                        setRescheduleDate(tomorrow);
+                        setRescheduleTime(item.follow_up_time || '');
+                        setRescheduleNotes('');
+                      }}
+                      onDelete={handleDelete}
+                      onCall={handleCallFollowUp}
+                      onCardClick={handleOpenFollowUpCall}
+                      defaultOpen={true}
+                    />
 
-                {/* ── Upcoming ── */}
-                <Section
-                  title="Upcoming"
-                  subtitle="After tomorrow"
-                  icon={CalendarIcon}
-                  iconBg="bg-gradient-to-br from-purple-500 to-pink-600"
-                  items={filteredOther}
-                  loading={loadingOther}
-                  onStatusChange={handleStatusChange}
-                  onRescheduleClick={item => {
-                    setRescheduleItem(item);
-                    setRescheduleDate(tomorrow);
-                    setRescheduleTime(item.follow_up_time || '');
-                    setRescheduleNotes('');
-                  }}
-                  onDelete={handleDelete}
-                  onCall={handleCallFollowUp}
-                  onCardClick={handleOpenFollowUpCall}
-                  defaultOpen={false}
-                />
+                    {/* ── Upcoming ── */}
+                    <Section
+                      title="Upcoming"
+                      subtitle="After tomorrow"
+                      icon={CalendarIcon}
+                      iconBg="bg-gradient-to-br from-purple-500 to-pink-600"
+                      items={filteredOther}
+                      loading={loadingOther}
+                      onStatusChange={handleStatusChange}
+                      onRescheduleClick={item => {
+                        setRescheduleItem(item);
+                        setRescheduleDate(tomorrow);
+                        setRescheduleTime(item.follow_up_time || '');
+                        setRescheduleNotes('');
+                      }}
+                      onDelete={handleDelete}
+                      onCall={handleCallFollowUp}
+                      onCardClick={handleOpenFollowUpCall}
+                      defaultOpen={false}
+                    />
+                  </>
+                )}
+              </>
+            ) : (
+              /* ── PAST FOLLOW-UPS TAB ── */
+              <>
+                {filterDate ? (
+                  <Section
+                    title={`Completed on ${new Date(filterDate).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`}
+                    subtitle="Past follow-up history"
+                    icon={CheckCircle2}
+                    iconBg="bg-gradient-to-br from-emerald-500 to-teal-600"
+                    items={filteredPast}
+                    loading={loadingPast}
+                    onStatusChange={handleStatusChange}
+                    onRescheduleClick={item => {
+                      setRescheduleItem(item);
+                      setRescheduleDate(today);
+                      setRescheduleTime(item.follow_up_time || '');
+                      setRescheduleNotes('');
+                    }}
+                    onDelete={handleDelete}
+                    onCall={handleCallFollowUp}
+                    onCardClick={handleOpenFollowUpCall}
+                    defaultOpen={true}
+                  />
+                ) : (
+                  <>
+                    {/* Today's completed */}
+                    {pastTodayItems.length > 0 && (
+                      <Section
+                        title="Completed Today"
+                        subtitle={todayLabel}
+                        icon={CheckCircle2}
+                        iconBg="bg-gradient-to-br from-emerald-500 to-teal-600"
+                        items={pastTodayItems}
+                        loading={loadingPast}
+                        onStatusChange={handleStatusChange}
+                        onRescheduleClick={item => {
+                          setRescheduleItem(item);
+                          setRescheduleDate(tomorrow);
+                          setRescheduleTime(item.follow_up_time || '');
+                          setRescheduleNotes('');
+                        }}
+                        onDelete={handleDelete}
+                        onCall={handleCallFollowUp}
+                        onCardClick={handleOpenFollowUpCall}
+                        defaultOpen={true}
+                      />
+                    )}
+
+                    {/* Yesterday's completed */}
+                    {pastYesterdayItems.length > 0 && (
+                      <Section
+                        title="Completed Yesterday"
+                        subtitle={new Date(Date.now() - 86400000).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        icon={History}
+                        iconBg="bg-gradient-to-br from-blue-500 to-indigo-600"
+                        items={pastYesterdayItems}
+                        loading={loadingPast}
+                        onStatusChange={handleStatusChange}
+                        onRescheduleClick={item => {
+                          setRescheduleItem(item);
+                          setRescheduleDate(today);
+                          setRescheduleTime(item.follow_up_time || '');
+                          setRescheduleNotes('');
+                        }}
+                        onDelete={handleDelete}
+                        onCall={handleCallFollowUp}
+                        onCardClick={handleOpenFollowUpCall}
+                        defaultOpen={pastTodayItems.length === 0}
+                      />
+                    )}
+
+                    {/* Earlier completed */}
+                    <Section
+                      title="Earlier Completed & Closed Follow-ups"
+                      subtitle="Historical follow-up activity"
+                      icon={Archive}
+                      iconBg="bg-gradient-to-br from-slate-600 to-slate-800"
+                      items={pastEarlierItems}
+                      loading={loadingPast}
+                      onStatusChange={handleStatusChange}
+                      onRescheduleClick={item => {
+                        setRescheduleItem(item);
+                        setRescheduleDate(today);
+                        setRescheduleTime(item.follow_up_time || '');
+                        setRescheduleNotes('');
+                      }}
+                      onDelete={handleDelete}
+                      onCall={handleCallFollowUp}
+                      onCardClick={handleOpenFollowUpCall}
+                      defaultOpen={pastTodayItems.length === 0 && pastYesterdayItems.length === 0}
+                    />
+                  </>
+                )}
               </>
             )}
           </>
@@ -882,7 +1153,10 @@ export default function AllFollowUpsPage() {
           <div className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100 h-[600px]">
             <Calendar
               localizer={localizer}
-              events={(filterDate ? filteredCustom : [...filteredOverdue, ...filteredToday, ...filteredTomorrow, ...filteredOther]).map(item => {
+              events={(activeTab === 'active'
+                ? (filterDate ? filteredCustom : [...filteredOverdue, ...filteredToday, ...filteredTomorrow, ...filteredOther])
+                : filteredPast
+              ).map(item => {
                 const date = new Date(item.follow_up_date);
                 if (item.follow_up_time) {
                   const [h, m] = item.follow_up_time.split(':');

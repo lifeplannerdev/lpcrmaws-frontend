@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from 'react-hot-toast';
 import { useAuth } from './context/AuthContext';
 import { usePermissions } from './context/PermissionsContext';
 import Login from './Pages/Login.jsx';
@@ -103,6 +104,7 @@ export default function App() {
 
   return (
     <Router>
+      <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
       {isAuthenticated && <LiveCallModal />}
       <Routes>
         <Route path="/login" element={<Login />} />
