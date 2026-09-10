@@ -426,14 +426,15 @@ export default function AllFollowUpsPage() {
   // Fetch staff list (admin only)
   useEffect(() => {
     if (!accessToken || !isAdmin) return;
-    authFetch(`${API_BASE_URL}/employees/list/`)
+    authFetch(`${API_BASE_URL}/employees/list/?team=Sales`)
       .then(r => r.json())
       .then(data => {
         const arr = Array.isArray(data) ? data : (data.results || data.employees || []);
         setStaffList(
           arr.filter(u => {
             const hasExcludedRole = u.role_names?.some(r => EXCLUDED_STAFF_ROLES.includes(r.toUpperCase()));
-            return !hasExcludedRole;
+            const isSalesTeam = !u.team || u.team.toLowerCase() === 'sales';
+            return !hasExcludedRole && isSalesTeam;
           })
         );
       })

@@ -23,7 +23,7 @@ const AssignedToSection = ({ formData, errors, onChange }) => {
       if (!token) token = await refreshAccessToken();
       if (!token) throw new Error('Authentication required');
 
-      let response = await fetch(`${API_BASE_URL}/leads/available-users/`, {
+      let response = await fetch(`${API_BASE_URL}/leads/available-users/?team=Sales`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -34,7 +34,7 @@ const AssignedToSection = ({ formData, errors, onChange }) => {
         token = await refreshAccessToken();
         if (!token) throw new Error('Authentication required after refresh');
         
-        response = await fetch(`${API_BASE_URL}/leads/available-users/`, {
+        response = await fetch(`${API_BASE_URL}/leads/available-users/?team=Sales`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },

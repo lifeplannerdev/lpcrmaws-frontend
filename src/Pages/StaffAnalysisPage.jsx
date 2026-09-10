@@ -361,6 +361,7 @@ export default function StaffAnalysisPage() {
     if (selectedCallTypes.length) params.set('call_type', selectedCallTypes.join(','));
     if (selectedCategory && selectedCategory !== 'all') params.set('category', selectedCategory);
     if (focusedEmployee) params.set('employee_id', focusedEmployee);
+    params.set('team', 'Sales');
     return params;
   }, [datePreset, singleDate, customStart, customEnd, selectedStatuses, selectedSources, selectedCallTypes, selectedCategory, focusedEmployee]);
 

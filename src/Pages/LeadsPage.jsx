@@ -329,7 +329,7 @@ export default function LeadsPage() {
         //  Parallel: staff only on first load, leads every time
         const [leadsRes, staffRes] = await Promise.all([
           authFetch(`${API_BASE_URL}/leads/?${new URLSearchParams(paramsObj)}`, {}, signal),
-          initialLoad ? authFetch(`${API_BASE_URL}/employees/list/?include_inactive=true`, {}, signal) : Promise.resolve(null),
+          initialLoad ? authFetch(`${API_BASE_URL}/employees/list/?include_inactive=true&team=Sales`, {}, signal) : Promise.resolve(null),
         ]);
 
         if (signal.aborted) return;
@@ -342,7 +342,10 @@ export default function LeadsPage() {
             : (staffData.results || staffData.employees || []);
           if (Array.isArray(staffArray)) {
             setStaffMembers(
-              staffArray.filter(u => !EXCLUDED_STAFF_ROLES.includes((u.role || '').toUpperCase()))
+              staffArray.filter(u => 
+                !EXCLUDED_STAFF_ROLES.includes((u.role || '').toUpperCase()) &&
+                (!u.team || u.team.toLowerCase() === 'sales')
+              )
             );
           }
         }

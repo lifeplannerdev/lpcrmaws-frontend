@@ -37,7 +37,7 @@ export default function BulkPasteModal({ isOpen, onClose, onSuccess, authFetch }
 
   const fetchUsers = async () => {
     try {
-      const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/leads/available-users/`);
+      const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL}/leads/available-users/?team=Sales`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

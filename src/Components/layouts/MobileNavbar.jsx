@@ -47,7 +47,7 @@ const MobileNavbar = ({
   };
 
   return (
-    <div className="lg:hidden">
+    <div className="lg:hidden relative z-40">
       {/* Mobile Top Header Bar */}
       <div className={`flex items-center justify-between rounded-xl px-4 py-3 border transition-all ${
         isFds 

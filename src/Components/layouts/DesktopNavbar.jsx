@@ -60,7 +60,7 @@ const DesktopNavbar = ({
   return (
     <div 
       ref={navbarRef}
-      className={`hidden lg:flex items-center justify-between gap-3 rounded-xl px-3 py-2 border transition-all duration-200 ${
+      className={`hidden lg:flex items-center justify-between gap-3 rounded-xl px-3 py-2 border transition-all duration-200 relative z-40 ${
         isFds 
           ? 'bg-[#2A1F15] border-[#C9A96E]/25 shadow-md shadow-black/20' 
           : 'bg-white/95 backdrop-blur-md border-gray-200/80 shadow-xs'
@@ -96,7 +96,7 @@ const DesktopNavbar = ({
           const flagItems = isDivisions ? category.items.filter(i => i.group === 'flag') : [];
 
           return (
-            <div key={category.id} className="relative">
+            <div key={category.id} className={`relative ${isOpen ? 'z-50' : ''}`}>
               <button
                 type="button"
                 onClick={() => handleToggleDropdown(category.id)}
@@ -119,7 +119,7 @@ const DesktopNavbar = ({
               {/* Dropdown Menu Card */}
               {isOpen && (
                 <div
-                  className={`absolute top-full left-0 mt-2 z-50 rounded-2xl shadow-2xl border p-3 transition-all animate-in fade-in zoom-in-95 duration-150 ${
+                  className={`absolute top-full left-0 mt-2 z-[9999] rounded-2xl shadow-2xl border p-3 transition-all animate-in fade-in zoom-in-95 duration-150 ${
                     isFds
                       ? 'bg-[#1C1410] border-[#C9A96E]/30 text-[#F5E6CC]'
                       : 'bg-white border-gray-100 text-gray-800'

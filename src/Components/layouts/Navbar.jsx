@@ -133,8 +133,8 @@ const Navbar = () => {
   const isFds = user?.company === 'FDS';
 
   return (
-    <div className={`p-3 lg:p-4 shadow-sm transition-colors ${isFds ? 'bg-[#1C1410] border-b border-[#C9A96E]/20' : 'bg-white border-b border-gray-100'}`}>
-      <div className="max-w-[1600px] mx-auto flex items-center gap-4">
+    <div className={`p-3 lg:p-4 shadow-sm transition-colors relative z-40 ${isFds ? 'bg-[#1C1410] border-b border-[#C9A96E]/20' : 'bg-white border-b border-gray-100'}`}>
+      <div className="max-w-[1600px] mx-auto flex items-center gap-4 relative z-40">
         {isFds && (
           <div 
             className="flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity mr-2" 
@@ -147,7 +147,7 @@ const Navbar = () => {
             />
           </div>
         )}
-        <div className="flex-1 w-full min-w-0">
+        <div className="flex-1 w-full min-w-0 relative z-40">
           <DesktopNavbar
             navItems={navItems}
             categorizedNav={categorizedNav}

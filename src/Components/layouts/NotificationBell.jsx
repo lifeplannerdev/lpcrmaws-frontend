@@ -59,7 +59,7 @@ const NotificationBell = ({ notifications, unreadCount, onClearNotifications, on
   };
 
   return (
-    <div className="relative" ref={ref}>
+    <div className={`relative ${open ? 'z-50' : ''}`} ref={ref}>
       <button
         onClick={handleOpen}
         className="relative p-2 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-md transition-all"
@@ -73,7 +73,7 @@ const NotificationBell = ({ notifications, unreadCount, onClearNotifications, on
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+        <div className="absolute right-0 top-11 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 z-[9999] overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <span className="text-sm font-bold text-gray-900">Notifications</span>

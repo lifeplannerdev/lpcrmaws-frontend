@@ -48,7 +48,7 @@ export default function MentionsTextarea({ value, onChange, name, placeholder, r
 
   useEffect(() => {
     if (accessToken) {
-      fetch(`${API_BASE_URL}/employees/list/`, {
+      fetch(`${API_BASE_URL}/employees/list/?team=Sales`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'

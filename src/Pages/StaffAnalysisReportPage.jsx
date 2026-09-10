@@ -260,7 +260,7 @@ export default function StaffAnalysisReportPage() {
   useEffect(() => {
     if (!accessToken) return;
     setIsFetchingEmps(true);
-    fetch(`${API_BASE_URL}/staff-analysis/?date_preset=today`, {
+    fetch(`${API_BASE_URL}/staff-analysis/?date_preset=today&team=Sales`, {
       headers: { Authorization: `Bearer ${accessToken}` }
     })
       .then(r => r.ok ? r.json() : Promise.reject('Failed'))
@@ -270,6 +270,7 @@ export default function StaffAnalysisReportPage() {
           name: e.employee.full_name || e.employee.username,
           username: e.employee.username,
           roles: e.employee.roles || [],
+          team: e.employee.team || '',
         }));
         setAllEmployees(emps);
       })
@@ -279,7 +280,7 @@ export default function StaffAnalysisReportPage() {
 
   // ── Build query params ─────────────────────────────────────────────────────
   const buildParams = useCallback(() => {
-    const p = new URLSearchParams({ date_preset: datePreset });
+    const p = new URLSearchParams({ date_preset: datePreset, team: 'Sales' });
     if (datePreset === 'custom_range' && customStart && customEnd) {
       p.set('start_date', customStart);
       p.set('end_date', customEnd);

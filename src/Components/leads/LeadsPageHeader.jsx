@@ -42,7 +42,7 @@ const BulkUploadModal = ({ onClose, authFetch }) => {
   React.useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await authFetch(`${API_BASE_URL}/leads/available-users/`);
+        const res = await authFetch(`${API_BASE_URL}/leads/available-users/?team=Sales`);
         if (res.ok) {
           const data = await res.json();
           setUsers(data);
