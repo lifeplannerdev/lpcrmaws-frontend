@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Download, Upload, X, ChevronUp, ChevronDown,
-  Eye, Edit2, Trash2, Calendar, Phone, MapPin, Filter, Users
+  Edit2, Trash2, Calendar, Phone, MapPin, Filter, Users, RefreshCw, CheckCircle, Clock
 } from 'lucide-react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
@@ -13,10 +13,10 @@ import './fds-theme.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const EMPTY_FORM = {
-  name: '', date: new Date().toISOString().split('T')[0],
+  name: '', parent_name: '', date: new Date().toISOString().split('T')[0],
   location: '', age: '', class_interest: 'DANCE', source: 'WALK_IN',
-  phone: '', whatsapp_no: '', preferred_timing: '', status: 'NEW',
-  follow_up_1: '', follow_up_2: '', joined: false, remarks: '',
+  phone: '', whatsapp_no: '', previous_exp: '', preferred_timing: '', status: 'NEW',
+  follow_up_1: '', follow_up_2: '', joined_status: 'NO', remarks: '',
 };
 
 const SOURCES = ['WALK_IN','INSTAGRAM','FACEBOOK','REFERRAL','GOOGLE','WHATSAPP','OTHER'];
@@ -47,6 +47,7 @@ export default function FdsEnquiryPage() {
   const [enquiries, setEnquiries] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [total, setTotal] = useState(0);
 
   // Filters
@@ -91,7 +92,6 @@ export default function FdsEnquiryPage() {
     const res = await authFetch(url, opts);
     if (!res.ok) throw new Error('Failed');
     if (res.status === 204) return null;
-    if (res.status === 204) return null;
     return res.json();
   }, [authFetch]);
 
@@ -111,7 +111,7 @@ export default function FdsEnquiryPage() {
     if (followUpDue) p.follow_up_due = 'true';
     p.ordering = sortDir === 'asc' ? `${sortField},id` : `-${sortField},-id`;
     return p;
-  }, [page, activeCategory, search, filterStatus, filterSource, dateFrom, dateTo, followUpDue, sortField, sortDir, viewTab]);
+  }, [page, activeCategory, search, filterStatus, filterSource, filterLocation, dateFrom, dateTo, followUpDue, sortField, sortDir, viewTab]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -128,7 +128,21 @@ export default function FdsEnquiryPage() {
   }, [authFetchJson, buildParams]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [activeCategory, search, filterStatus, filterSource, dateFrom, dateTo, followUpDue]);
+  useEffect(() => { setPage(1); }, [activeCategory, search, filterStatus, filterSource, filterLocation, dateFrom, dateTo, followUpDue]);
+
+  const handleSyncMaster = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      const res = await fdsApi.syncMasterSheets(authFetchJson);
+      alert(`Master Sync Complete!\nMessage: ${res.message || 'Synced'}\nImported: ${JSON.stringify(res.stats || {})}`);
+      load();
+    } catch (err) {
+      alert('Master Sync failed: ' + err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleSort = (field) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -138,18 +152,17 @@ export default function FdsEnquiryPage() {
   const openAdd = () => { setForm(EMPTY_FORM); setEditId(null); setShowModal(true); };
   const openEdit = (e) => {
     setForm({
-      name: e.name, date: e.date, location: e.location || '',
-      age: e.age || '', class_interest: e.class_interest,
-      source: e.source, phone: e.phone || '', whatsapp_no: e.whatsapp_no || '',
-      preferred_timing: e.preferred_timing || '', status: e.status,
+      name: e.name || '', parent_name: e.parent_name || '', date: e.date, location: e.location || '',
+      age: e.age || '', class_interest: e.class_interest || 'DANCE',
+      source: e.source || 'WALK_IN', phone: e.phone || '', whatsapp_no: e.whatsapp_no || '',
+      previous_exp: e.previous_exp || '', preferred_timing: e.preferred_timing || '', status: e.status || 'NEW',
       follow_up_1: e.follow_up_1 || '', follow_up_2: e.follow_up_2 || '',
-      joined: e.joined, remarks: e.remarks || '',
+      joined_status: e.joined_status || (e.joined ? 'YES' : 'NO'), remarks: e.remarks || '',
     });
     setEditId(e.id);
     setShowModal(true);
   };
 
-  
   const handleQuickRemarkSubmit = async (e) => {
     e.preventDefault();
     if (!remarkModal.enquiry || !remarkModal.text.trim()) return;
@@ -178,7 +191,7 @@ export default function FdsEnquiryPage() {
     try {
       const payload = {
         ...form,
-        age: form.age ? parseInt(form.age) : null,
+        joined: form.joined_status === 'YES',
         follow_up_1: form.follow_up_1 || null,
         follow_up_2: form.follow_up_2 || null,
       };
@@ -218,51 +231,33 @@ export default function FdsEnquiryPage() {
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
-      // Transform data based on detected format
       const parsedRows = jsonData.map(row => {
-        // Detect "Video Leads" format vs standard format
-        if (row.full_name || row['full_name.1']) {
-          // Video Leads format
-          const name = row.full_name || row['full_name.1'] || '';
-          let phone = String(row.phone_number || row['phone_number.1'] || '');
-          if (phone.startsWith('p:')) phone = phone.substring(2);
-          const email = row.email || row['email.1'] || '';
-          const sourceRaw = row.source || row['source.1'] || '';
-          const source = sourceRaw.toLowerCase().includes('ig') || sourceRaw.toLowerCase().includes('instagram') ? 'INSTAGRAM' : (sourceRaw.toLowerCase().includes('fb') || sourceRaw.toLowerCase().includes('facebook') ? 'FACEBOOK' : 'OTHER');
-          
-          return {
-            name,
-            phone,
-            whatsapp_no: phone,
-            source,
-            remarks: email ? `Email: ${email}` : '',
-            date: new Date().toISOString().split('T')[0],
-            class_interest: 'DANCE',
-          };
-        } else {
-          // Assume standard format
-          let dateStr = row.Date || row.date;
-          if (typeof dateStr === 'number') {
-            dateStr = new Date(Math.round((dateStr - 25569) * 86400 * 1000)).toISOString().split('T')[0];
-          } else if (!dateStr) {
-            dateStr = new Date().toISOString().split('T')[0];
-          } else if (typeof dateStr === 'string' && dateStr.includes('/')) {
-              const parts = dateStr.split('/');
-              if (parts.length === 3) dateStr = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-          }
-          return {
-            name: row.Name || row.name || '',
-            date: dateStr,
-            location: row.Location || row.location || '',
-            age: row.Age || row.age || null,
-            phone: row.Phone || row.phone || '',
-            whatsapp_no: row["What's App no."] || row.whatsapp_no || '',
-            preferred_timing: row['Preffered Timing'] || row.preferred_timing || '',
-            source: row.Source || row.source || 'WALK_IN',
-            remarks: row['Remarks / Concerns'] || row.remarks || '',
-            class_interest: row['Class Interest'] || row.class_interest || 'DANCE'
-          };
+        let dateStr = row.DATE || row.Date || row.date;
+        if (typeof dateStr === 'number') {
+          dateStr = new Date(Math.round((dateStr - 25569) * 86400 * 1000)).toISOString().split('T')[0];
+        } else if (!dateStr) {
+          dateStr = new Date().toISOString().split('T')[0];
+        } else if (typeof dateStr === 'string' && dateStr.includes('/')) {
+            const parts = dateStr.split('/');
+            if (parts.length === 3) dateStr = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
         }
+        return {
+          date: dateStr,
+          name: row.NAME || row.Name || row.name || '',
+          parent_name: row['PARENT NAME'] || row.parent_name || '',
+          age: String(row.AGE || row.Age || row.age || ''),
+          location: row.LOCATION || row.Location || row.location || '',
+          previous_exp: row['PREVIOUS DANCE EXP'] || row.previous_exp || '',
+          preferred_timing: row['PREFFERED TIMING'] || row['Preffered Timing'] || row.preferred_timing || '',
+          phone: String(row['CONTACT NO'] || row.Phone || row.phone || ''),
+          whatsapp_no: String(row['WHATS APP NO'] || row["What's App no."] || row.whatsapp_no || ''),
+          source: row.SOURCE || row.Source || row.source || 'WALK_IN',
+          follow_up_1: row['FOLLOW UP 1'] || row.follow_up_1 || '',
+          follow_up_2: row['FOLLOW UP 2'] || row.follow_up_2 || '',
+          joined_status: row['JOINED (YES/NO)'] || row.joined_status || 'NO',
+          remarks: row['REMARKS / CONCERNS'] || row['Remarks / Concerns'] || row.remarks || '',
+          class_interest: row['Class Interest'] || row.class_interest || 'DANCE'
+        };
       }).filter(r => r.name);
 
       setImportRows(parsedRows);
@@ -305,10 +300,20 @@ export default function FdsEnquiryPage() {
           {/* ── Header ── */}
           <div className="fds-page-header">
             <div>
-              <h1 className="fds-page-title">Enquiries</h1>
-              <p className="fds-page-subtitle">FILMAATIC Dance Studio · {total} total</p>
+              <h1 className="fds-page-title">Enquiry Master Mirror</h1>
+              <p className="fds-page-subtitle">FILMAATIC Dance Studio · 1:1 Mirror of Google Sheets (ENQUIRY) · {total} rows</p>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button 
+                className="fds-btn fds-btn-secondary" 
+                onClick={handleSyncMaster} 
+                disabled={syncing}
+                style={{ borderColor: 'var(--fds-primary)', color: 'var(--fds-primary)' }}
+                title="Pull live changes from Google Sheets master"
+              >
+                <RefreshCw size={15} className={syncing ? 'animate-spin' : ''} /> 
+                {syncing ? 'Syncing...' : 'Sync Master'}
+              </button>
               {canEdit && (
                 <>
                   <button className="fds-btn fds-btn-secondary" onClick={() => fileInputRef.current.click()}>
@@ -332,7 +337,7 @@ export default function FdsEnquiryPage() {
           {stats && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 20 }}>
               {[
-                { label: 'Total', val: stats.total, color: 'var(--fds-primary)' },
+                { label: 'Total Enquiries', val: stats.total, color: 'var(--fds-primary)' },
                 { label: 'New', val: stats.new, color: 'var(--fds-primary-light)' },
                 { label: 'Trial Scheduled', val: stats.trial_scheduled, color: '#E8C87A' },
                 { label: 'Converted', val: stats.converted, color: 'var(--fds-yoga)' },
@@ -384,7 +389,7 @@ export default function FdsEnquiryPage() {
               <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--fds-text-faint)' }} />
               <input
                 className="fds-search-input"
-                placeholder="Search name, phone, location..."
+                placeholder="Search name, phone, parent, location..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
@@ -397,9 +402,7 @@ export default function FdsEnquiryPage() {
               <option value="">All Sources</option>
               {SOURCES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
             </select>
-            {hasPermission('fds:admin') && (
-              <input className="fds-input" placeholder="Location..." style={{ maxWidth: 120 }} value={filterLocation} onChange={e => setFilterLocation(e.target.value)} />
-            )}
+            <input className="fds-input" placeholder="Location..." style={{ maxWidth: 130 }} value={filterLocation} onChange={e => setFilterLocation(e.target.value)} />
             <input className="fds-input" type="date" style={{ maxWidth: 140 }} value={dateFrom} onChange={e => setDateFrom(e.target.value)} placeholder="From" />
             <input className="fds-input" type="date" style={{ maxWidth: 140 }} value={dateTo} onChange={e => setDateTo(e.target.value)} placeholder="To" />
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: followUpDue ? 'var(--fds-primary)' : 'var(--fds-text-muted)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
@@ -413,28 +416,34 @@ export default function FdsEnquiryPage() {
             )}
           </div>
 
-          {/* ── Table ── */}
-          <div className="fds-table-wrap">
-            <table className="fds-table">
+          {/* ── Table (1:1 Mirror of Google Sheet ENQUIRY) ── */}
+          <div className="fds-table-wrap" style={{ overflowX: 'auto' }}>
+            <table className="fds-table" style={{ minWidth: 1200 }}>
               <thead>
                 <tr>
                   {[
                     { key: 'enquiry_id', label: 'ID' },
                     { key: 'date', label: 'Date' },
-                    { key: 'name', label: 'Name' },
-                    { key: 'class_interest', label: 'Class' },
-                    { key: 'phone', label: 'Contact' },
+                    { key: 'name', label: 'Candidate Name' },
+                    { key: 'parent_name', label: 'Parent Name' },
+                    { key: 'age', label: 'Age' },
                     { key: 'location', label: 'Location' },
+                    { key: 'previous_exp', label: 'Prev Experience' },
+                    { key: 'preferred_timing', label: 'Preferred Timing' },
+                    { key: 'phone', label: 'Contact No' },
+                    { key: 'whatsapp_no', label: 'WhatsApp' },
                     { key: 'source', label: 'Source' },
                     { key: 'status', label: 'Status' },
-                    
-                    { key: 'remarks', label: 'Remarks' },
+                    { key: 'follow_up_1', label: 'Follow Up 1' },
+                    { key: 'follow_up_2', label: 'Follow Up 2' },
+                    { key: 'joined_status', label: 'Joined' },
+                    { key: 'remarks', label: 'Remarks / Concerns' },
                     { key: 'actions', label: '' },
                   ].map(({ key, label }) => (
-                    <th key={key} onClick={() => key !== 'actions' && handleSort(key)}>
+                    <th key={key} onClick={() => key !== 'actions' && handleSort(key)} style={{ whiteSpace: 'nowrap' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         {label}
-                        {key !== 'actions' && key !== 'phone' && key !== 'location' && key !== 'source' && (
+                        {key !== 'actions' && (
                           <SortIcon field={key} sortField={sortField} sortDir={sortDir} />
                         )}
                       </span>
@@ -444,15 +453,15 @@ export default function FdsEnquiryPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={10} style={{ textAlign: 'center', padding: 40 }}>
+                  <tr><td colSpan={17} style={{ textAlign: 'center', padding: 40 }}>
                     <div className="fds-spinner" style={{ margin: '0 auto' }} />
                   </td></tr>
                 ) : enquiries.length === 0 ? (
-                  <tr><td colSpan={10}>
+                  <tr><td colSpan={17}>
                     <div className="fds-empty">
                       <div className="fds-empty-icon"><Users size={40} /></div>
                       <div className="fds-empty-title">No enquiries found</div>
-                      <div className="fds-empty-sub">Try adjusting your filters or add a new enquiry</div>
+                      <div className="fds-empty-sub">Try syncing from master Google Sheets or add an enquiry</div>
                     </div>
                   </td></tr>
                 ) : enquiries.map(e => (
@@ -461,16 +470,25 @@ export default function FdsEnquiryPage() {
                     <td style={{ whiteSpace: 'nowrap', color: 'var(--fds-text-muted)', fontSize: '0.82rem' }}>{e.date}</td>
                     <td>
                       <div style={{ fontWeight: 600 }}>{e.name}</div>
-                      {e.age && <div style={{ fontSize: '0.75rem', color: 'var(--fds-text-muted)' }}>Age {e.age}</div>}
+                      {e.class_interest && <CategoryPill cat={e.class_interest} />}
                     </td>
-                    <td><CategoryPill cat={e.class_interest} /></td>
-                    <td>
-                      <div style={{ fontSize: '0.82rem' }}>{e.phone || '—'}</div>
-                      {e.whatsapp_no && e.whatsapp_no !== e.phone && (
-                        <div style={{ fontSize: '0.72rem', color: 'var(--fds-text-muted)' }}>WA: {e.whatsapp_no}</div>
-                      )}
-                    </td>
+                    <td style={{ fontSize: '0.82rem', color: 'var(--fds-text)' }}>{e.parent_name || '—'}</td>
+                    <td style={{ fontSize: '0.82rem', color: 'var(--fds-text-muted)' }}>{e.age || '—'}</td>
                     <td style={{ fontSize: '0.82rem', color: 'var(--fds-text-muted)' }}>{e.location || '—'}</td>
+                    <td style={{ fontSize: '0.82rem', color: 'var(--fds-text)' }}>{e.previous_exp || '—'}</td>
+                    <td style={{ fontSize: '0.82rem', color: 'var(--fds-text-muted)' }}>{e.preferred_timing || '—'}</td>
+                    <td style={{ fontSize: '0.82rem' }}>
+                      {e.phone ? (
+                        <a href={`tel:${e.phone}`} style={{ color: 'inherit', textDecoration: 'none' }}>{e.phone}</a>
+                      ) : '—'}
+                    </td>
+                    <td style={{ fontSize: '0.82rem' }}>
+                      {e.whatsapp_no ? (
+                        <a href={`https://wa.me/${e.whatsapp_no.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ color: '#25D366', textDecoration: 'none' }}>
+                          {e.whatsapp_no}
+                        </a>
+                      ) : '—'}
+                    </td>
                     <td style={{ fontSize: '0.82rem', color: 'var(--fds-text-muted)' }}>{e.source_display || e.source}</td>
                     <td>
                       <select 
@@ -489,7 +507,13 @@ export default function FdsEnquiryPage() {
                         {STATUSES.map(s => <option key={s} value={s} style={{ color: '#000', background: '#fff' }}>{s.replace('_', ' ')}</option>)}
                       </select>
                     </td>
-
+                    <td style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)', whiteSpace: 'nowrap' }}>{e.follow_up_1 || '—'}</td>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)', whiteSpace: 'nowrap' }}>{e.follow_up_2 || '—'}</td>
+                    <td>
+                      <span className={`fds-badge ${e.joined_status === 'YES' || e.joined ? 'fds-badge-green' : 'fds-badge-gray'}`}>
+                        {e.joined_status || (e.joined ? 'YES' : 'NO')}
+                      </span>
+                    </td>
                     <td style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)', maxWidth: 180 }}>
                       <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 4 }} title={e.remarks}>
                         {e.remarks ? e.remarks.split('\n\n').pop() : 'No remarks'}
@@ -555,81 +579,83 @@ export default function FdsEnquiryPage() {
         {/* ── Modal ── */}
         {showModal && (
           <div className="fds-modal-overlay" onClick={() => setShowModal(false)}>
-            <div className="fds-modal" onClick={e => e.stopPropagation()}>
+            <div className="fds-modal fds-modal-lg" onClick={e => e.stopPropagation()}>
               <div className="fds-modal-header">
-                <div className="fds-modal-title">{editId ? 'Edit Enquiry' : 'New Enquiry'}</div>
+                <div className="fds-modal-title">{editId ? 'Edit Enquiry (Mirror)' : 'New Enquiry'}</div>
                 <button className="fds-btn fds-btn-ghost" onClick={() => setShowModal(false)}><X size={18} /></button>
               </div>
               <form onSubmit={handleSave}>
                 <div className="fds-modal-body">
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                    {/* Name */}
-                    <div style={{ gridColumn: '1/-1' }}>
-                      <label className="fds-label">Name *</label>
+                    <div>
+                      <label className="fds-label">Candidate Name *</label>
                       <input className="fds-input" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
                     </div>
-                    {/* Date */}
+                    <div>
+                      <label className="fds-label">Parent Name</label>
+                      <input className="fds-input" value={form.parent_name} onChange={e => setForm(f => ({ ...f, parent_name: e.target.value }))} />
+                    </div>
                     <div>
                       <label className="fds-label">Date *</label>
                       <input className="fds-input" type="date" required value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
                     </div>
-                    {/* Age */}
                     <div>
                       <label className="fds-label">Age</label>
-                      <input className="fds-input" type="number" min={0} max={100} value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value }))} />
+                      <input className="fds-input" placeholder="e.g. 5yrs, 27yrs" value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value }))} />
                     </div>
-                    {/* Class Interest */}
                     <div>
                       <label className="fds-label">Class Interest</label>
                       <select className="fds-input fds-select" value={form.class_interest} onChange={e => setForm(f => ({ ...f, class_interest: e.target.value }))}>
                         {['DANCE', 'ZUMBA', 'YOGA', 'MULTIPLE'].map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </div>
-                    {/* Source */}
                     <div>
                       <label className="fds-label">Source</label>
                       <select className="fds-input fds-select" value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))}>
                         {SOURCES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
                       </select>
                     </div>
-                    {/* Phone */}
                     <div>
-                      <label className="fds-label">Phone</label>
+                      <label className="fds-label">Contact No.</label>
                       <input className="fds-input" type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
                     </div>
-                    {/* WhatsApp */}
                     <div>
                       <label className="fds-label">WhatsApp No.</label>
                       <input className="fds-input" type="tel" value={form.whatsapp_no} onChange={e => setForm(f => ({ ...f, whatsapp_no: e.target.value }))} />
                     </div>
-                    {/* Location */}
                     <div>
                       <label className="fds-label">Location</label>
                       <input className="fds-input" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} />
                     </div>
-                    {/* Preferred Timing */}
+                    <div>
+                      <label className="fds-label">Previous Dance Exp</label>
+                      <input className="fds-input" placeholder="e.g. No, Yes, Beginner" value={form.previous_exp} onChange={e => setForm(f => ({ ...f, previous_exp: e.target.value }))} />
+                    </div>
                     <div>
                       <label className="fds-label">Preferred Timing</label>
                       <input className="fds-input" placeholder="e.g. Evening, 5pm-6pm" value={form.preferred_timing} onChange={e => setForm(f => ({ ...f, preferred_timing: e.target.value }))} />
                     </div>
-                    {/* Status */}
                     <div>
                       <label className="fds-label">Status</label>
                       <select className="fds-input fds-select" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
                         {STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
                       </select>
                     </div>
-                    {/* Follow Up 1 */}
                     <div>
                       <label className="fds-label">Follow Up 1</label>
                       <input className="fds-input" type="date" value={form.follow_up_1} onChange={e => setForm(f => ({ ...f, follow_up_1: e.target.value }))} />
                     </div>
-                    {/* Follow Up 2 */}
                     <div>
                       <label className="fds-label">Follow Up 2</label>
                       <input className="fds-input" type="date" value={form.follow_up_2} onChange={e => setForm(f => ({ ...f, follow_up_2: e.target.value }))} />
                     </div>
-                    {/* Remarks */}
+                    <div>
+                      <label className="fds-label">Joined (YES/NO)</label>
+                      <select className="fds-input fds-select" value={form.joined_status} onChange={e => setForm(f => ({ ...f, joined_status: e.target.value }))}>
+                        <option value="NO">NO</option>
+                        <option value="YES">YES</option>
+                      </select>
+                    </div>
                     <div style={{ gridColumn: '1/-1' }}>
                       <label className="fds-label">Remarks / Concerns</label>
                       <textarea className="fds-input" rows={3} value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} />
@@ -646,7 +672,6 @@ export default function FdsEnquiryPage() {
             </div>
           </div>
         )}
-
 
         {/* ── Quick Remark Modal ── */}
         {remarkModal.open && (
@@ -682,6 +707,7 @@ export default function FdsEnquiryPage() {
           </div>
         )}
 
+        {/* ── Import Preview Modal ── */}
         {showImportPreview && (
           <div className="fds-modal-overlay" onClick={() => !importLoading && setShowImportPreview(false)}>
             <div className="fds-modal" style={{ maxWidth: 800 }} onClick={e => e.stopPropagation()}>
@@ -695,9 +721,9 @@ export default function FdsEnquiryPage() {
                   <thead>
                     <tr>
                       <th>Name</th>
+                      <th>Parent</th>
                       <th>Phone</th>
-                      <th>Source</th>
-                      <th>Class</th>
+                      <th>Timing</th>
                       <th>Remarks</th>
                     </tr>
                   </thead>
@@ -705,9 +731,9 @@ export default function FdsEnquiryPage() {
                     {importRows.slice(0, 20).map((r, i) => (
                       <tr key={i}>
                         <td style={{ fontWeight: 600 }}>{r.name}</td>
+                        <td>{r.parent_name || '—'}</td>
                         <td>{r.phone}</td>
-                        <td>{r.source}</td>
-                        <td>{r.class_interest}</td>
+                        <td>{r.preferred_timing || '—'}</td>
                         <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.remarks}</td>
                       </tr>
                     ))}
@@ -730,3 +756,4 @@ export default function FdsEnquiryPage() {
     </div>
   );
 }
+

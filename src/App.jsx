@@ -42,6 +42,7 @@ import FeedsPage from "./Pages/FeedsPage.jsx";
 import ProgramsPage from "./Pages/ProgramsPage.jsx";
 import VoxbayAIPage from "./Pages/VoxbayAIPage.jsx";
 import StaffAnalysisPage from "./Pages/StaffAnalysisPage.jsx";
+import StaffAnalysisReportPage from "./Pages/StaffAnalysisReportPage.jsx";
 import DataExportPage from "./Pages/DataExportPage.jsx";
 import FdsDashboard from './Pages/FDS/FdsDashboard.jsx';
 import FdsEnquiryPage from './Pages/FDS/FdsEnquiryPage.jsx';
@@ -52,6 +53,7 @@ import FdsAttendancePage from './Pages/FDS/FdsAttendancePage.jsx';
 import FdsFeesPage from './Pages/FDS/FdsFeesPage.jsx';
 import FdsWeddingGroupsPage from './Pages/FDS/FdsWeddingGroupsPage.jsx';
 import FdsFeePoliciesPage from './Pages/FDS/FdsFeePoliciesPage.jsx';
+import FdsLeadSourcingPage from './Pages/FDS/FdsLeadSourcingPage.jsx';
 import LiveCallModal from './Components/voxbay/LiveCallModal.jsx';
 
 // ── FLAG: German Language Training ──
@@ -154,6 +156,7 @@ export default function App() {
         <Route path="/credentials" element={<PermissionRoute resources={['credentials']}><CredentialsVault /></PermissionRoute>} />
         <Route path="/programs" element={<PermissionRoute permissions={['programs:view', 'programs:manage']}><ProgramsPage /></PermissionRoute>} />
         <Route path="/voxbay-ai" element={<PermissionRoute permissions={['voxbay_ai:admin', 'voxbay_ai:read_own']}><VoxbayAIPage /></PermissionRoute>} />
+        <Route path="/staff-analysis/report" element={<PermissionRoute permissions={['staff_analysis:admin']} resources={['leads']}><StaffAnalysisReportPage /></PermissionRoute>} />
         <Route path="/staff-analysis" element={<PermissionRoute permissions={['staff_analysis:admin']} resources={['leads']}><StaffAnalysisPage /></PermissionRoute>} />
         <Route path="/export-data" element={<PermissionRoute resources={['leads']}><DataExportPage /></PermissionRoute>} />
 
@@ -166,6 +169,7 @@ export default function App() {
         <Route path="/fds/attendance" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view']}><FdsAttendancePage /></PermissionRoute>} />
         <Route path="/fds/fees" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view']}><FdsFeesPage /></PermissionRoute>} />
         <Route path="/fds/fee-policies" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view']}><FdsFeePoliciesPage /></PermissionRoute>} />
+        <Route path="/fds/lead-sourcing" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view']}><FdsLeadSourcingPage /></PermissionRoute>} />
         <Route path="/fds/weddings" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view']}><FdsWeddingGroupsPage /></PermissionRoute>} />
 
         {/* ── FLAG: German Language Training ── */}

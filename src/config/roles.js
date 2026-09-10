@@ -19,7 +19,8 @@ import {
   Star,
   Heart,
   BarChart2,
-  Download
+  Download,
+  Building2
 } from "lucide-react";
 
 export const masterNavigation = [
@@ -68,6 +69,7 @@ export const masterNavigation = [
   { id: "fdsAttendance", label: "FDS Attendance",   icon: CalendarCheck, path: "/fds/attendance",requiredPermissions: ["fds:admin","fds:admin_own","fds:view"],                group: "fds", category: "divisions", description: "Student class attendance" },
   { id: "fdsFees",       label: "FDS Fees",         icon: IndianRupee,   path: "/fds/fees",      requiredPermissions: ["fds:admin","fds:admin_own","fds:view","fds_fees:view"],group: "fds", category: "divisions", description: "Studio fee payments & dues" },
   { id: "fdsFeePolicies",label: "FDS Fee Policies", icon: Settings,      path: "/fds/fee-policies",requiredPermissions: ["fds:admin","fds:admin_own","fds:view","fds_fees:view"],group: "fds", category: "divisions", description: "Pricing plans & payment policies" },
+  { id: "fdsLeadSourcing",label: "FDS Lead Sourcing",icon: Building2,     path: "/fds/lead-sourcing",requiredPermissions: ["fds:admin","fds:admin_own","fds:view"],                group: "fds", category: "divisions", description: "Colleges, schools, clubs & builders directory" },
   { id: "fdsWeddings",   label: "FDS Weddings 💍",  icon: Heart,         path: "/fds/weddings",  requiredPermissions: ["fds:admin","fds:admin_own","fds:view"],                group: "fds", category: "divisions", description: "Wedding choreography packages" },
 
   // ── FLAG: German Language Training ──

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Search, Download, Upload, X, ChevronUp, ChevronDown, Edit2, Trash2, Star, Users, CheckCircle } from 'lucide-react';
+import { Plus, Search, Download, Upload, X, ChevronUp, ChevronDown, Edit2, Trash2, Star, Users, CheckCircle, RefreshCw } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
@@ -10,21 +10,22 @@ import './fds-theme.css';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const STATUSES = ['SCHEDULED','COMPLETED','NO_SHOW','CANCELLED'];
 const EMPTY_FORM = {
-  name: '', date: new Date().toISOString().split('T')[0], time: '',
+  name: '', date: new Date().toISOString().split('T')[0], time: '', time_text: '',
   age: '', phone: '', location: '', class_category: 'DANCE',
   fee_quoted: '', feedback: '', trainer_rating: '', status: 'SCHEDULED',
-  converted: false, join_date: '', follow_up_date: '', remarks: '',
-  enquiry: '', conducted_by: '',
+  converted: false, converted_text: 'NO', join_date: '', fee_status: 'NOT PAID',
+  follow_up_date: '', remarks: '', enquiry: '', conducted_by: '',
 };
 
 function StarRating({ value, onChange, readOnly = false }) {
   const [hovered, setHovered] = useState(0);
+  const ratingNum = parseInt(value) || 0;
   return (
     <div className="fds-stars">
       {[1, 2, 3, 4, 5].map(n => (
         <span
           key={n}
-          className={`fds-star ${n <= (hovered || value) ? 'filled' : ''}`}
+          className={`fds-star ${n <= (hovered || ratingNum) ? 'filled' : ''}`}
           style={{ cursor: readOnly ? 'default' : 'pointer' }}
           onClick={() => !readOnly && onChange && onChange(n)}
           onMouseEnter={() => !readOnly && setHovered(n)}
@@ -44,6 +45,7 @@ export default function FdsTrialPage() {
   const [trials, setTrials] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [total, setTotal] = useState(0);
 
   const [viewTab, setViewTab] = useState('ACTIVE');
@@ -83,7 +85,6 @@ export default function FdsTrialPage() {
         remarks: e.remarks || '',
       });
       setShowModal(true);
-      // Clear state so it doesn't reopen on reload
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state, navigate]);
@@ -142,44 +143,56 @@ export default function FdsTrialPage() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { setPage(1); }, [activeCategory, search, filterStatus, filterConverted, dateFrom, dateTo, followUpDue]);
 
-  const handleSort = (f) => {
-    if (sortField === f) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    else { setSortField(f); setSortDir('asc'); }
+  const handleSyncMaster = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      const res = await fdsApi.syncMasterSheets(authFetchJson);
+      alert(`Master Sync Complete!\nMessage: ${res.message || 'Synced'}\nImported: ${JSON.stringify(res.stats || {})}`);
+      load();
+    } catch (err) {
+      alert('Master Sync failed: ' + err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleSort = (field) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
   };
 
   const openAdd = () => { setForm(EMPTY_FORM); setEditId(null); setShowModal(true); };
   const openEdit = (t) => {
     setForm({
-      name: t.name, date: t.date, time: t.time || '',
+      name: t.name, date: t.date, time: t.time || '', time_text: t.time_text || '',
       age: t.age || '', phone: t.phone || '', location: t.location || '',
-      class_category: t.class_category, fee_quoted: t.fee_quoted || '',
-      feedback: t.feedback || '', trainer_rating: t.trainer_rating || '',
-      status: t.status, converted: t.converted,
-      join_date: t.join_date || '', follow_up_date: t.follow_up_date || '',
-      remarks: t.remarks || '', enquiry: t.enquiry || '', conducted_by: t.conducted_by || '',
+      class_category: t.class_category || 'DANCE',
+      fee_quoted: t.fee_quoted || '', feedback: t.feedback || '',
+      trainer_rating: t.trainer_rating || '', status: t.status,
+      converted: t.converted_text === 'YES' || t.converted,
+      converted_text: t.converted_text || (t.converted ? 'YES' : 'NO'),
+      join_date: t.join_date || '', fee_status: t.fee_status || 'NOT PAID',
+      follow_up_date: t.follow_up_date || '', remarks: t.remarks || '',
+      enquiry: t.enquiry || '', conducted_by: t.conducted_by || '',
     });
     setEditId(t.id);
     setShowModal(true);
   };
 
-  
   const handleQuickRemarkSubmit = async (e) => {
     e.preventDefault();
     if (!remarkModal.trial || !remarkModal.text.trim()) return;
-    
     try {
       const userStr = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : (user?.username || 'User');
       const now = new Date();
       const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-      
       const newRemarkLine = `[${dateStr}] ${userStr} (Trial): ${remarkModal.text.trim()}`;
       const existingRemarks = remarkModal.trial.remarks || '';
       const updatedRemarks = existingRemarks ? `${existingRemarks}\n\n${newRemarkLine}` : newRemarkLine;
-      
       await fdsApi.updateTrial(authFetchJson, remarkModal.trial.id, { remarks: updatedRemarks });
-      
       setRemarkModal({ open: false, trial: null, text: '' });
-      setTrials(prev => prev.map(x => x.id === remarkModal.trial.id ? { ...x, remarks: updatedRemarks } : x));
+      setTrials(prev => prev.map(tr => tr.id === remarkModal.trial.id ? { ...tr, remarks: updatedRemarks } : tr));
     } catch (err) {
       alert('Failed to add remark: ' + err.message);
     }
@@ -191,12 +204,9 @@ export default function FdsTrialPage() {
     try {
       const payload = {
         ...form,
-        age: form.age ? parseInt(form.age) : null,
-        fee_quoted: form.fee_quoted ? parseFloat(form.fee_quoted) : 0,
-        trainer_rating: form.trainer_rating ? parseInt(form.trainer_rating) : null,
+        converted: form.converted_text === 'YES' || form.converted,
         enquiry: form.enquiry || null,
         conducted_by: form.conducted_by || null,
-        time: form.time || null,
         join_date: form.join_date || null,
         follow_up_date: form.follow_up_date || null,
       };
@@ -224,12 +234,21 @@ export default function FdsTrialPage() {
   const handleImport = async (ev) => {
     const file = ev.target.files[0];
     if (!file) return;
-    alert('Trial import coming soon. Please use Excel export as template.');
-    ev.target.value = '';
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fdsApi.importTrials(authFetch, fd);
+      const data = await res.json();
+      alert(`Import complete: ${data.created} created, ${data.updated || 0} updated.`);
+      load();
+    } catch (e) {
+      alert('Import failed: ' + e.message);
+    } finally {
+      ev.target.value = '';
+    }
   };
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
-  const today = new Date().toISOString().split('T')[0];
 
   return (
     <div className="min-h-screen bg-slate-50"><Navbar />
@@ -238,31 +257,44 @@ export default function FdsTrialPage() {
           {/* Header */}
           <div className="fds-page-header">
             <div>
-              <h1 className="fds-page-title">Trials</h1>
-              <p className="fds-page-subtitle">FILMAATIC Dance Studio · {total} total</p>
+              <h1 className="fds-page-title">Trial Master Mirror</h1>
+              <p className="fds-page-subtitle">FILMAATIC Dance Studio · 1:1 Mirror of Google Sheets (TRIAL) · {total} rows</p>
             </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              {canEdit && <button className="fds-btn fds-btn-secondary" onClick={() => fileInputRef.current.click()}><Upload size={15} /> Import</button>}
-              <input ref={fileInputRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={handleImport} />
-              <button className="fds-btn fds-btn-secondary" onClick={handleExport}><Download size={15} /> Export</button>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button 
+                className="fds-btn fds-btn-secondary" 
+                onClick={handleSyncMaster} 
+                disabled={syncing}
+                style={{ borderColor: 'var(--fds-primary)', color: 'var(--fds-primary)' }}
+                title="Pull live changes from Google Sheets master"
+              >
+                <RefreshCw size={15} className={syncing ? 'animate-spin' : ''} /> 
+                {syncing ? 'Syncing...' : 'Sync Master'}
+              </button>
+              {canEdit && (
+                <>
+                  <button className="fds-btn fds-btn-secondary" onClick={() => fileInputRef.current.click()}><Upload size={15} /> Import Excel</button>
+                  <input ref={fileInputRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={handleImport} />
+                </>
+              )}
+              <button className="fds-btn fds-btn-secondary" onClick={handleExport}><Download size={15} /> Export Excel</button>
               {canEdit && <button className="fds-btn fds-btn-primary" onClick={openAdd}><Plus size={15} /> New Trial</button>}
             </div>
           </div>
 
-          {/* Stats */}
+          {/* Stats Row */}
           {stats && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, marginBottom: 20 }}>
               {[
-                { label: 'Total', val: stats.total, color: 'var(--fds-primary)' },
+                { label: 'Total Trials', val: stats.total, color: 'var(--fds-primary)' },
                 { label: 'Scheduled', val: stats.scheduled, color: 'var(--fds-primary-light)' },
-                { label: 'Completed', val: stats.completed, color: 'var(--fds-yoga)' },
-                { label: 'No Show', val: stats.no_show, color: '#e74c3c' },
+                { label: 'Completed', val: stats.completed, color: '#27ae60' },
                 { label: 'Converted', val: stats.converted, color: 'var(--fds-yoga)' },
-                { label: 'Conv. Rate', val: `${stats.conversion_rate ?? 0}%`, color: 'var(--fds-dance)' },
-                { label: 'Avg Rating', val: stats.avg_rating ? `${Number(stats.avg_rating).toFixed(1)}★` : '—', color: 'var(--fds-primary)' },
+                { label: 'Conversion Rate', val: `${stats.conversion_rate}%`, color: 'var(--fds-primary)' },
+                { label: 'Follow-up Due', val: stats.follow_up_due, color: '#e67e22' },
               ].map(({ label, val, color }) => (
                 <div key={label} className="fds-card" style={{ padding: '14px 16px', textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.5rem', fontWeight: 700, color }}>{val}</div>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.6rem', fontWeight: 700, color }}>{val}</div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--fds-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{label}</div>
                 </div>
               ))}
@@ -286,7 +318,7 @@ export default function FdsTrialPage() {
               <button
                 className={`fds-btn ${viewTab === 'ACTIVE' ? 'fds-btn-primary' : 'fds-btn-secondary'}`}
                 onClick={() => setViewTab('ACTIVE')}
-              >Active Trials</button>
+              >Upcoming Trials</button>
               <button
                 className={`fds-btn ${viewTab === 'PAST' ? 'fds-btn-primary' : 'fds-btn-secondary'}`}
                 onClick={() => setViewTab('PAST')}
@@ -294,44 +326,48 @@ export default function FdsTrialPage() {
             </div>
             <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
               <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--fds-text-faint)' }} />
-              <input className="fds-search-input" placeholder="Search name, phone..." value={search} onChange={e => setSearch(e.target.value)} />
+              <input className="fds-search-input" placeholder="Search name, phone, location..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
             <select className="fds-input fds-select" style={{ maxWidth: 150 }} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
               <option value="">All Statuses</option>
               {STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
             </select>
             <select className="fds-input fds-select" style={{ maxWidth: 140 }} value={filterConverted} onChange={e => setFilterConverted(e.target.value)}>
-              <option value="">All</option>
+              <option value="">All Converted</option>
               <option value="true">Converted ✓</option>
               <option value="false">Not Converted</option>
             </select>
-            <input className="fds-input" type="date" style={{ maxWidth: 140 }} value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-            <input className="fds-input" type="date" style={{ maxWidth: 140 }} value={dateTo} onChange={e => setDateTo(e.target.value)} />
+            <input className="fds-input" type="date" style={{ maxWidth: 140 }} value={dateFrom} onChange={e => setDateFrom(e.target.value)} placeholder="From" />
+            <input className="fds-input" type="date" style={{ maxWidth: 140 }} value={dateTo} onChange={e => setDateTo(e.target.value)} placeholder="To" />
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: followUpDue ? 'var(--fds-primary)' : 'var(--fds-text-muted)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
               <input type="checkbox" checked={followUpDue} onChange={e => setFollowUpDue(e.target.checked)} /> Follow-up Due
             </label>
           </div>
 
-          {/* Table */}
-          <div className="fds-table-wrap">
-            <table className="fds-table">
+          {/* Table (1:1 Mirror of TRIAL sheet) */}
+          <div className="fds-table-wrap" style={{ overflowX: 'auto' }}>
+            <table className="fds-table" style={{ minWidth: 1300 }}>
               <thead>
                 <tr>
                   {[
                     { key: 'trial_id', label: 'ID' },
-                    { key: 'date', label: 'Date & Time' },
-                    { key: 'name', label: 'Name' },
-                    { key: 'class_category', label: 'Class' },
-                    { key: 'phone', label: 'Phone' },
+                    { key: 'date', label: 'Date' },
+                    { key: 'name', label: 'Candidate Name' },
+                    { key: 'time_text', label: 'Time' },
+                    { key: 'age', label: 'Age' },
+                    { key: 'phone', label: 'Contact No' },
+                    { key: 'location', label: 'Location' },
                     { key: 'fee_quoted', label: 'Fee Quoted' },
-                    { key: 'trainer_rating', label: 'Rating' },
-                    { key: 'status', label: 'Status' },
-                    { key: 'converted', label: 'Converted' },
-                    
+                    { key: 'feedback', label: 'Feedback' },
+                    { key: 'trainer_rating', label: 'Trainer Rating' },
+                    { key: 'converted_text', label: 'Converted' },
+                    { key: 'join_date', label: 'Join Date' },
+                    { key: 'fee_status', label: 'Fee Status' },
+                    { key: 'follow_up_date', label: 'Follow Up' },
                     { key: 'remarks', label: 'Remarks' },
                     { key: 'actions', label: '' },
                   ].map(({ key, label }) => (
-                    <th key={key} onClick={() => !['actions','phone'].includes(key) && handleSort(key)}>
+                    <th key={key} onClick={() => key !== 'actions' && handleSort(key)} style={{ whiteSpace: 'nowrap' }}>
                       {label}
                     </th>
                   ))}
@@ -339,50 +375,47 @@ export default function FdsTrialPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40 }}><div className="fds-spinner" style={{ margin: '0 auto' }} /></td></tr>
+                  <tr><td colSpan={16} style={{ textAlign: 'center', padding: 40 }}><div className="fds-spinner" style={{ margin: '0 auto' }} /></td></tr>
                 ) : trials.length === 0 ? (
-                  <tr><td colSpan={11}><div className="fds-empty"><div className="fds-empty-title">No trials found</div></div></td></tr>
+                  <tr><td colSpan={16}><div className="fds-empty"><div className="fds-empty-title">No trials found</div></div></td></tr>
                 ) : trials.map(t => (
                   <tr key={t.id}>
                     <td><span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--fds-primary)' }}>{t.trial_id}</span></td>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{t.date}</div>
-                      {t.time && <div style={{ fontSize: '0.75rem', color: 'var(--fds-text-muted)' }}>{t.time}</div>}
-                    </td>
+                    <td style={{ whiteSpace: 'nowrap', fontSize: '0.82rem', color: 'var(--fds-text-muted)' }}>{t.date}</td>
                     <td>
                       <div style={{ fontWeight: 600 }}>{t.name}</div>
-                      {t.age && <div style={{ fontSize: '0.75rem', color: 'var(--fds-text-muted)' }}>Age {t.age}</div>}
+                      {t.class_category && <span className={`fds-badge fds-badge-${t.class_category?.toLowerCase()}`} style={{ fontSize: '0.65rem' }}>{t.class_category}</span>}
                     </td>
-                    <td><span className={`fds-badge fds-badge-${t.class_category?.toLowerCase()}`}>{t.class_category}</span></td>
-                    <td style={{ fontSize: '0.82rem' }}>{t.phone || '—'}</td>
-                    <td style={{ fontWeight: 600, color: 'var(--fds-primary)' }}>₹{Number(t.fee_quoted || 0).toLocaleString('en-IN')}</td>
-                    <td>
-                      {t.trainer_rating ? <StarRating value={parseInt(t.trainer_rating)} readOnly /> : <span style={{ color: 'var(--fds-text-faint)' }}>—</span>}
+                    <td style={{ fontSize: '0.82rem', color: 'var(--fds-text-muted)' }}>{t.time_text || t.time || '—'}</td>
+                    <td style={{ fontSize: '0.82rem', color: 'var(--fds-text-muted)' }}>{t.age || '—'}</td>
+                    <td style={{ fontSize: '0.82rem' }}>
+                      {t.phone ? <a href={`tel:${t.phone}`} style={{ color: 'inherit', textDecoration: 'none' }}>{t.phone}</a> : '—'}
                     </td>
-                    <td>
-                      <select 
-                        className={`fds-badge ${getStatusBadgeClass(t.status)}`}
-                        style={{ border: 'none', appearance: 'none', cursor: 'pointer', outline: 'none', fontWeight: 600, textAlign: 'center' }}
-                        value={t.status || ''}
-                        onClick={(ev) => ev.stopPropagation()}
-                        onChange={async (ev) => {
-                          const newStatus = ev.target.value;
-                          try {
-                            await fdsApi.updateTrial(authFetchJson, t.id, { status: newStatus });
-                            setTrials(prev => prev.map(x => x.id === t.id ? { ...x, status: newStatus } : x));
-                          } catch (err) { alert('Failed to update status'); }
-                        }}
-                      >
-                        {STATUSES.map(s => <option key={s} value={s} style={{ color: '#000', background: '#fff' }}>{s.replace('_', ' ')}</option>)}
-                      </select>
+                    <td style={{ fontSize: '0.82rem', color: 'var(--fds-text-muted)' }}>{t.location || '—'}</td>
+                    <td style={{ fontWeight: 600, color: 'var(--fds-primary)', whiteSpace: 'nowrap' }}>
+                      {t.fee_quoted ? `₹${Number(t.fee_quoted).toLocaleString('en-IN')}` : '—'}
+                    </td>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--fds-text)', maxWidth: 150 }}>
+                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={t.feedback}>
+                        {t.feedback || '—'}
+                      </div>
                     </td>
                     <td>
-                      {t.converted
-                        ? <span className="fds-badge fds-badge-green"><CheckCircle size={10} /> Yes</span>
-                        : <span className="fds-badge fds-badge-gray">No</span>
-                      }
+                      {t.trainer_rating ? <StarRating value={t.trainer_rating} readOnly /> : <span style={{ color: 'var(--fds-text-faint)' }}>—</span>}
                     </td>
-                    <td style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)', maxWidth: 180 }}>
+                    <td>
+                      <span className={`fds-badge ${t.converted_text === 'YES' || t.converted ? 'fds-badge-green' : 'fds-badge-gray'}`}>
+                        {t.converted_text || (t.converted ? 'YES' : 'NO')}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)', whiteSpace: 'nowrap' }}>{t.join_date || '—'}</td>
+                    <td>
+                      <span className={`fds-badge ${t.fee_status === 'PAID' ? 'fds-badge-green' : 'fds-badge-gold'}`}>
+                        {t.fee_status || 'NOT PAID'}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)', whiteSpace: 'nowrap' }}>{t.follow_up_date || '—'}</td>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)', maxWidth: 160 }}>
                       <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 4 }} title={t.remarks}>
                         {t.remarks ? t.remarks.split('\n\n').pop() : 'No remarks'}
                       </div>
@@ -434,7 +467,7 @@ export default function FdsTrialPage() {
           <div className="fds-modal-overlay" onClick={() => setShowModal(false)}>
             <div className="fds-modal fds-modal-lg" onClick={e => e.stopPropagation()}>
               <div className="fds-modal-header">
-                <div className="fds-modal-title">{editId ? 'Edit Trial' : 'New Trial'}</div>
+                <div className="fds-modal-title">{editId ? 'Edit Trial (Mirror)' : 'New Trial'}</div>
                 <button className="fds-btn fds-btn-ghost" onClick={() => setShowModal(false)}><X size={18} /></button>
               </div>
               <form onSubmit={handleSave}>
@@ -472,12 +505,12 @@ export default function FdsTrialPage() {
                       <input className="fds-input" type="date" required value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="fds-label">Time</label>
-                      <input className="fds-input" type="time" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} />
+                      <label className="fds-label">Time / Slot</label>
+                      <input className="fds-input" placeholder="e.g. 5:30PM - 6:30PM or 17:30" value={form.time_text || form.time} onChange={e => setForm(f => ({ ...f, time_text: e.target.value, time: e.target.value }))} />
                     </div>
                     <div>
                       <label className="fds-label">Age</label>
-                      <input className="fds-input" type="number" value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value }))} />
+                      <input className="fds-input" placeholder="e.g. 5yrs, 24" value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value }))} />
                     </div>
                     <div>
                       <label className="fds-label">Phone</label>
@@ -495,7 +528,7 @@ export default function FdsTrialPage() {
                     </div>
                     <div>
                       <label className="fds-label">Fee Quoted (₹)</label>
-                      <input className="fds-input" type="number" step="0.01" value={form.fee_quoted} onChange={e => setForm(f => ({ ...f, fee_quoted: e.target.value }))} />
+                      <input className="fds-input" placeholder="e.g. 2500" value={form.fee_quoted} onChange={e => setForm(f => ({ ...f, fee_quoted: e.target.value }))} />
                     </div>
                     <div>
                       <label className="fds-label">Status</label>
@@ -505,18 +538,26 @@ export default function FdsTrialPage() {
                     </div>
                     <div>
                       <label className="fds-label">Trainer Rating</label>
-                      <StarRating value={form.trainer_rating} onChange={v => setForm(f => ({ ...f, trainer_rating: v }))} />
+                      <StarRating value={form.trainer_rating} onChange={v => setForm(f => ({ ...f, trainer_rating: String(v) }))} />
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <label className="fds-label" style={{ marginBottom: 0 }}>Converted?</label>
-                      <input type="checkbox" checked={form.converted} onChange={e => setForm(f => ({ ...f, converted: e.target.checked }))} style={{ width: 16, height: 16, accentColor: 'var(--fds-primary)' }} />
+                    <div>
+                      <label className="fds-label">Converted (YES/NO)</label>
+                      <select className="fds-input fds-select" value={form.converted_text} onChange={e => setForm(f => ({ ...f, converted_text: e.target.value, converted: e.target.value === 'YES' }))}>
+                        <option value="NO">NO</option>
+                        <option value="YES">YES</option>
+                      </select>
                     </div>
-                    {form.converted && (
-                      <div>
-                        <label className="fds-label">Join Date</label>
-                        <input className="fds-input" type="date" value={form.join_date} onChange={e => setForm(f => ({ ...f, join_date: e.target.value }))} />
-                      </div>
-                    )}
+                    <div>
+                      <label className="fds-label">Fee Status (PAID/NOT PAID)</label>
+                      <select className="fds-input fds-select" value={form.fee_status} onChange={e => setForm(f => ({ ...f, fee_status: e.target.value }))}>
+                        <option value="NOT PAID">NOT PAID</option>
+                        <option value="PAID">PAID</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="fds-label">Join Date</label>
+                      <input className="fds-input" type="date" value={form.join_date} onChange={e => setForm(f => ({ ...f, join_date: e.target.value }))} />
+                    </div>
                     <div>
                       <label className="fds-label">Follow Up Date</label>
                       <input className="fds-input" type="date" value={form.follow_up_date} onChange={e => setForm(f => ({ ...f, follow_up_date: e.target.value }))} />
@@ -540,7 +581,7 @@ export default function FdsTrialPage() {
           </div>
         )}
 
-        {/* ── Quick Remark Modal ── */}
+        {/* Quick Remark Modal */}
         {remarkModal.open && (
           <div className="fds-modal-overlay" onClick={() => setRemarkModal({ open: false, trial: null, text: '' })}>
             <div className="fds-modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>

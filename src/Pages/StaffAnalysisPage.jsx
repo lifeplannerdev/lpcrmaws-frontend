@@ -554,6 +554,14 @@ export default function StaffAnalysisPage() {
             )}
 
             <button
+              onClick={() => navigate('/staff-analysis/report')}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold rounded-2xl transition-all shadow-md shadow-emerald-200 active:scale-95"
+            >
+              <BarChart2 size={14} />
+              Generate Report
+            </button>
+
+            <button
               onClick={() => {
                 fetchSummary();
                 if (activeTab === 'leads') fetchLeads();
