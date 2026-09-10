@@ -19,7 +19,6 @@ import {
   Star,
   Heart,
   BarChart2,
-  Download,
   Building2
 } from "lucide-react";
 
@@ -30,7 +29,7 @@ export const masterNavigation = [
   { id: "leads", label: "Leads", icon: Users, path: "/leads", requiredResource: "leads", category: "sales", description: "Leads pipeline, follow-ups & status" },
   { id: "call", label: "Voxbay", icon: PhoneCall, path: "/call-analytics", requiredResource: "voxbay", category: "sales", description: "Call records, agent analytics & logs" },
   { id: "voxbay_ai", label: "Voxbay AI", icon: PhoneCall, path: "/voxbay-ai", requiredPermissions: ["voxbay_ai:admin", "voxbay_ai:read_own"], category: "sales", description: "AI call summaries & sentiment analysis" },
-  { id: "exportData", label: "Data Export & Import", icon: Download, path: "/export-data", requiredResource: "leads", category: "sales", description: "Bulk lead import/export operations" },
+  { id: "staffAnalysisReport", label: "Report Generator", icon: BarChart2, path: "/staff-analysis/report", requiredPermissions: ["staff_analysis:admin"], category: "sales", description: "Generate performance reports with PDF export" },
 
   // ── Academics & Students ──
   { id: "registry", label: "Student Registry", icon: GraduationCap, path: "/registry", requiredPermissions: ["students:registry_manage"], category: "academics", description: "Master student database & records" },

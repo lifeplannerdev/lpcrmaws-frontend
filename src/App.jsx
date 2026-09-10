@@ -43,7 +43,6 @@ import ProgramsPage from "./Pages/ProgramsPage.jsx";
 import VoxbayAIPage from "./Pages/VoxbayAIPage.jsx";
 import StaffAnalysisPage from "./Pages/StaffAnalysisPage.jsx";
 import StaffAnalysisReportPage from "./Pages/StaffAnalysisReportPage.jsx";
-import DataExportPage from "./Pages/DataExportPage.jsx";
 import FdsDashboard from './Pages/FDS/FdsDashboard.jsx';
 import FdsEnquiryPage from './Pages/FDS/FdsEnquiryPage.jsx';
 import FdsTrialPage from './Pages/FDS/FdsTrialPage.jsx';
@@ -158,7 +157,6 @@ export default function App() {
         <Route path="/voxbay-ai" element={<PermissionRoute permissions={['voxbay_ai:admin', 'voxbay_ai:read_own']}><VoxbayAIPage /></PermissionRoute>} />
         <Route path="/staff-analysis/report" element={<PermissionRoute permissions={['staff_analysis:admin']} resources={['leads']}><StaffAnalysisReportPage /></PermissionRoute>} />
         <Route path="/staff-analysis" element={<PermissionRoute permissions={['staff_analysis:admin']} resources={['leads']}><StaffAnalysisPage /></PermissionRoute>} />
-        <Route path="/export-data" element={<PermissionRoute resources={['leads']}><DataExportPage /></PermissionRoute>} />
 
         {/* ── FDS: FILMAATIC Dance Studio ── */}
         <Route path="/fds" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view']}><FdsDashboard /></PermissionRoute>} />
