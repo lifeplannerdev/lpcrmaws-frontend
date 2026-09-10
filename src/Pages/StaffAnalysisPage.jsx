@@ -128,6 +128,41 @@ function FollowUpBadge({ f }) {
   );
 }
 
+function parseFollowUpNotes(notes, explicitRecordingUrl = null) {
+  let recordingUrl = explicitRecordingUrl || null;
+  if (!notes || !notes.trim()) {
+    return { recordingUrl, cleanNotes: recordingUrl ? 'Call recording available' : 'No notes.' };
+  }
+
+  // 1. Explicit prefix: Recording: <url> or [Audio Recording: <url>]
+  if (!recordingUrl) {
+    const explicitMatch = notes.match(/(?:Recording:\s*|\[Audio Recording:\s*|\bAudio:\s*)(https?:\/\/[^\s\]]+)/i);
+    if (explicitMatch) {
+      recordingUrl = explicitMatch[1];
+    } else {
+      // 2. Direct Voxbay URL match
+      const directMatch = notes.match(/(https?:\/\/[^\s\]]+(?:voiceapi\.voxbay\.com|callcenter|callrecordings|\.wav|\.mp3)[^\s\]]*)/i);
+      if (directMatch) {
+        recordingUrl = directMatch[1];
+      }
+    }
+  }
+
+  let cleanNotes = notes;
+  if (recordingUrl) {
+    cleanNotes = cleanNotes
+      .replace(/(?:Recording:\s*|\[Audio Recording:\s*|\bAudio:\s*)https?:\/\/[^\s\]]+/gi, '')
+      .replace(recordingUrl, '')
+      .replace(/Call UUID:\s*[0-9a-zA-Z_-]+/gi, '')
+      .trim();
+  }
+
+  return {
+    recordingUrl,
+    cleanNotes: cleanNotes || (recordingUrl ? 'Call completed with recording.' : 'No notes.')
+  };
+}
+
 function LeadRow({ lead, onCall }) {
   const [expanded, setExpanded] = useState(false);
   const statusCls = STATUS_COLOR_MAP[lead.status] || 'bg-gray-100 text-gray-700 border-gray-200';
@@ -217,13 +252,33 @@ function LeadRow({ lead, onCall }) {
                   <CalendarClock size={13} className="text-violet-600" /> Follow-ups History ({lead.followups?.length ?? 0})
                 </h5>
                 {lead.followups && lead.followups.length > 0 ? (
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {lead.followups.map(f => (
-                      <div key={f.id} className="border border-gray-100 rounded-lg p-2.5 space-y-1 bg-gray-50/50">
-                        <FollowUpBadge f={f} />
-                        <p className="text-xs text-gray-700 mt-1">{f.notes || 'No notes.'}</p>
-                      </div>
-                    ))}
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {lead.followups.map(f => {
+                      const { recordingUrl, cleanNotes } = parseFollowUpNotes(f.notes, f.recording_url);
+                      return (
+                        <div key={f.id} className="border border-gray-100 rounded-lg p-2.5 space-y-1.5 bg-gray-50/50 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <FollowUpBadge f={f} />
+                            {recordingUrl && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                                <Volume2 size={10} className="text-indigo-600" /> Recording
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">{cleanNotes}</p>
+                          {recordingUrl && (
+                            <div className="pt-1">
+                              <audio
+                                controls
+                                preload="none"
+                                src={recordingUrl}
+                                className="h-7 w-full rounded-md outline-none bg-white shadow-2xs"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-xs text-gray-400 italic">No follow-ups recorded.</p>
@@ -1387,8 +1442,23 @@ export default function StaffAnalysisPage() {
                             <td className="px-4 py-3 text-xs">
                               <span className="font-bold capitalize text-gray-700">{f.priority}</span> &bull; <span className="text-gray-500 capitalize">{f.followup_type}</span>
                             </td>
-                            <td className="px-4 py-3 text-xs text-gray-600 max-w-[280px] truncate">
-                              {f.notes || '—'}
+                            <td className="px-4 py-3 text-xs text-gray-600 min-w-[220px] max-w-[320px]">
+                              {(() => {
+                                const { recordingUrl, cleanNotes } = parseFollowUpNotes(f.notes, f.recording_url);
+                                return (
+                                  <div className="space-y-1.5">
+                                    <p className="line-clamp-2 text-gray-700" title={cleanNotes}>{cleanNotes}</p>
+                                    {recordingUrl && (
+                                      <audio
+                                        controls
+                                        preload="none"
+                                        src={recordingUrl}
+                                        className="h-7 w-48 rounded outline-none shadow-2xs"
+                                      />
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td className="px-4 py-3">
                               <button
@@ -1462,7 +1532,7 @@ export default function StaffAnalysisPage() {
                       <thead className="sticky top-0 bg-gray-50 border-b border-gray-100 z-10 shadow-2xs">
                         <tr>
                           <th className="px-4 py-2.5 text-[11px] font-bold text-gray-500 uppercase">Direction</th>
-                          <th className="px-4 py-2.5 text-[11px] font-bold text-gray-500 uppercase">Contact Number</th>
+                          <th className="px-4 py-2.5 text-[11px] font-bold text-gray-500 uppercase">Contact / Lead</th>
                           <th className="px-4 py-2.5 text-[11px] font-bold text-gray-500 uppercase">Status</th>
                           <th className="px-4 py-2.5 text-[11px] font-bold text-gray-500 uppercase">Duration & Talk Time</th>
                           <th className="px-4 py-2.5 text-[11px] font-bold text-gray-500 uppercase">Date & Time</th>
@@ -1486,7 +1556,29 @@ export default function StaffAnalysisPage() {
                                 )}
                               </td>
                               <td className="px-4 py-3">
-                                <p className="font-mono text-xs font-bold text-gray-900">
+                                {log.lead_name ? (
+                                  <div className="mb-0.5">
+                                    {log.lead_id ? (
+                                      <button
+                                        onClick={() => navigate(`/leads/${log.lead_id}`)}
+                                        className="font-bold text-xs text-indigo-700 hover:text-indigo-900 hover:underline text-left inline-flex items-center gap-1 group truncate max-w-[220px]"
+                                        title={`View lead: ${log.lead_name}`}
+                                      >
+                                        <span className="truncate">{log.lead_name}</span>
+                                        <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                                      </button>
+                                    ) : (
+                                      <p className="font-bold text-xs text-gray-900 truncate max-w-[220px]" title={log.lead_name}>
+                                        {log.lead_name}
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="mb-0.5">
+                                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Unknown Lead</span>
+                                  </div>
+                                )}
+                                <p className="font-mono text-xs font-bold text-gray-800">
                                   {log.call_type === 'outgoing' ? log.destination || log.called_number : log.caller_number}
                                 </p>
                                 <p className="text-[10px] text-gray-400">
