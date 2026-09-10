@@ -9,6 +9,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, FDS_CATEGORIES, getCategoryBadgeClass, getStatusBadgeClass, downloadExcelFromResponse } from './fdsApi';
+import FdsMasterSyncModal from './FdsMasterSyncModal';
 import './fds-theme.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -78,6 +79,7 @@ export default function FdsEnquiryPage() {
   const [showImportPreview, setShowImportPreview] = useState(false);
   const [importRows, setImportRows] = useState([]);
   const [importLoading, setImportLoading] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
 
   const authFetch = useCallback(async (url, opts = {}) => {
     let token = accessToken;
@@ -306,13 +308,12 @@ export default function FdsEnquiryPage() {
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button 
                 className="fds-btn fds-btn-secondary" 
-                onClick={handleSyncMaster} 
-                disabled={syncing}
+                onClick={() => setShowSyncModal(true)}
                 style={{ borderColor: 'var(--fds-primary)', color: 'var(--fds-primary)' }}
-                title="Pull live changes from Google Sheets master"
+                title="Sync downloaded Google Sheets master workbooks to CRM"
               >
-                <RefreshCw size={15} className={syncing ? 'animate-spin' : ''} /> 
-                {syncing ? 'Syncing...' : 'Sync Master'}
+                <RefreshCw size={15} /> 
+                Sync Master
               </button>
               {canEdit && (
                 <>
@@ -752,6 +753,15 @@ export default function FdsEnquiryPage() {
             </div>
           </div>
         )}
+
+        {/* Master Sync Modal */}
+        <FdsMasterSyncModal
+          isOpen={showSyncModal}
+          onClose={() => setShowSyncModal(false)}
+          onSyncComplete={() => load()}
+          authFetchJson={authFetchJson}
+          authFetch={authFetch}
+        />
       </div>
     </div>
   );

@@ -17,7 +17,7 @@ export function buildQueryString(params) {
 
 export const fdsApi = {
   // Master Sync: Google Sheets ➔ CRM Mirror
-  syncMasterSheets: (af) => af(`${FDS_BASE}/sync-master-sheets/`, { method: 'POST' }),
+  syncMasterSheets: (af, formData = null) => af(`${FDS_BASE}/sync-master-sheets/`, { method: 'POST', ...(formData ? { body: formData } : {}) }),
 
   // Dashboard
   dashboard: (af) => af(`${FDS_BASE}/dashboard/`),

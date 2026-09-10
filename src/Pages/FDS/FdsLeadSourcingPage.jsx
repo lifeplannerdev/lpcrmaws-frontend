@@ -8,6 +8,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, LEAD_SOURCING_CATEGORIES, downloadExcelFromResponse } from './fdsApi';
+import FdsMasterSyncModal from './FdsMasterSyncModal';
 import './fds-theme.css';
 
 const EMPTY_FORM = {
@@ -37,6 +38,7 @@ export default function FdsLeadSourcingPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
 
   const authFetch = useCallback(async (url, opts = {}) => {
     let token = accessToken;
@@ -182,12 +184,11 @@ export default function FdsLeadSourcingPage() {
               {canEdit && (
                 <button
                   className="fds-btn fds-btn-secondary"
-                  onClick={handleSyncMaster}
-                  disabled={syncing}
-                  title="Re-mirror from Master Sheets"
+                  onClick={() => setShowSyncModal(true)}
+                  title="Sync Google Sheets master workbooks to CRM"
                 >
-                  <RefreshCw size={15} className={syncing ? 'fds-spin' : ''} />
-                  {syncing ? 'Syncing...' : 'Sync Master'}
+                  <RefreshCw size={15} />
+                  Sync Master
                 </button>
               )}
               {canEdit && (
@@ -416,6 +417,15 @@ export default function FdsLeadSourcingPage() {
             </div>
           </div>
         )}
+
+        {/* Master Sync Modal */}
+        <FdsMasterSyncModal
+          isOpen={showSyncModal}
+          onClose={() => setShowSyncModal(false)}
+          onSyncComplete={() => load()}
+          authFetchJson={authFetchJson}
+          authFetch={authFetch}
+        />
       </div>
     </div>
   );
