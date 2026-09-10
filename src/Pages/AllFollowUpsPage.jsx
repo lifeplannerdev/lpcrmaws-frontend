@@ -564,28 +564,43 @@ export default function AllFollowUpsPage() {
     if (!rescheduleItem || !rescheduleDate) return;
     setIsRescheduling(true);
     try {
-      const payload = {
-        status: 'rescheduled',
-        follow_up_date: rescheduleDate,
-      };
-      if (rescheduleTime) payload.follow_up_time = rescheduleTime;
-      if (rescheduleNotes) {
-        payload.notes = rescheduleItem.notes
-          ? `${rescheduleItem.notes}\n[Rescheduled to ${rescheduleDate}]: ${rescheduleNotes}`
-          : `[Rescheduled to ${rescheduleDate}]: ${rescheduleNotes}`;
-      }
+      // 1. Mark current follow-up as completed / done
+      const currentNotes = rescheduleItem.notes || '';
+      const rescheduleNotice = `[Rescheduled to ${rescheduleDate}${rescheduleTime ? ' ' + rescheduleTime : ''}]: ${rescheduleNotes || 'Follow-up rescheduled'}`;
+      const updatedNotes = currentNotes ? `${currentNotes}\n${rescheduleNotice}` : rescheduleNotice;
 
-      const res = await authFetch(`${API_BASE_URL}/followups/${rescheduleItem.id}/`, {
+      const resUpdate = await authFetch(`${API_BASE_URL}/followups/${rescheduleItem.id}/`, {
         method: 'PUT',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          status: 'completed', // Mark existing attended followup as DONE
+          notes: updatedNotes,
+        }),
       });
 
-      if (!res.ok) throw new Error('Failed to reschedule');
+      if (!resUpdate.ok) throw new Error('Failed to update current follow-up');
+
+      // 2. Add new follow-up for the next date mentioned with status 'pending'
+      const leadId = rescheduleItem.lead || rescheduleItem.lead_id || (typeof rescheduleItem.lead === 'object' ? rescheduleItem.lead?.id : null);
+      await authFetch(`${API_BASE_URL}/followups/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead: leadId,
+          phone_number: rescheduleItem.phone_number || rescheduleItem.lead_phone || '',
+          name: rescheduleItem.name || rescheduleItem.lead_name || 'Lead',
+          follow_up_date: rescheduleDate,
+          follow_up_time: rescheduleTime || null,
+          followup_type: rescheduleItem.followup_type || 'call',
+          status: 'pending', // Added to next date mentioned as pending
+          priority: rescheduleItem.priority || 'medium',
+          notes: rescheduleNotes || `Follow-up rescheduled from ${rescheduleItem.follow_up_date}`,
+        }),
+      });
       
       setRescheduleItem(null);
       loadAll();
       loadPast();
-      toast.success('Follow-up rescheduled successfully.');
+      toast.success(`Follow-up marked done & rescheduled to ${rescheduleDate}`);
     } catch (err) {
       console.error(err);
       toast.error('Failed to reschedule follow-up');

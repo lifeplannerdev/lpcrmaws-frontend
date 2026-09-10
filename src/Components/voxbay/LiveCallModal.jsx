@@ -236,11 +236,11 @@ export default function LiveCallModal() {
 
   // Outcome status determination
   const selectedOutcome = formData.followup_status || (formData.follow_up_date ? 'pending' : (formData.followup_done ? 'completed' : 'pending'));
-  const isOutcomeCompleted = ['completed', 'contacted', 'not_interested'].includes(selectedOutcome) || Boolean(formData.followup_done);
+  const isOutcomeCompleted = ['completed', 'contacted'].includes(selectedOutcome) || Boolean(formData.followup_done);
   const isFollowupSatisfied = !followupRequired || Boolean(formData.follow_up_date) || isOutcomeCompleted;
 
   const handleOutcomeChange = (val) => {
-    if (val === 'completed' || val === 'contacted' || val === 'not_interested') {
+    if (val === 'completed' || val === 'contacted') {
       updateCallFormData(activeCall.id, {
         followup_status: val,
         follow_up_date: '',
@@ -373,7 +373,7 @@ export default function LiveCallModal() {
                 : existingNotes;
 
               const updateBody = {
-                status: isOutcomeCompleted ? (formData.followup_status || 'completed') : 'contacted',
+                status: 'completed', // Mark existing attended followup as DONE
                 notes: mergedNotes,
               };
               if (activeCall.duration) updateBody.duration = activeCall.duration;
@@ -403,7 +403,7 @@ export default function LiveCallModal() {
               follow_up_date: formData.follow_up_date,
               follow_up_time: formData.follow_up_time || null,
               followup_type: 'call',
-              status: selectedOutcome,
+              status: 'pending', // Added to next date mentioned as pending
               priority: (formData.priority || 'medium').toLowerCase(),
               notes: formattedRemark || 'Scheduled follow-up via Live Call Dossier',
               duration: activeCall.duration || 0,
@@ -834,14 +834,13 @@ export default function LiveCallModal() {
                         <option value="pending">📅 Schedule Next Follow-up</option>
                         <option value="rescheduled">🔄 Rescheduled</option>
                         <option value="completed">✅ Completed (No further follow-up)</option>
-                        <option value="not_interested">🚫 Not Interested</option>
                       </select>
                     </div>
 
                     {isOutcomeCompleted && (
                       <div className="flex items-center gap-2 p-2 bg-white/80 dark:bg-slate-800/80 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl text-xs text-emerald-800 dark:text-emerald-200">
                         <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <span>Call marked as <strong>{selectedOutcome === 'not_interested' ? 'Not Interested' : 'Completed'}</strong>. Follow-up is resolved and moved to Past.</span>
+                        <span>Call marked as <strong>Completed</strong>. Follow-up is resolved and moved to Past.</span>
                       </div>
                     )}
 
@@ -1085,14 +1084,13 @@ export default function LiveCallModal() {
                         <option value="pending">📅 Schedule Next Follow-up</option>
                         <option value="rescheduled">🔄 Rescheduled</option>
                         <option value="completed">✅ Completed (No further follow-up)</option>
-                        <option value="not_interested">🚫 Not Interested</option>
                       </select>
                     </div>
 
                     {isOutcomeCompleted && (
                       <div className="flex items-center gap-2 p-2 bg-white/80 dark:bg-slate-800/80 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl text-xs text-emerald-800 dark:text-emerald-200">
                         <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <span>Call marked as <strong>{selectedOutcome === 'not_interested' ? 'Not Interested' : 'Completed'}</strong>. Any existing pending follow-ups will be resolved and moved to Past Follow-ups.</span>
+                        <span>Call marked as <strong>Completed</strong>. Any existing pending follow-ups will be resolved and moved to Past Follow-ups.</span>
                       </div>
                     )}
 

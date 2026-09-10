@@ -121,7 +121,6 @@ const InlineForm = ({ lead, onSave, onCancel, initial }) => {
           <select value={form.status} onChange={e => set('status', e.target.value)} className={selectCls}>
             <option value="pending">Pending</option>
             <option value="contacted">Contacted</option>
-            <option value="not_interested">Not Interested</option>
             <option value="rescheduled">Rescheduled</option>
           </select>
         </div>
@@ -151,7 +150,7 @@ const InlineForm = ({ lead, onSave, onCancel, initial }) => {
 
 // ── Item row ──────────────────────────────────────────────────────────────────
 
-const FollowUpItem = ({ item, onEdit, onDelete, onStatusChange, canEdit }) => {
+const FollowUpItem = ({ item, onEdit, onDelete, onStatusChange, onReschedule, canEdit }) => {
   const type     = TYPE_META[item.followup_type]  || TYPE_META.call;
   const status   = STATUS_META[item.status]        || STATUS_META.pending;
   const TypeIcon = type.Icon;
@@ -240,7 +239,7 @@ const FollowUpItem = ({ item, onEdit, onDelete, onStatusChange, canEdit }) => {
             <CheckCircle size={12} />
             Contacted
           </button>
-          <button onClick={() => onStatusChange(item.id, 'rescheduled')}
+          <button onClick={() => onReschedule(item)}
             className="flex-1 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 transition-all flex items-center justify-center gap-1">
             <Clock size={12} />
             Reschedule
@@ -276,7 +275,50 @@ const LeadFollowUps = ({ lead, authFetch }) => {
 
   useEffect(() => { load(); }, [load]);
 
+  const handleReschedule = (item) => {
+    setEditItem({
+      ...item,
+      status: 'rescheduled',
+    });
+    setShowForm(true);
+    setCollapsed(false);
+  };
+
   const handleSave = async (formData) => {
+    if (editItem && formData.status === 'rescheduled') {
+      // 1. Mark current follow-up as completed / done
+      await authFetch(`${API_BASE_URL}/followups/${editItem.id}/`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          status: 'completed',
+          notes: editItem.notes
+            ? `${editItem.notes}\n[Rescheduled to ${formData.follow_up_date}]: ${formData.notes || ''}`.trim()
+            : `[Rescheduled to ${formData.follow_up_date}]: ${formData.notes || ''}`.trim(),
+        }),
+      });
+
+      // 2. Add new follow-up for next date with status pending
+      await authFetch(`${API_BASE_URL}/followups/`, {
+        method: 'POST',
+        body: JSON.stringify({
+          lead: lead?.id,
+          phone_number: editItem.phone_number || lead?.phone || '',
+          name: editItem.name || lead?.name || 'Lead',
+          follow_up_date: formData.follow_up_date,
+          follow_up_time: formData.follow_up_time || null,
+          followup_type: formData.followup_type || 'call',
+          status: 'pending',
+          priority: formData.priority || 'medium',
+          notes: formData.notes || `Follow-up rescheduled from ${editItem.follow_up_date}`,
+        }),
+      });
+
+      await load();
+      setShowForm(false);
+      setEditItem(null);
+      return;
+    }
+
     const method = editItem ? 'PUT' : 'POST';
     const url    = editItem
       ? `${API_BASE_URL}/followups/${editItem.id}/`
@@ -383,6 +425,7 @@ const LeadFollowUps = ({ lead, authFetch }) => {
                   onEdit={(i) => { setEditItem(i); setShowForm(false); }}
                   onDelete={handleDelete}
                   onStatusChange={handleStatusChange}
+                  onReschedule={handleReschedule}
                   canEdit={canEditLead}
                 />
               ))}
