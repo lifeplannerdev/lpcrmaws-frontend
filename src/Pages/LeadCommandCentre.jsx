@@ -14,36 +14,50 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const PAGE_SIZE = 50;
 
-// ─── Status definitions (ALL statuses, old + new) ────────────────────────────
-const ALL_STATUSES = [
-  { id: 'all',         label: 'All Statuses',  color: 'bg-gray-100 text-gray-600' },
+// ─── Status definitions (Current Pipeline vs Legacy Historical) ──────────────
+const CURRENT_STATUSES = [
   { id: 'enquiry',     label: 'Enquiry',        color: 'bg-blue-100 text-blue-700' },
   { id: 'job_enquiry', label: 'Job Enquiry',    color: 'bg-indigo-100 text-indigo-700' },
-  { id: 'contacted',   label: 'Contacted',      color: 'bg-yellow-100 text-yellow-700' },
-  { id: 'qualified',   label: 'Qualified',      color: 'bg-purple-100 text-purple-700' },
+  { id: 'b2b',         label: 'B2B',            color: 'bg-teal-100 text-teal-700' },
   { id: 'cold',        label: 'Cold',           color: 'bg-slate-100 text-slate-600' },
   { id: 'warm',        label: 'Warm',           color: 'bg-orange-100 text-orange-700' },
   { id: 'hot',         label: 'Hot',            color: 'bg-red-100 text-red-700' },
-  { id: 'b2b',         label: 'B2B',            color: 'bg-teal-100 text-teal-700' },
   { id: 'converted',   label: 'Converted',      color: 'bg-green-100 text-green-700' },
-  { id: 'registered',  label: 'Registered',     color: 'bg-emerald-100 text-emerald-700' },
   { id: 'closed',      label: 'Closed',         color: 'bg-gray-200 text-gray-500' },
-  { id: 'lost',        label: 'Lost',           color: 'bg-rose-100 text-rose-600' },
+];
+
+const LEGACY_STATUSES = [
+  { id: 'not_interested', label: 'Not Interested (Legacy)',         color: 'bg-stone-200 text-stone-800' },
+  { id: 'cnr',            label: 'Could Not Reach / CNR (Legacy)',  color: 'bg-amber-100 text-amber-800' },
+  { id: 'contacted',      label: 'Contacted (Legacy)',              color: 'bg-yellow-100 text-yellow-700' },
+  { id: 'qualified',      label: 'Qualified (Legacy)',              color: 'bg-purple-100 text-purple-700' },
+  { id: 'registered',     label: 'Registered (Legacy)',             color: 'bg-emerald-100 text-emerald-700' },
+  { id: 'lost',           label: 'Lost (Legacy)',                   color: 'bg-rose-100 text-rose-600' },
+];
+
+const ALL_STATUSES = [
+  { id: 'all', label: 'All Statuses', color: 'bg-gray-100 text-gray-600' },
+  ...CURRENT_STATUSES,
+  ...LEGACY_STATUSES,
 ];
 
 const STATUS_COLOR = {
-  enquiry:    'bg-blue-100 text-blue-700',
-  job_enquiry:'bg-indigo-100 text-indigo-700',
-  contacted:  'bg-yellow-100 text-yellow-700',
-  qualified:  'bg-purple-100 text-purple-700',
-  cold:       'bg-slate-100 text-slate-600',
-  warm:       'bg-orange-100 text-orange-700',
-  hot:        'bg-red-100 text-red-700',
-  b2b:        'bg-teal-100 text-teal-700',
-  converted:  'bg-green-100 text-green-700',
-  registered: 'bg-emerald-100 text-emerald-700',
-  closed:     'bg-gray-200 text-gray-500',
-  lost:       'bg-rose-100 text-rose-600',
+  enquiry:        'bg-blue-100 text-blue-700',
+  job_enquiry:    'bg-indigo-100 text-indigo-700',
+  contacted:      'bg-yellow-100 text-yellow-700',
+  qualified:      'bg-purple-100 text-purple-700',
+  cold:           'bg-slate-100 text-slate-600',
+  warm:           'bg-orange-100 text-orange-700',
+  hot:            'bg-red-100 text-red-700',
+  b2b:            'bg-teal-100 text-teal-700',
+  converted:      'bg-green-100 text-green-700',
+  registered:     'bg-emerald-100 text-emerald-700',
+  closed:         'bg-gray-200 text-gray-500',
+  lost:           'bg-rose-100 text-rose-600',
+  not_interested: 'bg-stone-200 text-stone-800 border border-stone-300 font-semibold',
+  'not interested':'bg-stone-200 text-stone-800 border border-stone-300 font-semibold',
+  cnr:            'bg-amber-100 text-amber-800 border border-amber-200 font-semibold',
+  'could not reach':'bg-amber-100 text-amber-800 border border-amber-200 font-semibold',
 };
 
 const SOURCE_OPTIONS = [
@@ -295,6 +309,15 @@ export default function LeadCommandCentre() {
     setSearch(v);
     clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => { setPage(1); setDebouncedSearch(v); }, 400);
+  }, []);
+
+  // Status change handler (ensures legacy/terminal statuses don't conflict with "Active Pipeline Only")
+  const handleStatusChange = useCallback((newStatus) => {
+    setFilterStatus(newStatus);
+    if (['not_interested', 'cnr', 'closed', 'converted', 'lost', 'registered'].includes(newStatus)) {
+      setFilterActivePipeline(false);
+    }
+    setPage(1);
   }, []);
 
   // ── Auth fetch ─────────────────────────────────────────────────────────────
@@ -880,6 +903,57 @@ export default function LeadCommandCentre() {
                 </div>
               </div>
 
+              {/* Legacy / Cleanup Status Quick Filter Strip */}
+              <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-gray-100">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                  <Layers size={13} className="text-stone-500" />
+                  Legacy Historical Statuses:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange(filterStatus === 'not_interested' ? 'all' : 'not_interested')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                    filterStatus === 'not_interested'
+                      ? 'bg-stone-800 text-white border-stone-900 shadow-sm ring-2 ring-stone-400'
+                      : 'bg-stone-100 text-stone-700 border-stone-300 hover:bg-stone-200'
+                  }`}
+                  title="Filter leads marked as Not Interested in legacy CRM"
+                >
+                  <Ban size={12} className={filterStatus === 'not_interested' ? 'text-stone-300' : 'text-stone-500'} />
+                  Not Interested (Legacy)
+                  {filterStatus === 'not_interested' && (
+                    <span className="ml-1 text-[10px] bg-stone-600 px-1.5 py-0.2 rounded font-black">ACTIVE</span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange(filterStatus === 'cnr' ? 'all' : 'cnr')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                    filterStatus === 'cnr'
+                      ? 'bg-amber-800 text-white border-amber-900 shadow-sm ring-2 ring-amber-400'
+                      : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                  }`}
+                  title="Filter leads marked as Could Not Reach (CNR) in legacy CRM"
+                >
+                  <Phone size={12} className={filterStatus === 'cnr' ? 'text-amber-300' : 'text-amber-600'} />
+                  Could Not Reach / CNR (Legacy)
+                  {filterStatus === 'cnr' && (
+                    <span className="ml-1 text-[10px] bg-amber-600 px-1.5 py-0.2 rounded font-black">ACTIVE</span>
+                  )}
+                </button>
+
+                {filterStatus !== 'all' && (filterStatus === 'not_interested' || filterStatus === 'cnr') && (
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange('all')}
+                    className="text-xs text-indigo-600 hover:text-indigo-800 underline font-semibold ml-2"
+                  >
+                    Reset Status Filter
+                  </button>
+                )}
+              </div>
+
               {/* Grid filters */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {/* Specific Employee */}
@@ -908,12 +982,20 @@ export default function LeadCommandCentre() {
                 {/* Status */}
                 <select
                   value={filterStatus}
-                  onChange={e => { setFilterStatus(e.target.value); setPage(1); }}
+                  onChange={e => handleStatusChange(e.target.value)}
                   className="px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-800 focus:outline-none focus:border-indigo-500 bg-white"
                 >
-                  {ALL_STATUSES.map(s => (
-                    <option key={s.id} value={s.id}>{s.label}</option>
-                  ))}
+                  <option value="all">All Statuses</option>
+                  <optgroup label="Active / Standard Pipeline">
+                    {CURRENT_STATUSES.map(s => (
+                      <option key={s.id} value={s.id}>{s.label}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Legacy / Historical Statuses">
+                    {LEGACY_STATUSES.map(s => (
+                      <option key={s.id} value={s.id}>{s.label}</option>
+                    ))}
+                  </optgroup>
                 </select>
 
                 {/* Priority */}
