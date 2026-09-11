@@ -316,21 +316,73 @@ export default function LeadCommandCentre() {
     return res;
   }, [refreshAccessToken]);
 
-  // ── Fetch staff (once) ────────────────────────────────────────────────────
+  // ── Fetch staff ───────────────────────────────────────────────────────────
+  const [staffSearch, setStaffSearch] = useState('');
+
   useEffect(() => {
     if (authLoading || !accessToken) return;
     const load = async () => {
       try {
-        const res = await authFetch(`${API_BASE_URL}/employees/list/?include_inactive=true`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const arr = Array.isArray(data) ? data : (data.results || data.employees || []);
-        setAllStaff(arr);
-        setActiveStaff(arr.filter(s => s.is_active !== false));
-      } catch { /* ignore */ }
+        let employees = [];
+        let available = [];
+
+        // 1. Fetch available-users (specifically for lead assignment)
+        try {
+          const availRes = await authFetch(`${API_BASE_URL}/leads/available-users/?team=all`);
+          if (availRes.ok) {
+            const availData = await availRes.json();
+            available = Array.isArray(availData) ? availData : (availData.results || availData.users || []);
+          }
+        } catch (e) {
+          console.warn('Could not fetch available-users:', e);
+        }
+
+        // 2. Fetch full employee list (active + inactive)
+        try {
+          const empRes = await authFetch(`${API_BASE_URL}/employees/list/?include_inactive=true`);
+          if (empRes.ok) {
+            const empData = await empRes.json();
+            employees = Array.isArray(empData) ? empData : (empData.results || empData.employees || []);
+          }
+        } catch (e) {
+          console.warn('Could not fetch employees list:', e);
+        }
+
+        // 3. Fallback: try alternative employee endpoints if still empty
+        if (employees.length === 0) {
+          try {
+            const empRes2 = await authFetch(`${API_BASE_URL}/employees/`);
+            if (empRes2.ok) {
+              const empData2 = await empRes2.json();
+              employees = Array.isArray(empData2) ? empData2 : (empData2.results || empData2.employees || []);
+            }
+          } catch { /* ignore */ }
+        }
+
+        // Merge all staff for the filters
+        const combinedAll = [...employees];
+        available.forEach(u => {
+          if (!combinedAll.some(e => String(e.id) === String(u.id))) {
+            combinedAll.push(u);
+          }
+        });
+
+        // Determine active staff for transfer assignment
+        let activeOnly = [];
+        if (available.length > 0) {
+          activeOnly = available;
+        } else {
+          activeOnly = combinedAll.filter(s => s.is_active !== false);
+        }
+
+        setAllStaff(combinedAll.length > 0 ? combinedAll : activeOnly);
+        setActiveStaff(activeOnly);
+      } catch (err) {
+        console.error('Critical staff load error:', err);
+      }
     };
     load();
-  }, [authLoading, accessToken]); // eslint-disable-line
+  }, [authLoading, accessToken, authFetch]);
 
   // ── Fetch global KPI stats across whole database ───────────────────────────
   const fetchKpiStats = useCallback(async () => {
@@ -1352,44 +1404,74 @@ export default function LeadCommandCentre() {
               {drawerStep === 1 && (
                 <div>
                   <h3 className="text-base font-bold text-gray-900 mb-1">Select Target Counsellor</h3>
-                  <p className="text-sm text-gray-500 mb-4">
+                  <p className="text-sm text-gray-500 mb-3">
                     Choose the active admission counsellor or manager to receive these {selectedCount.toLocaleString()} leads.
                   </p>
 
-                  <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                  {/* Quick counsellor search */}
+                  <div className="relative mb-3">
+                    <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search counsellor by name, role, email..."
+                      value={staffSearch}
+                      onChange={e => setStaffSearch(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 font-medium"
+                    />
+                  </div>
+
+                  <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
                     {activeStaff.length === 0 ? (
-                      <div className="p-8 text-center text-gray-400 text-sm">No active staff members found</div>
+                      <div className="p-8 text-center bg-gray-50 rounded-2xl border border-gray-200 text-gray-500 text-sm">
+                        <Users size={32} className="mx-auto mb-2 opacity-40 text-gray-400" />
+                        <p className="font-bold">No active counsellors found</p>
+                        <p className="text-xs text-gray-400 mt-1">Please verify team permissions or refresh the page.</p>
+                      </div>
                     ) : (
-                      activeStaff.map(s => {
-                        const isSelected = String(s.id) === String(targetStaffId);
-                        return (
-                          <button
-                            key={s.id}
-                            onClick={() => setTargetStaffId(String(s.id))}
-                            className={`w-full flex items-center justify-between p-3.5 rounded-xl border-2 text-left transition-all duration-150 ${
-                              isSelected ? 'border-indigo-600 bg-indigo-50/80 shadow-sm' : 'border-gray-200 hover:border-gray-300 bg-white'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
-                                isSelected ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'
-                              }`}>
-                                {(s.first_name?.[0] || s.username?.[0] || '?').toUpperCase()}
+                      activeStaff
+                        .filter(s => {
+                          if (!staffSearch.trim()) return true;
+                          const q = staffSearch.toLowerCase();
+                          return (
+                            (s.first_name || '').toLowerCase().includes(q) ||
+                            (s.last_name || '').toLowerCase().includes(q) ||
+                            (s.username || '').toLowerCase().includes(q) ||
+                            (s.email || '').toLowerCase().includes(q) ||
+                            (s.role || '').toLowerCase().includes(q)
+                          );
+                        })
+                        .map(s => {
+                          const isSelected = String(s.id) === String(targetStaffId);
+                          return (
+                            <button
+                              key={s.id}
+                              onClick={() => setTargetStaffId(String(s.id))}
+                              className={`w-full flex items-center justify-between p-3.5 rounded-xl border-2 text-left transition-all duration-150 ${
+                                isSelected ? 'border-indigo-600 bg-indigo-50/80 shadow-sm' : 'border-gray-200 hover:border-gray-300 bg-white'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
+                                  isSelected ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {(s.first_name?.[0] || s.username?.[0] || '?').toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-gray-900 text-sm">{staffDisplayName(s)}</div>
+                                  <div className="text-xs text-gray-400">
+                                    {s.role ? `${s.role} • ` : ''}{s.email || s.username}
+                                  </div>
+                                </div>
                               </div>
-                              <div>
-                                <div className="font-bold text-gray-900 text-sm">{staffDisplayName(s)}</div>
-                                <div className="text-xs text-gray-400">{s.email || s.username}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                                  Active
+                                </span>
+                                {isSelected && <CheckCircle2 size={18} className="text-indigo-600" />}
                               </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
-                                Active
-                              </span>
-                              {isSelected && <CheckCircle2 size={18} className="text-indigo-600" />}
-                            </div>
-                          </button>
-                        );
-                      })
+                            </button>
+                          );
+                        })
                     )}
                   </div>
                 </div>
