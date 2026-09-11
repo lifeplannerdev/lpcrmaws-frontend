@@ -8,7 +8,7 @@ import {
   Users, UserCheck, UserX, Search, Filter, X, ChevronDown, ChevronUp,
   ArrowRightLeft, CalendarClock, Phone, MessageSquare, Mail, AlertTriangle,
   CheckCircle2, Clock, Shuffle, Ban, Zap, Info, ExternalLink, RefreshCw,
-  Layers, Calendar, BarChart2, Shield
+  Layers, Calendar, BarChart2, Shield, Activity, XCircle, Flame, CheckSquare
 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -69,6 +69,15 @@ const FU_TYPE_OPTIONS = [
   { id: 'meeting',  label: 'Meeting',  Icon: Users },
 ];
 
+const CLOSE_REASONS = [
+  'Inactive Employee Cleanup',
+  'Cold / Unresponsive',
+  'Lost to Competitor / Not Interested',
+  'Invalid / Wrong / Duplicate Contact',
+  'Fee / Budget Constraint',
+  'Other Reason',
+];
+
 // ─── Follow-up Strategy Definitions ──────────────────────────────────────────
 const STRATEGIES = [
   {
@@ -84,7 +93,7 @@ const STRATEGIES = [
   {
     id: 'overdue',
     label: 'Mark All as Overdue (Priority Queue)',
-    sublabel: 'Sets follow-up to yesterday — these appear at the top of the counsellor\'s queue',
+    sublabel: 'Sets follow-up to yesterday — appears at top of counsellor\'s overdue list',
     Icon: AlertTriangle,
     color: 'border-gray-300 bg-gray-50',
     activeColor: 'border-amber-500 bg-amber-50',
@@ -94,7 +103,7 @@ const STRATEGIES = [
   {
     id: 'specific_date',
     label: 'Set One Specific Date for All',
-    sublabel: 'All selected leads will get a new follow-up on this date',
+    sublabel: 'All selected leads will get a new follow-up scheduled on this date',
     Icon: Calendar,
     color: 'border-gray-300 bg-gray-50',
     activeColor: 'border-blue-500 bg-blue-50',
@@ -151,7 +160,7 @@ const staffDisplayName = (s) => {
 // ─── Skeleton Row ─────────────────────────────────────────────────────────────
 const SkeletonRow = () => (
   <tr className="animate-pulse border-b border-gray-100">
-    {Array.from({ length: 8 }).map((_, i) => (
+    {Array.from({ length: 9 }).map((_, i) => (
       <td key={i} className="px-4 py-4">
         <div className="h-4 bg-gray-200 rounded w-3/4" />
       </td>
@@ -159,7 +168,7 @@ const SkeletonRow = () => (
   </tr>
 );
 
-// ─── Follow-up Strategy Panel (inside transfer drawer) ───────────────────────
+// ─── Follow-up Strategy Panel ─────────────────────────────────────────────────
 const StrategyPicker = ({ strategy, setStrategy, specificDate, setSpecificDate, staggerDays, setStaggerDays, selectedCount }) => (
   <div className="space-y-3">
     {STRATEGIES.map(({ id, label, sublabel, Icon, color, activeColor, iconColor, activeIconColor }) => {
@@ -177,7 +186,6 @@ const StrategyPicker = ({ strategy, setStrategy, specificDate, setSpecificDate, 
             </div>
           </button>
 
-          {/* Conditional extras */}
           {isActive && id === 'specific_date' && (
             <div className="mt-2 ml-10">
               <input
@@ -208,7 +216,7 @@ const StrategyPicker = ({ strategy, setStrategy, specificDate, setSpecificDate, 
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  MAIN PAGE COMPONENT
+//  MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 export default function LeadCommandCentre() {
   const navigate = useNavigate();
@@ -228,6 +236,18 @@ export default function LeadCommandCentre() {
   const [totalPages, setTotalPages] = useState(1);
   const [initialLoad, setInitialLoad] = useState(true);
 
+  // Global KPI Stats across whole database
+  const [kpiStats, setKpiStats] = useState({
+    total: 0,
+    activeStaffLeads: 0,
+    activePipelineLeads: 0,
+    inactiveStaffLeads: 0,
+    unassignedLeads: 0,
+    closedLeads: 0,
+    convertedLeads: 0,
+    loading: true,
+  });
+
   // Selection
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [selectAllMatching, setSelectAllMatching] = useState(false);
@@ -238,8 +258,9 @@ export default function LeadCommandCentre() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterSource, setFilterSource] = useState('all');
-  const [filterStaff, setFilterStaff] = useState('all');        // specific employee ID
-  const [filterEmpStatus, setFilterEmpStatus] = useState('all'); // all / active / inactive
+  const [filterStaff, setFilterStaff] = useState('all');          // specific employee ID
+  const [filterEmpStatus, setFilterEmpStatus] = useState('all');  // all / active / inactive / unassigned
+  const [filterActivePipeline, setFilterActivePipeline] = useState(false); // active staff pipeline (excl closed/converted)
   const [filterOverdue, setFilterOverdue] = useState(false);
   const [filterHasPending, setFilterHasPending] = useState(false);
   const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -249,7 +270,7 @@ export default function LeadCommandCentre() {
 
   // Transfer drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerStep, setDrawerStep] = useState(1); // 1=target, 2=strategy, 3=details, 4=preview
+  const [drawerStep, setDrawerStep] = useState(1);
   const [targetStaffId, setTargetStaffId] = useState('');
   const [strategy, setStrategy] = useState('keep');
   const [specificDate, setSpecificDate] = useState(getLocalDateString());
@@ -258,6 +279,15 @@ export default function LeadCommandCentre() {
   const [fuPriority, setFuPriority] = useState('medium');
   const [transferNote, setTransferNote] = useState('');
   const [transferring, setTransferring] = useState(false);
+
+  // Bulk Close modal
+  const [closeModalOpen, setCloseModalOpen] = useState(false);
+  const [closeMode, setCloseMode] = useState('selected'); // 'selected' | 'filter'
+  const [closeReason, setCloseReason] = useState(CLOSE_REASONS[0]);
+  const [customReason, setCustomReason] = useState('');
+  const [closeRemarks, setCloseRemarks] = useState('');
+  const [resolveFollowups, setResolveFollowups] = useState(true);
+  const [closing, setClosing] = useState(false);
 
   // Debounce search
   const debounceTimer = useRef(null);
@@ -302,82 +332,124 @@ export default function LeadCommandCentre() {
     load();
   }, [authLoading, accessToken]); // eslint-disable-line
 
+  // ── Fetch global KPI stats across whole database ───────────────────────────
+  const fetchKpiStats = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      // Try dedicated command-centre stats endpoint
+      const res = await authFetch(`${API_BASE_URL}/leads/command-centre-stats/`);
+      if (res.ok) {
+        const data = await res.json();
+        setKpiStats({
+          total: data.total ?? 0,
+          activeStaffLeads: data.active_staff_leads ?? 0,
+          activePipelineLeads: data.active_pipeline_leads ?? 0,
+          inactiveStaffLeads: data.inactive_staff_leads ?? 0,
+          unassignedLeads: data.unassigned_leads ?? 0,
+          closedLeads: data.closed_leads ?? 0,
+          convertedLeads: data.converted_leads ?? 0,
+          loading: false,
+        });
+        return;
+      }
+    } catch { /* ignore and fallback */ }
+
+    // Fallback: parallel fast count queries
+    try {
+      const [totalRes, activeRes, inactiveRes, unassignedRes, pipelineRes] = await Promise.all([
+        authFetch(`${API_BASE_URL}/leads/?page_size=1&include_all=true`),
+        authFetch(`${API_BASE_URL}/leads/?page_size=1&include_all=true&employee_status=active`),
+        authFetch(`${API_BASE_URL}/leads/?page_size=1&include_all=true&employee_status=inactive`),
+        authFetch(`${API_BASE_URL}/leads/?page_size=1&include_all=true&employee_status=unassigned`),
+        authFetch(`${API_BASE_URL}/leads/?page_size=1&include_all=true&employee_status=active&active_pipeline_only=true`),
+      ]);
+
+      const [totalData, activeData, inactiveData, unassignedData, pipelineData] = await Promise.all([
+        totalRes.ok ? totalRes.json() : { count: 0 },
+        activeRes.ok ? activeRes.json() : { count: 0 },
+        inactiveRes.ok ? inactiveRes.json() : { count: 0 },
+        unassignedRes.ok ? unassignedRes.json() : { count: 0 },
+        pipelineRes.ok ? pipelineRes.json() : { count: 0 },
+      ]);
+
+      setKpiStats({
+        total: totalData.count || 0,
+        activeStaffLeads: activeData.count || 0,
+        activePipelineLeads: pipelineData.count || 0,
+        inactiveStaffLeads: inactiveData.count || 0,
+        unassignedLeads: unassignedData.count || 0,
+        loading: false,
+      });
+    } catch {
+      setKpiStats(prev => ({ ...prev, loading: false }));
+    }
+  }, [authFetch, accessToken]);
+
+  useEffect(() => {
+    if (!authLoading && accessToken) {
+      fetchKpiStats();
+    }
+  }, [authLoading, accessToken, fetchKpiStats]);
+
   // ── Fetch leads ────────────────────────────────────────────────────────────
+  const fetchLeads = useCallback(async (signal = null) => {
+    setLoading(true);
+    try {
+      const params = { page, page_size: PAGE_SIZE, include_all: 'true' };
+
+      if (debouncedSearch)         params.search = debouncedSearch;
+      if (filterStatus !== 'all')  params.status = filterStatus.toUpperCase();
+      if (filterPriority !== 'all') params.priority = filterPriority.toUpperCase();
+      if (filterSource !== 'all')  params.source = filterSource;
+      if (filterDateFrom)          params.created_at__gte = filterDateFrom;
+      if (filterDateTo)            params.created_at__lte = filterDateTo;
+      if (filterCompany)           params.company = filterCompany;
+      if (filterOverdue)           params.overdue = 'true';
+      if (filterHasPending)        params.has_pending_followup = 'true';
+
+      // Staff status
+      if (filterStaff !== 'all') {
+        params.assigned_to = filterStaff;
+      } else if (filterEmpStatus !== 'all') {
+        params.employee_status = filterEmpStatus;
+      }
+
+      // Active Pipeline Only (active staff minus closed/converted/lost)
+      if (filterActivePipeline) {
+        params.active_pipeline_only = 'true';
+      }
+
+      const res = await authFetch(`${API_BASE_URL}/leads/?${new URLSearchParams(params)}`, {}, signal);
+      if (signal?.aborted) return;
+      if (!res.ok) throw new Error('Failed to fetch leads');
+
+      const data = await res.json();
+      const rawLeads = data.results?.leads || data.results || [];
+
+      setLeads(rawLeads);
+      setTotalCount(data.count || 0);
+      setTotalPages(Math.ceil((data.count || 0) / PAGE_SIZE));
+      setInitialLoad(false);
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.error(err);
+      toast.error('Failed to load leads');
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
+  }, [
+    authFetch, page, debouncedSearch,
+    filterStatus, filterPriority, filterSource, filterStaff,
+    filterEmpStatus, filterActivePipeline,
+    filterOverdue, filterHasPending, filterDateFrom, filterDateTo, filterCompany,
+  ]);
+
   useEffect(() => {
     if (authLoading || !accessToken) return;
     const controller = new AbortController();
-    const { signal } = controller;
-
-    const fetchLeads = async () => {
-      setLoading(true);
-      try {
-        const params = { page, page_size: PAGE_SIZE };
-
-        if (debouncedSearch)        params.search = debouncedSearch;
-        if (filterStatus !== 'all') params.status = filterStatus.toUpperCase();
-        if (filterPriority !== 'all') params.priority = filterPriority.toUpperCase();
-        if (filterSource !== 'all') params.source = filterSource;
-        if (filterDateFrom)         params.created_at__gte = filterDateFrom;
-        if (filterDateTo)           params.created_at__lte = filterDateTo;
-        if (filterCompany)          params.company = filterCompany;
-        if (filterOverdue)          params.overdue = 'true';
-        if (filterHasPending)       params.has_pending_followup = 'true';
-
-        // Staff filters
-        if (filterStaff !== 'all') {
-          params.assigned_to = filterStaff;
-        } else if (filterEmpStatus === 'inactive') {
-          // The backend returns all leads; we'll filter client-side by is_active
-          params.include_inactive_staff = 'true';
-        }
-
-        // Always fetch all-company leads for this view
-        params.include_all = 'true';
-
-        const res = await authFetch(`${API_BASE_URL}/leads/?${new URLSearchParams(params)}`, {}, signal);
-        if (signal.aborted) return;
-        if (!res.ok) throw new Error('Failed to fetch leads');
-
-        const data = await res.json();
-        const rawLeads = data.results?.leads || data.results || [];
-
-        // Client-side filter by employee activity status
-        let filtered = rawLeads;
-        if (filterEmpStatus === 'active') {
-          filtered = rawLeads.filter(l => {
-            const assignee = l.assigned_to;
-            if (!assignee) return false;
-            return assignee.is_active !== false;
-          });
-        } else if (filterEmpStatus === 'inactive') {
-          filtered = rawLeads.filter(l => {
-            const assignee = l.assigned_to;
-            if (!assignee) return true; // unassigned also shown in inactive filter
-            return assignee.is_active === false;
-          });
-        }
-
-        setLeads(filtered);
-        setTotalCount(data.count || 0);
-        setTotalPages(Math.ceil((data.count || 0) / PAGE_SIZE));
-        setInitialLoad(false);
-      } catch (err) {
-        if (err.name === 'AbortError') return;
-        console.error(err);
-        toast.error('Failed to load leads');
-      } finally {
-        if (!signal.aborted) setLoading(false);
-      }
-    };
-
-    fetchLeads();
+    fetchLeads(controller.signal);
     return () => controller.abort();
-  }, [
-    authLoading, authFetch,
-    page, debouncedSearch,
-    filterStatus, filterPriority, filterSource, filterStaff, filterEmpStatus,
-    filterOverdue, filterHasPending, filterDateFrom, filterDateTo, filterCompany,
-  ]);
+  }, [authLoading, accessToken, fetchLeads]);
 
   // ── Selection helpers ──────────────────────────────────────────────────────
   const selectedCount = selectAllMatching ? totalCount : selectedIds.size;
@@ -405,57 +477,21 @@ export default function LeadCommandCentre() {
 
   const clearSelection = () => { setSelectedIds(new Set()); setSelectAllMatching(false); };
 
-  // ── Stats (computed) ───────────────────────────────────────────────────────
-  const stats = useMemo(() => {
-    const active = leads.filter(l => l.assigned_to?.is_active !== false && l.assigned_to).length;
-    const inactive = leads.filter(l => l.assigned_to?.is_active === false).length;
-    const unassigned = leads.filter(l => !l.assigned_to).length;
-    return { active, inactive, unassigned };
-  }, [leads]);
+  // ── Active filter object helper (used for bulk assign & bulk close) ─────────
+  const currentFiltersObj = useMemo(() => ({
+    employee_status: filterEmpStatus,
+    active_pipeline_only: filterActivePipeline,
+    assigned_to: filterStaff,
+    status: filterStatus,
+    priority: filterPriority,
+    source: filterSource,
+    company: filterCompany,
+    created_at__gte: filterDateFrom,
+    created_at__lte: filterDateTo,
+  }), [filterEmpStatus, filterActivePipeline, filterStaff, filterStatus, filterPriority, filterSource, filterCompany, filterDateFrom, filterDateTo]);
 
   // ── Transfer logic ─────────────────────────────────────────────────────────
   const targetStaff = useMemo(() => activeStaff.find(s => String(s.id) === String(targetStaffId)), [activeStaff, targetStaffId]);
-
-  const buildTransferPayload = () => {
-    const lead_ids = selectAllMatching ? 'all_matching' : Array.from(selectedIds);
-
-    const base = {
-      lead_ids,
-      assigned_to_id: targetStaffId,
-      notes: transferNote || 'Bulk transfer via Lead Command Centre',
-    };
-
-    if (strategy === 'keep') {
-      return { ...base, followup_strategy: 'keep' };
-    } else if (strategy === 'overdue') {
-      return {
-        ...base,
-        followup_strategy: 'overdue',
-        followup_date: getYesterdayString(),
-        followup_type: fuType,
-        followup_priority: fuPriority,
-      };
-    } else if (strategy === 'specific_date') {
-      return {
-        ...base,
-        followup_strategy: 'specific_date',
-        followup_date: specificDate,
-        followup_type: fuType,
-        followup_priority: fuPriority,
-      };
-    } else if (strategy === 'stagger') {
-      return {
-        ...base,
-        followup_strategy: 'stagger',
-        stagger_days: staggerDays,
-        followup_type: fuType,
-        followup_priority: fuPriority,
-      };
-    } else if (strategy === 'none') {
-      return { ...base, followup_strategy: 'none' };
-    }
-    return base;
-  };
 
   const handleTransfer = async () => {
     if (!targetStaffId) { toast.error('Please select a target counsellor'); return; }
@@ -463,9 +499,19 @@ export default function LeadCommandCentre() {
 
     setTransferring(true);
     try {
-      const payload = buildTransferPayload();
+      const payload = {
+        lead_ids: selectAllMatching ? 'all_matching' : Array.from(selectedIds),
+        assigned_to_id: targetStaffId,
+        assignment_type: 'PRIMARY',
+        notes: transferNote || 'Bulk transfer via Lead Command Centre',
+        followup_strategy: strategy,
+        followup_date: strategy === 'specific_date' ? specificDate : undefined,
+        stagger_days: strategy === 'stagger' ? staggerDays : undefined,
+        followup_type: fuType,
+        followup_priority: fuPriority,
+        filters: currentFiltersObj,
+      };
 
-      // Step 1: Bulk assign
       const res = await authFetch(`${API_BASE_URL}/leads/bulk-assign/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -477,11 +523,6 @@ export default function LeadCommandCentre() {
         throw new Error(err.detail || err.error || 'Transfer failed');
       }
 
-      // Step 2: If strategy requires new follow-ups and backend doesn't handle it,
-      // the payload fields are included in the request above. Most implementations
-      // handle this server-side. If follow-ups need a separate call, it can be
-      // added here.
-
       toast.success(`✅ ${selectedCount} leads transferred to ${staffDisplayName(targetStaff)}`);
       setDrawerOpen(false);
       setDrawerStep(1);
@@ -490,14 +531,64 @@ export default function LeadCommandCentre() {
       setTargetStaffId('');
       setStrategy('keep');
 
-      // Refresh leads
-      setPage(1);
-      setInitialLoad(true);
+      // Refresh both stats and leads list
+      fetchKpiStats();
+      fetchLeads();
     } catch (err) {
       console.error(err);
       toast.error(err.message || 'Transfer failed. Please try again.');
     } finally {
       setTransferring(false);
+    }
+  };
+
+  // ── Bulk Close logic ───────────────────────────────────────────────────────
+  const countToClose = closeMode === 'filter' ? totalCount : selectedCount;
+
+  const handleBulkClose = async () => {
+    if (countToClose === 0) {
+      toast.error('No leads to close');
+      return;
+    }
+
+    setClosing(true);
+    try {
+      const finalReason = closeReason === 'Other Reason' ? (customReason || 'Closed via Command Centre') : closeReason;
+      const payload = {
+        lead_ids: closeMode === 'filter' ? 'all_matching' : (selectAllMatching ? 'all_matching' : Array.from(selectedIds)),
+        reason: finalReason,
+        remarks: closeRemarks,
+        resolve_followups: resolveFollowups,
+        filters: currentFiltersObj,
+      };
+
+      const res = await authFetch(`${API_BASE_URL}/leads/bulk-close/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || err.error || 'Bulk close failed');
+      }
+
+      const data = await res.json().catch(() => ({}));
+      toast.success(`✅ ${data.message || `Closed ${countToClose} leads successfully`}`);
+
+      setCloseModalOpen(false);
+      clearSelection();
+      setCloseRemarks('');
+      setCustomReason('');
+
+      // Refresh both stats and leads list
+      fetchKpiStats();
+      fetchLeads();
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || 'Bulk close failed. Please try again.');
+    } finally {
+      setClosing(false);
     }
   };
 
@@ -507,22 +598,12 @@ export default function LeadCommandCentre() {
     hasPermission('leads:read_any') ||
     hasPermission('leads:read_tenant');
 
-  // Filter staff list for the employee filter dropdown
-  const staffFilterOptions = useMemo(() => [
-    { id: 'all', label: 'All Employees', isActive: null },
-    ...allStaff.map(s => ({
-      id: s.id,
-      label: staffDisplayName(s),
-      isActive: s.is_active !== false,
-    })),
-  ], [allStaff]);
-
-  // Apply filterEmpStatus to the staffFilterOptions for display
-  const visibleStaffOptions = useMemo(() => {
-    if (filterEmpStatus === 'active') return staffFilterOptions.filter(s => s.id === 'all' || s.isActive === true);
-    if (filterEmpStatus === 'inactive') return staffFilterOptions.filter(s => s.id === 'all' || s.isActive === false);
-    return staffFilterOptions;
-  }, [staffFilterOptions, filterEmpStatus]);
+  // Staff options grouped for dropdown
+  const groupedStaff = useMemo(() => {
+    const active = allStaff.filter(s => s.is_active !== false);
+    const inactive = allStaff.filter(s => s.is_active === false);
+    return { active, inactive };
+  }, [allStaff]);
 
   const pageAllSelected = leads.length > 0 && leads.every(l => selectedIds.has(l.id));
   const pagePartialSelected = leads.some(l => selectedIds.has(l.id)) && !pageAllSelected;
@@ -561,14 +642,14 @@ export default function LeadCommandCentre() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 leading-tight">Lead Command Centre</h1>
-                <p className="text-sm text-gray-500">Manage &amp; transfer leads across all employees — past and present</p>
+                <p className="text-sm text-gray-500">Global lead inventory, inactive staff reassignment &amp; mass closure</p>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => { setInitialLoad(true); setPage(1); }}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:text-indigo-700 transition-all"
+              onClick={() => { fetchKpiStats(); setPage(1); fetchLeads(); }}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:text-indigo-700 transition-all shadow-sm"
             >
               <RefreshCw size={16} />
               Refresh
@@ -583,93 +664,192 @@ export default function LeadCommandCentre() {
           </div>
         </div>
 
-        {/* ── Stats Row ──────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          {[
-            { label: 'Total Leads', value: totalCount, icon: Users, color: 'from-violet-500 to-indigo-600', textColor: 'text-white' },
-            { label: 'Selected', value: selectedCount, icon: CheckCircle2, color: 'from-emerald-500 to-teal-600', textColor: 'text-white' },
-            { label: 'Inactive-Staff Leads', value: stats.inactive, icon: UserX, color: 'from-amber-500 to-orange-600', textColor: 'text-white' },
-            { label: 'Unassigned', value: stats.unassigned, icon: Zap, color: 'from-rose-500 to-red-600', textColor: 'text-white' },
-          ].map(({ label, value, icon: Icon, color, textColor }) => (
-            <div key={label} className={`bg-gradient-to-br ${color} rounded-2xl p-4 shadow-md`}>
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-semibold ${textColor} opacity-80 uppercase tracking-wide`}>{label}</span>
-                <Icon size={18} className={`${textColor} opacity-70`} />
-              </div>
-              <div className={`text-3xl font-black ${textColor}`}>{value.toLocaleString()}</div>
+        {/* ── KPI Cards Row (5 Accurate Global Counts + 1-Click Filter) ─────── */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+          {/* 1. Total Leads */}
+          <button
+            onClick={() => { setFilterEmpStatus('all'); setFilterActivePipeline(false); setPage(1); }}
+            className={`text-left p-4 rounded-2xl shadow-md transition-all duration-200 bg-gradient-to-br from-slate-800 to-indigo-900 text-white hover:shadow-lg ${
+              filterEmpStatus === 'all' && !filterActivePipeline ? 'ring-4 ring-indigo-400 scale-[1.02]' : 'opacity-90 hover:opacity-100'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-indigo-200">Total Leads</span>
+              <Users size={18} className="text-indigo-300" />
             </div>
-          ))}
+            <div className="text-2xl sm:text-3xl font-black">{kpiStats.total.toLocaleString()}</div>
+            <div className="text-[11px] text-indigo-200 mt-1">All database leads</div>
+          </button>
+
+          {/* 2. Active Staff Leads */}
+          <button
+            onClick={() => { setFilterEmpStatus('active'); setFilterActivePipeline(false); setPage(1); }}
+            className={`text-left p-4 rounded-2xl shadow-md transition-all duration-200 bg-gradient-to-br from-blue-600 to-indigo-700 text-white hover:shadow-lg ${
+              filterEmpStatus === 'active' && !filterActivePipeline ? 'ring-4 ring-blue-300 scale-[1.02]' : 'opacity-90 hover:opacity-100'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-200">Active Staff</span>
+              <UserCheck size={18} className="text-blue-200" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black">{kpiStats.activeStaffLeads.toLocaleString()}</div>
+            <div className="text-[11px] text-blue-100 mt-1">Assigned to active team</div>
+          </button>
+
+          {/* 3. Active Pipeline (Active Staff - Excl Closed/Converted) */}
+          <button
+            onClick={() => { setFilterEmpStatus('active'); setFilterActivePipeline(true); setPage(1); }}
+            className={`text-left p-4 rounded-2xl shadow-md transition-all duration-200 bg-gradient-to-br from-emerald-600 to-teal-700 text-white hover:shadow-lg ${
+              filterEmpStatus === 'active' && filterActivePipeline ? 'ring-4 ring-emerald-300 scale-[1.02]' : 'opacity-90 hover:opacity-100'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-200">Active Pipeline</span>
+              <Activity size={18} className="text-emerald-200" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black">{kpiStats.activePipelineLeads.toLocaleString()}</div>
+            <div className="text-[11px] text-emerald-100 mt-1">Active staff • Non-closed</div>
+          </button>
+
+          {/* 4. Inactive-Staff Leads */}
+          <button
+            onClick={() => { setFilterEmpStatus('inactive'); setFilterActivePipeline(false); setPage(1); }}
+            className={`text-left p-4 rounded-2xl shadow-md transition-all duration-200 bg-gradient-to-br from-amber-500 to-orange-600 text-white hover:shadow-lg ${
+              filterEmpStatus === 'inactive' ? 'ring-4 ring-amber-300 scale-[1.02]' : 'opacity-90 hover:opacity-100'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-100">Inactive Staff</span>
+              <UserX size={18} className="text-amber-200" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black">{kpiStats.inactiveStaffLeads.toLocaleString()}</div>
+            <div className="text-[11px] text-amber-100 mt-1">Needs action / transfer</div>
+          </button>
+
+          {/* 5. Unassigned Leads */}
+          <button
+            onClick={() => { setFilterEmpStatus('unassigned'); setFilterActivePipeline(false); setPage(1); }}
+            className={`text-left p-4 rounded-2xl shadow-md transition-all duration-200 bg-gradient-to-br from-rose-500 to-red-600 text-white hover:shadow-lg ${
+              filterEmpStatus === 'unassigned' ? 'ring-4 ring-rose-300 scale-[1.02]' : 'opacity-90 hover:opacity-100'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-rose-100">Unassigned</span>
+              <Zap size={18} className="text-rose-200" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black">{kpiStats.unassignedLeads.toLocaleString()}</div>
+            <div className="text-[11px] text-rose-100 mt-1">No owner assigned</div>
+          </button>
         </div>
 
         {/* ── Filters Panel ──────────────────────────────────────────────── */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-md mb-6 overflow-hidden">
-          <button
-            onClick={() => setShowFilters(f => !f)}
-            className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
-              <Filter size={16} />
-              Filters &amp; Search
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+            <div className="flex items-center gap-2 text-sm font-bold text-gray-800">
+              <Filter size={18} className="text-indigo-600" />
+              Filter &amp; Query Controls
+              {filterActivePipeline && (
+                <span className="ml-2 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  Active Pipeline Filter Applied
+                </span>
+              )}
             </div>
-            {showFilters ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
-          </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => { setCloseMode('filter'); setCloseModalOpen(true); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-100 transition-all"
+                title="Close all open leads matching currently applied filters"
+              >
+                <Ban size={13} />
+                Bulk Close Filtered Leads
+              </button>
+              <button
+                onClick={() => setShowFilters(f => !f)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                {showFilters ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </button>
+            </div>
+          </div>
 
           {showFilters && (
-            <div className="px-6 pb-6 border-t border-gray-100 pt-4 space-y-4">
+            <div className="p-6 space-y-4">
               {/* Search */}
               <div className="relative">
                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by name, phone, email..."
+                  placeholder="Search by name, phone, email, campaign..."
                   value={search}
                   onChange={e => handleSearchChange(e.target.value)}
                   className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 text-gray-900 font-medium text-sm"
                 />
               </div>
 
-              {/* Employee Status — the key filter */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-gray-600 whitespace-nowrap">Employee Status:</span>
+              {/* Employee Status Buttons */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Employee Status:</span>
                 <div className="flex gap-2 flex-wrap">
                   {[
-                    { id: 'all', label: 'All Employees', icon: Users },
-                    { id: 'active', label: 'Active Only', icon: UserCheck },
-                    { id: 'inactive', label: 'Inactive Only', icon: UserX },
-                  ].map(({ id, label, icon: Icon }) => (
-                    <button
-                      key={id}
-                      onClick={() => { setFilterEmpStatus(id); setFilterStaff('all'); setPage(1); }}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border-2 transition-all ${
-                        filterEmpStatus === id
-                          ? id === 'inactive'
-                            ? 'bg-amber-100 text-amber-700 border-amber-400'
-                            : id === 'active'
-                            ? 'bg-green-100 text-green-700 border-green-400'
-                            : 'bg-indigo-100 text-indigo-700 border-indigo-400'
-                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-400'
-                      }`}
-                    >
-                      <Icon size={14} />
-                      {label}
-                    </button>
-                  ))}
+                    { id: 'all', label: 'All Leads', icon: Users, isPipeline: false },
+                    { id: 'active', label: 'Active Staff', icon: UserCheck, isPipeline: false },
+                    { id: 'active', label: 'Active Pipeline (Excl. Closed/Converted)', icon: Activity, isPipeline: true },
+                    { id: 'inactive', label: 'Inactive Staff', icon: UserX, isPipeline: false },
+                    { id: 'unassigned', label: 'Unassigned', icon: Zap, isPipeline: false },
+                  ].map(({ id, label, icon: Icon, isPipeline }) => {
+                    const isSelected = filterEmpStatus === id && filterActivePipeline === isPipeline;
+                    return (
+                      <button
+                        key={`${id}-${isPipeline}`}
+                        onClick={() => {
+                          setFilterEmpStatus(id);
+                          setFilterActivePipeline(isPipeline);
+                          setFilterStaff('all');
+                          setPage(1);
+                        }}
+                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border-2 transition-all ${
+                          isSelected
+                            ? isPipeline
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-500 shadow-sm'
+                              : id === 'inactive'
+                              ? 'bg-amber-100 text-amber-800 border-amber-500 shadow-sm'
+                              : id === 'unassigned'
+                              ? 'bg-rose-100 text-rose-800 border-rose-500 shadow-sm'
+                              : 'bg-indigo-100 text-indigo-800 border-indigo-500 shadow-sm'
+                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-400'
+                        }`}
+                      >
+                        <Icon size={14} />
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Grid filters */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {/* Employee */}
+                {/* Specific Employee */}
                 <select
                   value={filterStaff}
                   onChange={e => { setFilterStaff(e.target.value); setPage(1); }}
                   className="px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm font-medium text-gray-800 focus:outline-none focus:border-indigo-500 bg-white"
                 >
-                  {visibleStaffOptions.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.id === 'all' ? 'All Employees' : `${s.label}${s.isActive === false ? ' 🔴' : ' 🟢'}`}
-                    </option>
-                  ))}
+                  <option value="all">All Employees</option>
+                  {groupedStaff.active.length > 0 && (
+                    <optgroup label={`Active Employees (${groupedStaff.active.length})`}>
+                      {groupedStaff.active.map(s => (
+                        <option key={s.id} value={s.id}>🟢 {staffDisplayName(s)}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {groupedStaff.inactive.length > 0 && (
+                    <optgroup label={`Inactive Employees (${groupedStaff.inactive.length})`}>
+                      {groupedStaff.inactive.map(s => (
+                        <option key={s.id} value={s.id}>🔴 {staffDisplayName(s)} (Inactive)</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
 
                 {/* Status */}
@@ -720,7 +900,7 @@ export default function LeadCommandCentre() {
               </div>
 
               {/* Date range + toggles */}
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3 pt-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Created:</span>
                   <input type="date" value={filterDateFrom} onChange={e => { setFilterDateFrom(e.target.value); setPage(1); }}
@@ -730,29 +910,39 @@ export default function LeadCommandCentre() {
                     className="px-3 py-2 border-2 border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:border-indigo-500" />
                 </div>
 
+                <label className="flex items-center gap-2 px-3 py-2 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-300 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={filterActivePipeline}
+                    onChange={e => { setFilterActivePipeline(e.target.checked); setPage(1); }}
+                    className="w-4 h-4 rounded text-emerald-600 accent-emerald-600"
+                  />
+                  <span className="text-xs font-bold text-gray-700">Hide Closed &amp; Converted</span>
+                </label>
+
                 <label className="flex items-center gap-2 px-3 py-2 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-red-50 hover:border-red-300 transition-all">
                   <input type="checkbox" checked={filterOverdue} onChange={e => { setFilterOverdue(e.target.checked); setPage(1); }}
-                    className="w-4 h-4 rounded text-red-600" />
-                  <span className="text-sm font-semibold text-gray-700">Overdue Only</span>
+                    className="w-4 h-4 rounded text-red-600 accent-red-600" />
+                  <span className="text-xs font-bold text-gray-700">Overdue Only</span>
                 </label>
 
                 <label className="flex items-center gap-2 px-3 py-2 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-amber-50 hover:border-amber-300 transition-all">
                   <input type="checkbox" checked={filterHasPending} onChange={e => { setFilterHasPending(e.target.checked); setPage(1); }}
-                    className="w-4 h-4 rounded text-amber-600" />
-                  <span className="text-sm font-semibold text-gray-700">Has Pending Follow-up</span>
+                    className="w-4 h-4 rounded text-amber-600 accent-amber-600" />
+                  <span className="text-xs font-bold text-gray-700">Has Pending Follow-up</span>
                 </label>
 
                 <button
                   onClick={() => {
                     setSearch(''); setDebouncedSearch('');
                     setFilterStatus('all'); setFilterPriority('all'); setFilterSource('all');
-                    setFilterStaff('all'); setFilterEmpStatus('all');
+                    setFilterStaff('all'); setFilterEmpStatus('all'); setFilterActivePipeline(false);
                     setFilterOverdue(false); setFilterHasPending(false);
                     setFilterDateFrom(''); setFilterDateTo('');
                     setFilterCompany('');
                     setPage(1);
                   }}
-                  className="px-4 py-2 text-sm font-semibold text-rose-700 bg-rose-50 border-2 border-rose-200 rounded-xl hover:bg-rose-100 transition-all"
+                  className="px-4 py-2 text-xs font-bold text-rose-700 bg-rose-50 border-2 border-rose-200 rounded-xl hover:bg-rose-100 transition-all ml-auto"
                 >
                   Clear All Filters
                 </button>
@@ -761,12 +951,12 @@ export default function LeadCommandCentre() {
           )}
         </div>
 
-        {/* ── Selection action bar ────────────────────────────────────────── */}
+        {/* ── Selection Action Bar ────────────────────────────────────────── */}
         {selectedCount > 0 && (
-          <div className="bg-gradient-to-r from-violet-600 to-indigo-700 rounded-2xl p-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg shadow-indigo-200/50">
+          <div className="bg-gradient-to-r from-violet-700 via-indigo-700 to-slate-800 rounded-2xl p-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xl shadow-indigo-200/50 animate-fadeIn">
             <div className="flex items-center gap-3 text-white">
-              <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
-                <CheckCircle2 size={20} className="text-white" />
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                <CheckCircle2 size={22} className="text-white" />
               </div>
               <div>
                 <div className="font-bold text-base">{selectedCount.toLocaleString()} lead{selectedCount !== 1 ? 's' : ''} selected</div>
@@ -780,16 +970,23 @@ export default function LeadCommandCentre() {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5 flex-wrap">
               <button
                 onClick={clearSelection}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white bg-white/20 rounded-xl hover:bg-white/30 transition-all"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white/90 bg-white/10 rounded-xl hover:bg-white/20 transition-all"
               >
                 <X size={16} /> Clear
               </button>
               <button
+                onClick={() => { setCloseMode('selected'); setCloseModalOpen(true); }}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-rose-100 bg-rose-600/80 hover:bg-rose-600 border border-rose-400/30 rounded-xl transition-all shadow-sm"
+              >
+                <Ban size={16} />
+                Close Selected Leads
+              </button>
+              <button
                 onClick={() => { setDrawerOpen(true); setDrawerStep(1); }}
-                className="flex items-center gap-2 px-5 py-2 text-sm font-bold text-indigo-700 bg-white rounded-xl hover:bg-indigo-50 transition-all shadow-sm"
+                className="flex items-center gap-2 px-5 py-2 text-sm font-bold text-indigo-900 bg-white rounded-xl hover:bg-indigo-50 transition-all shadow-md"
               >
                 <ArrowRightLeft size={16} />
                 Transfer Leads
@@ -801,14 +998,15 @@ export default function LeadCommandCentre() {
         {/* ── Lead Table ──────────────────────────────────────────────────── */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
           {loading && (
-            <div className="text-center py-2 text-xs text-indigo-600 font-semibold animate-pulse border-b border-indigo-100 bg-indigo-50">
-              Fetching leads…
+            <div className="text-center py-2.5 text-xs text-indigo-700 font-bold animate-pulse border-b border-indigo-100 bg-indigo-50/80 flex items-center justify-center gap-2">
+              <RefreshCw size={14} className="animate-spin" />
+              Fetching leads from database…
             </div>
           )}
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-gradient-to-r from-slate-800 to-indigo-900 text-white">
+                <tr className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white">
                   <th className="px-4 py-4 w-10">
                     <input
                       type="checkbox"
@@ -829,9 +1027,9 @@ export default function LeadCommandCentre() {
                 ) : leads.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="text-center py-16 text-gray-400">
-                      <Users size={40} className="mx-auto mb-3 opacity-30" />
-                      <p className="font-semibold text-sm">No leads match your filters</p>
-                      <p className="text-xs mt-1">Try adjusting the employee status or status filter</p>
+                      <Users size={44} className="mx-auto mb-3 opacity-30" />
+                      <p className="font-bold text-base text-gray-600">No leads match your filters</p>
+                      <p className="text-xs text-gray-400 mt-1">Try switching to All Employees or resetting the status filter</p>
                     </td>
                   </tr>
                 ) : (
@@ -843,7 +1041,6 @@ export default function LeadCommandCentre() {
                     const statusKey = (lead.status || '').toLowerCase();
                     const statusColor = STATUS_COLOR[statusKey] || 'bg-gray-100 text-gray-500';
 
-                    // Border logic
                     let rowBorder = '';
                     if (isAssigneeInactive) rowBorder = 'border-l-4 border-l-amber-400';
                     if (lead.has_overdue_followup || lead.is_overdue) rowBorder = 'border-l-4 border-l-red-400';
@@ -851,7 +1048,7 @@ export default function LeadCommandCentre() {
                     return (
                       <tr
                         key={lead.id}
-                        className={`group transition-colors hover:bg-indigo-50/50 ${isSelected ? 'bg-indigo-50' : 'bg-white'} ${rowBorder}`}
+                        className={`group transition-colors hover:bg-indigo-50/50 ${isSelected ? 'bg-indigo-50/80' : 'bg-white'} ${rowBorder}`}
                       >
                         <td className="px-4 py-4">
                           <input
@@ -886,63 +1083,65 @@ export default function LeadCommandCentre() {
                         </td>
 
                         {/* Assigned to */}
-                        <td className="px-4 py-4 min-w-[160px]">
+                        <td className="px-4 py-4 min-w-[170px]">
                           {isUnassigned ? (
-                            <span className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
-                              <span className="w-2 h-2 rounded-full bg-gray-300 inline-block" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                              <Zap size={12} className="text-rose-500" />
                               Unassigned
                             </span>
                           ) : (
-                            <span className={`flex items-center gap-1.5 text-xs font-semibold ${isAssigneeInactive ? 'text-amber-700' : 'text-gray-700'}`}>
-                              <span className={`w-2 h-2 rounded-full inline-block flex-shrink-0 ${isAssigneeInactive ? 'bg-amber-400' : 'bg-green-400'}`} />
-                              <span className="leading-tight">
-                                {staffDisplayName(assignee)}
-                                {isAssigneeInactive && <span className="block text-xs text-amber-500 font-normal">Inactive</span>}
-                              </span>
-                            </span>
+                            <div className="flex items-center gap-1.5 text-xs font-semibold">
+                              <span className={`w-2 h-2 rounded-full inline-block flex-shrink-0 ${isAssigneeInactive ? 'bg-amber-500' : 'bg-green-500'}`} />
+                              <div>
+                                <span className={isAssigneeInactive ? 'text-amber-800' : 'text-gray-800'}>
+                                  {staffDisplayName(assignee)}
+                                </span>
+                                {isAssigneeInactive && (
+                                  <span className="block text-[10px] text-amber-600 font-bold uppercase tracking-wider">
+                                    Inactive Employee
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           )}
                         </td>
 
                         {/* Last follow-up */}
                         <td className="px-4 py-4 text-xs text-gray-500 whitespace-nowrap">
-                          {lead.last_followup_date ? (
-                            <div>
-                              <div className="font-medium text-gray-700">{formatDate(lead.last_followup_date)}</div>
-                              {lead.last_followup_status && (
-                                <span className={`text-xs ${lead.last_followup_status === 'pending' ? 'text-amber-600' : 'text-gray-400'}`}>
-                                  {lead.last_followup_status}
-                                </span>
-                              )}
-                            </div>
-                          ) : <span className="text-gray-300">—</span>}
+                          {formatDate(lead.last_follow_up_date || lead.last_followup?.follow_up_date)}
                         </td>
 
                         {/* Next follow-up */}
-                        <td className="px-4 py-4 text-xs whitespace-nowrap">
-                          {lead.next_followup_date ? (
-                            <div className={`font-semibold ${lead.is_overdue || lead.has_overdue_followup ? 'text-red-600' : 'text-gray-700'}`}>
-                              {formatDate(lead.next_followup_date)}
-                              {(lead.is_overdue || lead.has_overdue_followup) && (
-                                <div className="flex items-center gap-1 text-red-500 text-xs font-bold">
-                                  <AlertTriangle size={10} /> Overdue
-                                </div>
-                              )}
-                            </div>
-                          ) : <span className="text-gray-300">—</span>}
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          {lead.next_follow_up_date ? (
+                            <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md ${
+                              new Date(lead.next_follow_up_date) < new Date() ? 'bg-red-100 text-red-700' : 'bg-blue-50 text-blue-700'
+                            }`}>
+                              <Calendar size={11} />
+                              {formatDate(lead.next_follow_up_date)}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">None scheduled</span>
+                          )}
                         </td>
 
                         {/* Created */}
-                        <td className="px-4 py-4 text-xs text-gray-500 whitespace-nowrap">
-                          {lead.created_at ? formatDate(lead.created_at) : '—'}
+                        <td className="px-4 py-4 text-xs text-gray-400 whitespace-nowrap">
+                          {formatDate(lead.created_at)}
                         </td>
 
-                        {/* View */}
-                        <td className="px-4 py-4">
+                        {/* Actions */}
+                        <td className="px-4 py-4 text-right whitespace-nowrap">
                           <button
-                            onClick={() => navigate(`/leads/${lead.id}`)}
-                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors opacity-0 group-hover:opacity-100"
+                            onClick={() => {
+                              setSelectedIds(new Set([lead.id]));
+                              setSelectAllMatching(false);
+                              setDrawerOpen(true);
+                              setDrawerStep(1);
+                            }}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 px-2.5 py-1 rounded-lg hover:bg-indigo-50 transition-colors"
                           >
-                            View <ExternalLink size={12} />
+                            Transfer →
                           </button>
                         </td>
                       </tr>
@@ -953,149 +1152,255 @@ export default function LeadCommandCentre() {
             </table>
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50">
-              <div className="text-sm text-gray-500 font-medium">
-                Page <strong className="text-gray-800">{page}</strong> of <strong className="text-gray-800">{totalPages}</strong>
-                &nbsp;·&nbsp; {totalCount.toLocaleString()} total
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={page <= 1}
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                >
-                  ← Prev
-                </button>
-                <button
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                >
-                  Next →
-                </button>
-              </div>
+          {/* ── Pagination ─────────────────────────────────────────────────── */}
+          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
+            <div>
+              Showing <strong className="text-gray-800">{leads.length > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}</strong>–<strong className="text-gray-800">{Math.min(page * PAGE_SIZE, totalCount)}</strong> of <strong className="text-gray-800">{totalCount.toLocaleString()}</strong> leads
             </div>
-          )}
+            <div className="flex items-center gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                ← Prev
+              </button>
+              <span className="font-bold text-gray-700 px-2">Page {page} of {Math.max(1, totalPages)}</span>
+              <button
+                disabled={page >= totalPages}
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
         </div>
+
       </div>
 
-      {/* ════════════════════════════════════════════════════════════════════
-          TRANSFER DRAWER
-         ════════════════════════════════════════════════════════════════════ */}
-      {drawerOpen && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
-            onClick={() => !transferring && setDrawerOpen(false)}
-          />
-
-          {/* Drawer */}
-          <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[520px] bg-white shadow-2xl flex flex-col">
+      {/* ── Bulk Close Modal ─────────────────────────────────────────────────── */}
+      {closeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-100 animate-scaleUp">
             {/* Header */}
-            <div className="bg-gradient-to-r from-violet-700 to-indigo-800 px-6 py-5 flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-3 text-white">
-                <ArrowRightLeft size={22} />
+            <div className="px-6 py-5 bg-gradient-to-r from-rose-600 to-red-700 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
+                  <Ban size={22} className="text-white" />
+                </div>
                 <div>
-                  <h2 className="text-lg font-bold">Transfer Leads</h2>
-                  <p className="text-xs text-indigo-200">{selectedCount.toLocaleString()} leads selected</p>
+                  <h3 className="text-lg font-black leading-tight">Bulk Close Leads</h3>
+                  <p className="text-xs text-rose-100">Permanently close leads as per applied filter</p>
                 </div>
               </div>
+              <button onClick={() => setCloseModalOpen(false)} className="text-white/80 hover:text-white p-1 rounded-lg">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              {/* Alert / Summary */}
+              <div className="p-4 bg-rose-50 border-2 border-rose-200 rounded-2xl">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle size={20} className="text-rose-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-sm text-rose-900">
+                      You are about to close <span className="underline font-black">{countToClose.toLocaleString()}</span> lead{countToClose !== 1 ? 's' : ''}
+                    </div>
+                    <div className="text-xs text-rose-700 mt-1">
+                      {closeMode === 'filter'
+                        ? 'Targeting ALL leads matching current filter criteria.'
+                        : 'Targeting currently selected leads.'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Closure Reason Chips */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                  Closure Reason
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {CLOSE_REASONS.map(r => (
+                    <button
+                      key={r}
+                      onClick={() => setCloseReason(r)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition-all ${
+                        closeReason === r
+                          ? 'bg-rose-100 text-rose-800 border-rose-400'
+                          : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+                {closeReason === 'Other Reason' && (
+                  <input
+                    type="text"
+                    placeholder="Specify custom reason..."
+                    value={customReason}
+                    onChange={e => setCustomReason(e.target.value)}
+                    className="w-full mt-2 px-3.5 py-2 border-2 border-rose-200 rounded-xl text-sm focus:outline-none focus:border-rose-500"
+                  />
+                )}
+              </div>
+
+              {/* Remarks */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                  Audit Remarks (Optional)
+                </label>
+                <textarea
+                  value={closeRemarks}
+                  onChange={e => setCloseRemarks(e.target.value)}
+                  placeholder="e.g., Cleaned up inactive counsellor pipeline on management order."
+                  rows={3}
+                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:outline-none focus:border-rose-500 resize-none font-medium"
+                />
+              </div>
+
+              {/* Checkbox: Resolve Follow-ups */}
+              <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={resolveFollowups}
+                  onChange={e => setResolveFollowups(e.target.checked)}
+                  className="w-4 h-4 rounded text-rose-600 accent-rose-600"
+                />
+                <span className="text-xs font-bold text-gray-700">
+                  Cancel all pending follow-ups for these leads
+                </span>
+              </label>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
               <button
-                onClick={() => !transferring && setDrawerOpen(false)}
-                className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all"
+                onClick={() => setCloseModalOpen(false)}
+                disabled={closing}
+                className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 disabled:opacity-40"
               >
-                <X size={18} />
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkClose}
+                disabled={closing || countToClose === 0}
+                className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 hover:to-red-800 rounded-xl shadow-md disabled:opacity-50 transition-all"
+              >
+                {closing ? (
+                  <><RefreshCw size={16} className="animate-spin" /> Closing Leads…</>
+                ) : (
+                  <><Ban size={16} /> Confirm &amp; Close {countToClose.toLocaleString()} Leads</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Transfer Drawer ─────────────────────────────────────────────────── */}
+      {drawerOpen && (
+        <>
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 animate-fadeIn" onClick={() => setDrawerOpen(false)} />
+          <div className="fixed inset-y-0 right-0 max-w-xl w-full bg-white z-50 shadow-2xl flex flex-col animate-slideLeft">
+            {/* Drawer Header */}
+            <div className="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-violet-600 to-indigo-700 text-white flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
+                  <ArrowRightLeft size={20} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold leading-tight">Smart Lead Transfer</h2>
+                  <p className="text-xs text-indigo-200">Reassign {selectedCount.toLocaleString()} leads to an active counsellor</p>
+                </div>
+              </div>
+              <button onClick={() => setDrawerOpen(false)} className="p-2 text-white/80 hover:text-white rounded-xl hover:bg-white/10 transition-colors">
+                <X size={20} />
               </button>
             </div>
 
             {/* Step indicator */}
-            <div className="flex items-center px-6 py-3 bg-indigo-50 border-b border-indigo-100 gap-2 flex-shrink-0">
-              {['Target', 'Strategy', 'Details', 'Confirm'].map((label, i) => {
-                const step = i + 1;
-                const isCurrent = drawerStep === step;
-                const isDone = drawerStep > step;
-                return (
-                  <React.Fragment key={label}>
-                    <div className="flex items-center gap-1.5">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
-                        isCurrent ? 'bg-indigo-600 border-indigo-600 text-white'
-                        : isDone ? 'bg-emerald-500 border-emerald-500 text-white'
-                        : 'bg-white border-gray-300 text-gray-400'
-                      }`}>
-                        {isDone ? '✓' : step}
-                      </div>
-                      <span className={`text-xs font-semibold hidden sm:block ${isCurrent ? 'text-indigo-700' : isDone ? 'text-emerald-600' : 'text-gray-400'}`}>{label}</span>
-                    </div>
-                    {i < 3 && <div className={`flex-1 h-0.5 rounded ${drawerStep > step ? 'bg-emerald-400' : 'bg-gray-200'}`} />}
-                  </React.Fragment>
-                );
-              })}
+            <div className="px-6 py-3 bg-indigo-50/70 border-b border-indigo-100 flex items-center justify-between flex-shrink-0">
+              {[
+                { n: 1, label: 'Assignee' },
+                { n: 2, label: 'Strategy' },
+                { n: 3, label: 'Details' },
+                { n: 4, label: 'Confirm' },
+              ].map(({ n, label }) => (
+                <div key={n} className="flex items-center gap-2">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                    drawerStep === n
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : drawerStep > n
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-200 text-gray-500'
+                  }`}>
+                    {drawerStep > n ? '✓' : n}
+                  </div>
+                  <span className={`text-xs font-semibold ${drawerStep === n ? 'text-indigo-900' : 'text-gray-400'}`}>{label}</span>
+                </div>
+              ))}
             </div>
 
-            {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto px-6 py-6">
-
-              {/* ── Step 1: Target counsellor ────────────────────────────── */}
+            {/* Drawer Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Step 1: Target Counsellor */}
               {drawerStep === 1 && (
                 <div>
-                  <h3 className="text-base font-bold text-gray-900 mb-1">Choose Target Counsellor</h3>
-                  <p className="text-sm text-gray-500 mb-4">Select the active staff member to receive these leads.</p>
+                  <h3 className="text-base font-bold text-gray-900 mb-1">Select Target Counsellor</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Choose the active admission counsellor or manager to receive these {selectedCount.toLocaleString()} leads.
+                  </p>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
                     {activeStaff.length === 0 ? (
-                      <p className="text-sm text-gray-400 italic">No active staff found.</p>
+                      <div className="p-8 text-center text-gray-400 text-sm">No active staff members found</div>
                     ) : (
                       activeStaff.map(s => {
-                        const name = staffDisplayName(s);
                         const isSelected = String(s.id) === String(targetStaffId);
                         return (
                           <button
                             key={s.id}
                             onClick={() => setTargetStaffId(String(s.id))}
-                            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all ${
-                              isSelected
-                                ? 'border-indigo-500 bg-indigo-50 shadow-sm'
-                                : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
+                            className={`w-full flex items-center justify-between p-3.5 rounded-xl border-2 text-left transition-all duration-150 ${
+                              isSelected ? 'border-indigo-600 bg-indigo-50/80 shadow-sm' : 'border-gray-200 hover:border-gray-300 bg-white'
                             }`}
                           >
                             <div className="flex items-center gap-3">
-                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black ${isSelected ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                                {name.charAt(0).toUpperCase()}
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
+                                isSelected ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'
+                              }`}>
+                                {(s.first_name?.[0] || s.username?.[0] || '?').toUpperCase()}
                               </div>
-                              <div className="text-left">
-                                <div className={`text-sm font-bold ${isSelected ? 'text-indigo-700' : 'text-gray-900'}`}>{name}</div>
-                                <div className="text-xs text-gray-400">{s.role || s.department || 'Staff'}</div>
+                              <div>
+                                <div className="font-bold text-gray-900 text-sm">{staffDisplayName(s)}</div>
+                                <div className="text-xs text-gray-400">{s.email || s.username}</div>
                               </div>
                             </div>
-                            {isSelected && <CheckCircle2 size={20} className="text-indigo-600" />}
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                                Active
+                              </span>
+                              {isSelected && <CheckCircle2 size={18} className="text-indigo-600" />}
+                            </div>
                           </button>
                         );
                       })
                     )}
                   </div>
-
-                  {targetStaffId && (
-                    <div className="mt-3 p-3 bg-indigo-50 rounded-xl border border-indigo-200 flex items-start gap-2">
-                      <Info size={16} className="text-indigo-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-xs text-indigo-700 font-medium">
-                        <strong>{selectedCount}</strong> leads will be transferred to <strong>{staffDisplayName(targetStaff)}</strong>. 
-                        Any existing assignment will be overwritten. No duplicate assignments will be created.
-                      </p>
-                    </div>
-                  )}
                 </div>
               )}
 
-              {/* ── Step 2: Strategy ─────────────────────────────────────── */}
+              {/* Step 2: Follow-up Strategy */}
               {drawerStep === 2 && (
                 <div>
                   <h3 className="text-base font-bold text-gray-900 mb-1">Follow-up Scheduling Strategy</h3>
                   <p className="text-sm text-gray-500 mb-4">
-                    Choose how follow-ups should be handled for the transferred leads. 
-                    This determines how they appear in <strong>{staffDisplayName(targetStaff)}</strong>'s queue.
+                    Control how follow-up tasks are scheduled for <strong>{staffDisplayName(targetStaff)}</strong>.
                   </p>
                   <StrategyPicker
                     strategy={strategy}
@@ -1109,7 +1414,7 @@ export default function LeadCommandCentre() {
                 </div>
               )}
 
-              {/* ── Step 3: Follow-up details ─────────────────────────────── */}
+              {/* Step 3: Follow-up Details */}
               {drawerStep === 3 && (
                 <div>
                   <h3 className="text-base font-bold text-gray-900 mb-1">Follow-up Details</h3>
@@ -1164,7 +1469,7 @@ export default function LeadCommandCentre() {
 
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">
-                      Note (added to each lead's timeline)
+                      Transfer Note (added to lead timeline)
                     </label>
                     <textarea
                       value={transferNote}
@@ -1177,7 +1482,7 @@ export default function LeadCommandCentre() {
                 </div>
               )}
 
-              {/* ── Step 4: Confirm preview ───────────────────────────────── */}
+              {/* Step 4: Confirm Preview */}
               {drawerStep === 4 && (
                 <div>
                   <h3 className="text-base font-bold text-gray-900 mb-4">Review &amp; Confirm Transfer</h3>
@@ -1185,7 +1490,7 @@ export default function LeadCommandCentre() {
                   <div className="space-y-3">
                     {[
                       { label: 'Leads to transfer', value: `${selectedCount.toLocaleString()} leads` },
-                      { label: 'Transfer to', value: staffDisplayName(targetStaff) },
+                      { label: 'Transfer to (New Primary)', value: staffDisplayName(targetStaff) },
                       {
                         label: 'Follow-up strategy',
                         value: STRATEGIES.find(s => s.id === strategy)?.label || strategy,
@@ -1208,9 +1513,9 @@ export default function LeadCommandCentre() {
                   <div className="mt-4 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-start gap-3">
                     <AlertTriangle size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-bold text-amber-800">This action cannot be undone</p>
+                      <p className="text-sm font-bold text-amber-800">Primary Assignment Guaranteed</p>
                       <p className="text-xs text-amber-700 mt-0.5">
-                        All selected leads will be re-assigned and follow-up dates will be updated according to the chosen strategy.
+                        These leads will be set to {staffDisplayName(targetStaff)} as PRIMARY owner and will no longer be counted as inactive members' leads.
                       </p>
                     </div>
                   </div>
