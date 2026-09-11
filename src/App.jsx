@@ -6,6 +6,7 @@ import { usePermissions } from './context/PermissionsContext';
 import Login from './Pages/Login.jsx';
 import DashboardOverview from './Pages/DashboardOverview.jsx';
 import LeadsPage from './Pages/LeadsPage.jsx';
+import LeadCommandCentre from './Pages/LeadCommandCentre.jsx';
 import AddLeadPage from './Pages/AddLeadPage.jsx';
 import EditLeadPage from './Pages/EditLeadPage.jsx';
 import LeadDetailPage from './Pages/LeadDetailPage.jsx';
@@ -118,6 +119,7 @@ export default function App() {
         <Route path="/addnewlead" element={<PermissionRoute resources={['leads']}><AddLeadPage /></PermissionRoute>} />
         <Route path="/leads/view/:id" element={<PermissionRoute resources={['leads']}><LeadDetailPage /></PermissionRoute>} />
         <Route path="/followups"element={<PermissionRoute resources={['leads']}><AllFollowUpsPage /></PermissionRoute>} />
+        <Route path="/leads/command-centre" element={<PermissionRoute permissions={['leads:read_any', 'leads:read_tenant']} resources={['leads']}><LeadCommandCentre /></PermissionRoute>} />
 
 
         <Route path="/staff" element={<PermissionRoute resources={['staff']}><StaffPage /></PermissionRoute>} />
