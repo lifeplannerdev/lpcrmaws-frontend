@@ -28,7 +28,7 @@ export const masterNavigation = [
   
   // ── Sales & Telephony ──
   { id: "leads", label: "Leads", icon: Users, path: "/leads", requiredResource: "leads", category: "sales", description: "Leads pipeline, follow-ups & status" },
-  { id: "commandCentre", label: "Lead Command Centre", icon: Layers, path: "/leads/command-centre", requiredPermissions: ["leads:read_any", "leads:read_tenant"], category: "sales", description: "Manage & transfer all leads across active & inactive staff" },
+  { id: "commandCentre", label: "Lead Command Centre", icon: Layers, path: "/leads/command-centre", requiredPermissions: ["staff_analysis:admin", "leads:read_any", "leads:read_tenant"], category: "sales", description: "Manage & transfer all leads across active & inactive staff" },
   { id: "call", label: "Voxbay", icon: PhoneCall, path: "/call-analytics", requiredResource: "voxbay", category: "sales", description: "Call records, agent analytics & logs" },
   { id: "voxbay_ai", label: "Voxbay AI", icon: PhoneCall, path: "/voxbay-ai", requiredPermissions: ["voxbay_ai:admin", "voxbay_ai:read_own"], category: "sales", description: "AI call summaries & sentiment analysis" },
   { id: "staffAnalysisReport", label: "Report Generator", icon: BarChart2, path: "/staff-analysis/report", requiredPermissions: ["staff_analysis:admin"], category: "sales", description: "Generate performance reports with PDF export" },

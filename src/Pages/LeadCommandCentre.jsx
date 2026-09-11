@@ -647,6 +647,7 @@ export default function LeadCommandCentre() {
   // ── Guard ──────────────────────────────────────────────────────────────────
   const isAdmin = user?.role === 'ADMIN' ||
     user?.db_roles?.some(r => ['ADMIN', 'CEO', 'SUPER_ADMIN'].includes(r.name)) ||
+    hasPermission('staff_analysis:admin') ||
     hasPermission('leads:read_any') ||
     hasPermission('leads:read_tenant');
 

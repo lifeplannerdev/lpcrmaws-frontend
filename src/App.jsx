@@ -119,7 +119,7 @@ export default function App() {
         <Route path="/addnewlead" element={<PermissionRoute resources={['leads']}><AddLeadPage /></PermissionRoute>} />
         <Route path="/leads/view/:id" element={<PermissionRoute resources={['leads']}><LeadDetailPage /></PermissionRoute>} />
         <Route path="/followups"element={<PermissionRoute resources={['leads']}><AllFollowUpsPage /></PermissionRoute>} />
-        <Route path="/leads/command-centre" element={<PermissionRoute permissions={['leads:read_any', 'leads:read_tenant']} resources={['leads']}><LeadCommandCentre /></PermissionRoute>} />
+        <Route path="/leads/command-centre" element={<PermissionRoute permissions={['staff_analysis:admin', 'leads:read_any', 'leads:read_tenant']} resources={['leads']}><LeadCommandCentre /></PermissionRoute>} />
 
 
         <Route path="/staff" element={<PermissionRoute resources={['staff']}><StaffPage /></PermissionRoute>} />
