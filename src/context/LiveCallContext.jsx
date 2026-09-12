@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useUserChannel } from '../hooks/useUserChannel';
 import { useAuth } from './AuthContext';
+import { useApi } from './ApiContext';
 
 const LiveCallContext = createContext(null);
 
 export const LiveCallProvider = ({ children }) => {
   const { user } = useAuth();
+  const { authFetch, apiBaseUrl } = useApi();
   // Array of active calls: [{ id, phone, leadId, leadName, isNewLead, callType, status, startedAt, duration, formData, ... }]
   const [calls, setCalls] = useState([]);
   const [activeCallId, setActiveCallId] = useState(null);
@@ -117,18 +119,10 @@ export const LiveCallProvider = ({ children }) => {
   // Handle incoming call / ringing / connected webhook event
   const handleIncomingCallEvent = useCallback((data) => {
     if (!data) return;
-    const isAnswered = data.event_type === 'answered' || data.callevent === 'connect' || data.callevent === 'answer' || data.call_type === 'outgoing';
-    const isExisting = !data.is_new_lead || data.lead_id;
-
-    // Rule:
-    // 1. If outgoing -> always open modal
-    // 2. If incoming & answered -> always open modal (both fresh & existing)
-    // 3. If incoming & ringing -> only open modal immediately if existing lead
-    if (data.call_type === 'outgoing' || isAnswered || isExisting) {
-      upsertCall(data);
-      setIsModalOpen(true);
-      setIsMinimized(false);
-    }
+    // Always open modal for all incoming and outgoing calls (including ringing on fresh leads)
+    upsertCall(data);
+    setIsModalOpen(true);
+    setIsMinimized(false);
   }, [upsertCall]);
 
   // Handle call connected event
@@ -169,11 +163,34 @@ export const LiveCallProvider = ({ children }) => {
     });
   }, []);
 
+  // Dismiss call purely in local React state
+  const dismissCallLocally = useCallback((callId) => {
+    if (!callId) return;
+    setCalls(prevCalls => {
+      const remaining = prevCalls.filter(c => c.id !== callId);
+      if (remaining.length === 0) {
+        setIsModalOpen(false);
+        setActiveCallId(null);
+        setIsMinimized(false);
+      } else if (activeCallId === callId) {
+        setActiveCallId(remaining[0].id);
+      }
+      return remaining;
+    });
+  }, [activeCallId]);
+
+  // Handle call dismissed event received via Pusher from another device/tab of this user
+  const handleCallDismissedEvent = useCallback((data) => {
+    if (!data?.call_uuid) return;
+    dismissCallLocally(data.call_uuid);
+  }, [dismissCallLocally]);
+
   // Listen to user Pusher channel
   useUserChannel({
     onIncomingCall: handleIncomingCallEvent,
     onCallConnected: handleCallConnectedEvent,
     onCallEnded: handleCallEndedEvent,
+    onCallDismissed: handleCallDismissedEvent,
   });
 
   // Update in-progress form data for a specific call
@@ -189,20 +206,32 @@ export const LiveCallProvider = ({ children }) => {
     }));
   }, []);
 
-  // Close/Dismiss a single call
-  const closeCall = useCallback((callId) => {
-    setCalls(prevCalls => {
-      const remaining = prevCalls.filter(c => c.id !== callId);
-      if (remaining.length === 0) {
-        setIsModalOpen(false);
-        setActiveCallId(null);
-        setIsMinimized(false);
-      } else if (activeCallId === callId) {
-        setActiveCallId(remaining[0].id);
+  // Update top-level call properties cleanly (e.g. when lead is identified)
+  const updateCall = useCallback((callId, partialData) => {
+    setCalls(prevCalls => prevCalls.map(c => {
+      if (c.id === callId) {
+        return {
+          ...c,
+          ...partialData
+        };
       }
-      return remaining;
-    });
-  }, [activeCallId]);
+      return c;
+    }));
+  }, []);
+
+  // Close/Dismiss a single call and optionally broadcast to other devices of this user
+  const closeCall = useCallback((callId, broadcast = true) => {
+    if (!callId) return;
+    dismissCallLocally(callId);
+
+    if (broadcast && authFetch && apiBaseUrl) {
+      authFetch(`${apiBaseUrl}/voxbay/dismiss-call/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ call_uuid: callId })
+      }).catch(err => console.debug('[LiveCallContext] Dismiss broadcast failed:', err));
+    }
+  }, [dismissCallLocally, authFetch, apiBaseUrl]);
 
   // Close all calls
   const closeAllCalls = useCallback(() => {
@@ -255,6 +284,7 @@ export const LiveCallProvider = ({ children }) => {
         isMinimized,
         setIsMinimized,
         upsertCall,
+        updateCall,
         updateCallFormData,
         closeCall,
         closeAllCalls,

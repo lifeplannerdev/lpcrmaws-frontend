@@ -42,6 +42,7 @@ export default function LiveCallModal() {
     isMinimized,
     setIsMinimized,
     closeCall,
+    updateCall,
     updateCallFormData,
   } = useLiveCall();
 
@@ -64,19 +65,21 @@ export default function LiveCallModal() {
     if (!activeCall) return;
 
     const calculateDuration = () => {
-      if (activeCall.status === 'ready' || activeCall.status === 'idle') {
+      if (activeCall.status === 'ready' || activeCall.status === 'idle' || activeCall.status === 'ringing') {
         return 0;
       }
       if (activeCall.status === 'ended') {
-        return activeCall.duration || (activeCall.endedAt && activeCall.startedAt ? Math.round((activeCall.endedAt - activeCall.startedAt) / 1000) : 0);
+        return activeCall.duration || (activeCall.endedAt && (activeCall.connectedAt || activeCall.startedAt) ? Math.round((activeCall.endedAt - (activeCall.connectedAt || activeCall.startedAt)) / 1000) : 0);
       }
-      const startRef = activeCall.connectedAt || activeCall.startedAt || Date.now();
-      return Math.max(0, Math.floor((Date.now() - startRef) / 1000));
+      if (activeCall.connectedAt) {
+        return Math.max(0, Math.floor((Date.now() - activeCall.connectedAt) / 1000));
+      }
+      return 0;
     };
 
     setTimerSeconds(calculateDuration());
 
-    if (activeCall.status !== 'ended' && activeCall.status !== 'ready' && activeCall.status !== 'idle') {
+    if (activeCall.status === 'connected') {
       const interval = setInterval(() => {
         setTimerSeconds(calculateDuration());
       }, 1000);
@@ -134,9 +137,11 @@ export default function LiveCallModal() {
         });
 
         if (match) {
-          activeCall.isNewLead = false;
-          activeCall.leadId = match.id;
-          activeCall.leadName = match.name;
+          updateCall(activeCall.id, {
+            isNewLead: false,
+            leadId: match.id,
+            leadName: match.name,
+          });
           setExistingLeadData(match);
         }
       })
@@ -289,18 +294,48 @@ export default function LiveCallModal() {
           assigned_to: user?.id || null,
         };
 
-        const res = await authFetch(`${apiBaseUrl}/leads/create/`, {
+        let res = await authFetch(`${apiBaseUrl}/leads/create/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
 
+        let createdLead = null;
         if (!res.ok) {
           const errData = await res.json();
-          throw new Error(errData.detail || errData.message || JSON.stringify(errData) || 'Failed to create lead');
+          // If already created by Voxbay CDR or another session, gracefully recover and patch
+          if (res.status === 400 && (JSON.stringify(errData).toLowerCase().includes('already exists') || JSON.stringify(errData).toLowerCase().includes('unique'))) {
+            const checkRes = await authFetch(`${apiBaseUrl}/leads/?search=${cleanPhoneDigits.slice(-10)}`);
+            if (checkRes.ok) {
+              const checkData = await checkRes.json();
+              const list = checkData.results?.leads || checkData.results || checkData || [];
+              const matched = Array.isArray(list) ? list.find(l => String(l.phone || '').replace(/\D/g, '').endsWith(cleanPhoneDigits.slice(-10))) : null;
+              if (matched) {
+                await authFetch(`${apiBaseUrl}/leads/${matched.id}/update/`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    name: formData.name.trim(),
+                    status: formData.status || 'ENQUIRY',
+                    priority: formData.priority || 'MEDIUM',
+                    program: formData.program || '',
+                    interested_country: formData.interested_country || '',
+                    interested_course: formData.interested_course || '',
+                    location: formData.location || '',
+                    remarks: matched.remarks ? `${matched.remarks}\n\n${formattedRemark}` : formattedRemark,
+                  })
+                });
+                createdLead = { id: matched.id, lead: matched };
+              }
+            }
+          }
+          if (!createdLead) {
+            throw new Error(errData.detail || errData.message || JSON.stringify(errData) || 'Failed to create lead');
+          }
+        } else {
+          createdLead = await res.json();
         }
 
-        const createdLead = await res.json();
         const createdId = createdLead.id || createdLead.lead?.id;
         const leadObj = createdLead.lead || createdLead;
 
@@ -470,7 +505,7 @@ export default function LiveCallModal() {
               {activeCall.isNewLead ? '✨ New Call' : (existingLeadData?.name || activeCall.leadName)}
             </span>
             <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/60">
-              {formatTimer(timerSeconds)}
+              {activeCall.status === 'ringing' ? 'Ringing...' : formatTimer(timerSeconds)}
             </span>
           </div>
           <span className="text-xs text-slate-400 font-mono">{activeCall.phone}</span>
@@ -629,7 +664,7 @@ export default function LiveCallModal() {
             <div className="flex items-center gap-2 bg-slate-900/90 border border-purple-500/30 px-3.5 py-1.5 rounded-xl shadow-inner">
               <Clock size={15} className="text-emerald-400 animate-spin-slow" />
               <span className="font-mono text-base font-black text-emerald-400">
-                {formatTimer(timerSeconds)}
+                {activeCall.status === 'ringing' ? 'Ringing...' : formatTimer(timerSeconds)}
               </span>
             </div>
 

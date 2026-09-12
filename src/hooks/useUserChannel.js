@@ -11,6 +11,7 @@ export const useUserChannel = ({
   onIncomingCall,
   onCallConnected,
   onCallEnded,
+  onCallDismissed,
 } = {}) => {
   const { pusher, isReady } = usePusher();
   const { user } = useAuth();
@@ -25,6 +26,7 @@ export const useUserChannel = ({
   const onIncomingCallRef = useRef(onIncomingCall);
   const onCallConnectedRef = useRef(onCallConnected);
   const onCallEndedRef = useRef(onCallEnded);
+  const onCallDismissedRef = useRef(onCallDismissed);
 
   // Update refs on every render (no re-subscription needed)
   useEffect(() => {
@@ -36,6 +38,7 @@ export const useUserChannel = ({
     onIncomingCallRef.current = onIncomingCall;
     onCallConnectedRef.current = onCallConnected;
     onCallEndedRef.current = onCallEnded;
+    onCallDismissedRef.current = onCallDismissed;
   });
 
   useEffect(() => {
@@ -52,6 +55,7 @@ export const useUserChannel = ({
     const handleIncomingCall = (data) => onIncomingCallRef.current?.(data);
     const handleCallConnected = (data) => onCallConnectedRef.current?.(data);
     const handleCallEnded = (data) => onCallEndedRef.current?.(data);
+    const handleCallDismissed = (data) => onCallDismissedRef.current?.(data);
 
     channelRef.current.bind('task.assigned', handleTaskAssigned);
     channelRef.current.bind('task.status_updated', handleTaskStatus);
@@ -61,6 +65,7 @@ export const useUserChannel = ({
     channelRef.current.bind('telephony.incoming_call', handleIncomingCall);
     channelRef.current.bind('telephony.call_connected', handleCallConnected);
     channelRef.current.bind('telephony.call_ended', handleCallEnded);
+    channelRef.current.bind('telephony.call_dismissed', handleCallDismissed);
 
     return () => {
       channelRef.current?.unbind('task.assigned', handleTaskAssigned);
@@ -71,6 +76,7 @@ export const useUserChannel = ({
       channelRef.current?.unbind('telephony.incoming_call', handleIncomingCall);
       channelRef.current?.unbind('telephony.call_connected', handleCallConnected);
       channelRef.current?.unbind('telephony.call_ended', handleCallEnded);
+      channelRef.current?.unbind('telephony.call_dismissed', handleCallDismissed);
     };
   }, [isReady, pusher, user?.id]);
 };
