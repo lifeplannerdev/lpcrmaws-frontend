@@ -68,8 +68,8 @@ export const LiveCallProvider = ({ children }) => {
         leadId: callData.lead_id || callData.leadId || prevCall?.leadId || null,
         leadName: (callData.lead_name && !callData.lead_name.startsWith('Voxbay ')) 
           ? callData.lead_name 
-          : (prevCall?.leadName && !prevCall.leadName.startsWith('Voxbay ') ? prevCall.leadName : defaultLeadName),
-        isNewLead: prevCall ? (callData.is_new_lead !== undefined ? Boolean(callData.is_new_lead) : prevCall.isNewLead) : isNew,
+          : (prevCall?.leadName && !prevCall.leadName.startsWith('Voxbay ')) ? prevCall.leadName : defaultLeadName,
+        isNewLead: (callData.is_new_lead !== undefined) ? Boolean(callData.is_new_lead) : (prevCall?.isNewLead !== undefined ? prevCall.isNewLead : isNew),
         callType: callData.call_type || prevCall?.callType || 'incoming',
         status: callData.event_type === 'answered' || callData.callevent === 'connect' || callData.callevent === 'answer' ? 'connected' : (callData.status || prevCall?.status || 'ringing'),
         startedAt: isFirstTime ? Date.now() : (prevCall.startedAt || Date.now()),

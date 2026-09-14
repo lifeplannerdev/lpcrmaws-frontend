@@ -293,6 +293,11 @@ export default function LeadCommandCentre() {
   const [fuPriority, setFuPriority] = useState('medium');
   const [transferNote, setTransferNote] = useState('');
   const [transferring, setTransferring] = useState(false);
+  const [transferProgress, setTransferProgress] = useState({
+    active: false,
+    percent: 0,
+    statusText: '',
+  });
 
   // Bulk Close modal
   const [closeModalOpen, setCloseModalOpen] = useState(false);
@@ -573,7 +578,43 @@ export default function LeadCommandCentre() {
     if (!selectAllMatching && selectedIds.size === 0) { toast.error('No leads selected'); return; }
 
     setTransferring(true);
+    setTransferProgress({
+      active: true,
+      percent: 15,
+      statusText: `Preparing transfer of ${selectedCount.toLocaleString()} leads...`,
+    });
+
+    let progressTimer = null;
     try {
+      // Smooth progress phase progression
+      progressTimer = setInterval(() => {
+        setTransferProgress(prev => {
+          if (!prev.active) return prev;
+          if (prev.percent < 45) {
+            return {
+              ...prev,
+              percent: Math.min(45, prev.percent + 10),
+              statusText: `Assigning ${selectedCount.toLocaleString()} leads to ${staffDisplayName(targetStaff)}...`,
+            };
+          } else if (prev.percent < 80) {
+            return {
+              ...prev,
+              percent: Math.min(80, prev.percent + 6),
+              statusText: strategy === 'stagger'
+                ? `Scheduling staggered follow-ups across ${staggerDays} days...`
+                : 'Updating pipeline and follow-up schedules...',
+            };
+          } else if (prev.percent < 95) {
+            return {
+              ...prev,
+              percent: Math.min(95, prev.percent + 2),
+              statusText: 'Writing audit and timeline logs in database...',
+            };
+          }
+          return prev;
+        });
+      }, 350);
+
       const payload = {
         lead_ids: selectAllMatching ? 'all_matching' : Array.from(selectedIds),
         assigned_to_id: targetStaffId,
@@ -598,7 +639,16 @@ export default function LeadCommandCentre() {
         throw new Error(err.detail || err.error || 'Transfer failed');
       }
 
-      toast.success(`✅ ${selectedCount} leads transferred to ${staffDisplayName(targetStaff)}`);
+      setTransferProgress({
+        active: true,
+        percent: 100,
+        statusText: 'All leads transferred successfully!',
+      });
+
+      // Brief pause to display 100% completion
+      await new Promise(r => setTimeout(r, 600));
+
+      toast.success(`✅ ${selectedCount.toLocaleString()} leads transferred to ${staffDisplayName(targetStaff)}`);
       setDrawerOpen(false);
       setDrawerStep(1);
       clearSelection();
@@ -613,7 +663,9 @@ export default function LeadCommandCentre() {
       console.error(err);
       toast.error(err.message || 'Transfer failed. Please try again.');
     } finally {
+      if (progressTimer) clearInterval(progressTimer);
       setTransferring(false);
+      setTransferProgress({ active: false, percent: 0, statusText: '' });
     }
   };
 
@@ -1440,7 +1492,10 @@ export default function LeadCommandCentre() {
       {/* ── Transfer Drawer ─────────────────────────────────────────────────── */}
       {drawerOpen && (
         <>
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 animate-fadeIn" onClick={() => setDrawerOpen(false)} />
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 animate-fadeIn"
+            onClick={() => !transferring && setDrawerOpen(false)}
+          />
           <div className="fixed inset-y-0 right-0 max-w-xl w-full bg-white z-50 shadow-2xl flex flex-col animate-slideLeft">
             {/* Drawer Header */}
             <div className="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-violet-600 to-indigo-700 text-white flex items-center justify-between flex-shrink-0">
@@ -1453,7 +1508,11 @@ export default function LeadCommandCentre() {
                   <p className="text-xs text-indigo-200">Reassign {selectedCount.toLocaleString()} leads to an active counsellor</p>
                 </div>
               </div>
-              <button onClick={() => setDrawerOpen(false)} className="p-2 text-white/80 hover:text-white rounded-xl hover:bg-white/10 transition-colors">
+              <button
+                disabled={transferring}
+                onClick={() => !transferring && setDrawerOpen(false)}
+                className="p-2 text-white/80 hover:text-white rounded-xl hover:bg-white/10 transition-colors disabled:opacity-40"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -1652,6 +1711,41 @@ export default function LeadCommandCentre() {
                 <div>
                   <h3 className="text-base font-bold text-gray-900 mb-4">Review &amp; Confirm Transfer</h3>
 
+                  {/* Transfer Progress Indicator */}
+                  {transferring && (
+                    <div className="p-5 bg-gradient-to-br from-indigo-50 via-purple-50 to-emerald-50 border-2 border-indigo-200 rounded-2xl shadow-sm mb-5 animate-fadeIn">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+                            <RefreshCw size={16} className="animate-spin" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-indigo-950">Transferring Leads</h4>
+                            <p className="text-xs text-indigo-700 font-medium">
+                              {transferProgress.statusText || 'Processing batch transfer...'}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-lg font-black text-indigo-700 font-mono">
+                          {transferProgress.percent}%
+                        </span>
+                      </div>
+
+                      {/* Smooth animated progress track */}
+                      <div className="w-full bg-indigo-100/80 rounded-full h-3.5 overflow-hidden p-0.5 border border-indigo-200/70">
+                        <div
+                          className="bg-gradient-to-r from-violet-600 via-indigo-600 to-emerald-500 h-full rounded-full transition-all duration-300 ease-out shadow"
+                          style={{ width: `${Math.max(6, transferProgress.percent)}%` }}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-gray-500 mt-2.5 font-medium">
+                        <span>Updating {selectedCount.toLocaleString()} leads</span>
+                        <span className="text-amber-700 font-semibold">Please keep this window open</span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-3">
                     {[
                       { label: 'Leads to transfer', value: `${selectedCount.toLocaleString()} leads` },
@@ -1675,15 +1769,17 @@ export default function LeadCommandCentre() {
                     ))}
                   </div>
 
-                  <div className="mt-4 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-start gap-3">
-                    <AlertTriangle size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-bold text-amber-800">Primary Assignment Guaranteed</p>
-                      <p className="text-xs text-amber-700 mt-0.5">
-                        These leads will be set to {staffDisplayName(targetStaff)} as PRIMARY owner and will no longer be counted as inactive members' leads.
-                      </p>
+                  {!transferring && (
+                    <div className="mt-4 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-start gap-3">
+                      <AlertTriangle size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-bold text-amber-800">Primary Assignment Guaranteed</p>
+                        <p className="text-xs text-amber-700 mt-0.5">
+                          These leads will be set to {staffDisplayName(targetStaff)} as PRIMARY owner and will no longer be counted as inactive members' leads.
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1710,10 +1806,10 @@ export default function LeadCommandCentre() {
                 <button
                   disabled={transferring}
                   onClick={handleTransfer}
-                  className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-700 rounded-xl hover:from-emerald-700 hover:to-teal-800 disabled:opacity-50 shadow-md transition-all flex items-center gap-2"
+                  className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-700 rounded-xl hover:from-emerald-700 hover:to-teal-800 disabled:opacity-75 shadow-md transition-all flex items-center gap-2"
                 >
                   {transferring ? (
-                    <><RefreshCw size={16} className="animate-spin" /> Transferring…</>
+                    <><RefreshCw size={16} className="animate-spin" /> Transferring ({transferProgress.percent}%)…</>
                   ) : (
                     <><CheckCircle2 size={16} /> Confirm Transfer</>
                   )}
