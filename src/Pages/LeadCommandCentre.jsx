@@ -240,6 +240,25 @@ export default function LeadCommandCentre() {
   const tokenRef = useRef(accessToken);
   useEffect(() => { tokenRef.current = accessToken; }, [accessToken]);
 
+  // ── Auth fetch helper (defined early to prevent TDZ ReferenceError) ─────────
+  const authFetch = useCallback(async (url, options = {}, signal = null, retry = true) => {
+    const token = tokenRef.current;
+    if (!token) throw new Error('No access token');
+    const res = await fetch(url, {
+      ...options,
+      signal,
+      credentials: 'include',
+      headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 401 && retry) {
+      const tok = await refreshAccessToken();
+      if (!tok) throw new Error('Session expired');
+      tokenRef.current = tok;
+      return authFetch(url, options, signal, false);
+    }
+    return res;
+  }, [refreshAccessToken]);
+
   // ── State ──────────────────────────────────────────────────────────────────
   const [leads, setLeads] = useState([]);
   const [allStaff, setAllStaff] = useState([]);   // active + inactive
@@ -437,75 +456,6 @@ export default function LeadCommandCentre() {
       fetchModalWorkload(rescheduleStaffId, rescheduleFromDate);
     }
   }, [rescheduleModalOpen, rescheduleStaffId, rescheduleFromDate, fetchModalWorkload]);
-
-  // Bulk Reschedule action handler
-  const handleBulkReschedule = async () => {
-    if (!rescheduleToDate) {
-      toast.error('Please select a target date for rescheduled follow-ups.');
-      return;
-    }
-
-    setRescheduling(true);
-    try {
-      const payload = {
-        from_date: rescheduleFromDate,
-        to_date: rescheduleToDate,
-        employee_id: rescheduleStaffId || 'all',
-        lead_ids: selectedIds.size > 0 ? Array.from(selectedIds) : undefined,
-        stagger_days: rescheduleStagger ? rescheduleStaggerDays : 1,
-        notes: rescheduleNotes,
-      };
-
-      const res = await authFetch(`${API_BASE_URL}/leads/bulk-reschedule-followups/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || err.error || 'Failed to reschedule follow-ups');
-      }
-
-      const data = await res.json().catch(() => ({}));
-      toast.success(`✅ ${data.message || 'Follow-ups successfully rescheduled!'}`);
-
-      setRescheduleModalOpen(false);
-      clearSelection();
-      setRescheduleNotes('');
-
-      // Refresh list, KPI stats, and employee workload summary
-      fetchKpiStats();
-      fetchLeads();
-      if (filterStaff && filterStaff !== 'all') {
-        fetchEmployeeWorkload(filterStaff, filterFollowUpDate);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(err.message || 'Failed to reschedule follow-ups');
-    } finally {
-      setRescheduling(false);
-    }
-  };
-
-  // ── Auth fetch ─────────────────────────────────────────────────────────────
-  const authFetch = useCallback(async (url, options = {}, signal = null, retry = true) => {
-    const token = tokenRef.current;
-    if (!token) throw new Error('No access token');
-    const res = await fetch(url, {
-      ...options,
-      signal,
-      credentials: 'include',
-      headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` },
-    });
-    if (res.status === 401 && retry) {
-      const tok = await refreshAccessToken();
-      if (!tok) throw new Error('Session expired');
-      tokenRef.current = tok;
-      return authFetch(url, options, signal, false);
-    }
-    return res;
-  }, [refreshAccessToken]);
 
   // ── Fetch staff ───────────────────────────────────────────────────────────
   const [staffSearch, setStaffSearch] = useState('');
@@ -881,6 +831,56 @@ export default function LeadCommandCentre() {
       toast.error(err.message || 'Bulk close failed. Please try again.');
     } finally {
       setClosing(false);
+    }
+  };
+
+  // ── Bulk Reschedule action handler ─────────────────────────────────────────
+  const handleBulkReschedule = async () => {
+    if (!rescheduleToDate) {
+      toast.error('Please select a target date for rescheduled follow-ups.');
+      return;
+    }
+
+    setRescheduling(true);
+    try {
+      const payload = {
+        from_date: rescheduleFromDate,
+        to_date: rescheduleToDate,
+        employee_id: rescheduleStaffId || 'all',
+        lead_ids: selectedIds.size > 0 ? Array.from(selectedIds) : undefined,
+        stagger_days: rescheduleStagger ? rescheduleStaggerDays : 1,
+        notes: rescheduleNotes,
+      };
+
+      const res = await authFetch(`${API_BASE_URL}/leads/bulk-reschedule-followups/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || err.error || 'Failed to reschedule follow-ups');
+      }
+
+      const data = await res.json().catch(() => ({}));
+      toast.success(`✅ ${data.message || 'Follow-ups successfully rescheduled!'}`);
+
+      setRescheduleModalOpen(false);
+      clearSelection();
+      setRescheduleNotes('');
+
+      // Refresh list, KPI stats, and employee workload summary
+      fetchKpiStats();
+      fetchLeads();
+      if (filterStaff && filterStaff !== 'all') {
+        fetchEmployeeWorkload(filterStaff, filterFollowUpDate);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || 'Failed to reschedule follow-ups');
+    } finally {
+      setRescheduling(false);
     }
   };
 
