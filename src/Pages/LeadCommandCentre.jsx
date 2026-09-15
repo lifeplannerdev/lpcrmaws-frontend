@@ -279,8 +279,37 @@ export default function LeadCommandCentre() {
   const [filterHasPending, setFilterHasPending] = useState(false);
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
+  const [filterFollowUpDate, setFilterFollowUpDate] = useState('');
   const [filterCompany, setFilterCompany] = useState('');
   const [showFilters, setShowFilters] = useState(true);
+
+  // Selected Employee Workload
+  const [employeeWorkload, setEmployeeWorkload] = useState({
+    loading: false,
+    latest_followup_date: null,
+    suggested_next_date: null,
+    total_pending_followups: 0,
+    count_on_from_date: 0,
+    employee_name: '',
+  });
+
+  // Bulk Reschedule modal state
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [rescheduleStaffId, setRescheduleStaffId] = useState('');
+  const [rescheduleFromDate, setRescheduleFromDate] = useState(getLocalDateString());
+  const [rescheduleToDate, setRescheduleToDate] = useState('');
+  const [rescheduleStagger, setRescheduleStagger] = useState(false);
+  const [rescheduleStaggerDays, setRescheduleStaggerDays] = useState(5);
+  const [rescheduleNotes, setRescheduleNotes] = useState('');
+  const [rescheduling, setRescheduling] = useState(false);
+  const [modalWorkload, setModalWorkload] = useState({
+    loading: false,
+    latest_followup_date: null,
+    suggested_next_date: null,
+    total_pending_followups: 0,
+    count_on_from_date: 0,
+    employee_name: '',
+  });
 
   // Transfer drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -324,6 +353,140 @@ export default function LeadCommandCentre() {
     }
     setPage(1);
   }, []);
+
+  // Fetch employee workload summary for active filter pill
+  const fetchEmployeeWorkload = useCallback(async (staffId, fromDate = '') => {
+    if (!staffId || staffId === 'all') {
+      setEmployeeWorkload({
+        loading: false,
+        latest_followup_date: null,
+        suggested_next_date: null,
+        total_pending_followups: 0,
+        count_on_from_date: 0,
+        employee_name: '',
+      });
+      return;
+    }
+
+    setEmployeeWorkload(prev => ({ ...prev, loading: true }));
+    try {
+      const q = new URLSearchParams({ employee_id: staffId });
+      if (fromDate) q.append('from_date', fromDate);
+      const res = await authFetch(`${API_BASE_URL}/leads/employee-followup-summary/?${q.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setEmployeeWorkload({
+          loading: false,
+          latest_followup_date: data.latest_followup_date,
+          suggested_next_date: data.suggested_next_date,
+          total_pending_followups: data.total_pending_followups || 0,
+          count_on_from_date: data.count_on_from_date || 0,
+          employee_name: data.employee_name || '',
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to load employee workload summary:', e);
+      setEmployeeWorkload(prev => ({ ...prev, loading: false }));
+    }
+  }, [authFetch]);
+
+  useEffect(() => {
+    if (filterStaff && filterStaff !== 'all') {
+      fetchEmployeeWorkload(filterStaff, filterFollowUpDate);
+    } else {
+      setEmployeeWorkload({
+        loading: false,
+        latest_followup_date: null,
+        suggested_next_date: null,
+        total_pending_followups: 0,
+        count_on_from_date: 0,
+        employee_name: '',
+      });
+    }
+  }, [filterStaff, filterFollowUpDate, fetchEmployeeWorkload]);
+
+  // Fetch modal workload summary
+  const fetchModalWorkload = useCallback(async (staffId, fromDate) => {
+    setModalWorkload(prev => ({ ...prev, loading: true }));
+    try {
+      const q = new URLSearchParams();
+      if (staffId && staffId !== 'all') q.append('employee_id', staffId);
+      else q.append('employee_id', 'all');
+      if (fromDate) q.append('from_date', fromDate);
+      const res = await authFetch(`${API_BASE_URL}/leads/employee-followup-summary/?${q.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setModalWorkload({
+          loading: false,
+          latest_followup_date: data.latest_followup_date,
+          suggested_next_date: data.suggested_next_date,
+          total_pending_followups: data.total_pending_followups || 0,
+          count_on_from_date: data.count_on_from_date || 0,
+          employee_name: data.employee_name || '',
+        });
+        setRescheduleToDate(prev => prev || data.suggested_next_date || getLocalDateString());
+      }
+    } catch (e) {
+      console.warn(e);
+      setModalWorkload(prev => ({ ...prev, loading: false }));
+    }
+  }, [authFetch]);
+
+  useEffect(() => {
+    if (rescheduleModalOpen) {
+      fetchModalWorkload(rescheduleStaffId, rescheduleFromDate);
+    }
+  }, [rescheduleModalOpen, rescheduleStaffId, rescheduleFromDate, fetchModalWorkload]);
+
+  // Bulk Reschedule action handler
+  const handleBulkReschedule = async () => {
+    if (!rescheduleToDate) {
+      toast.error('Please select a target date for rescheduled follow-ups.');
+      return;
+    }
+
+    setRescheduling(true);
+    try {
+      const payload = {
+        from_date: rescheduleFromDate,
+        to_date: rescheduleToDate,
+        employee_id: rescheduleStaffId || 'all',
+        lead_ids: selectedIds.size > 0 ? Array.from(selectedIds) : undefined,
+        stagger_days: rescheduleStagger ? rescheduleStaggerDays : 1,
+        notes: rescheduleNotes,
+      };
+
+      const res = await authFetch(`${API_BASE_URL}/leads/bulk-reschedule-followups/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || err.error || 'Failed to reschedule follow-ups');
+      }
+
+      const data = await res.json().catch(() => ({}));
+      toast.success(`✅ ${data.message || 'Follow-ups successfully rescheduled!'}`);
+
+      setRescheduleModalOpen(false);
+      clearSelection();
+      setRescheduleNotes('');
+
+      // Refresh list, KPI stats, and employee workload summary
+      fetchKpiStats();
+      fetchLeads();
+      if (filterStaff && filterStaff !== 'all') {
+        fetchEmployeeWorkload(filterStaff, filterFollowUpDate);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || 'Failed to reschedule follow-ups');
+    } finally {
+      setRescheduling(false);
+    }
+  };
 
   // ── Auth fetch ─────────────────────────────────────────────────────────────
   const authFetch = useCallback(async (url, options = {}, signal = null, retry = true) => {
@@ -483,6 +646,7 @@ export default function LeadCommandCentre() {
       if (filterSource !== 'all')  params.source = filterSource;
       if (filterDateFrom)          params.created_at__gte = filterDateFrom;
       if (filterDateTo)            params.created_at__lte = filterDateTo;
+      if (filterFollowUpDate)      params.followup_date = filterFollowUpDate;
       if (filterCompany)           params.company = filterCompany;
       if (filterOverdue)           params.overdue = 'true';
       if (filterHasPending)        params.has_pending_followup = 'true';
@@ -521,7 +685,7 @@ export default function LeadCommandCentre() {
     authFetch, page, debouncedSearch,
     filterStatus, filterPriority, filterSource, filterStaff,
     filterEmpStatus, filterActivePipeline,
-    filterOverdue, filterHasPending, filterDateFrom, filterDateTo, filterCompany,
+    filterOverdue, filterHasPending, filterDateFrom, filterDateTo, filterFollowUpDate, filterCompany,
   ]);
 
   useEffect(() => {
@@ -568,7 +732,8 @@ export default function LeadCommandCentre() {
     company: filterCompany,
     created_at__gte: filterDateFrom,
     created_at__lte: filterDateTo,
-  }), [filterEmpStatus, filterActivePipeline, filterStaff, filterStatus, filterPriority, filterSource, filterCompany, filterDateFrom, filterDateTo]);
+    followup_date: filterFollowUpDate,
+  }), [filterEmpStatus, filterActivePipeline, filterStaff, filterStatus, filterPriority, filterSource, filterCompany, filterDateFrom, filterDateTo, filterFollowUpDate]);
 
   // ── Transfer logic ─────────────────────────────────────────────────────────
   const targetStaff = useMemo(() => activeStaff.find(s => String(s.id) === String(targetStaffId)), [activeStaff, targetStaffId]);
@@ -775,6 +940,19 @@ export default function LeadCommandCentre() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setRescheduleStaffId(filterStaff !== 'all' ? filterStaff : '');
+                setRescheduleFromDate(filterFollowUpDate || getLocalDateString());
+                setRescheduleToDate(employeeWorkload?.suggested_next_date || getLocalDateString());
+                setRescheduleModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-violet-700 bg-violet-50 border-2 border-violet-200 rounded-xl hover:bg-violet-100 transition-all shadow-sm"
+              title="Reschedule all follow-ups of any day to another day"
+            >
+              <CalendarClock size={16} />
+              Reschedule Day's Follow-ups
+            </button>
             <button
               onClick={() => { fetchKpiStats(); setPage(1); fetchLeads(); }}
               className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:text-indigo-700 transition-all shadow-sm"
@@ -1086,6 +1264,58 @@ export default function LeadCommandCentre() {
                 </select>
               </div>
 
+              {/* Active Employee Workload Summary Banner */}
+              {filterStaff !== 'all' && (
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-violet-50 via-indigo-50 to-blue-50 border-2 border-indigo-200 rounded-2xl shadow-sm animate-fadeIn">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+                      <CalendarClock size={18} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-gray-900">
+                          {groupedStaff.active.find(s => String(s.id) === String(filterStaff))?.first_name || 'Counsellor'}'s Queue:
+                        </span>
+                        {employeeWorkload.loading ? (
+                          <span className="text-xs text-indigo-600 animate-pulse font-bold">Checking scheduled follow-ups…</span>
+                        ) : employeeWorkload.latest_followup_date ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-black text-indigo-800 bg-indigo-100/90 px-2.5 py-0.5 rounded-lg border border-indigo-300">
+                            Furthest Date: {formatDate(employeeWorkload.latest_followup_date)}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100/90 px-2.5 py-0.5 rounded-lg border border-emerald-300">
+                            Queue clear (0 pending)
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                        <span>Total pending: <strong className="text-gray-800 font-bold">{employeeWorkload.total_pending_followups} leads</strong></span>
+                        {employeeWorkload.suggested_next_date && (
+                          <span>• Next open date: <strong className="text-violet-700 font-bold">{formatDate(employeeWorkload.suggested_next_date)}</strong></span>
+                        )}
+                        {filterFollowUpDate && (
+                          <span>• On {formatDate(filterFollowUpDate)}: <strong className="text-indigo-800 font-bold">{employeeWorkload.count_on_from_date} pending</strong></span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRescheduleStaffId(filterStaff);
+                      setRescheduleFromDate(filterFollowUpDate || getLocalDateString());
+                      setRescheduleToDate(employeeWorkload.suggested_next_date || getLocalDateString());
+                      setRescheduleModalOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-indigo-700 bg-white border-2 border-indigo-200 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-xs"
+                    title="Reschedule this employee's follow-ups"
+                  >
+                    <CalendarClock size={14} />
+                    Reschedule Follow-ups
+                  </button>
+                </div>
+              )}
+
               {/* Date range + toggles */}
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <div className="flex items-center gap-2">
@@ -1095,6 +1325,30 @@ export default function LeadCommandCentre() {
                   <span className="text-gray-400 text-sm">to</span>
                   <input type="date" value={filterDateTo} onChange={e => { setFilterDateTo(e.target.value); setPage(1); }}
                     className="px-3 py-2 border-2 border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:border-indigo-500" />
+                </div>
+
+                {/* Follow-up Date Filter */}
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50/70 border-2 border-indigo-200 rounded-xl">
+                  <span className="text-xs font-bold text-indigo-900 uppercase tracking-wide flex items-center gap-1">
+                    <CalendarClock size={13} className="text-indigo-600" />
+                    Follow-up:
+                  </span>
+                  <input
+                    type="date"
+                    value={filterFollowUpDate}
+                    onChange={e => { setFilterFollowUpDate(e.target.value); setPage(1); }}
+                    className="px-2.5 py-1 bg-white border border-indigo-300 rounded-lg text-xs font-bold text-indigo-950 focus:outline-none focus:border-indigo-500"
+                  />
+                  {filterFollowUpDate && (
+                    <button
+                      type="button"
+                      onClick={() => { setFilterFollowUpDate(''); setPage(1); }}
+                      className="text-indigo-400 hover:text-rose-600 font-bold text-xs px-1"
+                      title="Clear follow-up date filter"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
 
                 <label className="flex items-center gap-2 px-3 py-2 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-300 transition-all">
@@ -1125,7 +1379,7 @@ export default function LeadCommandCentre() {
                     setFilterStatus('all'); setFilterPriority('all'); setFilterSource('all');
                     setFilterStaff('all'); setFilterEmpStatus('all'); setFilterActivePipeline(false);
                     setFilterOverdue(false); setFilterHasPending(false);
-                    setFilterDateFrom(''); setFilterDateTo('');
+                    setFilterDateFrom(''); setFilterDateTo(''); setFilterFollowUpDate('');
                     setFilterCompany('');
                     setPage(1);
                   }}
@@ -1163,6 +1417,18 @@ export default function LeadCommandCentre() {
                 className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white/90 bg-white/10 rounded-xl hover:bg-white/20 transition-all"
               >
                 <X size={16} /> Clear
+              </button>
+              <button
+                onClick={() => {
+                  setRescheduleStaffId(filterStaff !== 'all' ? filterStaff : '');
+                  setRescheduleFromDate(filterFollowUpDate || getLocalDateString());
+                  setRescheduleToDate(employeeWorkload?.suggested_next_date || getLocalDateString());
+                  setRescheduleModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-bold text-violet-100 bg-violet-600/90 hover:bg-violet-600 border border-violet-400/30 rounded-xl transition-all shadow-sm"
+              >
+                <CalendarClock size={16} />
+                Reschedule Selected ({selectedCount})
               </button>
               <button
                 onClick={() => { setCloseMode('selected'); setCloseModalOpen(true); }}
@@ -1818,6 +2084,209 @@ export default function LeadCommandCentre() {
             </div>
           </div>
         </>
+      )}
+      {/* ── Bulk Reschedule Follow-ups Modal ───────────────────────────────── */}
+      {rescheduleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full overflow-hidden border border-gray-100 animate-scaleUp">
+            {/* Header */}
+            <div className="px-6 py-5 bg-gradient-to-r from-violet-600 via-indigo-600 to-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center shadow-xs">
+                  <CalendarClock size={22} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black leading-tight">Reschedule Day's Follow-ups</h3>
+                  <p className="text-xs text-indigo-200">Move all pending follow-ups of any day to a new scheduled date</p>
+                </div>
+              </div>
+              <button
+                onClick={() => !rescheduling && setRescheduleModalOpen(false)}
+                disabled={rescheduling}
+                className="text-white/80 hover:text-white p-1 rounded-lg disabled:opacity-40"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              {/* Target Counsellor Selector */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">
+                  Target Counsellor
+                </label>
+                <select
+                  value={rescheduleStaffId}
+                  onChange={e => setRescheduleStaffId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-indigo-500 bg-white"
+                >
+                  <option value="">All Counsellors (Global Day Queue)</option>
+                  {groupedStaff.active.length > 0 && (
+                    <optgroup label={`Active Employees (${groupedStaff.active.length})`}>
+                      {groupedStaff.active.map(s => (
+                        <option key={s.id} value={s.id}>🟢 {staffDisplayName(s)}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {groupedStaff.inactive.length > 0 && (
+                    <optgroup label={`Inactive Employees (${groupedStaff.inactive.length})`}>
+                      {groupedStaff.inactive.map(s => (
+                        <option key={s.id} value={s.id}>🔴 {staffDisplayName(s)} (Inactive)</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+
+              {/* Employee Furthest Follow-up Workload Box */}
+              <div className="p-4 bg-gradient-to-br from-violet-50 via-indigo-50/50 to-blue-50 border-2 border-indigo-200 rounded-2xl shadow-xs">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <CalendarClock size={16} className="text-indigo-600" />
+                    <span className="text-xs font-bold text-indigo-950 uppercase tracking-wide">
+                      {rescheduleStaffId ? `${modalWorkload.employee_name}'s Follow-up Queue` : 'Global Workload Overview'}
+                    </span>
+                  </div>
+                  {modalWorkload.loading && (
+                    <span className="text-xs text-indigo-600 font-bold animate-pulse">Checking schedule…</span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="bg-white/80 p-3 rounded-xl border border-indigo-100">
+                    <div className="text-[11px] font-semibold text-gray-500 uppercase">Furthest Scheduled Date</div>
+                    <div className="text-sm font-black text-indigo-900 mt-0.5">
+                      {modalWorkload.latest_followup_date ? formatDate(modalWorkload.latest_followup_date) : 'None scheduled'}
+                    </div>
+                  </div>
+                  <div className="bg-white/80 p-3 rounded-xl border border-indigo-100">
+                    <div className="text-[11px] font-semibold text-gray-500 uppercase">Pending on Source Date</div>
+                    <div className="text-sm font-black text-violet-900 mt-0.5">
+                      {modalWorkload.count_on_from_date} follow-ups
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick 1-click helper: Assign after furthest date */}
+                {modalWorkload.suggested_next_date && (
+                  <button
+                    type="button"
+                    onClick={() => setRescheduleToDate(modalWorkload.suggested_next_date)}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-white border-2 border-indigo-300 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-xs"
+                  >
+                    <span>✨ Assign to Next Available Day: <strong>{formatDate(modalWorkload.suggested_next_date)}</strong></span>
+                  </button>
+                )}
+              </div>
+
+              {/* Date Inputs Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">
+                    Source Date (Day to Move)
+                  </label>
+                  <input
+                    type="date"
+                    value={rescheduleFromDate}
+                    onChange={e => setRescheduleFromDate(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border-2 border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:border-indigo-500"
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    All pending follow-ups on this day will disappear.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-indigo-900 uppercase tracking-wide mb-1.5">
+                    Target Date (New Date)
+                  </label>
+                  <input
+                    type="date"
+                    min={getLocalDateString()}
+                    value={rescheduleToDate}
+                    onChange={e => setRescheduleToDate(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border-2 border-indigo-300 rounded-xl text-sm font-bold text-indigo-900 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100"
+                  />
+                  <p className="text-[11px] text-indigo-600 font-semibold mt-1">
+                    Follow-ups will appear under this date.
+                  </p>
+                </div>
+              </div>
+
+              {/* Optional Stagger Setting */}
+              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rescheduleStagger}
+                    onChange={e => setRescheduleStagger(e.target.checked)}
+                    className="w-4 h-4 rounded text-indigo-600 accent-indigo-600"
+                  />
+                  <span className="text-xs font-bold text-gray-800">
+                    Stagger evenly over multiple days (prevents overwhelming one day)
+                  </span>
+                </label>
+                {rescheduleStagger && (
+                  <div className="flex items-center gap-2 pl-6 pt-1">
+                    <span className="text-xs text-gray-600 font-medium">Spread across:</span>
+                    <input
+                      type="number"
+                      min={2}
+                      max={30}
+                      value={rescheduleStaggerDays}
+                      onChange={e => setRescheduleStaggerDays(Math.max(2, parseInt(e.target.value) || 2))}
+                      className="w-20 px-2.5 py-1 border-2 border-indigo-200 rounded-lg text-xs font-bold"
+                    />
+                    <span className="text-xs text-gray-500">days starting from Target Date</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Remarks */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1.5">
+                  Reason / Notes (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Counsellor on leave / Queue rescheduled via Command Centre"
+                  value={rescheduleNotes}
+                  onChange={e => setRescheduleNotes(e.target.value)}
+                  className="w-full px-3.5 py-2 border-2 border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {selectedIds.size > 0 && (
+                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-medium">
+                  📌 Note: You currently have <strong>{selectedIds.size} specific leads selected</strong>. The operation will prioritize rescheduling follow-ups for those selected leads.
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+              <button
+                onClick={() => setRescheduleModalOpen(false)}
+                disabled={rescheduling}
+                className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkReschedule}
+                disabled={rescheduling || !rescheduleToDate}
+                className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-700 hover:from-violet-700 hover:to-indigo-800 rounded-xl shadow-md disabled:opacity-50 transition-all"
+              >
+                {rescheduling ? (
+                  <><RefreshCw size={16} className="animate-spin" /> Rescheduling Queue…</>
+                ) : (
+                  <><CalendarClock size={16} /> Confirm &amp; Reschedule Leads</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
