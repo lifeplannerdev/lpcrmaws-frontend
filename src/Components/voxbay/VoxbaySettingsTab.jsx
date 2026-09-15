@@ -84,6 +84,7 @@ export default function VoxbaySettingsTab() {
     const s = search.toLowerCase();
     return (
       (u.name && u.name.toLowerCase().includes(s)) ||
+      (u.team && u.team.toLowerCase().includes(s)) ||
       (u.roles && u.roles.toLowerCase().includes(s)) ||
       (u.voxbay_number && u.voxbay_number.toLowerCase().includes(s)) ||
       (u.voxbay_extension && u.voxbay_extension.toLowerCase().includes(s))
@@ -107,25 +108,25 @@ export default function VoxbaySettingsTab() {
           
           <input 
             type="text" 
-            placeholder="Search staff..." 
+            placeholder="Search staff or team..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-400 bg-gray-50"
+            className="px-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 w-44"
           />
           
           <button
             onClick={fetchUsers}
             disabled={loading}
-            className="p-1.5 border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             title="Refresh"
           >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
           
           <button
             onClick={handleSave}
-            disabled={saving || loading}
-            className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+            disabled={saving || !users.some((u) => u._isDirty)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-all shadow-sm shadow-indigo-200"
           >
             <Save size={14} />
             {saving ? 'Saving...' : 'Save Changes'}
@@ -141,6 +142,7 @@ export default function VoxbaySettingsTab() {
             <thead className="bg-gray-50 text-[10px] text-gray-500 uppercase tracking-widest font-bold sticky top-0 border-b border-gray-100 z-10">
               <tr>
                 <th className="px-4 py-3 text-left">Staff Member</th>
+                <th className="px-4 py-3 text-left">Team</th>
                 <th className="px-4 py-3 text-left">Roles</th>
                 <th className="px-4 py-3 text-left">Voxbay DID (Incoming)</th>
                 <th className="px-4 py-3 text-left">Voxbay Extension (Outgoing)</th>
@@ -151,6 +153,13 @@ export default function VoxbaySettingsTab() {
                 filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-4 py-3 font-semibold text-gray-800">{user.name}</td>
+                    <td className="px-4 py-3 text-gray-500 font-medium">
+                      {user.team ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                          {user.team}
+                        </span>
+                      ) : '—'}
+                    </td>
                     <td className="px-4 py-3 text-gray-500">{user.roles || '—'}</td>
                     <td className="px-4 py-2">
                       <input
@@ -174,7 +183,7 @@ export default function VoxbaySettingsTab() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4" className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan="5" className="px-4 py-10 text-center text-gray-400">
                     No active staff found matching your search.
                   </td>
                 </tr>

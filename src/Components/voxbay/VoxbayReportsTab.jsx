@@ -18,13 +18,18 @@ export default function VoxbayReportsTab({ accessToken }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Fetch agents for the dropdown
-    fetch(`${API_BASE}/voxbay/settings/`, {
-      headers: { 'Authorization': `Bearer ${accessToken}` }
+    // Fetch agents for the dropdown (only people with Sales as team/department)
+    fetch(`${API_BASE}/voxbay/settings/?team=Sales`, {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+      credentials: 'omit'
     })
       .then(res => res.ok ? res.json() : [])
       .then(data => {
-        setAgents(data);
+        // Ensure only employees in Sales department are listed
+        const salesAgents = Array.isArray(data)
+          ? data.filter(a => !a.team || a.team.toLowerCase().includes('sales'))
+          : [];
+        setAgents(salesAgents);
         setLoadingAgents(false);
       })
       .catch(() => setLoadingAgents(false));
@@ -57,12 +62,19 @@ export default function VoxbayReportsTab({ accessToken }) {
       
       const response = await fetch(url, {
         method: 'GET',
-        headers: { 'Authorization': `Bearer ${accessToken}` }
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+        credentials: 'omit'
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to download report');
+        let errMsg = 'Failed to download report';
+        try {
+          const errorData = await response.json();
+          errMsg = errorData.error || errMsg;
+        } catch (_) {
+          errMsg = `Server error (${response.status}): ${response.statusText || 'Unable to generate report'}`;
+        }
+        throw new Error(errMsg);
       }
 
       // Handle file download
@@ -74,8 +86,11 @@ export default function VoxbayReportsTab({ accessToken }) {
       // Try to get filename from content-disposition header if available, otherwise fallback
       const disposition = response.headers.get('content-disposition');
       let filename = `Voxbay_Report_${start}_to_${end}.xlsx`;
-      if (disposition && disposition.indexOf('filename=') !== -1) {
-        filename = disposition.split('filename=')[1].replace(/"/g, '');
+      if (disposition) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          filename = match[1].replace(/['"]/g, '').trim();
+        }
       }
       
       a.download = filename;
