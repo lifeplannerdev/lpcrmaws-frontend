@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
-import { BookOpen, Search, Plus, Filter, Users, Loader2 } from 'lucide-react';
+import { BookOpen, Search, Plus, Filter, Users, Loader2, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -13,9 +13,42 @@ export default function BatchesPage() {
   const navigate = useNavigate();
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const canEdit = hasPermission('flag:admin') || hasPermission('flag:trainer');
+  const canEdit = hasPermission('flag:admin') || hasPermission('flag:trainer') || user?.is_superuser;
   const isTrainerOnly = (hasPermission('flag:trainer') || user?.role_names?.includes('TRAINER')) && !hasPermission('flag:admin') && !user?.is_superuser;
+
+  const handleDeleteBatch = async (e, batch) => {
+    e.stopPropagation();
+    const studentWarning = batch.student_count > 0 
+      ? `\n\n⚠️ This batch currently has ${batch.student_count} active student(s). Deleting it will unassign those students.`
+      : '';
+    if (!window.confirm(`Are you sure you want to delete batch "${batch.name}"?${studentWarning}\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setDeletingId(batch.id);
+      const token = accessToken || await refreshAccessToken();
+      const res = await fetch(`${API_BASE_URL}/students/batches/${batch.id}/`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok && res.status !== 204) {
+        let errData = {};
+        try { errData = await res.json(); } catch (_) {}
+        throw new Error(errData.detail || errData.message || `Failed to delete batch (Status ${res.status})`);
+      }
+
+      setBatches(prev => prev.filter(b => b.id !== batch.id));
+    } catch (err) {
+      console.error('Error deleting batch:', err);
+      alert(err.message || 'Failed to delete batch.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const fetchBatches = async () => {
     try {
@@ -116,8 +149,25 @@ export default function BatchesPage() {
                           {batch.status.toUpperCase()}
                         </span>
                       </div>
-                      <div className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
-                        {batch.grade_progress}
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                          {batch.grade_progress}
+                        </div>
+                        {canEdit && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteBatch(e, batch)}
+                            disabled={deletingId === batch.id}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title={`Delete ${batch.name}`}
+                          >
+                            {deletingId === batch.id ? (
+                              <Loader2 size={16} className="animate-spin text-red-500" />
+                            ) : (
+                              <Trash2 size={16} />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                     

@@ -2,23 +2,56 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
-import { useParams, Link } from 'react-router-dom';
-import { BookOpen, Users, Settings, ArrowUpCircle, ArrowDownCircle, AlertTriangle, Loader2, Check, UserCheck, Edit } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { BookOpen, Users, Settings, ArrowUpCircle, ArrowDownCircle, AlertTriangle, Loader2, Check, UserCheck, Edit, Trash2 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function BatchDetailPage() {
   const { id } = useParams();
-  const { accessToken, refreshAccessToken } = useAuth();
+  const navigate = useNavigate();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
   const [batch, setBatch] = useState(null);
   const [students, setStudents] = useState([]);
   const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const [savingTrainer, setSavingTrainer] = useState(false);
-  const canEdit = hasPermission('flag:admin') || hasPermission('flag:trainer');
+  const canEdit = hasPermission('flag:admin') || hasPermission('flag:trainer') || user?.is_superuser;
   const [activeTab, setActiveTab] = useState('students'); // 'students', 'promote', 'demote'
   const [promotionLoading, setPromotionLoading] = useState(false);
+
+  const handleDeleteBatch = async () => {
+    if (!batch) return;
+    const studentWarning = students.length > 0 
+      ? `\n\n⚠️ This batch currently has ${students.length} active student(s). Deleting it will unassign those students.`
+      : '';
+    if (!window.confirm(`Are you sure you want to delete batch "${batch.name}"?${studentWarning}\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      const token = accessToken || await refreshAccessToken();
+      const res = await fetch(`${API_BASE_URL}/students/batches/${id}/`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok && res.status !== 204) {
+        let errData = {};
+        try { errData = await res.json(); } catch (_) {}
+        throw new Error(errData.detail || errData.message || `Failed to delete batch (Status ${res.status})`);
+      }
+
+      navigate('/flag/batches');
+    } catch (err) {
+      console.error('Error deleting batch:', err);
+      alert(err.message || 'Failed to delete batch.');
+      setDeleting(false);
+    }
+  };
 
   const fetchBatch = async () => {
     try {
@@ -192,13 +225,24 @@ export default function BatchDetailPage() {
               </div>
               <div className="flex items-center gap-3">
                 {canEdit && (
-                  <Link
-                    to={`/flag/batches/${batch.id}/edit`}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm font-semibold rounded-xl hover:bg-indigo-100 transition-colors"
-                  >
-                    <Edit size={16} />
-                    Edit Batch
-                  </Link>
+                  <>
+                    <Link
+                      to={`/flag/batches/${batch.id}/edit`}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm font-semibold rounded-xl hover:bg-indigo-100 transition-colors"
+                    >
+                      <Edit size={16} />
+                      Edit Batch
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleDeleteBatch}
+                      disabled={deleting}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 border border-red-200 text-red-700 text-sm font-semibold rounded-xl hover:bg-red-100 transition-colors"
+                    >
+                      {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                      Delete Batch
+                    </button>
+                  </>
                 )}
                 <div className={`px-4 py-2 rounded-xl text-sm font-bold ${batch.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'}`}>
                   {batch.status.toUpperCase()}

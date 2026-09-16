@@ -271,9 +271,28 @@ export default function ProcessingStudentsPage() {
             </div>
           ) : (
             <>
-              {activeView === 'list' && <ListView students={students} dynamicFields={dynamicFields} onStudentClick={openEditModal} />}
+              {activeView === 'list' && (
+                <ListView 
+                  students={students} 
+                  dynamicFields={dynamicFields} 
+                  onStudentClick={openEditModal} 
+                  onDeleteStudent={handleDeleteStudent}
+                  canDelete={canEditAny || canEditOwn}
+                />
+              )}
               {activeView === 'kanban' && <KanbanView students={students} dynamicFields={dynamicFields} handleUpdateField={handleUpdateField} onStudentClick={openEditModal} />}
-              {activeView === 'spreadsheet' && <SpreadsheetView students={students} dynamicFields={dynamicFields} debouncedUpdateField={debouncedUpdateField} staffList={staffList} onStudentClick={openEditModal} canManageFees={canManageFees} />}
+              {activeView === 'spreadsheet' && (
+                <SpreadsheetView 
+                  students={students} 
+                  dynamicFields={dynamicFields} 
+                  debouncedUpdateField={debouncedUpdateField} 
+                  staffList={staffList} 
+                  onStudentClick={openEditModal} 
+                  onDeleteStudent={handleDeleteStudent}
+                  canManageFees={canManageFees} 
+                  canDelete={canEditAny || canEditOwn}
+                />
+              )}
             </>
           )}
         </div>
@@ -298,34 +317,47 @@ export default function ProcessingStudentsPage() {
   );
 }
 
-function ListView({ students, dynamicFields, onStudentClick }) {
+function ListView({ students, dynamicFields, onStudentClick, onDeleteStudent, canDelete = false }) {
   if (students.length === 0) return <div className="text-gray-500 text-center p-8">No students found.</div>;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {students.map(student => (
-        <div key={student.id} className="border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
-          <h3 className="font-bold text-lg text-gray-800 mb-1">{student.name}</h3>
-          <p className="text-sm text-gray-500 mb-4">{student.program_applied || 'No program'}</p>
+        <div key={student.id} className="border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+          <div>
+            <h3 className="font-bold text-lg text-gray-800 mb-1">{student.name}</h3>
+            <p className="text-sm text-gray-500 mb-4">{student.program_applied || 'No program'}</p>
 
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Phone:</span>
-              <span className="font-medium text-gray-800">{student.mobile_number}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Status:</span>
-              <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{student.enrollment_process_status}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Assigned To:</span>
-              <span className="text-gray-800">{student.assigned_to_name || 'Unassigned'}</span>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Phone:</span>
+                <span className="font-medium text-gray-800">{student.mobile_number}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Status:</span>
+                <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{student.enrollment_process_status}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Assigned To:</span>
+                <span className="text-gray-800">{student.assigned_to_name || 'Unassigned'}</span>
+              </div>
             </div>
           </div>
 
-          <button onClick={() => onStudentClick(student)} className="w-full mt-5 bg-gray-50 hover:bg-gray-100 text-blue-600 font-medium py-2 rounded-lg text-sm border border-gray-200 transition-colors">
-            View Details
-          </button>
+          <div className="flex gap-2 mt-5">
+            <button onClick={() => onStudentClick(student)} className="flex-1 bg-gray-50 hover:bg-gray-100 text-blue-600 font-medium py-2 rounded-lg text-sm border border-gray-200 transition-colors">
+              View Details
+            </button>
+            {canDelete && onDeleteStudent && (
+              <button 
+                onClick={() => onDeleteStudent(student.id)} 
+                className="px-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm border border-red-200 transition-colors font-medium"
+                title="Delete Student"
+              >
+                Delete
+              </button>
+            )}
+          </div>
         </div>
       ))}
     </div>
@@ -392,7 +424,7 @@ function KanbanView({ students, dynamicFields, handleUpdateField, onStudentClick
   );
 }
 
-function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffList, onStudentClick, canManageFees }) {
+function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffList, onStudentClick, onDeleteStudent, canManageFees, canDelete = false }) {
   const fixedColumns = [
     { key: 'name', label: 'Student Name' },
     { key: 'mobile_number', label: 'Mobile Number' },
@@ -576,9 +608,16 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                 </td>
               ))}
               <td className="px-4 py-2 border-l sticky right-0 z-10 bg-white text-center shadow-sm">
-                <button onClick={() => onStudentClick(student)} className="text-blue-600 font-medium hover:text-blue-800 hover:underline">
-                  Edit
-                </button>
+                <div className="flex items-center justify-center gap-2">
+                  <button onClick={() => onStudentClick(student)} className="text-blue-600 font-medium hover:text-blue-800 hover:underline">
+                    Edit
+                  </button>
+                  {canDelete && onDeleteStudent && (
+                    <button onClick={() => onDeleteStudent(student.id)} className="text-red-600 font-medium hover:text-red-800 hover:underline">
+                      Delete
+                    </button>
+                  )}
+                </div>
               </td>
             </tr>
           ))}
