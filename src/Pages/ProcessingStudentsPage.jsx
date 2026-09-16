@@ -588,7 +588,7 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
   );
 }
 
-function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, onSave, accessToken }) {
+function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, onSave, accessToken, canManageFees = false }) {
   const [formData, setFormData] = useState({
     name: '', mobile_number: '', whatsapp_number: '', email: '', parent_contact: '',
     program_applied: '', university: '', intake: '', registration_fee_status: 'Pending',
