@@ -8,7 +8,7 @@ import './fds-theme.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const MODES = ['CASH','UPI','BANK_TRANSFER','CARD','OTHER'];
+const MODES = ['CASH','UPI','ONLINE','BANK_TRANSFER','CARD','OTHER'];
 const PAY_STATUSES = ['PAID','PARTIAL','PENDING','OVERDUE'];
 
 const EMPTY_FORM = {
@@ -178,7 +178,7 @@ export default function FdsFeesPage() {
           <div className="fds-page-header">
             <div>
               <h1 className="fds-page-title">Fees & Payments</h1>
-              <p className="fds-page-subtitle">FILMAATIC Dance Studio · {total} records</p>
+              <p className="fds-page-subtitle">FILMAATIC Dance Studio · {mainTab === 'ACCOUNTS' ? feeAccounts.length : total} records</p>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="fds-btn fds-btn-secondary" onClick={handleExport}><Download size={15} /> Export Excel</button>
@@ -190,19 +190,19 @@ export default function FdsFeesPage() {
           {summary && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
               <div className="fds-card" style={{ padding: '16px 20px' }}>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.7rem', color: 'var(--fds-yoga)', fontWeight: 700 }}>
-                  ₹{Number(summary.total_collected || 0).toLocaleString('en-IN')}
-                </div>
-                <div className="fds-stat-label">Total Collected</div>
-              </div>
-              <div className="fds-card" style={{ padding: '16px 20px' }}>
                 <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.7rem', color: 'var(--fds-primary)', fontWeight: 700 }}>
                   ₹{Number(summary.total_billed || 0).toLocaleString('en-IN')}
                 </div>
                 <div className="fds-stat-label">Total Billed</div>
               </div>
               <div className="fds-card" style={{ padding: '16px 20px' }}>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.7rem', color: '#e74c3c', fontWeight: 700 }}>
+                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.7rem', color: 'var(--fds-yoga)', fontWeight: 700 }}>
+                  ₹{Number(summary.total_collected || 0).toLocaleString('en-IN')}
+                </div>
+                <div className="fds-stat-label">Total Collected</div>
+              </div>
+              <div className="fds-card" style={{ padding: '16px 20px' }}>
+                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '1.7rem', color: Number(summary.total_balance || 0) > 0 ? '#e74c3c' : 'var(--fds-yoga)', fontWeight: 700 }}>
                   ₹{Number(summary.total_balance || 0).toLocaleString('en-IN')}
                 </div>
                 <div className="fds-stat-label">Outstanding Balance</div>

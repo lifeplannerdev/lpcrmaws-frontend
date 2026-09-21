@@ -126,15 +126,23 @@ export default function FdsTrialPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [data, statsData, enqData] = await Promise.all([
+      const [trialsRes, statsRes, enqRes] = await Promise.allSettled([
         fdsApi.trials(authFetchJson, buildParams()),
         fdsApi.trialStats(authFetchJson),
         fdsApi.enquiries(authFetchJson, { joined: false, page_size: 150 }),
       ]);
-      setTrials(data.results ?? data);
-      setTotal(data.count ?? (data.results ? data.results.length : data.length));
-      setStats(statsData);
-      setEnquiries(enqData.results ?? enqData);
+      if (trialsRes.status === 'fulfilled' && trialsRes.value) {
+        const data = trialsRes.value;
+        setTrials(data.results ?? data);
+        setTotal(data.count ?? (data.results ? data.results.length : data.length));
+      }
+      if (statsRes.status === 'fulfilled' && statsRes.value) {
+        setStats(statsRes.value);
+      }
+      if (enqRes.status === 'fulfilled' && enqRes.value) {
+        const enqData = enqRes.value;
+        setEnquiries(enqData.results ?? enqData);
+      }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [authFetchJson, buildParams]);
