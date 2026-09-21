@@ -101,6 +101,7 @@ export default function FdsFeesPage() {
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
   const [editingStructureId, setEditingStructureId] = useState(null);
   const [structureForm, setStructureForm] = useState({
+    name: '',
     category: 'DANCE',
     batch_type: 'WEEKEND',
     admission_fee: '0.00',
@@ -139,7 +140,13 @@ export default function FdsFeesPage() {
     const res = await authFetch(url, opts);
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({}));
-      throw new Error(errBody.detail || errBody.error || `Request failed with status ${res.status}`);
+      let msg = errBody.detail || errBody.error;
+      if (!msg && typeof errBody === 'object' && Object.keys(errBody).length > 0) {
+        msg = Object.entries(errBody)
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : (typeof v === 'object' ? JSON.stringify(v) : v)}`)
+          .join('; ');
+      }
+      throw new Error(msg || `Request failed with status ${res.status}`);
     }
     if (res.status === 204) return null;
     return res.json();
@@ -423,11 +430,24 @@ export default function FdsFeesPage() {
     e.preventDefault();
     setSaving(true);
     try {
+      const cat = structureForm.category || 'DANCE';
+      const btype = structureForm.batch_type || 'WEEKEND';
+      const generatedName = `${cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase()} - ${btype.charAt(0).toUpperCase() + btype.slice(1).toLowerCase()}`;
+      const payload = {
+        name: structureForm.name?.trim() || generatedName,
+        category: cat,
+        batch_type: btype,
+        amount: parseFloat(structureForm.amount) || 0,
+        admission_fee: parseFloat(structureForm.admission_fee) || 0,
+        duration_months: Number(structureForm.duration_months) || 1,
+        sessions_per_week: Number(structureForm.sessions_per_week) || 2,
+        is_active: structureForm.is_active ?? true,
+      };
       if (editingStructureId) {
-        await fdsApi.updateFeeStructure(authFetchJson, editingStructureId, structureForm);
+        await fdsApi.updateFeeStructure(authFetchJson, editingStructureId, payload);
         setMessage({ type: 'success', text: 'Fee structure package updated.' });
       } else {
-        await fdsApi.createFeeStructure(authFetchJson, structureForm);
+        await fdsApi.createFeeStructure(authFetchJson, payload);
         setMessage({ type: 'success', text: 'New fee structure package created.' });
       }
       setIsCatalogModalOpen(false);
@@ -1439,6 +1459,7 @@ export default function FdsFeesPage() {
                 <button
                   onClick={() => {
                     setStructureForm({
+                      name: '',
                       category: 'DANCE',
                       batch_type: 'WEEKEND',
                       admission_fee: '0.00',
@@ -1466,8 +1487,9 @@ export default function FdsFeesPage() {
                         onClick={() => {
                           setEditingStructureId(fs.id);
                           setStructureForm({
+                            name: fs.name || '',
                             category: fs.category,
-                            batch_type: fs.batch_type,
+                            batch_type: fs.batch_type || 'WEEKEND',
                             admission_fee: fs.admission_fee || '0.00',
                             amount: fs.amount || '0.00',
                             duration_months: fs.duration_months || 1,
@@ -1496,6 +1518,10 @@ export default function FdsFeesPage() {
                       </span>
                       <span className="text-xs font-bold text-gray-500 uppercase">{fs.batch_type_display || fs.batch_type}</span>
                     </div>
+
+                    {fs.name && (
+                      <h4 className="text-sm font-bold text-gray-900 mt-2">{fs.name}</h4>
+                    )}
 
                     <div className="mt-4">
                       <p className="text-xs text-gray-400">Total Fee</p>
@@ -1601,10 +1627,11 @@ export default function FdsFeesPage() {
                   onChange={(e) => {
                     const val = e.target.value;
                     const pkg = feeStructures.find(f => String(f.id) === val);
+                    const pkgTitle = pkg ? (pkg.name || `${pkg.category_display || pkg.category} (${pkg.batch_type || 'Weekend'})`) : p.plan_name;
                     setCreateForm(p => ({
                       ...p,
                       active_package: val,
-                      plan_name: pkg ? pkg.category_display || pkg.category : p.plan_name,
+                      plan_name: pkgTitle,
                       total_due: pkg ? String(pkg.amount) : p.total_due,
                     }));
                   }}
@@ -1613,7 +1640,7 @@ export default function FdsFeesPage() {
                   <option value="">Custom Package</option>
                   {feeStructures.map(f => (
                     <option key={f.id} value={f.id}>
-                      {f.category_display || f.category} ({f.batch_type}) — {currency(f.amount)}
+                      {f.name || `${f.category_display || f.category} (${f.batch_type || 'Weekend'})`} — {currency(f.amount)}
                     </option>
                   ))}
                 </select>
@@ -1986,6 +2013,16 @@ export default function FdsFeesPage() {
               {editingStructureId ? 'Edit Fee Package' : 'Create Fee Package'}
             </h3>
             <form onSubmit={handleSaveStructure} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Package Name (Optional)</label>
+                <input
+                  type="text"
+                  value={structureForm.name || ''}
+                  onChange={(e) => setStructureForm(p => ({ ...p, name: e.target.value }))}
+                  placeholder="e.g. Dance Weekend - Regular"
+                  className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Class Category</label>
