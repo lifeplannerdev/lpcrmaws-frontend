@@ -79,6 +79,23 @@ export const fdsApi = {
 
   // Fee Accounts
   feeAccounts: (af, params = {}) => af(`${FDS_BASE}/fee-accounts/${buildQueryString(params)}`),
+  feeAccount: (af, id) => af(`${FDS_BASE}/fee-accounts/${id}/`),
+  createFeeAccount: (af, data) => af(`${FDS_BASE}/fee-accounts/`, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
+  updateFeeAccount: (af, id, data) => af(`${FDS_BASE}/fee-accounts/${id}/`, { method: 'PATCH', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
+  deleteFeeAccount: (af, id) => af(`${FDS_BASE}/fee-accounts/${id}/`, { method: 'DELETE' }),
+  recalculateFeeAccount: (af, id) => af(`${FDS_BASE}/fee-accounts/${id}/recalculate/`, { method: 'POST' }),
+  recordFeeAccountPayment: (af, id, data) => af(`${FDS_BASE}/fee-accounts/${id}/payments/`, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
+  restructureFeeAccount: (af, id, data) => af(`${FDS_BASE}/fee-accounts/${id}/restructure/`, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
+  feeInstallments: (af, id) => af(`${FDS_BASE}/fee-accounts/${id}/installments/`),
+  addFeeInstallment: (af, id, data) => af(`${FDS_BASE}/fee-accounts/${id}/installments/`, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
+  updateFeeInstallment: (af, accountId, instId, data) => af(`${FDS_BASE}/fee-accounts/${accountId}/installments/${instId}/`, { method: 'PATCH', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
+  deleteFeeInstallment: (af, accountId, instId) => af(`${FDS_BASE}/fee-accounts/${accountId}/installments/${instId}/`, { method: 'DELETE' }),
+  feeAdjustments: (af, id) => af(`${FDS_BASE}/fee-accounts/${id}/adjustments/`),
+  addFeeAdjustment: (af, id, data) => af(`${FDS_BASE}/fee-accounts/${id}/adjustments/`, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
+  pendingFeeStudents: (af, params = {}) => af(`${FDS_BASE}/fee-accounts/pending_students/${buildQueryString(params)}`),
+  feeSummary: (af, params = {}) => af(`${FDS_BASE}/fee-accounts/summary/${buildQueryString(params)}`),
+  feePolicies: (af) => af(`${FDS_BASE}/fee-accounts/policies/`),
+  updateFeePolicies: (af, data) => af(`${FDS_BASE}/fee-accounts/policies/`, { method: 'PATCH', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
 
   // Trainers
   trainers: (af) => af(`${FDS_BASE}/trainers/`),
