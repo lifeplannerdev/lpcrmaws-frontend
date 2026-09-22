@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
+import { useUserChannel } from '../hooks/useUserChannel';
 import {
   ArrowLeft, Calendar, User, FileText, Clock,
   Edit2, CheckCircle, AlertTriangle, Loader,
@@ -76,7 +77,7 @@ export default function TaskViewPage() {
       if (!taskRes.ok) throw new Error('Failed to fetch task details');
       setTask(await taskRes.json());
 
-      // Task updates — FIX: handle both paginated {results:[]} and plain []
+      // Task updates — handle both paginated {results:[]} and plain []
       const updatesRes = await fetch(`${API_BASE_URL}/tasks/${id}/updates/`, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
@@ -86,6 +87,9 @@ export default function TaskViewPage() {
           ? updatesData
           : (updatesData.results || []);
         setUpdates(list);
+      } else {
+        const errText = await updatesRes.text().catch(() => '');
+        console.error('Failed to fetch task updates:', updatesRes.status, errText);
       }
     } catch (err) {
       setError(err.message);
@@ -95,6 +99,20 @@ export default function TaskViewPage() {
   };
 
   useEffect(() => { loadTaskData(); }, [id]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Real-time updates for remarks and status changes on this task
+  useUserChannel({
+    onTaskRemarkAdded: (data) => {
+      if (data?.task_id?.toString() === id?.toString()) {
+        loadTaskData();
+      }
+    },
+    onTaskStatusUpdated: (data) => {
+      if (data?.task_id?.toString() === id?.toString()) {
+        loadTaskData();
+      }
+    },
+  });
 
   // ── Permission helpers ─────────────────────────────────────────────────────
 

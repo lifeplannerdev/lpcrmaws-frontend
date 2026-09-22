@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 export const useUserChannel = ({
   onTaskAssigned,
   onTaskStatusUpdated,
+  onTaskRemarkAdded,
   onLeadAssigned,
   onNewConversation,
   onChatMessage,
@@ -20,6 +21,7 @@ export const useUserChannel = ({
   // Store callbacks in refs so they're always fresh
   const onTaskAssignedRef = useRef(onTaskAssigned);
   const onTaskStatusUpdatedRef = useRef(onTaskStatusUpdated);
+  const onTaskRemarkAddedRef = useRef(onTaskRemarkAdded);
   const onLeadAssignedRef = useRef(onLeadAssigned);
   const onNewConversationRef = useRef(onNewConversation);
   const onChatMessageRef = useRef(onChatMessage);
@@ -32,6 +34,7 @@ export const useUserChannel = ({
   useEffect(() => {
     onTaskAssignedRef.current = onTaskAssigned;
     onTaskStatusUpdatedRef.current = onTaskStatusUpdated;
+    onTaskRemarkAddedRef.current = onTaskRemarkAdded;
     onLeadAssignedRef.current = onLeadAssigned;
     onNewConversationRef.current = onNewConversation;
     onChatMessageRef.current = onChatMessage;
@@ -49,6 +52,7 @@ export const useUserChannel = ({
 
     const handleTaskAssigned = (data) => onTaskAssignedRef.current?.(data);
     const handleTaskStatus = (data) => onTaskStatusUpdatedRef.current?.(data);
+    const handleTaskRemark = (data) => onTaskRemarkAddedRef.current?.(data);
     const handleLeadAssigned = (data) => onLeadAssignedRef.current?.(data);
     const handleNewConv = (data) => onNewConversationRef.current?.(data);
     const handleChatMsg = (data) => onChatMessageRef.current?.(data);
@@ -59,6 +63,7 @@ export const useUserChannel = ({
 
     channelRef.current.bind('task.assigned', handleTaskAssigned);
     channelRef.current.bind('task.status_updated', handleTaskStatus);
+    channelRef.current.bind('task.remark_added', handleTaskRemark);
     channelRef.current.bind('lead.assigned', handleLeadAssigned);
     channelRef.current.bind('new-conversation', handleNewConv);
     channelRef.current.bind('chat.new_message', handleChatMsg);
@@ -70,6 +75,7 @@ export const useUserChannel = ({
     return () => {
       channelRef.current?.unbind('task.assigned', handleTaskAssigned);
       channelRef.current?.unbind('task.status_updated', handleTaskStatus);
+      channelRef.current?.unbind('task.remark_added', handleTaskRemark);
       channelRef.current?.unbind('lead.assigned', handleLeadAssigned);
       channelRef.current?.unbind('new-conversation', handleNewConv);
       channelRef.current?.unbind('chat.new_message', handleChatMsg);

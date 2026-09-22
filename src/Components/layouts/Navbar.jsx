@@ -96,6 +96,22 @@ const Navbar = () => {
       time: new Date().toISOString(),
       is_read: false,
     }),
+    onTaskRemarkAdded: (data) => addNotification({
+      id: Date.now(),
+      type: 'task',
+      message: data.message,
+      by: data.updated_by_name,
+      time: new Date().toISOString(),
+      is_read: false,
+    }),
+    onTaskStatusUpdated: (data) => addNotification({
+      id: Date.now(),
+      type: 'task',
+      message: data.message,
+      by: data.updated_by_name,
+      time: new Date().toISOString(),
+      is_read: false,
+    }),
     onLeadAssigned: (data) => addNotification({
       id: Date.now(),
       type: 'lead',
