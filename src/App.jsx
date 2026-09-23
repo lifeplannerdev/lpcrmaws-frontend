@@ -140,7 +140,7 @@ export default function App() {
 
         <Route path="/processing-students" element={<PermissionRoute resources={['processing_students']}><ProcessingStudentsPage /></PermissionRoute>} />
         
-        <Route path="/hr/documents" element={<PermissionRoute resources={['license:admin']}><DocumentDetailsPage /></PermissionRoute>} />
+        <Route path="/hr/documents" element={<PermissionRoute permissions={['license:admin']}><DocumentDetailsPage /></PermissionRoute>} />
         <Route path="/hr/attendance" element={<PermissionRoute resources={['staff']}><AttendanceDocumentsPage /></PermissionRoute>} />
         <Route path="/hr/penalties" element={<PermissionRoute resources={['penalties']}><PenaltyManagementPage /></PermissionRoute>} />
         <Route path="/candidates" element={<PermissionRoute resources={['candidates']}><CandidatesPage /></PermissionRoute>} />
