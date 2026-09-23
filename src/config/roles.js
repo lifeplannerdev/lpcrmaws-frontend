@@ -49,6 +49,7 @@ export const masterNavigation = [
   { id: "attendanceDocs", label: "Attendance Docs", icon: FolderClock, path: "/hr/attendance", requiredResource: "staff", category: "hr", description: "Staff monthly attendance & leave docs" },
   { id: "penalties", label: "Penalties", icon: ShieldAlert, path: "/hr/penalties", requiredResource: "penalties", category: "hr", description: "Staff disciplinary records & penalties" },
   { id: "assets", label: "Assets", icon: Monitor, path: "/hr/assets", requiredResource: "assets", category: "hr", description: "Company equipment, devices & resources" },
+  { id: "documents", label: "Document Registry", icon: FileText, path: "/hr/documents", requiredPermissions: ["license:admin"], category: "hr", description: "Company licenses, documents & expiries" },
 
   // ── Tasks & Collaboration ──
   { id: "myTasks", label: "My Tasks", icon: ListTodo, path: "/mytasks", requiredResource: "tasks", requiredSpecificPermission: "tasks:read_own", category: "tasks", description: "Personal assignments & to-dos" },
