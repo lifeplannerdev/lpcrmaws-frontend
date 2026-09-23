@@ -42,6 +42,8 @@ import ProgramsPage from "./Pages/ProgramsPage.jsx";
 import VoxbayAIPage from "./Pages/VoxbayAIPage.jsx";
 import StaffAnalysisPage from "./Pages/StaffAnalysisPage.jsx";
 import StaffAnalysisReportPage from "./Pages/StaffAnalysisReportPage.jsx";
+import DocumentDetailsPage from "./Pages/DocumentDetailsPage.jsx";
+import DocumentExpiryNotifier from "./Components/dashboard/DocumentExpiryNotifier.jsx";
 import FdsDashboard from './Pages/FDS/FdsDashboard.jsx';
 import FdsEnquiryPage from './Pages/FDS/FdsEnquiryPage.jsx';
 import FdsTrialPage from './Pages/FDS/FdsTrialPage.jsx';
@@ -105,6 +107,7 @@ export default function App() {
     <Router>
       <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
       {isAuthenticated && <LiveCallModal />}
+      <DocumentExpiryNotifier />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<ProtectedRoute><DashboardOverview /></ProtectedRoute>} />
@@ -137,8 +140,7 @@ export default function App() {
 
         <Route path="/processing-students" element={<PermissionRoute resources={['processing_students']}><ProcessingStudentsPage /></PermissionRoute>} />
         
-
-
+        <Route path="/hr/documents" element={<PermissionRoute resources={['license:admin']}><DocumentDetailsPage /></PermissionRoute>} />
         <Route path="/hr/attendance" element={<PermissionRoute resources={['staff']}><AttendanceDocumentsPage /></PermissionRoute>} />
         <Route path="/hr/penalties" element={<PermissionRoute resources={['penalties']}><PenaltyManagementPage /></PermissionRoute>} />
         <Route path="/candidates" element={<PermissionRoute resources={['candidates']}><CandidatesPage /></PermissionRoute>} />

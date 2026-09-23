@@ -14,6 +14,7 @@ import LoadingSpinner from '../Components/dashboard/LoadingSpinner';
 import RecentActivities from '../Components/dashboard/RecentActivities';
 import LiveLeadsBoard from '../Components/dashboard/LiveLeadsBoard';
 import FeedsWidget from '../Components/dashboard/FeedsWidget';
+import DocumentExpiryWidget from '../Components/dashboard/DocumentExpiryWidget';
 import { formatTimeAgo, formatTaskTime, getPriorityColor } from '../Components/utils/dashboardHelpers';
 import { LayoutDashboard, Activity } from 'lucide-react';
 
@@ -171,7 +172,7 @@ export default function DashboardOverview() {
 
         {/* Tab panels */}
         {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <div className="lg:col-span-1">
               <UpcomingTasks
                 tasks={tasks}
@@ -194,6 +195,11 @@ export default function DashboardOverview() {
                 onViewAll={() => navigate('/followups')}
               />
             </div>
+            {hasPermission('license:admin') && (
+              <div className="lg:col-span-1">
+                <DocumentExpiryWidget />
+              </div>
+            )}
           </div>
         )}
 
