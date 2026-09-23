@@ -17,7 +17,9 @@ const CompanySwitcher = ({ activeCompany, onChange, showAll = false }) => {
   const canSwitchCompany = 
     user?.is_superuser || 
     user?.role === 'ADMIN' || 
-    (Array.isArray(user?.roles) && user.roles.includes('ADMIN')) || 
+    user?.role === 'MANAGING_DIRECTOR' ||
+    user?.role === 'CEO' ||
+    (Array.isArray(user?.roles) && (user.roles.includes('ADMIN') || user.roles.includes('MANAGING_DIRECTOR') || user.roles.includes('CEO'))) || 
     hasPermission('staff:access_flag') || 
     hasPermission('reports:kochi') || 
     hasPermission('reports:sales_all');

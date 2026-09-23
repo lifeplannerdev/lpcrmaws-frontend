@@ -75,7 +75,7 @@ export default function TaskFormPage() {
         }
 
         // Fetch team members
-        const membersResponse = await fetch(`${API_BASE_URL}/employees/list/`, {
+        const membersResponse = await fetch(`${API_BASE_URL}/employees/list/?company=all`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
