@@ -15,7 +15,7 @@ import { downloadCSV, downloadPDF } from '../utils/exportUtils';
 import CompanySwitcher from '../Components/common/CompanySwitcher';
 
 
-export default function TasksPage() {
+export default function TasksPage({ isMyTasks = false }) {
   const navigate = useNavigate();
   const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
@@ -111,6 +111,7 @@ export default function TasksPage() {
       if (companyFilter) params.set('company', companyFilter);
       if (selectedMonth && selectedMonth !== 'all') params.set('month', selectedMonth);
       if (selectedYear && selectedYear !== 'all') params.set('year', selectedYear);
+      if (isMyTasks && user?.id) params.set('user', user.id);
       
       const url = `${API_BASE_URL}/tasks/stats/?${params.toString()}`;
       const res = await fetch(url, {
@@ -134,6 +135,7 @@ export default function TasksPage() {
       // FIX: pass filters as query params → server filters across ALL pages
       const params = new URLSearchParams({ page });
       if (companyFilter)                        params.set('company', companyFilter);
+      if (isMyTasks && user?.id)                params.set('user', user.id);
       if (searchTerm)                           params.set('search',   searchTerm);
       if (filterStatus   && filterStatus   !== 'all') params.set('status',   filterStatus);
       if (filterPriority && filterPriority !== 'all') params.set('priority', filterPriority);

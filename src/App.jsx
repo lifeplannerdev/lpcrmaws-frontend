@@ -15,10 +15,8 @@ import StaffDetailsPage from './Pages/StaffDetailsPage.jsx';
 import AddStaffPage from './Pages/AddStaffPage.jsx';
 import EditStaffPage from './Pages/EditStaffPage.jsx';
 import TasksPage from './Pages/TasksPage.jsx';
-import MyTasksPage from './Pages/MyTasksPage.jsx';
-import TaskCreationPage from './Pages/TaskCreationPage.jsx';
+import TaskFormPage from './Pages/TaskFormPage.jsx';
 import TaskViewPage from "./Pages/TaskViewPage.jsx";
-import EditTaskPage from "./Pages/EditTaskPage.jsx";
 import ReportsPage from './Pages/ReportsPage.jsx';
 import ReportViewPage from "./Pages/ReportViewPage.jsx";
 
@@ -127,10 +125,10 @@ export default function App() {
         <Route path="/staff/edit/:id" element={<PermissionRoute permissions={['staff:edit_any', 'staff:edit_tenant']}><EditStaffPage /></PermissionRoute>} />
 
         <Route path="/staff/tasks" element={<PermissionRoute resources={['tasks']}><TasksPage /></PermissionRoute>} />
-        <Route path="/mytasks" element={<PermissionRoute resources={['tasks']}><MyTasksPage /></PermissionRoute>} />
-        <Route path="/tasks/new" element={<PermissionRoute resources={['tasks']}><TaskCreationPage /></PermissionRoute>} />
+        <Route path="/mytasks" element={<PermissionRoute resources={['tasks']}><TasksPage isMyTasks={true} /></PermissionRoute>} />
+        <Route path="/tasks/new" element={<PermissionRoute resources={['tasks']}><TaskFormPage /></PermissionRoute>} />
         <Route path="/tasks/:id" element={<PermissionRoute resources={['tasks']}><TaskViewPage /></PermissionRoute>} />
-        <Route path="/tasks/edit/:id" element={<PermissionRoute resources={['tasks']}><EditTaskPage /></PermissionRoute>} />
+        <Route path="/tasks/edit/:id" element={<PermissionRoute resources={['tasks']}><TaskFormPage /></PermissionRoute>} />
 
         <Route path="/daily/reports" element={<PermissionRoute resources={['reports']} permissions={['reports:read_all', 'reports:documentation', 'reports:kochi', 'reports:sales_all']} roles={['ADM_MANAGER', 'ADM_COUNSELLOR', 'FLAG_COORDINATOR']}><ReportsPage /></PermissionRoute>} />
         <Route path="/admin/reports/settings" element={<PermissionRoute resources={['reports']} permissions={['report_settings:manage']} roles={['ADM_MANAGER']}><ReportTimingSettingsPage /></PermissionRoute>} />

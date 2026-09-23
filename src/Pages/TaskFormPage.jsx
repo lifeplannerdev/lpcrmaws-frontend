@@ -1,26 +1,26 @@
-// Pages/TaskCreationPage.jsx
+// Pages/EditTaskPage.jsx
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { usePermissions } from '../context/PermissionsContext';
+import { Loader, ArrowLeft } from 'lucide-react';
 import TaskFormFields from '../Components/tasks/TaskFormFields';
 import PrioritySelector from '../Components/tasks/PrioritySelector';
-import { Building } from 'lucide-react';
+import StatusSelector from '../Components/tasks/StatusSelector';
+import { usePermissions } from '../context/PermissionsContext';
 
-export default function TaskCreationPage() {
+export default function TaskFormPage() {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const { accessToken, refreshAccessToken, user } = useAuth();
+  const { accessToken, refreshAccessToken } = useAuth();
   const { hasPermission } = usePermissions();
+  const canAssignTasks = hasPermission('tasks:edit_any') || hasPermission('tasks:edit_tenant') || hasPermission('tasks:edit_own');
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   
-  const hasDualAccess = hasPermission('staff:access_flag');
-  const canAssignTasks = hasPermission('tasks:edit_any') || hasPermission('tasks:edit_tenant') || hasPermission('tasks:edit_own');
-
   const [teamMembers, setTeamMembers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
-  
+
   // Dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,58 +30,74 @@ export default function TaskCreationPage() {
     description: '',
     assignTo: '',
     priority: 'MEDIUM',
+    status: 'PENDING',
     deadline: '',
-    company: user?.company || 'LP',
   });
 
-  // Fetch team members
+  // Fetch task details and team members
   useEffect(() => {
-    const fetchTeamMembers = async () => {
+    const fetchData = async () => {
       try {
+        setLoading(true);
         let token = accessToken;
+        
         if (!token) {
           token = await refreshAccessToken();
-          if (!token) {
-            setTeamMembers([]);
-            return;
-          }
+          if (!token) throw new Error('Authentication required');
         }
 
-        const url = formData.company ? `${API_BASE_URL}/employees/list/?company=${formData.company}` : `${API_BASE_URL}/employees/list/`;
-        const res = await fetch(url, {
+        // Fetch task details if editing
+        if (id) {
+          const taskResponse = await fetch(`${API_BASE_URL}/tasks/${id}/`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!taskResponse.ok) {
+            throw new Error('Failed to fetch task details');
+          }
+
+          const taskData = await taskResponse.json();
+
+          // Convert date to YYYY-MM-DD format
+          const deadlineDate = taskData.deadline ? taskData.deadline.split('T')[0] : '';
+
+          setFormData({
+            title: taskData.title,
+            description: taskData.description,
+            assignTo: taskData.assigned_to.toString(),
+            priority: taskData.priority,
+            status: taskData.status,
+            deadline: deadlineDate,
+          });
+        }
+
+        // Fetch team members
+        const membersResponse = await fetch(`${API_BASE_URL}/employees/list/`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        if (!res.ok) {
-          throw new Error(`Failed to fetch employees: ${res.status}`);
+
+        if (!membersResponse.ok) {
+          throw new Error('Failed to fetch employees');
         }
 
-        const data = await res.json();
-        console.log("employees data:", data);
-
-        let employeeList = data;
-        if (data && typeof data === 'object' && !Array.isArray(data)) {
-          if (data.results && Array.isArray(data.results)) {
-            employeeList = data.results;
-          }
-        }
-
-        if (Array.isArray(employeeList) && employeeList.length > 0) {
-          // Filter out ADMIN role employees
-          const filteredEmployees = employeeList.filter(emp => !emp.role_names?.some(r => r.toLowerCase() === 'admin'));
-          setTeamMembers(filteredEmployees);
-        } else {
-          setTeamMembers([]);
-        }
+        const membersData = await membersResponse.json();
+        setTeamMembers(membersData.results || membersData || []);
       } catch (err) {
-        console.error('Error fetching team members:', err);
-        setTeamMembers([]);
+        console.error('Error fetching data:', err);
+        alert('Failed to load task details. Please try again.');
+        navigate('/tasks');
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchTeamMembers();
-  }, [accessToken, refreshAccessToken, API_BASE_URL, formData.company]);
+    fetchData();
+  }, [id, accessToken, refreshAccessToken, API_BASE_URL, navigate]);
 
   // Validate form
   const validateForm = () => {
@@ -101,14 +117,6 @@ export default function TaskCreationPage() {
 
     if (!formData.deadline) {
       newErrors.deadline = 'Deadline is required';
-    } else {
-      const selectedDate = new Date(formData.deadline);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      if (selectedDate < today) {
-        newErrors.deadline = 'Deadline cannot be in the past';
-      }
     }
 
     setErrors(newErrors);
@@ -123,14 +131,14 @@ export default function TaskCreationPage() {
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
 
     let token = accessToken;
     if (!token) {
       token = await refreshAccessToken();
       if (!token) {
         alert('Session expired. Please login again.');
-        setLoading(false);
+        setSubmitting(false);
         return;
       }
     }
@@ -141,12 +149,15 @@ export default function TaskCreationPage() {
         description: formData.description.trim(),
         assigned_to: parseInt(formData.assignTo, 10),
         priority: formData.priority,
+        status: formData.status,
         deadline: formData.deadline,
-        company: formData.company,
       };
 
-      const res = await fetch(`${API_BASE_URL}/tasks/`, {
-        method: 'POST',
+      const url = id ? `${API_BASE_URL}/tasks/${id}/` : `${API_BASE_URL}/tasks/`;
+      const method = id ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -154,10 +165,10 @@ export default function TaskCreationPage() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const data = await response.json();
 
-      if (!res.ok) {
-        if (res.status === 400 && data) {
+      if (!response.ok) {
+        if (response.status === 400 && data) {
           const backendErrors = {};
           Object.keys(data).forEach(key => {
             if (Array.isArray(data[key])) {
@@ -169,42 +180,17 @@ export default function TaskCreationPage() {
           setErrors(backendErrors);
           throw new Error(Object.values(backendErrors).join(', '));
         }
-        throw new Error(data.detail || 'Task creation failed');
+        throw new Error(data.detail || 'Task update failed');
       }
 
-      alert('Task created successfully!');
-
-      setFormData({
-        title: '',
-        description: '',
-        assignTo: '',
-        priority: 'MEDIUM',
-        deadline: '',
-        company: user?.company || 'LP',
-      });
-      setErrors({});
-
-      navigate('/staff/tasks');
-
+      alert(`Task ${id ? 'updated' : 'created'} successfully!`);
+      navigate(id ? `/tasks/${id}` : '/staff/tasks');
     } catch (error) {
-      console.error('Task creation error:', error);
-      alert(error.message || 'Failed to create task. Please try again.');
+      console.error('Error updating task:', error);
+      alert(error.message || `Failed to ${id ? 'update' : 'create'} task. Please try again.`);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
-  };
-
-  // Handle cancel
-  const handleCancel = () => {
-    setFormData({
-      title: '',
-      description: '',
-      assignTo: '',
-      priority: 'MEDIUM',
-      deadline: '',
-      company: user?.company || 'LP',
-    });
-    setErrors({});
   };
 
   // Handle field change
@@ -215,55 +201,48 @@ export default function TaskCreationPage() {
     }
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="animate-spin text-indigo-600 mx-auto mb-4" size={48} />
+          <p className="text-slate-600 font-medium">{id ? 'Loading task details...' : 'Loading...'}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 p-6 md:p-8">
       <div className="max-w-4xl mx-auto">
         {/* Back Button */}
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate(id ? `/tasks/${id}` : '/staff/tasks')}
           className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-6 transition-colors duration-200"
-          disabled={loading}
+          disabled={submitting}
         >
           <ArrowLeft size={20} />
-          <span className="font-medium">Back</span>
+          <span className="font-medium">{id ? 'Back to Task' : 'Back to Tasks'}</span>
         </button>
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">Create New Task</h1>
-          <p className="text-slate-600">Fill in the details to create a new task for your team</p>
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">{id ? 'Edit Task' : 'Create Task'}</h1>
+          <p className="text-slate-600">{id ? 'Update the task details below' : 'Fill in the task details below'}</p>
         </div>
 
         {/* Form Card */}
         <form onSubmit={handleSubmit}>
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
             <div className="p-8 space-y-8">
-              {hasDualAccess && (
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <Building size={16} className="text-indigo-500" />
-                    Company
-                  </label>
-                  <select
-                    value={formData.company}
-                    onChange={(e) => handleFieldChange('company', e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none"
-                    disabled={loading}
-                  >
-                    <option value="LP">LP Group</option>
-                    <option value="FLAG">FLAG</option>
-                    <option value="FDS">FDS — Dance Studio</option>
-                  </select>
-                </div>
-              )}
-
               {/* Task Form Fields */}
               <TaskFormFields
                 formData={formData}
                 errors={errors}
                 teamMembers={teamMembers}
                 onFieldChange={handleFieldChange}
-                disabled={loading}
+                disabled={submitting}
                 isDropdownOpen={isDropdownOpen}
                 setIsDropdownOpen={setIsDropdownOpen}
                 searchQuery={searchQuery}
@@ -274,7 +253,14 @@ export default function TaskCreationPage() {
               <PrioritySelector
                 value={formData.priority}
                 onChange={(value) => handleFieldChange('priority', value)}
-                disabled={loading}
+                disabled={submitting}
+              />
+
+              {/* Status Selector */}
+              <StatusSelector
+                value={formData.status}
+                onChange={(value) => handleFieldChange('status', value)}
+                disabled={submitting}
               />
             </div>
 
@@ -282,9 +268,9 @@ export default function TaskCreationPage() {
             <div className="bg-slate-50 px-8 py-6 flex items-center justify-end gap-4 border-t border-slate-200">
               <button
                 type="button"
-                onClick={handleCancel}
+                onClick={() => navigate(`/tasks/${id}`)}
                 className="px-6 py-3 text-slate-700 font-semibold rounded-xl hover:bg-slate-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={loading}
+                disabled={submitting}
               >
                 Cancel
               </button>
@@ -292,9 +278,9 @@ export default function TaskCreationPage() {
                 <button
                   type="submit"
                   className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-indigo-800 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                  disabled={loading}
+                  disabled={submitting}
                 >
-                  {loading ? 'Creating...' : 'Create Task'}
+                  {submitting ? 'Updating...' : 'Update Task'}
                 </button>
               )}
             </div>
@@ -304,4 +290,3 @@ export default function TaskCreationPage() {
     </div>
   );
 }
-
