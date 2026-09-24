@@ -97,8 +97,9 @@ export const fdsApi = {
   feePolicies: (af) => af(`${FDS_BASE}/fee-accounts/policies/`),
   updateFeePolicies: (af, data) => af(`${FDS_BASE}/fee-accounts/policies/`, { method: 'PATCH', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
 
-  // Trainers
-  trainers: (af) => af(`${FDS_BASE}/trainers/`),
+  // Staff
+  trainers: (af, params = {}) => af(`${FDS_BASE}/trainers/${buildQueryString(params)}`),
+  coordinators: (af, params = {}) => af(`${FDS_BASE}/trainers/${buildQueryString(params)}`),
 };
 
 // Category meta

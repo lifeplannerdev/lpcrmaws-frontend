@@ -569,12 +569,12 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                   return (
                     <td key={col.key} className="px-4 py-2 border-r p-0">
                       <select
-                        defaultValue={student[col.key] || 'UNPAID'}
+                        defaultValue={student[col.key] || 'PENDING'}
                         disabled={!canManageFees}
                         className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
                         onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
                       >
-                        <option value="UNPAID">Unpaid</option>
+                        <option value="PENDING">Pending</option>
                         <option value="PARTIAL">Partial</option>
                         <option value="PAID">Paid</option>
                       </select>
@@ -635,7 +635,7 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
     application_status: '', offer_letter_status: '', visa_documentation_info_status: '',
     visa_appointment: '', visa_documentation: '', accommodation: '', visa_results: '',
     category: 'All Students', assigned_to: '',
-    processing_fee_amount: '', processing_fee_paid: '', processing_fee_status: 'UNPAID'
+    processing_fee_amount: '', processing_fee_paid: '', processing_fee_status: 'PENDING'
   });
   const [dynamicData, setDynamicData] = useState({});
   const [loading, setLoading] = useState(false);
@@ -795,6 +795,10 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
     setLoading(true);
     try {
       const payload = { ...formData, dynamic_data: dynamicData };
+      if (!payload.assigned_to) payload.assigned_to = null;
+      if (payload.processing_fee_amount === '') payload.processing_fee_amount = null;
+      if (payload.processing_fee_paid === '') payload.processing_fee_paid = null;
+
       if (student) {
         await axios.put(`${API_BASE_URL}/processing-students/${student.id}/`, payload, {
           headers: { Authorization: `Bearer ${accessToken}` }
@@ -807,7 +811,14 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
       onSave();
     } catch (err) {
       console.error('Error saving student', err);
-      alert('Failed to save student details');
+      if (err.response?.data) {
+        const errors = typeof err.response.data === 'object' 
+          ? Object.entries(err.response.data).map(([k, v]) => `${k}: ${v}`).join('\n')
+          : err.response.data;
+        alert(`Failed to save student details:\n${errors}`);
+      } else {
+        alert('Failed to save student details');
+      }
     } finally {
       setLoading(false);
     }
@@ -979,7 +990,7 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
                     <select name="processing_fee_status" value={formData.processing_fee_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
-                      <option value="UNPAID">Unpaid</option>
+                      <option value="PENDING">Pending</option>
                       <option value="PARTIAL">Partial</option>
                       <option value="PAID">Paid</option>
                     </select>

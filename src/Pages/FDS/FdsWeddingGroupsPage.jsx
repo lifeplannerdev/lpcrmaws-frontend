@@ -18,7 +18,7 @@ const EMPTY_FORM = {
   batch: '', lead_contact_name: '', lead_contact_phone: '',
   total_members: 1, total_classes_booked: 5, classes_completed: 0,
   fee_amount: '', amount_paid: '', status: 'ENQUIRY',
-  trainer: '', notes: '',
+  trainer: '', coordinator: '', notes: '',
 };
 
 const PKG_COLORS = { BASIC: 'var(--fds-dance)', COUPLE: 'var(--fds-zumba)', PREMIUM: 'var(--fds-primary)', FAMILY_GROUP: 'var(--fds-yoga)' };
@@ -31,6 +31,7 @@ export default function FdsWeddingGroupsPage() {
   const [groups, setGroups] = useState([]);
   const [batches, setBatches] = useState([]);
   const [trainers, setTrainers] = useState([]);
+  const [coordinators, setCoordinators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterPkg, setFilterPkg] = useState('');
@@ -57,14 +58,16 @@ export default function FdsWeddingGroupsPage() {
       if (filterStatus) params.status = filterStatus;
       if (filterPkg) params.package_type = filterPkg;
       if (search) params.search = search;
-      const [gData, bData, tData] = await Promise.all([
+      const [gData, bData, tData, cData] = await Promise.all([
         fdsApi.weddingGroups(authFetchJson, params),
         fdsApi.batches(authFetchJson, { status: 'ACTIVE', page_size: 200 }),
-        fdsApi.trainers(authFetchJson),
+        fdsApi.trainers(authFetchJson, { roles: 'FDS_TRAINER,FDS_COORDINATOR' }),
+        fdsApi.coordinators(authFetchJson, { roles: 'FDS_COORDINATOR' }),
       ]);
       setGroups(gData.results ?? gData);
       setBatches(bData.results ?? bData);
       setTrainers(tData);
+      setCoordinators(cData);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [authFetchJson, filterStatus, filterPkg, search]);
@@ -80,7 +83,7 @@ export default function FdsWeddingGroupsPage() {
       total_members: g.total_members, total_classes_booked: g.total_classes_booked,
       classes_completed: g.classes_completed, fee_amount: g.fee_amount,
       amount_paid: g.amount_paid, status: g.status,
-      trainer: g.trainer || '', notes: g.notes || '',
+      trainer: g.trainer || '', coordinator: g.coordinator || '', notes: g.notes || '',
     });
     setEditId(g.id);
     setShowModal(true);
@@ -99,6 +102,7 @@ export default function FdsWeddingGroupsPage() {
         amount_paid: parseFloat(form.amount_paid),
         batch: form.batch || null,
         trainer: form.trainer || null,
+        coordinator: form.coordinator || null,
       };
       if (editId) await fdsApi.updateWeddingGroup(authFetchJson, editId, payload);
       else await fdsApi.createWeddingGroup(authFetchJson, payload);
@@ -218,10 +222,13 @@ export default function FdsWeddingGroupsPage() {
                     </div>
 
                     {/* Members */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                      <Users size={13} color="var(--fds-text-muted)" />
-                      <span style={{ fontSize: '0.82rem', color: 'var(--fds-text-muted)' }}>{g.total_members} members</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Users size={13} color="var(--fds-text-muted)" />
+                        <span style={{ fontSize: '0.82rem', color: 'var(--fds-text-muted)' }}>{g.total_members} members</span>
+                      </div>
                       {g.trainer_name && <span style={{ fontSize: '0.82rem', color: 'var(--fds-primary)', marginLeft: 8 }}>🎬 {g.trainer_name}</span>}
+                      {g.coordinator_name && <span style={{ fontSize: '0.78rem', color: 'var(--fds-text-muted)', marginLeft: 8 }}>👤 {g.coordinator_name} (Coord)</span>}
                     </div>
 
                     {/* Fees */}
@@ -325,6 +332,13 @@ export default function FdsWeddingGroupsPage() {
                       <select className="fds-input fds-select" value={form.trainer} onChange={e => setForm(f => ({ ...f, trainer: e.target.value }))}>
                         <option value="">Select Trainer</option>
                         {trainers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="fds-label">Coordinator</label>
+                      <select className="fds-input fds-select" value={form.coordinator} onChange={e => setForm(f => ({ ...f, coordinator: e.target.value }))}>
+                        <option value="">Select Coordinator</option>
+                        {coordinators.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
                     <div>

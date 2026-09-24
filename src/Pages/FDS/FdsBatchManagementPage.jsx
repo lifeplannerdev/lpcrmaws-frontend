@@ -13,7 +13,7 @@ const STATUSES = ['ACTIVE','PAUSED','COMPLETED'];
 const EMPTY_FORM = {
   name: '', batch_type: 'REGULAR', class_category: 'DANCE',
   schedule_days: '', time_slot_start: '', time_slot_end: '',
-  trainer: '', max_capacity: 20, status: 'ACTIVE', notes: '',
+  trainer: '', coordinator: '', max_capacity: 20, status: 'ACTIVE', notes: '',
 };
 
 export default function FdsBatchManagementPage() {
@@ -23,6 +23,7 @@ export default function FdsBatchManagementPage() {
 
   const [batches, setBatches] = useState([]);
   const [trainers, setTrainers] = useState([]);
+  const [coordinators, setCoordinators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ACTIVE');
@@ -50,12 +51,14 @@ export default function FdsBatchManagementPage() {
       if (activeCategory !== 'ALL') params.class_category = activeCategory;
       if (filterStatus) params.status = filterStatus;
       if (search) params.search = search;
-      const [batchData, trainerData] = await Promise.all([
+      const [batchData, trainerData, coordinatorData] = await Promise.all([
         fdsApi.batches(authFetchJson, params),
-        fdsApi.trainers(authFetchJson),
+        fdsApi.trainers(authFetchJson, { roles: 'FDS_TRAINER,FDS_COORDINATOR' }),
+        fdsApi.coordinators(authFetchJson, { roles: 'FDS_COORDINATOR' }),
       ]);
       setBatches(batchData.results ?? batchData);
       setTrainers(trainerData);
+      setCoordinators(coordinatorData);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [authFetchJson, activeCategory, filterStatus, search]);
@@ -78,6 +81,7 @@ export default function FdsBatchManagementPage() {
       name: b.name, batch_type: b.batch_type, class_category: b.class_category,
       schedule_days: b.schedule_days || '', time_slot_start: b.time_slot_start || '',
       time_slot_end: b.time_slot_end || '', trainer: b.trainer || '',
+      coordinator: b.coordinator || '',
       max_capacity: b.max_capacity, status: b.status, notes: b.notes || '',
     });
     setSelectedDays(b.schedule_days ? b.schedule_days.split(',').map(d => d.trim()) : []);
@@ -89,7 +93,7 @@ export default function FdsBatchManagementPage() {
     ev.preventDefault();
     setSaving(true);
     try {
-      const payload = { ...form, schedule_days: selectedDays.join(','), trainer: form.trainer || null };
+      const payload = { ...form, schedule_days: selectedDays.join(','), trainer: form.trainer || null, coordinator: form.coordinator || null };
       if (editId) await fdsApi.updateBatch(authFetchJson, editId, payload);
       else await fdsApi.createBatch(authFetchJson, payload);
       setShowModal(false);
@@ -202,9 +206,14 @@ export default function FdsBatchManagementPage() {
                       </span>
                       {b.enrolled_count >= b.max_capacity && <span className="fds-badge fds-badge-red" style={{ fontSize: '0.65rem' }}>Full</span>}
                     </div>
-                    {b.trainer_name && (
-                      <span style={{ fontSize: '0.78rem', color: 'var(--fds-primary)' }}>🎬 {b.trainer_name}</span>
-                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                      {b.trainer_name && (
+                        <span style={{ fontSize: '0.78rem', color: 'var(--fds-primary)' }}>🎬 {b.trainer_name}</span>
+                      )}
+                      {b.coordinator_name && (
+                        <span style={{ fontSize: '0.72rem', color: 'var(--fds-text-muted)' }}>👤 {b.coordinator_name} (Coord)</span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Capacity Bar */}
@@ -289,6 +298,13 @@ export default function FdsBatchManagementPage() {
                       <select className="fds-input fds-select" value={form.trainer} onChange={e => setForm(f => ({ ...f, trainer: e.target.value }))}>
                         <option value="">Select Trainer</option>
                         {trainers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="fds-label">Coordinator</label>
+                      <select className="fds-input fds-select" value={form.coordinator} onChange={e => setForm(f => ({ ...f, coordinator: e.target.value }))}>
+                        <option value="">Select Coordinator</option>
+                        {coordinators.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
                     <div>
