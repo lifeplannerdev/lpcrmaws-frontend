@@ -20,6 +20,100 @@ function StatusCycleBtn({ status, onChange }) {
   );
 }
 
+const DAYS_MAP = { 0: 'SUN', 1: 'MON', 2: 'TUE', 3: 'WED', 4: 'THU', 5: 'FRI', 6: 'SAT' };
+
+function FdsCalendar({ selectedDate, onSelectDate, scheduleDaysString }) {
+  const [currentDate, setCurrentDate] = useState(new Date(selectedDate));
+  
+  useEffect(() => {
+    setCurrentDate(new Date(selectedDate));
+  }, [selectedDate]);
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
+
+  const scheduleDays = (scheduleDaysString || '').split(',').map(s => s.trim().toUpperCase());
+
+  const handlePrevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const handleNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+
+  const pad = (n) => n.toString().padStart(2, '0');
+  const selDateStr = selectedDate;
+
+  const handleDateClick = (d) => {
+    const dateStr = `${year}-${pad(month+1)}-${pad(d)}`;
+    onSelectDate(dateStr);
+  };
+
+  const blanks = Array.from({ length: firstDayOfWeek });
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  return (
+    <div className="fds-card" style={{ padding: '20px', maxWidth: '350px', margin: '0 auto 20px auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <button className="fds-btn fds-btn-secondary" style={{ padding: '6px' }} onClick={handlePrevMonth}><ChevronLeft size={16} /></button>
+        <div style={{ fontWeight: 'bold', color: 'var(--fds-primary)' }}>
+          {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+        </div>
+        <button className="fds-btn fds-btn-secondary" style={{ padding: '6px' }} onClick={handleNextMonth}><ChevronRight size={16} /></button>
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--fds-text-muted)', marginBottom: '8px' }}>
+        <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+        {blanks.map((_, i) => <div key={`blank-${i}`} />)}
+        {days.map(d => {
+          const dateStr = `${year}-${pad(month+1)}-${pad(d)}`;
+          const dayOfWeek = new Date(year, month, d).getDay();
+          const dayName = DAYS_MAP[dayOfWeek];
+          
+          const isScheduled = scheduleDays.includes(dayName);
+          const isSelected = dateStr === selDateStr;
+          
+          const baseStyle = { 
+            width: '100%', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', cursor: 'pointer',
+            fontSize: '0.9rem', transition: 'all 0.2s', userSelect: 'none'
+          };
+          
+          if (isSelected) {
+            baseStyle.backgroundColor = 'var(--fds-primary)';
+            baseStyle.color = 'var(--fds-bg)';
+            baseStyle.fontWeight = 'bold';
+          } else if (isScheduled) {
+            baseStyle.color = 'var(--fds-primary)';
+            baseStyle.border = '1px solid var(--fds-border)';
+            baseStyle.backgroundColor = 'var(--fds-surface-2)';
+          } else {
+            baseStyle.color = 'var(--fds-text-faint)';
+            baseStyle.backgroundColor = 'transparent';
+          }
+
+          return (
+            <div 
+              key={d} 
+              onClick={() => handleDateClick(d)}
+              style={baseStyle}
+              onMouseOver={e => !isSelected && (e.currentTarget.style.backgroundColor = 'var(--fds-surface-3)')}
+              onMouseOut={e => {
+                if (!isSelected) {
+                  e.currentTarget.style.backgroundColor = isScheduled ? 'var(--fds-surface-2)' : 'transparent';
+                }
+              }}
+            >
+              {d}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function FdsAttendancePage() {
   const { accessToken, refreshAccessToken } = useAuth();
   const { hasPermission } = usePermissions();
@@ -177,14 +271,22 @@ export default function FdsAttendancePage() {
 
               {/* Batch info */}
               {selectedBatchObj && (
-                <div className="fds-card" style={{ marginBottom: 16, padding: '14px 20px' }}>
-                  <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span className={`fds-badge fds-badge-${selectedBatchObj.class_category?.toLowerCase()}`}>{selectedBatchObj.class_category}</span>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--fds-text)' }}>🕐 {selectedBatchObj.time_display || 'Time TBD'}</span>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--fds-text-muted)' }}>{selectedBatchObj.enrolled_count} students</span>
-                    {selectedBatchObj.trainer_name && <span style={{ fontSize: '0.85rem', color: 'var(--fds-primary)' }}>Trainer: {selectedBatchObj.trainer_name}</span>}
+                <>
+                  <div className="fds-card" style={{ marginBottom: 16, padding: '14px 20px' }}>
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span className={`fds-badge fds-badge-${selectedBatchObj.class_category?.toLowerCase()}`}>{selectedBatchObj.class_category}</span>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--fds-text)' }}>🕐 {selectedBatchObj.time_display || 'Time TBD'}</span>
+                      <span style={{ fontSize: '0.85rem', color: 'var(--fds-text-muted)' }}>{selectedBatchObj.enrolled_count} students</span>
+                      {selectedBatchObj.trainer_name && <span style={{ fontSize: '0.85rem', color: 'var(--fds-primary)' }}>Trainer: {selectedBatchObj.trainer_name}</span>}
+                    </div>
                   </div>
-                </div>
+                  
+                  <FdsCalendar 
+                    selectedDate={selectedDate} 
+                    onSelectDate={setSelectedDate} 
+                    scheduleDaysString={selectedBatchObj.schedule_days} 
+                  />
+                </>
               )}
 
               {!selectedBatch ? (
@@ -263,6 +365,23 @@ export default function FdsAttendancePage() {
                 <input className="fds-input" type="number" style={{ maxWidth: 100 }} value={reportYear} onChange={e => setReportYear(parseInt(e.target.value))} min={2020} max={2100} />
                 <button className="fds-btn fds-btn-primary" onClick={loadMonthlyReport}>Load Report</button>
               </div>
+
+              {reportBatch && (() => {
+                const rbObj = batches.find(b => String(b.id) === String(reportBatch));
+                return rbObj ? (
+                  <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    <FdsCalendar 
+                      selectedDate={`${reportYear}-${String(reportMonth).padStart(2, '0')}-01`} 
+                      onSelectDate={(d) => {
+                        const newD = new Date(d);
+                        setReportMonth(newD.getMonth() + 1);
+                        setReportYear(newD.getFullYear());
+                      }} 
+                      scheduleDaysString={rbObj.schedule_days} 
+                    />
+                  </div>
+                ) : null;
+              })()}
 
               {reportLoading ? (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><div className="fds-spinner" /></div>
