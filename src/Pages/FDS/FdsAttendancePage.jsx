@@ -391,10 +391,10 @@ export default function FdsAttendancePage() {
                     <thead>
                       <tr>
                         <th>Student</th>
-                        <th>Total</th>
+                        <th>Total Classes</th>
                         <th>Present</th>
                         <th>Absent</th>
-                        <th>Leave</th>
+                        <th>Others</th>
                         <th>%</th>
                       </tr>
                     </thead>
@@ -408,7 +408,7 @@ export default function FdsAttendancePage() {
                           <td>{row.total}</td>
                           <td style={{ color: 'var(--fds-yoga)' }}>{row.present}</td>
                           <td style={{ color: '#e74c3c' }}>{row.absent}</td>
-                          <td style={{ color: '#e67e22' }}>{row.leave}</td>
+                          <td style={{ color: '#e67e22' }}>{row.total - row.present - row.absent}</td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <div style={{ flex: 1, height: 6, background: 'var(--fds-surface-3)', borderRadius: 3, overflow: 'hidden' }}>
