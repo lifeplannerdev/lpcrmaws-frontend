@@ -3,6 +3,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { Check, X, Clock, Calendar, AlertTriangle, Search, Filter, Loader2, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import AcademicCalendar from '../../Components/ui/AcademicCalendar';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -10,6 +11,8 @@ export default function AttendancePage() {
   const { accessToken, refreshAccessToken } = useAuth();
   const [batches, setBatches] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState(null);
+  const [grades, setGrades] = useState([]);
+  const [selectedGrade, setSelectedGrade] = useState('');
   const [students, setStudents] = useState([]);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [loading, setLoading] = useState(true);
@@ -23,12 +26,18 @@ export default function AttendancePage() {
     try {
       setLoading(true);
       const token = accessToken || await refreshAccessToken();
-      const res = await fetch(`${API_BASE_URL}/students/batches/?status=active`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
+      const [batchesRes, gradesRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/students/batches/?status=active`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/students/grades/`, { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+      const data = await batchesRes.json();
+      const gradesData = await gradesRes.json();
+      
       const fetchedBatches = (data.results !== undefined ? data.results : (Array.isArray(data) ? data : []));
+      const fetchedGrades = (gradesData.results !== undefined ? gradesData.results : (Array.isArray(gradesData) ? gradesData : []));
+      
       setBatches(fetchedBatches);
+      setGrades(fetchedGrades);
       if (fetchedBatches.length > 0) {
         setSelectedBatch(fetchedBatches[0].id);
       }
@@ -51,13 +60,17 @@ export default function AttendancePage() {
         loadBatchStudentsAndViewData();
       }
     }
-  }, [selectedBatch, date, activeTab]);
+  }, [selectedBatch, selectedGrade, date, activeTab]);
 
   const loadBatchStudents = async () => {
     try {
       setLoading(true);
       const token = accessToken || await refreshAccessToken();
-      const res = await fetch(`${API_BASE_URL}/students/students/?batch=${selectedBatch}`, {
+      let url = `${API_BASE_URL}/students/students/?batch=${selectedBatch}`;
+      if (selectedGrade) {
+        url = `${API_BASE_URL}/students/students/?batch__current_grade=${selectedGrade}`;
+      }
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -83,8 +96,12 @@ export default function AttendancePage() {
       setLoading(true);
       const token = accessToken || await refreshAccessToken();
       
+      let url = `${API_BASE_URL}/students/students/?batch=${selectedBatch}`;
+      if (selectedGrade) {
+        url = `${API_BASE_URL}/students/students/?batch__current_grade=${selectedGrade}`;
+      }
       const [studentsRes, attendanceRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/students/students/?batch=${selectedBatch}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(url, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/students/attendance-records/?session__batch=${selectedBatch}`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       
@@ -207,14 +224,18 @@ export default function AttendancePage() {
             </div>
             
             {activeTab === 'mark' && (
-              <div className="w-full md:w-1/4">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Date</label>
-                <input 
-                  type="date" 
+              <div className="w-full md:w-1/3">
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Filter by Current Grade (Backfill)</label>
+                <select 
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
+                  value={selectedGrade || ''}
+                  onChange={(e) => setSelectedGrade(e.target.value)}
+                >
+                  <option value="">All (Default Batch Students)</option>
+                  {grades.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
               </div>
             )}
           </div>
@@ -230,9 +251,12 @@ export default function AttendancePage() {
               <p className="text-sm text-gray-500 mt-1">This batch has no students.</p>
             </div>
           ) : activeTab === 'mark' ? (
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                <h3 className="text-lg font-bold text-gray-900">Attendance Grid</h3>
+            <div className="space-y-6">
+              <AcademicCalendar selectedDate={date} onSelectDate={setDate} />
+              
+              <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50/50 gap-4">
+                  <h3 className="text-lg font-bold text-gray-900">Attendance Grid</h3>
                 <div className="flex gap-4 text-sm font-medium">
                   <span className="flex items-center gap-1.5 text-emerald-600"><Check size={16}/> Present</span>
                   <span className="flex items-center gap-1.5 text-rose-600"><X size={16}/> Absent</span>
@@ -299,6 +323,7 @@ export default function AttendancePage() {
                   Save Attendance
                 </button>
               </div>
+            </div>
             </div>
           ) : (
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
