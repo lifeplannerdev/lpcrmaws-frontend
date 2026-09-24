@@ -61,8 +61,8 @@ export default function FdsWeddingGroupsPage() {
       const [gData, bData, tData, cData] = await Promise.all([
         fdsApi.weddingGroups(authFetchJson, params),
         fdsApi.batches(authFetchJson, { status: 'ACTIVE', page_size: 200 }),
-        fdsApi.trainers(authFetchJson, { roles: 'FDS_TRAINER,FDS_COORDINATOR' }),
-        fdsApi.coordinators(authFetchJson, { roles: 'FDS_COORDINATOR' }),
+        fdsApi.trainers(authFetchJson, { roles: 'FDS_TRAINER,FDS TRAINER,FDS_COORDINATOR,FDS COORDINATOR' }),
+        fdsApi.coordinators(authFetchJson, { roles: 'FDS_COORDINATOR,FDS COORDINATOR' }),
       ]);
       setGroups(gData.results ?? gData);
       setBatches(bData.results ?? bData);

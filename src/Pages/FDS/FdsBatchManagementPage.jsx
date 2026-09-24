@@ -53,8 +53,8 @@ export default function FdsBatchManagementPage() {
       if (search) params.search = search;
       const [batchData, trainerData, coordinatorData] = await Promise.all([
         fdsApi.batches(authFetchJson, params),
-        fdsApi.trainers(authFetchJson, { roles: 'FDS_TRAINER,FDS_COORDINATOR' }),
-        fdsApi.coordinators(authFetchJson, { roles: 'FDS_COORDINATOR' }),
+        fdsApi.trainers(authFetchJson, { roles: 'FDS_TRAINER,FDS TRAINER,FDS_COORDINATOR,FDS COORDINATOR' }),
+        fdsApi.coordinators(authFetchJson, { roles: 'FDS_COORDINATOR,FDS COORDINATOR' }),
       ]);
       setBatches(batchData.results ?? batchData);
       setTrainers(trainerData);
