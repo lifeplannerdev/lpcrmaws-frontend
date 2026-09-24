@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { FileText, AlertCircle, Clock, RefreshCw, DollarSign, ChevronRight } from 'lucide-react';
+import { FileText, RefreshCw, DollarSign } from 'lucide-react';
+import Card from '../common/Card';
+import SectionHeader from '../common/SectionHeader';
+import EmptyState from '../common/EmptyState';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-const STATUS_CONFIG = {
-  expired: { bg: 'bg-red-50',   text: 'text-red-700',   border: 'border-red-100',   label: 'Expired' },
-  overdue: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100', label: 'Overdue' },
-  active:  { bg: 'bg-gray-50',  text: 'text-gray-600',  border: 'border-gray-100',  label: 'Due Soon' },
-};
 
 export default function DocumentExpiryWidget() {
   const { accessToken, refreshAccessToken } = useAuth();
@@ -71,68 +68,51 @@ export default function DocumentExpiryWidget() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 animate-pulse">
-        <div className="h-5 w-40 bg-gray-200 rounded mb-4" />
-        {[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 rounded mb-2" />)}
-      </div>
-    );
-  }
-
-  if (sorted.length === 0) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center text-center min-h-[160px]">
-        <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center mb-3">
-          <FileText className="w-5 h-5 text-emerald-500" />
+      <Card className="h-[290px] flex flex-col" padding="p-4">
+        <SectionHeader title="Document Alerts" actionText="View All" onActionClick={() => navigate('/hr/documents')} size="sm" />
+        <div className="space-y-1.5 flex-1 animate-pulse">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-12 bg-gray-100 rounded-xl" />
+          ))}
         </div>
-        <p className="text-sm font-semibold text-gray-800">All documents up to date</p>
-        <p className="text-xs text-gray-400 mt-1">No expiries in the next 30 days</p>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/60">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-amber-500" />
-          <span className="text-sm font-semibold text-gray-900">Document Alerts</span>
-          <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-amber-500 rounded-full">
-            {sorted.length}
-          </span>
-        </div>
-        <button
-          onClick={() => navigate('/hr/documents')}
-          className="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 transition-colors"
-        >
-          View all <ChevronRight className="w-3.5 h-3.5" />
-        </button>
+    <Card className="h-[290px] flex flex-col" padding="p-4">
+      <SectionHeader
+        title="Document Alerts"
+        actionText="View All"
+        onActionClick={() => navigate('/hr/documents')}
+        size="sm"
+      />
+
+      <div className="flex-1 flex flex-col justify-start overflow-hidden">
+        {sorted.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            iconColor="text-emerald-500"
+            bgColor="bg-emerald-50"
+            title="All documents up to date"
+            description="No expiries in the next 30 days"
+            compact
+          />
+        ) : (
+          <div className="space-y-1.5 overflow-hidden">
+            {sorted.slice(0, 3).map(doc => (
+              <DocRow
+                key={doc.id}
+                doc={doc}
+                onMarkPaid={handleMarkPaid}
+                markingPaid={markingPaid}
+                getDaysLabel={getDaysLabel}
+              />
+            ))}
+          </div>
+        )}
       </div>
-
-      {/* Section: Expired */}
-      {expired.length > 0 && (
-        <div className="px-3 pt-3 pb-1">
-          <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1.5 px-1">Expired</p>
-          {expired.map(doc => <DocRow key={doc.id} doc={doc} onMarkPaid={handleMarkPaid} markingPaid={markingPaid} getDaysLabel={getDaysLabel} />)}
-        </div>
-      )}
-
-      {/* Section: Overdue */}
-      {overdue.length > 0 && (
-        <div className="px-3 pt-2 pb-1">
-          <p className="text-[10px] font-bold text-amber-500 uppercase tracking-wider mb-1.5 px-1">Overdue (expiring within 30 days)</p>
-          {overdue.map(doc => <DocRow key={doc.id} doc={doc} onMarkPaid={handleMarkPaid} markingPaid={markingPaid} getDaysLabel={getDaysLabel} />)}
-        </div>
-      )}
-
-      {/* Section: Due soon */}
-      {rest.length > 0 && (
-        <div className="px-3 pt-2 pb-3">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 px-1">Due Soon</p>
-          {rest.map(doc => <DocRow key={doc.id} doc={doc} onMarkPaid={handleMarkPaid} markingPaid={markingPaid} getDaysLabel={getDaysLabel} />)}
-        </div>
-      )}
-    </div>
+    </Card>
   );
 }
 
@@ -142,15 +122,15 @@ function DocRow({ doc, onMarkPaid, markingPaid, getDaysLabel }) {
   const needsAction = isExpired || isOverdue;
 
   return (
-    <div className={`flex items-center justify-between gap-2 px-3 py-2.5 mb-1 rounded-lg border transition-colors ${
-      isExpired ? 'bg-red-50 border-red-100' : isOverdue ? 'bg-amber-50 border-amber-100' : 'bg-gray-50 border-gray-100'
+    <div className={`flex items-center justify-between gap-2 p-2 rounded-xl border transition-all duration-200 ${
+      isExpired ? 'bg-red-50/70 border-red-200' : isOverdue ? 'bg-amber-50/70 border-amber-200' : 'bg-white border-gray-100'
     }`}>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-gray-900 truncate">{doc.title}</p>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-xs text-gray-500">{doc.company}</span>
+        <p className="text-xs font-semibold text-gray-900 truncate">{doc.title}</p>
+        <div className="flex items-center gap-1.5 mt-0.5 text-[11px]">
+          <span className="text-gray-500 truncate max-w-[90px]">{doc.company}</span>
           <span className="text-gray-300">·</span>
-          <span className={`text-xs font-semibold ${isExpired ? 'text-red-600' : isOverdue ? 'text-amber-600' : 'text-gray-500'}`}>
+          <span className={`font-semibold ${isExpired ? 'text-red-600' : isOverdue ? 'text-amber-600' : 'text-gray-500'}`}>
             {getDaysLabel(doc)}
           </span>
         </div>
@@ -160,7 +140,7 @@ function DocRow({ doc, onMarkPaid, markingPaid, getDaysLabel }) {
         <button
           onClick={(e) => onMarkPaid(doc.id, e)}
           disabled={markingPaid === doc.id}
-          className="flex-shrink-0 flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-blue-700 bg-white border border-blue-200 rounded-md hover:bg-blue-50 transition-colors disabled:opacity-50"
+          className="flex-shrink-0 flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-blue-700 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
         >
           {markingPaid === doc.id
             ? <RefreshCw className="w-3 h-3 animate-spin" />

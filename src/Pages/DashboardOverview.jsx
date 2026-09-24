@@ -172,33 +172,25 @@ export default function DashboardOverview() {
 
         {/* Tab panels */}
         {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <div className="lg:col-span-1">
-              <UpcomingTasks
-                tasks={tasks}
-                formatTaskTime={formatTaskTime}
-                getPriorityColor={getPriorityColor}
-                onViewAll={() => navigate('/staff/tasks')}
-              />
-            </div>
-            <div className="lg:col-span-1">
-              <UpcomingTasksSection
-                tasks={upcomingTasks}
-                formatTaskTime={formatTaskTime}
-                getPriorityColor={getPriorityColor}
-                onViewAll={() => navigate('/staff/tasks')}
-              />
-            </div>
-            <div className="lg:col-span-1">
-              <TodayFollowUps
-                followUps={todayFollowUps}
-                onViewAll={() => navigate('/followups')}
-              />
-            </div>
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${hasPermission('license:admin') ? 'xl:grid-cols-4' : 'xl:grid-cols-3'} gap-5`}>
+            <UpcomingTasks
+              tasks={tasks}
+              formatTaskTime={formatTaskTime}
+              getPriorityColor={getPriorityColor}
+              onViewAll={() => navigate('/staff/tasks')}
+            />
+            <UpcomingTasksSection
+              tasks={upcomingTasks}
+              formatTaskTime={formatTaskTime}
+              getPriorityColor={getPriorityColor}
+              onViewAll={() => navigate('/staff/tasks')}
+            />
+            <TodayFollowUps
+              followUps={todayFollowUps}
+              onViewAll={() => navigate('/followups')}
+            />
             {hasPermission('license:admin') && (
-              <div className="lg:col-span-1">
-                <DocumentExpiryWidget />
-              </div>
+              <DocumentExpiryWidget />
             )}
           </div>
         )}
