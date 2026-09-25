@@ -625,13 +625,20 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                     </td>
                   );
                 }
+                let isFeeApplicable = true;
+                if (col.key.startsWith('processing_fee_')) isFeeApplicable = student.processing_fee_applicable !== false;
+                else if (col.key.startsWith('fee_admission_')) isFeeApplicable = student.fee_admission_applicable !== false;
+                else if (col.key.startsWith('fee_language_')) isFeeApplicable = student.fee_language_applicable !== false;
+                else if (col.key.startsWith('fee_visa_')) isFeeApplicable = student.fee_visa_applicable !== false;
+                else if (col.key.startsWith('fee_ministry_')) isFeeApplicable = student.fee_ministry_applicable !== false;
+
                 if (col.key === 'processing_fee_status' || col.key === 'fee_admission_status' || col.key === 'fee_language_status' || col.key === 'fee_visa_status' || col.key === 'fee_ministry_status') {
                   return (
-                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                    <td key={col.key} className="px-4 py-2 border-r p-0 bg-gray-50">
                       <select
                         defaultValue={student[col.key] || 'PENDING'}
-                        disabled={!canManageFees}
-                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        disabled={!canManageFees || !isFeeApplicable}
+                        className={`w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed ${!isFeeApplicable ? 'opacity-50' : ''}`}
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="PENDING">Pending</option>
@@ -643,12 +650,13 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                 }
                 
                 return (
-                  <td key={col.key} className="px-4 py-2 border-r p-0">
+                  <td key={col.key} className={`px-4 py-2 border-r p-0 ${!isFeeApplicable ? 'bg-gray-100' : ''}`}>
                     <input
                       type={col.key.endsWith('_amount') || col.key.endsWith('_paid') ? 'number' : 'text'}
-                      defaultValue={student[col.key] || ''}
-                      disabled={(col.key.startsWith('processing_fee_') || col.key.startsWith('fee_')) && !canManageFees}
-                      className="w-full h-full min-w-[120px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      defaultValue={!isFeeApplicable ? '' : (student[col.key] || '')}
+                      disabled={((col.key.startsWith('processing_fee_') || col.key.startsWith('fee_')) && !canManageFees) || !isFeeApplicable}
+                      placeholder={!isFeeApplicable ? 'N/A' : ''}
+                      className={`w-full h-full min-w-[120px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed ${!isFeeApplicable ? 'opacity-50 placeholder-gray-400' : ''}`}
                       onBlur={(e) => {
                         if (e.target.value !== (student[col.key] || '')) {
                           handleUpdateField(student.id, col.key, e.target.value);
@@ -712,11 +720,11 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, onCl
     application_status: '', offer_letter_status: '', visa_documentation_info_status: '',
     visa_appointment: '', visa_documentation: '', accommodation: '', visa_results: '',
     category: 'All Students', assigned_to: '', source: '',
-    processing_fee_amount: '', processing_fee_paid: '', processing_fee_status: 'PENDING',
-    fee_admission_amount: '', fee_admission_paid: '', fee_admission_status: 'PENDING',
-    fee_language_amount: '', fee_language_paid: '', fee_language_status: 'PENDING',
-    fee_visa_amount: '', fee_visa_paid: '', fee_visa_status: 'PENDING',
-    fee_ministry_amount: '', fee_ministry_paid: '', fee_ministry_status: 'PENDING'
+    processing_fee_amount: '', processing_fee_paid: '', processing_fee_status: 'PENDING', processing_fee_applicable: true,
+    fee_admission_amount: '', fee_admission_paid: '', fee_admission_status: 'PENDING', fee_admission_applicable: true,
+    fee_language_amount: '', fee_language_paid: '', fee_language_status: 'PENDING', fee_language_applicable: true,
+    fee_visa_amount: '', fee_visa_paid: '', fee_visa_status: 'PENDING', fee_visa_applicable: true,
+    fee_ministry_amount: '', fee_ministry_paid: '', fee_ministry_status: 'PENDING', fee_ministry_applicable: true
   });
   const [dynamicData, setDynamicData] = useState({});
   const [loading, setLoading] = useState(false);
@@ -867,8 +875,8 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, onCl
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleDynamicChange = (e, fieldName) => {
@@ -1085,105 +1093,140 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, onCl
               
               {/* Fee Section */}
               <div className="md:col-span-2 pt-4 border-t mt-4">
-                <h4 className="text-md font-semibold text-gray-700 mb-4">Application/Registration Fee</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                    <input type="number" name="processing_fee_amount" value={formData.processing_fee_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                {(!canManageFees && !formData.processing_fee_applicable) ? null : (
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <input type="checkbox" name="processing_fee_applicable" checked={formData.processing_fee_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 text-blue-600 rounded" />
+                      <h4 className="text-md font-semibold text-gray-700">Application/Registration Fee</h4>
+                    </div>
+                    <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.processing_fee_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
+                        <input type="number" name="processing_fee_amount" value={formData.processing_fee_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
+                        <input type="number" name="processing_fee_paid" value={formData.processing_fee_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
+                        <select name="processing_fee_status" value={formData.processing_fee_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                          <option value="PENDING">Pending</option>
+                          <option value="PARTIAL">Partial</option>
+                          <option value="PAID">Paid</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                    <input type="number" name="processing_fee_paid" value={formData.processing_fee_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                    <select name="processing_fee_status" value={formData.processing_fee_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
-                      <option value="PENDING">Pending</option>
-                      <option value="PARTIAL">Partial</option>
-                      <option value="PAID">Paid</option>
-                    </select>
-                  </div>
-                </div>
+                )}
 
-                <h4 className="text-md font-semibold text-gray-700 mb-4">On Admission/Ausbildung/Offer Letter</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                    <input type="number" name="fee_admission_amount" value={formData.fee_admission_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                {(!canManageFees && !formData.fee_admission_applicable) ? null : (
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <input type="checkbox" name="fee_admission_applicable" checked={formData.fee_admission_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 text-blue-600 rounded" />
+                      <h4 className="text-md font-semibold text-gray-700">On Admission/Ausbildung/Offer Letter</h4>
+                    </div>
+                    <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_admission_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
+                        <input type="number" name="fee_admission_amount" value={formData.fee_admission_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
+                        <input type="number" name="fee_admission_paid" value={formData.fee_admission_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
+                        <select name="fee_admission_status" value={formData.fee_admission_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                          <option value="PENDING">Pending</option>
+                          <option value="PARTIAL">Partial</option>
+                          <option value="PAID">Paid</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                    <input type="number" name="fee_admission_paid" value={formData.fee_admission_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                    <select name="fee_admission_status" value={formData.fee_admission_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
-                      <option value="PENDING">Pending</option>
-                      <option value="PARTIAL">Partial</option>
-                      <option value="PAID">Paid</option>
-                    </select>
-                  </div>
-                </div>
+                )}
 
-                <h4 className="text-md font-semibold text-gray-700 mb-4">On Language Confirmation</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                    <input type="number" name="fee_language_amount" value={formData.fee_language_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                {(!canManageFees && !formData.fee_language_applicable) ? null : (
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <input type="checkbox" name="fee_language_applicable" checked={formData.fee_language_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 text-blue-600 rounded" />
+                      <h4 className="text-md font-semibold text-gray-700">On Language Confirmation</h4>
+                    </div>
+                    <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_language_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
+                        <input type="number" name="fee_language_amount" value={formData.fee_language_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
+                        <input type="number" name="fee_language_paid" value={formData.fee_language_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
+                        <select name="fee_language_status" value={formData.fee_language_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                          <option value="PENDING">Pending</option>
+                          <option value="PARTIAL">Partial</option>
+                          <option value="PAID">Paid</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                    <input type="number" name="fee_language_paid" value={formData.fee_language_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                    <select name="fee_language_status" value={formData.fee_language_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
-                      <option value="PENDING">Pending</option>
-                      <option value="PARTIAL">Partial</option>
-                      <option value="PAID">Paid</option>
-                    </select>
-                  </div>
-                </div>
+                )}
 
-                <h4 className="text-md font-semibold text-gray-700 mb-4">On Visa Approval</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                    <input type="number" name="fee_visa_amount" value={formData.fee_visa_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                {(!canManageFees && !formData.fee_visa_applicable) ? null : (
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <input type="checkbox" name="fee_visa_applicable" checked={formData.fee_visa_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 text-blue-600 rounded" />
+                      <h4 className="text-md font-semibold text-gray-700">On Visa Approval</h4>
+                    </div>
+                    <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_visa_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
+                        <input type="number" name="fee_visa_amount" value={formData.fee_visa_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
+                        <input type="number" name="fee_visa_paid" value={formData.fee_visa_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
+                        <select name="fee_visa_status" value={formData.fee_visa_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                          <option value="PENDING">Pending</option>
+                          <option value="PARTIAL">Partial</option>
+                          <option value="PAID">Paid</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                    <input type="number" name="fee_visa_paid" value={formData.fee_visa_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                    <select name="fee_visa_status" value={formData.fee_visa_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
-                      <option value="PENDING">Pending</option>
-                      <option value="PARTIAL">Partial</option>
-                      <option value="PAID">Paid</option>
-                    </select>
-                  </div>
-                </div>
+                )}
 
-                <h4 className="text-md font-semibold text-gray-700 mb-4">On Ministry Letter</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                    <input type="number" name="fee_ministry_amount" value={formData.fee_ministry_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                {(!canManageFees && !formData.fee_ministry_applicable) ? null : (
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <input type="checkbox" name="fee_ministry_applicable" checked={formData.fee_ministry_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 text-blue-600 rounded" />
+                      <h4 className="text-md font-semibold text-gray-700">On Ministry Letter</h4>
+                    </div>
+                    <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_ministry_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
+                        <input type="number" name="fee_ministry_amount" value={formData.fee_ministry_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
+                        <input type="number" name="fee_ministry_paid" value={formData.fee_ministry_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
+                        <select name="fee_ministry_status" value={formData.fee_ministry_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                          <option value="PENDING">Pending</option>
+                          <option value="PARTIAL">Partial</option>
+                          <option value="PAID">Paid</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                    <input type="number" name="fee_ministry_paid" value={formData.fee_ministry_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                    <select name="fee_ministry_status" value={formData.fee_ministry_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
-                      <option value="PENDING">Pending</option>
-                      <option value="PARTIAL">Partial</option>
-                      <option value="PAID">Paid</option>
-                    </select>
-                  </div>
-                </div>
+                )}
                 {!canManageFees && (
                   <p className="text-xs text-amber-600 mt-2">Only accounts with fee management permissions can edit processing fees.</p>
                 )}
