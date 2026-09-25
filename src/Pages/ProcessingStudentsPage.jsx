@@ -305,6 +305,7 @@ export default function ProcessingStudentsPage() {
                   onDeleteStudent={handleDeleteStudent}
                   canManageFees={canManageFees} 
                   canDelete={canEditAny || canEditOwn}
+                  isOperationRole={isOperationRole}
                 />
               )}
             </>
@@ -441,7 +442,7 @@ function KanbanView({ students, dynamicFields, handleUpdateField, onStudentClick
   );
 }
 
-function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffList, onStudentClick, onDeleteStudent, canManageFees, canDelete = false }) {
+function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffList, onStudentClick, onDeleteStudent, canManageFees, canDelete = false, isOperationRole }) {
   const fixedColumns = [
     { key: 'name', label: 'Student Name' },
     { key: 'mobile_number', label: 'Mobile Number' },
