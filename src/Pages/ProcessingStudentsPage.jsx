@@ -720,11 +720,11 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, onCl
     application_status: '', offer_letter_status: '', visa_documentation_info_status: '',
     visa_appointment: '', visa_documentation: '', accommodation: '', visa_results: '',
     category: 'All Students', assigned_to: '', source: '',
-    processing_fee_amount: '', processing_fee_paid: '', processing_fee_status: 'PENDING', processing_fee_applicable: true,
-    fee_admission_amount: '', fee_admission_paid: '', fee_admission_status: 'PENDING', fee_admission_applicable: true,
-    fee_language_amount: '', fee_language_paid: '', fee_language_status: 'PENDING', fee_language_applicable: true,
-    fee_visa_amount: '', fee_visa_paid: '', fee_visa_status: 'PENDING', fee_visa_applicable: true,
-    fee_ministry_amount: '', fee_ministry_paid: '', fee_ministry_status: 'PENDING', fee_ministry_applicable: true
+    processing_fee_amount: '', processing_fee_paid: '', processing_fee_status: 'PENDING', processing_fee_applicable: false,
+    fee_admission_amount: '', fee_admission_paid: '', fee_admission_status: 'PENDING', fee_admission_applicable: false,
+    fee_language_amount: '', fee_language_paid: '', fee_language_status: 'PENDING', fee_language_applicable: false,
+    fee_visa_amount: '', fee_visa_paid: '', fee_visa_status: 'PENDING', fee_visa_applicable: false,
+    fee_ministry_amount: '', fee_ministry_paid: '', fee_ministry_status: 'PENDING', fee_ministry_applicable: false
   });
   const [dynamicData, setDynamicData] = useState({});
   const [loading, setLoading] = useState(false);
