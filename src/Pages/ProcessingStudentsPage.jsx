@@ -191,6 +191,11 @@ export default function ProcessingStudentsPage() {
       "Processing Fee Amount": student.processing_fee_amount || 0,
       "Processing Fee Paid": student.processing_fee_paid || 0,
       "Processing Fee Status": student.processing_fee_status,
+      "Application/Registration Fee": student.fee_application_registration || '',
+      "On Admission/Ausbildung/Offer Letter": student.fee_admission_offer_letter || '',
+      "On Language Confirmation": student.fee_language_confirmation || '',
+      "On Visa Approval": student.fee_visa_approval || '',
+      "On Ministry Letter": student.fee_ministry_letter || '',
       ...student.dynamic_data
     }));
 
@@ -469,7 +474,12 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
     { key: 'visa_results', label: 'Visa Results' },
     { key: 'processing_fee_amount', label: 'Proc Fee Amount' },
     { key: 'processing_fee_paid', label: 'Proc Fee Paid' },
-    { key: 'processing_fee_status', label: 'Proc Fee Status' }
+    { key: 'processing_fee_status', label: 'Proc Fee Status' },
+    { key: 'fee_application_registration', label: 'App/Reg Fee' },
+    { key: 'fee_admission_offer_letter', label: 'Admission/Offer Letter' },
+    { key: 'fee_language_confirmation', label: 'Language Conf.' },
+    { key: 'fee_visa_approval', label: 'Visa Approval' },
+    { key: 'fee_ministry_letter', label: 'Ministry Letter' }
   ];
 
   if (students.length === 0) return <div className="text-gray-500 text-center p-8">No students found.</div>;
@@ -623,7 +633,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                     <input
                       type={col.key === 'processing_fee_amount' || col.key === 'processing_fee_paid' ? 'number' : 'text'}
                       defaultValue={student[col.key] || ''}
-                      disabled={(col.key === 'processing_fee_amount' || col.key === 'processing_fee_paid') && !canManageFees}
+                      disabled={(col.key === 'processing_fee_amount' || col.key === 'processing_fee_paid' || col.key.startsWith('fee_')) && !canManageFees}
                       className="w-full h-full min-w-[120px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
                       onBlur={(e) => {
                         if (e.target.value !== (student[col.key] || '')) {
@@ -688,7 +698,9 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, onCl
     application_status: '', offer_letter_status: '', visa_documentation_info_status: '',
     visa_appointment: '', visa_documentation: '', accommodation: '', visa_results: '',
     category: 'All Students', assigned_to: '', source: '',
-    processing_fee_amount: '', processing_fee_paid: '', processing_fee_status: 'PENDING'
+    processing_fee_amount: '', processing_fee_paid: '', processing_fee_status: 'PENDING',
+    fee_application_registration: '', fee_admission_offer_letter: '', fee_language_confirmation: '',
+    fee_visa_approval: '', fee_ministry_letter: ''
   });
   const [dynamicData, setDynamicData] = useState({});
   const [loading, setLoading] = useState(false);
@@ -1074,6 +1086,28 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, onCl
                       <option value="PARTIAL">Partial</option>
                       <option value="PAID">Paid</option>
                     </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Application/Registration Fee</label>
+                    <input type="text" name="fee_application_registration" value={formData.fee_application_registration || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">On Admission/Ausbildung/Offer Letter</label>
+                    <input type="text" name="fee_admission_offer_letter" value={formData.fee_admission_offer_letter || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">On Language Confirmation</label>
+                    <input type="text" name="fee_language_confirmation" value={formData.fee_language_confirmation || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">On Visa Approval</label>
+                    <input type="text" name="fee_visa_approval" value={formData.fee_visa_approval || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">On Ministry Letter</label>
+                    <input type="text" name="fee_ministry_letter" value={formData.fee_ministry_letter || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" />
                   </div>
                 </div>
                 {!canManageFees && (
