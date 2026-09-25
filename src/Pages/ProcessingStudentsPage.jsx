@@ -32,10 +32,12 @@ const fixedDocumentTypes = [
 
 export default function ProcessingStudentsPage() {
   const { hasPermission } = usePermissions();
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
+  const isOperationRole = user?.role_names?.includes('OPERATION');
   const [students, setStudents] = useState([]);
   const [dynamicFields, setDynamicFields] = useState([]);
   const [staffList, setStaffList] = useState([]);
+  const [sourceStaffList, setSourceStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // State for layout & toggles
@@ -51,12 +53,23 @@ export default function ProcessingStudentsPage() {
 
   const fetchStaff = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/employees/`, {
+      const res = await axios.get(`${API_BASE_URL}/employees/?roles=DOCUMENTATION,OPERATION`, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       setStaffList(res.data || []);
     } catch (err) {
       console.error('Error fetching staff', err);
+    }
+  };
+
+  const fetchSourceStaffList = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/employees/?source_filter=true`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setSourceStaffList(res.data || []);
+    } catch (err) {
+      console.error('Error fetching source staff', err);
     }
   };
 
@@ -89,6 +102,7 @@ export default function ProcessingStudentsPage() {
   useEffect(() => {
     fetchDynamicFields();
     fetchStaff();
+    fetchSourceStaffList();
   }, []);
 
   useEffect(() => {
@@ -303,9 +317,12 @@ export default function ProcessingStudentsPage() {
           student={selectedStudent}
           dynamicFields={dynamicFields}
           staffList={staffList}
+          sourceStaffList={sourceStaffList}
           onClose={() => setIsModalOpen(false)}
           onDelete={handleDeleteStudent}
           accessToken={accessToken}
+          user={user}
+          isOperationRole={isOperationRole}
           canManageFees={canManageFees}
           onSave={() => {
             setIsModalOpen(false);
@@ -498,7 +515,8 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                     <td key={col.key} className="px-4 py-2 border-r p-0">
                       <select
                         defaultValue={student[col.key] || ''}
-                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        disabled={!isOperationRole}
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:text-gray-500"
                         onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="">Unassigned</option>
@@ -627,14 +645,14 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
   );
 }
 
-function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, onSave, accessToken, canManageFees = false }) {
+function StudentModal({ student, dynamicFields, staffList, sourceStaffList, onClose, onDelete, onSave, accessToken, user, isOperationRole, canManageFees = false }) {
   const [formData, setFormData] = useState({
     name: '', mobile_number: '', whatsapp_number: '', email: '', parent_contact: '',
     program_applied: '', university: '', intake: '', registration_fee_status: 'Pending',
     enrollment_process_status: 'Pending', application_documents_status: 'Pending',
     application_status: '', offer_letter_status: '', visa_documentation_info_status: '',
     visa_appointment: '', visa_documentation: '', accommodation: '', visa_results: '',
-    category: 'All Students', assigned_to: '',
+    category: 'All Students', assigned_to: '', source: '',
     processing_fee_amount: '', processing_fee_paid: '', processing_fee_status: 'PENDING'
   });
   const [dynamicData, setDynamicData] = useState({});
@@ -687,14 +705,18 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
     if (student) {
       setFormData({
         ...student,
-        assigned_to: student.assigned_to || ''
+        assigned_to: student.assigned_to || '',
+        source: student.source || ''
       });
       setDynamicData(student.dynamic_data || {});
       fetchTimeline();
       fetchDocuments();
       fetchReminders();
+    } else if (!isOperationRole && user) {
+      // Auto-assign to self if creating new and not OPERATION
+      setFormData(prev => ({ ...prev, assigned_to: user.id }));
     }
-  }, [student]);
+  }, [student, isOperationRole, user]);
 
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
@@ -796,6 +818,7 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
     try {
       const payload = { ...formData, dynamic_data: dynamicData };
       if (!payload.assigned_to) payload.assigned_to = null;
+      if (!payload.source) payload.source = null;
       if (payload.processing_fee_amount === '') payload.processing_fee_amount = null;
       if (payload.processing_fee_paid === '') payload.processing_fee_paid = null;
 
@@ -916,9 +939,18 @@ function StudentModal({ student, dynamicFields, staffList, onClose, onDelete, on
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
-                <select name="assigned_to" value={formData.assigned_to} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                <select name="assigned_to" value={formData.assigned_to} onChange={handleChange} disabled={!isOperationRole} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
                   <option value="">Unassigned</option>
                   {staffList?.map(staff => (
+                    <option key={staff.id} value={staff.id}>{staff.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
+                <select name="source" value={formData.source} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                  <option value="">None</option>
+                  {sourceStaffList?.map(staff => (
                     <option key={staff.id} value={staff.id}>{staff.name}</option>
                   ))}
                 </select>
