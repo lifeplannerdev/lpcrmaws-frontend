@@ -63,7 +63,7 @@ export default function FdsFeesPage() {
   const { hasPermission, hasAnyPermission } = usePermissions();
 
   const canManageFees = hasPermission('fds:admin') || hasPermission('fds:admin_own');
-  const canViewFees = hasPermission('fds:admin') || hasPermission('fds:view') || hasPermission('fds_fees:view');
+  const canViewFees = hasPermission('fds:admin') || hasPermission('fds:view') || hasPermission('fds_fees:view') || hasPermission('fds:management');
 
   // Main navigation & workspace
   const [mainTab, setMainTab] = useState('accounts'); // 'accounts' | 'spreadsheet' | 'pending_students' | 'all_fees' | 'catalog' | 'policies'

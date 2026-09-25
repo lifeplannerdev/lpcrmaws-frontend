@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, Music, TrendingUp, IndianRupee, CalendarCheck,
-  UserCheck, Star, AlertCircle, ArrowRight, Sparkles, Activity
+  UserCheck, Star, AlertCircle, ArrowRight, Sparkles, Activity, BarChart2
 } from 'lucide-react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
@@ -105,7 +105,10 @@ export default function FdsDashboard() {
               </div>
               <p className="fds-page-subtitle">KTM 2026 — Studio Operations Dashboard</p>
             </div>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button className="fds-btn fds-btn-secondary" onClick={() => navigate('/fds/analysis')} style={{ borderColor: 'var(--fds-primary)' }}>
+                <BarChart2 size={16} color="var(--fds-primary)" /> Analysis
+              </button>
               <button className="fds-btn fds-btn-secondary" onClick={() => navigate('/fds/enquiries')}>
                 <Users size={16} /> Enquiries
               </button>
@@ -201,6 +204,7 @@ export default function FdsDashboard() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
                   {[
+                    { label: 'Analysis',     path: '/fds/analysis',     icon: BarChart2 },
                     { label: 'Enquiries',    path: '/fds/enquiries',    icon: Users },
                     { label: 'Trials',       path: '/fds/trials',       icon: Star },
                     { label: 'Students',     path: '/fds/students',     icon: UserCheck },
