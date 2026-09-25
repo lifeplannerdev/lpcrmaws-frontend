@@ -299,7 +299,7 @@ export default function ProcessingStudentsPage() {
                 <SpreadsheetView 
                   students={students} 
                   dynamicFields={dynamicFields} 
-                  debouncedUpdateField={debouncedUpdateField} 
+                  handleUpdateField={handleUpdateField} 
                   staffList={staffList} 
                   onStudentClick={openEditModal} 
                   onDeleteStudent={handleDeleteStudent}
@@ -442,7 +442,7 @@ function KanbanView({ students, dynamicFields, handleUpdateField, onStudentClick
   );
 }
 
-function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffList, onStudentClick, onDeleteStudent, canManageFees, canDelete = false, isOperationRole }) {
+function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList, onStudentClick, onDeleteStudent, canManageFees, canDelete = false, isOperationRole }) {
   const fixedColumns = [
     { key: 'name', label: 'Student Name' },
     { key: 'mobile_number', label: 'Mobile Number' },
@@ -502,7 +502,7 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                       <select
                         defaultValue={student[col.key] || 'All Students'}
                         className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
-                        onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                        onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="All Students">All Students</option>
                         <option value="GCC Students">GCC Students</option>
@@ -518,7 +518,7 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                         defaultValue={student[col.key] || ''}
                         disabled={!isOperationRole}
                         className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:text-gray-500"
-                        onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                        onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="">Unassigned</option>
                         {staffList?.map(staff => (
@@ -534,7 +534,7 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                       <select
                         defaultValue={student[col.key] || 'Pending'}
                         className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
-                        onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                        onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="Pending">Pending</option>
                         <option value="Shared">Shared</option>
@@ -549,7 +549,7 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                       <select
                         defaultValue={student[col.key] || 'Pending'}
                         className="w-full h-full min-w-[150px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
-                        onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                        onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="Pending">Pending</option>
                         <option value="Shared with student">Shared with student</option>
@@ -564,7 +564,7 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                       <select
                         defaultValue={student[col.key] || 'Pending'}
                         className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
-                        onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                        onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="Pending">Pending</option>
                         <option value="Collected">Collected</option>
@@ -579,7 +579,7 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                         type="date"
                         defaultValue={student[col.key] || ''}
                         className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
-                        onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                        onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       />
                     </td>
                   );
@@ -591,7 +591,7 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                         defaultValue={student[col.key] || 'PENDING'}
                         disabled={!canManageFees}
                         className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-                        onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                        onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="PENDING">Pending</option>
                         <option value="PARTIAL">Partial</option>
@@ -608,7 +608,16 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                       defaultValue={student[col.key] || ''}
                       disabled={(col.key === 'processing_fee_amount' || col.key === 'processing_fee_paid') && !canManageFees}
                       className="w-full h-full min-w-[120px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      onChange={(e) => debouncedUpdateField(student.id, col.key, e.target.value)}
+                      onBlur={(e) => {
+                        if (e.target.value !== (student[col.key] || '')) {
+                          handleUpdateField(student.id, col.key, e.target.value);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.target.blur();
+                        }
+                      }}
                     />
                   </td>
                 );
@@ -619,9 +628,16 @@ function SpreadsheetView({ students, dynamicFields, debouncedUpdateField, staffL
                     type="text"
                     defaultValue={student.dynamic_data?.[field.name] || ''}
                     className="w-full h-full min-w-[120px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
-                    onChange={(e) => {
-                      const newDynamicData = { ...student.dynamic_data, [field.name]: e.target.value };
-                      debouncedUpdateField(student.id, 'dynamic_data', newDynamicData);
+                    onBlur={(e) => {
+                      if (e.target.value !== (student.dynamic_data?.[field.name] || '')) {
+                        const newDynamicData = { ...student.dynamic_data, [field.name]: e.target.value };
+                        handleUpdateField(student.id, 'dynamic_data', newDynamicData);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.target.blur();
+                      }
                     }}
                   />
                 </td>
