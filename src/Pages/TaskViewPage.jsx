@@ -27,8 +27,28 @@ export default function TaskViewPage() {
   const [completionNotes,       setCompletionNotes]       = useState('');
   const [submittingCompletion,  setSubmittingCompletion]  = useState(false);
 
+  const [showApproveModal,      setShowApproveModal]      = useState(false);
+  const [approvalNotes,         setApprovalNotes]         = useState('');
+  const [submittingApproval,    setSubmittingApproval]    = useState(false);
+
+  const [showRejectModal,       setShowRejectModal]       = useState(false);
+  const [rejectionNotes,        setRejectionNotes]        = useState('');
+  const [changeDeadline,        setChangeDeadline]        = useState(false);
+  const [newDeadline,           setNewDeadline]           = useState('');
+  const [submittingRejection,   setSubmittingRejection]   = useState(false);
+
   const [remarkText, setRemarkText] = useState('');
   const [submittingRemark, setSubmittingRemark] = useState(false);
+
+  // Check if current user is Managing Director or Administrator
+  const isManagingDirector = user?.is_superuser || [
+    ...(Array.isArray(user?.role_names) ? user.role_names : []),
+    ...(Array.isArray(user?.roles) ? user.roles : []),
+    user?.role,
+  ].filter(Boolean).some(r => {
+    const u = String(r).toUpperCase().trim();
+    return u === 'MANAGING_DIRECTOR' || u === 'MD' || u === 'ADMIN';
+  });
 
   // ── Style maps ─────────────────────────────────────────────────────────────
 
@@ -40,19 +60,21 @@ export default function TaskViewPage() {
   };
 
   const statusColors = {
-    PENDING:     'bg-slate-100 text-slate-700 border-slate-300',
-    IN_PROGRESS: 'bg-amber-100 text-amber-700 border-amber-300',
-    COMPLETED:   'bg-emerald-100 text-emerald-700 border-emerald-300',
-    OVERDUE:     'bg-red-100 text-red-700 border-red-300',
-    CANCELLED:   'bg-gray-100 text-gray-600 border-gray-300',
+    PENDING:          'bg-slate-100 text-slate-700 border-slate-300',
+    IN_PROGRESS:      'bg-amber-100 text-amber-700 border-amber-300',
+    PENDING_APPROVAL: 'bg-purple-100 text-purple-700 border-purple-300',
+    COMPLETED:        'bg-emerald-100 text-emerald-700 border-emerald-300',
+    OVERDUE:          'bg-red-100 text-red-700 border-red-300',
+    CANCELLED:        'bg-gray-100 text-gray-600 border-gray-300',
   };
 
   const statusIcons = {
-    PENDING:     <Circle        className="w-4 h-4" />,
-    IN_PROGRESS: <Loader        className="w-4 h-4" />,
-    COMPLETED:   <CheckCircle   className="w-4 h-4" />,
-    OVERDUE:     <AlertTriangle className="w-4 h-4" />,
-    CANCELLED:   <XCircle       className="w-4 h-4" />,
+    PENDING:          <Circle        className="w-4 h-4" />,
+    IN_PROGRESS:      <Loader        className="w-4 h-4" />,
+    PENDING_APPROVAL: <Clock         className="w-4 h-4 text-purple-600" />,
+    COMPLETED:        <CheckCircle   className="w-4 h-4" />,
+    OVERDUE:          <AlertTriangle className="w-4 h-4" />,
+    CANCELLED:        <XCircle       className="w-4 h-4" />,
   };
 
   // ── Token helper ───────────────────────────────────────────────────────────
@@ -118,7 +140,7 @@ export default function TaskViewPage() {
 
   const canEditTask = () => {
     if (!task || !user) return false;
-    if (['COMPLETED', 'CANCELLED'].includes(task.status)) return false;
+    if (['COMPLETED', 'CANCELLED', 'PENDING_APPROVAL'].includes(task.status)) return false;
 
     // FIX: coerce both sides to Number to avoid string vs int mismatch
     const createdByMe = Number(task.assigned_by) === Number(user.id);
@@ -128,7 +150,7 @@ export default function TaskViewPage() {
 
   const canUpdateStatus = () => {
     if (!task || !user) return false;
-    if (['COMPLETED', 'CANCELLED'].includes(task.status)) return false;
+    if (['COMPLETED', 'CANCELLED', 'PENDING_APPROVAL'].includes(task.status)) return false;
     // FIX: coerce types
     return Number(task.assigned_to) === Number(user.id);
   };
@@ -153,20 +175,97 @@ export default function TaskViewPage() {
         body: JSON.stringify({ status: 'COMPLETED', notes: trimmed }),
       });
 
+      const resData = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || 'Failed to update task');
+        throw new Error(resData.detail || 'Failed to update task');
       }
 
       // Refresh data in place
       await loadTaskData();
       setShowCompletionModal(false);
-      alert('Task marked as completed successfully!');
+      if (resData.pending_approval) {
+        alert('Task marked as complete and submitted for Managing Director approval!');
+      } else {
+        alert('Task marked as completed successfully!');
+      }
     } catch (err) {
       console.error('Error completing task:', err);
       alert(err.message || 'Failed to update task. Please try again.');
     } finally {
       setSubmittingCompletion(false);
+    }
+  };
+
+  // ── Managing Director: Approve / Reject Handlers ─────────────────────────
+
+  const handleApproveTask = async () => {
+    try {
+      setSubmittingApproval(true);
+      const token = await getToken();
+      const res = await fetch(`${API_BASE_URL}/tasks/${id}/approve/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ notes: approvalNotes.trim() }),
+      });
+
+      const resData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(resData.detail || 'Failed to approve task');
+      }
+
+      await loadTaskData();
+      setShowApproveModal(false);
+      setApprovalNotes('');
+      alert('Task approved successfully and marked as Completed!');
+    } catch (err) {
+      console.error('Error approving task:', err);
+      alert(err.message || 'Failed to approve task.');
+    } finally {
+      setSubmittingApproval(false);
+    }
+  };
+
+  const handleRejectTask = async () => {
+    const trimmedNotes = rejectionNotes.trim();
+    if (!trimmedNotes) {
+      alert('Please provide a reason for rejecting the task completion.');
+      return;
+    }
+    if (changeDeadline && !newDeadline) {
+      alert('Please select a new deadline date or uncheck the change deadline option.');
+      return;
+    }
+
+    try {
+      setSubmittingRejection(true);
+      const token = await getToken();
+      const payload = {
+        notes: trimmedNotes,
+        ...(changeDeadline && newDeadline ? { new_deadline: newDeadline } : {}),
+      };
+
+      const res = await fetch(`${API_BASE_URL}/tasks/${id}/reject/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+
+      const resData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(resData.detail || 'Failed to reject task');
+      }
+
+      await loadTaskData();
+      setShowRejectModal(false);
+      setRejectionNotes('');
+      setChangeDeadline(false);
+      setNewDeadline('');
+      alert('Task completion rejected. Task has been reverted to In Progress.');
+    } catch (err) {
+      console.error('Error rejecting task:', err);
+      alert(err.message || 'Failed to reject task.');
+    } finally {
+      setSubmittingRejection(false);
     }
   };
 
@@ -308,7 +407,7 @@ export default function TaskViewPage() {
           </div>
 
           {/* Action buttons */}
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-4 items-center">
             {canEditTask() && (
               <>
                 <button
@@ -337,8 +436,73 @@ export default function TaskViewPage() {
                 Mark Complete
               </button>
             )}
+
+            {task.status === 'PENDING_APPROVAL' && isManagingDirector && (
+              <>
+                <button
+                  onClick={() => setShowApproveModal(true)}
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-200 hover:shadow-xl"
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  Approve Completion
+                </button>
+                <button
+                  onClick={() => setShowRejectModal(true)}
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-rose-200 hover:shadow-xl"
+                >
+                  <XCircle className="w-5 h-5" />
+                  Reject Completion
+                </button>
+              </>
+            )}
+
+            {task.status === 'PENDING_APPROVAL' && !isManagingDirector && Number(task.assigned_to) === Number(user?.id) && (
+              <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-50 border-2 border-purple-300 text-purple-700 font-semibold rounded-xl">
+                <Clock className="w-4 h-4 animate-spin text-purple-600" />
+                Submitted for Managing Director Approval
+              </span>
+            )}
           </div>
         </div>
+
+        {/* ── Pending Approval Banner ── */}
+        {task.status === 'PENDING_APPROVAL' && (
+          <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border-2 border-purple-300 rounded-2xl p-6 mb-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-purple-100 rounded-xl border border-purple-200 text-purple-600 shrink-0 mt-0.5">
+                <Clock className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="text-purple-900 font-bold text-lg mb-1 flex items-center gap-2">
+                  Task Awaiting Managing Director Approval
+                  <span className="text-xs uppercase bg-purple-200 text-purple-800 font-bold px-2 py-0.5 rounded-full">Review Required</span>
+                </h3>
+                <p className="text-purple-700 text-sm">
+                  Marked as completed by <span className="font-semibold">{task.assigned_to_name}</span>. 
+                  {isManagingDirector 
+                    ? ' Please review the activity notes and decide whether to approve or reject.'
+                    : ' Awaiting review and approval from the Managing Director.'}
+                </p>
+              </div>
+            </div>
+            {isManagingDirector && (
+              <div className="flex items-center gap-3 shrink-0 w-full md:w-auto">
+                <button
+                  onClick={() => setShowApproveModal(true)}
+                  className="flex-1 md:flex-initial px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-sm"
+                >
+                  <CheckCircle className="w-4 h-4" /> Approve
+                </button>
+                <button
+                  onClick={() => setShowRejectModal(true)}
+                  className="flex-1 md:flex-initial px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-sm"
+                >
+                  <XCircle className="w-4 h-4" /> Reject
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Overdue / approaching alerts */}
         {task.is_overdue && task.overdue_days > 0 && (
@@ -521,7 +685,7 @@ export default function TaskViewPage() {
 
               <div className="p-6 overflow-y-auto flex-1">
                 <p className="text-slate-600 mb-6">
-                  Provide details about the completion. This will be saved in the activity history.
+                  Provide details about the completion. Once submitted, this task will be forwarded to the <strong>Managing Director</strong> for review and approval.
                 </p>
 
                 <div className="mb-6">
@@ -557,11 +721,149 @@ export default function TaskViewPage() {
                   {submittingCompletion ? (
                     <><Loader className="w-4 h-4 animate-spin" /> Submitting…</>
                   ) : (
-                    <><CheckCircle className="w-4 h-4" /> Complete Task</>
+                    <><CheckCircle className="w-4 h-4" /> Submit for Approval</>
                   )}
                 </button>
               </div>
               
+            </div>
+          </div>
+        )}
+
+        {/* ── Approval Modal (Managing Director) ───────────────────────────── */}
+        {showApproveModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg flex flex-col relative animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-6 border-b border-gray-100 flex items-center gap-3 bg-white rounded-t-3xl">
+                <CheckCircle className="w-7 h-7 text-emerald-600" />
+                <h2 className="text-2xl font-bold text-slate-800">Approve Task Completion</h2>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <p className="text-slate-600 text-sm">
+                  You are approving the completion of <strong className="text-slate-800">"{task.title}"</strong> submitted by <strong className="text-slate-800">{task.assigned_to_name}</strong>. The task will be officially marked as <strong>Completed</strong>.
+                </p>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-2 text-sm">
+                    Approval Remarks <span className="text-slate-400 font-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    value={approvalNotes}
+                    onChange={(e) => setApprovalNotes(e.target.value)}
+                    placeholder="e.g. Excellent work, all requirements met."
+                    rows="4"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all resize-none bg-slate-50 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-100 bg-slate-50/50 flex items-center justify-end gap-3 rounded-b-3xl">
+                <button
+                  onClick={() => setShowApproveModal(false)}
+                  disabled={submittingApproval}
+                  className="px-5 py-2.5 rounded-xl font-medium text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleApproveTask}
+                  disabled={submittingApproval}
+                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 text-sm"
+                >
+                  {submittingApproval ? (
+                    <><Loader className="w-4 h-4 animate-spin" /> Approving…</>
+                  ) : (
+                    <><CheckCircle className="w-4 h-4" /> Confirm & Approve</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Reject Modal (Managing Director) ────────────────────────────── */}
+        {showRejectModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg flex flex-col relative animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-6 border-b border-gray-100 flex items-center gap-3 bg-white rounded-t-3xl">
+                <XCircle className="w-7 h-7 text-rose-600" />
+                <h2 className="text-2xl font-bold text-slate-800">Reject Task Completion</h2>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-800 flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span>
+                    Rejecting will revert this task back to <strong>In Progress</strong> ("task prevails"). The employee will be notified to revise their work.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-2 text-sm">
+                    Reason for Rejection <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea
+                    value={rejectionNotes}
+                    onChange={(e) => setRejectionNotes(e.target.value)}
+                    placeholder="Explain what is incomplete, needs correction, or missing deliverables…"
+                    rows="4"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all resize-none bg-slate-50 text-sm"
+                  />
+                </div>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-slate-700 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={changeDeadline}
+                      onChange={(e) => {
+                        setChangeDeadline(e.target.checked);
+                        if (!e.target.checked) setNewDeadline('');
+                      }}
+                      className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                    />
+                    Change deadline for completion (optional)
+                  </label>
+
+                  {changeDeadline && (
+                    <div className="mt-2 pl-6">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-slate-500" />
+                        <span className="text-xs text-slate-500">Current deadline: <strong>{formatDate(task.deadline)}</strong></span>
+                      </div>
+                      <input
+                        type="date"
+                        value={newDeadline}
+                        min={new Date().toISOString().split('T')[0]}
+                        onChange={(e) => setNewDeadline(e.target.value)}
+                        className="mt-2 w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 bg-slate-50"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-100 bg-slate-50/50 flex items-center justify-end gap-3 rounded-b-3xl">
+                <button
+                  onClick={() => setShowRejectModal(false)}
+                  disabled={submittingRejection}
+                  className="px-5 py-2.5 rounded-xl font-medium text-slate-700 hover:bg-slate-100 border border-slate-200 transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRejectTask}
+                  disabled={submittingRejection || !rejectionNotes.trim()}
+                  className="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 text-sm"
+                >
+                  {submittingRejection ? (
+                    <><Loader className="w-4 h-4 animate-spin" /> Rejecting…</>
+                  ) : (
+                    <><XCircle className="w-4 h-4" /> Reject & Revert to In Progress</>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

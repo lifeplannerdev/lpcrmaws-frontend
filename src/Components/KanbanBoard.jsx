@@ -9,6 +9,7 @@ const KanbanBoard = ({ tasks, onDragEnd, canAssignTasks, currentUser }) => {
   const columns = [
     { id: 'PENDING', title: 'Pending', color: 'bg-slate-100 border-slate-200 text-slate-700' },
     { id: 'IN_PROGRESS', title: 'In Progress', color: 'bg-amber-100 border-amber-200 text-amber-700' },
+    { id: 'PENDING_APPROVAL', title: 'Pending Approval', color: 'bg-purple-100 border-purple-200 text-purple-700' },
     { id: 'COMPLETED', title: 'Completed', color: 'bg-emerald-100 border-emerald-200 text-emerald-700' },
     { id: 'OVERDUE', title: 'Overdue', color: 'bg-red-100 border-red-200 text-red-700' },
     { id: 'CANCELLED', title: 'Cancelled', color: 'bg-gray-100 border-gray-200 text-gray-600' },

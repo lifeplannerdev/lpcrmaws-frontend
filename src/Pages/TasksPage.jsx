@@ -4,7 +4,7 @@ import {
   Search, Plus, Calendar, User, Flag,
   CheckCircle, Circle, AlertCircle,
   ListTodo, Loader, CheckCheck,
-  AlertTriangle, XCircle, Filter, LayoutGrid, List, MessageSquare, Trash2
+  AlertTriangle, XCircle, Filter, LayoutGrid, List, MessageSquare, Trash2, Clock
 } from 'lucide-react';
 
 import Navbar from '../Components/layouts/Navbar';
@@ -60,6 +60,12 @@ export default function TasksPage({ isMyTasks = false }) {
       color: 'bg-gradient-to-br from-amber-500 to-amber-600',
     },
     {
+      label: 'Pending Approval',
+      value: stats.pending_approval || 0,
+      icon: Clock,
+      color: 'bg-gradient-to-br from-purple-500 to-purple-600',
+    },
+    {
       label: 'Completed',
       value: stats.completed || 0,
       icon: CheckCheck,
@@ -81,19 +87,21 @@ export default function TasksPage({ isMyTasks = false }) {
   };
 
   const statusIcons = {
-    PENDING:     <Circle        className="text-slate-400"  size={20} />,
-    IN_PROGRESS: <AlertCircle  className="text-amber-500"  size={20} />,
-    COMPLETED:   <CheckCircle  className="text-emerald-500" size={20} />,
-    OVERDUE:     <AlertTriangle className="text-red-500"    size={20} />,
-    CANCELLED:   <XCircle      className="text-slate-500"  size={20} />,
+    PENDING:          <Circle        className="text-slate-400"  size={20} />,
+    IN_PROGRESS:      <AlertCircle  className="text-amber-500"  size={20} />,
+    PENDING_APPROVAL: <Clock        className="text-purple-600" size={20} />,
+    COMPLETED:        <CheckCircle  className="text-emerald-500" size={20} />,
+    OVERDUE:          <AlertTriangle className="text-red-500"    size={20} />,
+    CANCELLED:        <XCircle      className="text-slate-500"  size={20} />,
   };
 
   const statusColors = {
-    PENDING:     'bg-slate-100 text-slate-700 border-slate-200',
-    IN_PROGRESS: 'bg-amber-100 text-amber-700 border-amber-200',
-    COMPLETED:   'bg-emerald-100 text-emerald-700 border-emerald-200',
-    OVERDUE:     'bg-red-100 text-red-700 border-red-200',
-    CANCELLED:   'bg-slate-100 text-slate-600 border-slate-200',
+    PENDING:          'bg-slate-100 text-slate-700 border-slate-200',
+    IN_PROGRESS:      'bg-amber-100 text-amber-700 border-amber-200',
+    PENDING_APPROVAL: 'bg-purple-100 text-purple-700 border-purple-200',
+    COMPLETED:        'bg-emerald-100 text-emerald-700 border-emerald-200',
+    OVERDUE:          'bg-red-100 text-red-700 border-red-200',
+    CANCELLED:        'bg-slate-100 text-slate-600 border-slate-200',
   };
 
   // ── Data fetching ──────────────────────────────────────────────────────────
@@ -452,6 +460,7 @@ export default function TasksPage({ isMyTasks = false }) {
               <option value="all">All Status</option>
               <option value="PENDING">Pending</option>
               <option value="IN_PROGRESS">In Progress</option>
+              <option value="PENDING_APPROVAL">Pending Approval</option>
               <option value="COMPLETED">Completed</option>
               <option value="OVERDUE">Overdue</option>
               <option value="CANCELLED">Cancelled</option>

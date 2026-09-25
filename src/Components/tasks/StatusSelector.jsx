@@ -1,6 +1,5 @@
-// Components/tasks/StatusSelector.jsx
 import React from 'react';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Clock } from 'lucide-react';
 
 export default function StatusSelector({
   value,
@@ -15,8 +14,9 @@ export default function StatusSelector({
     { value: 'CANCELLED',   label: 'Cancelled',   color: 'bg-slate-50 border-slate-300 text-slate-600'  },
   ];
 
-  // OVERDUE is set automatically — shown read-only when the task is already overdue
+  // OVERDUE and PENDING_APPROVAL are managed via workflows
   const isOverdue = value === 'OVERDUE';
+  const isPendingApproval = value === 'PENDING_APPROVAL';
 
   return (
     <div className="space-y-2">
@@ -30,6 +30,14 @@ export default function StatusSelector({
         <div className="flex items-center gap-2 px-4 py-3 mb-3 bg-red-50 border-2 border-red-300 rounded-xl text-red-700 font-semibold text-sm">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           This task is marked as <span className="font-bold">OVERDUE</span> — status is managed automatically.
+        </div>
+      )}
+
+      {/* Read-only pending approval banner */}
+      {isPendingApproval && (
+        <div className="flex items-center gap-2 px-4 py-3 mb-3 bg-purple-50 border-2 border-purple-300 rounded-xl text-purple-700 font-semibold text-sm">
+          <Clock className="w-4 h-4 flex-shrink-0" />
+          This task is marked as <span className="font-bold">PENDING APPROVAL</span> — awaiting Managing Director review.
         </div>
       )}
 
