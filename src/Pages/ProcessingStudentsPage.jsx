@@ -178,6 +178,7 @@ export default function ProcessingStudentsPage() {
       "Category": student.category,
       "Assigned To": student.assigned_to_name || 'Unassigned',
       "Registration Fee Status": student.registration_fee_status,
+      "Registration Fee Receipt Status": student.registration_fee_receipt_status,
       "Enrollment Process Status": student.enrollment_process_status,
       "App Documents Status": student.application_documents_status,
       "Application Status": student.application_status,
@@ -456,6 +457,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
     { key: 'category', label: 'Category' },
     { key: 'assigned_to', label: 'Assigned To' },
     { key: 'registration_fee_status', label: 'Reg Fee Status' },
+    { key: 'registration_fee_receipt_status', label: 'Receipt Status' },
     { key: 'enrollment_process_status', label: 'Enrollment Status' },
     { key: 'application_documents_status', label: 'App Docs Status' },
     { key: 'application_status', label: 'Application Status' },
@@ -552,8 +554,23 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="Pending">Pending</option>
+                        <option value="Paid without gst">Paid without gst</option>
+                        <option value="Paid with gst">Paid with gst</option>
+                      </select>
+                    </td>
+                  );
+                }
+                if (col.key === 'registration_fee_receipt_status') {
+                  return (
+                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                      <select
+                        defaultValue={student[col.key] || 'Pending'}
+                        disabled={student.registration_fee_status !== 'Paid with gst'}
+                        className="w-full h-full min-w-[150px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
+                      >
+                        <option value="Pending">Pending</option>
                         <option value="Shared with student">Shared with student</option>
-                        <option value="Without Tax amount">Without Tax amount</option>
                       </select>
                     </td>
                   );
@@ -666,6 +683,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, onCl
   const [formData, setFormData] = useState({
     name: '', mobile_number: '', whatsapp_number: '', email: '', parent_contact: '',
     program_applied: '', university: '', intake: '', registration_fee_status: 'Pending',
+    registration_fee_receipt_status: 'Pending',
     enrollment_process_status: 'Pending', application_documents_status: 'Pending',
     application_status: '', offer_letter_status: '', visa_documentation_info_status: '',
     visa_appointment: '', visa_documentation: '', accommodation: '', visa_results: '',
@@ -976,8 +994,21 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, onCl
                 <label className="block text-sm font-medium text-gray-700 mb-1">Registration Fee Status</label>
                 <select name="registration_fee_status" value={formData.registration_fee_status} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                   <option value="Pending">Pending</option>
+                  <option value="Paid without gst">Paid without gst</option>
+                  <option value="Paid with gst">Paid with gst</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Receipt Status</label>
+                <select 
+                  name="registration_fee_receipt_status" 
+                  value={formData.registration_fee_receipt_status} 
+                  onChange={handleChange} 
+                  disabled={formData.registration_fee_status !== 'Paid with gst'}
+                  className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="Pending">Pending</option>
                   <option value="Shared with student">Shared with student</option>
-                  <option value="Without Tax amount">Without Tax amount</option>
                 </select>
               </div>
               <div>
