@@ -33,7 +33,7 @@ const fixedDocumentTypes = [
 export default function ProcessingStudentsPage() {
   const { hasPermission } = usePermissions();
   const { accessToken, user } = useAuth();
-  const isOperationRole = user?.role_names?.includes('OPERATION');
+  const isOperationRole = user?.role_names?.includes('OPERATION') || user?.role_names?.includes('MANAGING_DIRECTOR');
   const [students, setStudents] = useState([]);
   const [dynamicFields, setDynamicFields] = useState([]);
   const [staffList, setStaffList] = useState([]);
