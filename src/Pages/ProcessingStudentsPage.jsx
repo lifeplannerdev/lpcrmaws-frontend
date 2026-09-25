@@ -183,10 +183,8 @@ export default function ProcessingStudentsPage() {
       "App Documents Status": student.application_documents_status,
       "Application Status": student.application_status,
       "Offer Letter Status": student.offer_letter_status,
-      "Visa Doc Info Status": student.visa_documentation_info_status,
-      "Visa Appointment": student.visa_appointment,
+      "Visa Appointment Date": student.visa_appointment_date,
       "Visa Documentation": student.visa_documentation,
-      "Accommodation": student.accommodation,
       "Visa Results": student.visa_results,
       "App/Reg Fee Amount": student.processing_fee_amount || 0,
       "App/Reg Fee Paid": student.processing_fee_paid || 0,
@@ -474,10 +472,8 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
     { key: 'application_documents_status', label: 'App Docs Status' },
     { key: 'application_status', label: 'Application Status' },
     { key: 'offer_letter_status', label: 'Offer Letter' },
-    { key: 'visa_documentation_info_status', label: 'Visa Doc Info' },
-    { key: 'visa_appointment', label: 'Visa Appointment' },
+    { key: 'visa_appointment_date', label: 'Visa Appointment Date' },
     { key: 'visa_documentation', label: 'Visa Docs' },
-    { key: 'accommodation', label: 'Accommodation' },
     { key: 'visa_results', label: 'Visa Results' },
     { key: 'processing_fee_amount', label: 'App/Reg Fee Amount' },
     { key: 'processing_fee_paid', label: 'App/Reg Fee Paid' },
@@ -613,7 +609,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                     </td>
                   );
                 }
-                if (col.key === 'date_of_registration') {
+                if (col.key === 'date_of_registration' || col.key === 'visa_appointment_date') {
                   return (
                     <td key={col.key} className="px-4 py-2 border-r p-0">
                       <input
@@ -622,6 +618,38 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                         className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       />
+                    </td>
+                  );
+                }
+                
+                if (col.key === 'visa_documentation') {
+                  return (
+                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                      <select
+                        defaultValue={student[col.key] || 'Pending'}
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="In Process">In Process</option>
+                        <option value="Complete">Complete</option>
+                      </select>
+                    </td>
+                  );
+                }
+
+                if (col.key === 'visa_results') {
+                  return (
+                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                      <select
+                        defaultValue={student[col.key] || ''}
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
+                      >
+                        <option value="">Select Result</option>
+                        <option value="Granted">Granted</option>
+                        <option value="Refused">Refused</option>
+                      </select>
                     </td>
                   );
                 }
@@ -717,8 +745,8 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, onCl
     program_applied: '', university: '', intake: '', registration_fee_status: 'Pending',
     registration_fee_receipt_status: 'Pending',
     enrollment_process_status: 'Pending', application_documents_status: 'Pending',
-    application_status: '', offer_letter_status: '', visa_documentation_info_status: '',
-    visa_appointment: '', visa_documentation: '', accommodation: '', visa_results: '',
+    application_status: '', offer_letter_status: '', 
+    visa_appointment_date: '', visa_documentation: 'Pending', visa_results: '',
     category: 'All Students', assigned_to: '', source: '',
     processing_fee_amount: '', processing_fee_paid: '', processing_fee_status: 'PENDING', processing_fee_applicable: false,
     fee_admission_amount: '', fee_admission_paid: '', fee_admission_status: 'PENDING', fee_admission_applicable: false,
@@ -1071,24 +1099,24 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, onCl
                 <input name="offer_letter_status" value={formData.offer_letter_status || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Visa Doc Info Status</label>
-                <input name="visa_documentation_info_status" value={formData.visa_documentation_info_status || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Visa Appointment</label>
-                <input name="visa_appointment" value={formData.visa_appointment || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Visa Appointment Date</label>
+                <input type="date" name="visa_appointment_date" value={formData.visa_appointment_date || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Visa Documentation</label>
-                <input name="visa_documentation" value={formData.visa_documentation || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Accommodation</label>
-                <input name="accommodation" value={formData.accommodation || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                <select name="visa_documentation" value={formData.visa_documentation} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                  <option value="Pending">Pending</option>
+                  <option value="In Process">In Process</option>
+                  <option value="Complete">Complete</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Visa Results</label>
-                <input name="visa_results" value={formData.visa_results || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                <select name="visa_results" value={formData.visa_results || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                  <option value="">Select Result</option>
+                  <option value="Granted">Granted</option>
+                  <option value="Refused">Refused</option>
+                </select>
               </div>
               
               {/* Fee Section */}
