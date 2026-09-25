@@ -72,6 +72,7 @@ export const masterNavigation = [
   { id: "fdsFees",       label: "FDS Fees",         icon: IndianRupee,   path: "/fds/fees",      requiredPermissions: ["fds:admin","fds:admin_own","fds:view","fds_fees:view"],group: "fds", category: "divisions", description: "Studio fee payments & dues" },
   { id: "fdsFeePolicies",label: "FDS Fee Policies", icon: Settings,      path: "/fds/fee-policies",requiredPermissions: ["fds:admin","fds:admin_own","fds:view","fds_fees:view"],group: "fds", category: "divisions", description: "Pricing plans & payment policies" },
   { id: "fdsWeddings",   label: "FDS Weddings 💍",  icon: Heart,         path: "/fds/weddings",  requiredPermissions: ["fds:admin","fds:admin_own","fds:view"],                group: "fds", category: "divisions", description: "Wedding choreography packages" },
+  { id: "fdsAnalysis",  label: "FDS Analysis",     icon: BarChart2,     path: "/fds/analysis",  requiredPermissions: ["fds:management","fds:admin"],                         group: "fds", category: "divisions", description: "Management read-only cross-branch analytics" },
 
   // ── FLAG: German Language Training ──
   { id: "flag",          label: "FLAG Dashboard",   icon: FileText,      path: "/flag",          requiredPermissions: ["flag:admin","flag:trainer","flag:view","flag:fees"],  group: "flag", category: "divisions", description: "German academy overview & metrics" },

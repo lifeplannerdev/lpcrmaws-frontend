@@ -53,6 +53,7 @@ import FdsAttendancePage from './Pages/FDS/FdsAttendancePage.jsx';
 import FdsFeesPage from './Pages/FDS/FdsFeesPage.jsx';
 import FdsWeddingGroupsPage from './Pages/FDS/FdsWeddingGroupsPage.jsx';
 import FdsFeePoliciesPage from './Pages/FDS/FdsFeePoliciesPage.jsx';
+import FdsAnalysisPage from './Pages/FDS/FdsAnalysisPage.jsx';
 import LiveCallModal from './Components/voxbay/LiveCallModal.jsx';
 
 // ── FLAG: German Language Training ──
@@ -169,6 +170,7 @@ export default function App() {
         <Route path="/fds/fees" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view']}><FdsFeesPage /></PermissionRoute>} />
         <Route path="/fds/fee-policies" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view']}><FdsFeePoliciesPage /></PermissionRoute>} />
         <Route path="/fds/weddings" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view']}><FdsWeddingGroupsPage /></PermissionRoute>} />
+        <Route path="/fds/analysis" element={<PermissionRoute permissions={['fds:management','fds:admin']}><FdsAnalysisPage /></PermissionRoute>} />
 
         {/* ── FLAG: German Language Training ── */}
         <Route path="/flag" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view','flag:fees']}><FlagDashboard /></PermissionRoute>} />

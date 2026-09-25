@@ -19,6 +19,9 @@ export const fdsApi = {
   // Dashboard
   dashboard: (af) => af(`${FDS_BASE}/dashboard/`),
 
+  // Management Analysis (fds:management or fds:admin)
+  analysis: (af, params = {}) => af(`${FDS_BASE}/analysis/${buildQueryString(params)}`),
+
   // Fee Structures
   feeStructures: (af, params = {}) => af(`${FDS_BASE}/fee-structures/${buildQueryString(params)}`),
   createFeeStructure: (af, data) => af(`${FDS_BASE}/fee-structures/`, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
