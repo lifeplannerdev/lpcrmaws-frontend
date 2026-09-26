@@ -92,7 +92,7 @@ export default function ProcessingStudentsPage() {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       const results = res.data.results || [];
-      setStudents(results);
+      setStudents([...results].reverse());
     } catch (err) {
       console.error('Error fetching students', err);
     } finally {
