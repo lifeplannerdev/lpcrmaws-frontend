@@ -67,9 +67,7 @@ export default function AttendancePage() {
       setLoading(true);
       const token = accessToken || await refreshAccessToken();
       let url = `${API_BASE_URL}/students/students/?batch=${selectedBatch}`;
-      if (selectedGrade) {
-        url = `${API_BASE_URL}/students/students/?batch__current_grade=${selectedGrade}`;
-      }
+      // Do not filter by grade for backfill - list all students in batch irrespective of grade
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -97,9 +95,8 @@ export default function AttendancePage() {
       const token = accessToken || await refreshAccessToken();
       
       let url = `${API_BASE_URL}/students/students/?batch=${selectedBatch}`;
-      if (selectedGrade) {
-        url = `${API_BASE_URL}/students/students/?batch__current_grade=${selectedGrade}`;
-      }
+      // Do not filter by grade for backfill - list all students in batch irrespective of grade
+
       const [studentsRes, attendanceRes] = await Promise.all([
         fetch(url, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/students/attendance-records/?session__batch=${selectedBatch}`, { headers: { Authorization: `Bearer ${token}` } })
