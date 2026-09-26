@@ -91,7 +91,9 @@ export default function ProcessingStudentsPage() {
         params: { category: activeCategory !== 'All Students' ? activeCategory : undefined, search },
         headers: { Authorization: `Bearer ${accessToken}` }
       });
-      setStudents(res.data.results || []);
+      const results = res.data.results || [];
+      const sortedStudents = [...results].sort((a, b) => (b.id || 0) - (a.id || 0));
+      setStudents(sortedStudents);
     } catch (err) {
       console.error('Error fetching students', err);
     } finally {
@@ -161,11 +163,11 @@ export default function ProcessingStudentsPage() {
   const debouncedUpdateField = useCallback(debounce(handleUpdateField, 1000), []);
 
   const handleExportExcel = () => {
-    if (filteredStudents.length === 0) {
+    if (students.length === 0) {
       alert("No data to export.");
       return;
     }
-    const data = filteredStudents.map(student => ({
+    const data = students.map(student => ({
       "Student Name": student.name,
       "Mobile Number": student.mobile_number,
       "WhatsApp Number": student.whatsapp_number,
