@@ -38,6 +38,9 @@ export default function ProcessingStudentsPage() {
   const [dynamicFields, setDynamicFields] = useState([]);
   const [staffList, setStaffList] = useState([]);
   const [sourceStaffList, setSourceStaffList] = useState([]);
+  const [intakeOptions, setIntakeOptions] = useState([]);
+  const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(false);
+  const [newIntakeName, setNewIntakeName] = useState('');
   const [loading, setLoading] = useState(true);
 
   // State for layout & toggles
@@ -84,6 +87,44 @@ export default function ProcessingStudentsPage() {
     }
   };
 
+  const fetchIntakeOptions = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/intake-options/`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setIntakeOptions(res.data);
+    } catch (err) {
+      console.error('Error fetching intake options', err);
+    }
+  };
+
+  const handleAddIntake = async (e) => {
+    e.preventDefault();
+    if (!newIntakeName.trim()) return;
+    try {
+      const res = await axios.post(`${API_BASE_URL}/intake-options/`, { name: newIntakeName }, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setIntakeOptions([...intakeOptions, res.data]);
+      setNewIntakeName('');
+    } catch (err) {
+      console.error('Error adding intake option', err);
+      alert('Failed to add intake option');
+    }
+  };
+
+  const handleDeleteIntake = async (id) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/intake-options/${id}/`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setIntakeOptions(intakeOptions.filter(o => o.id !== id));
+    } catch (err) {
+      console.error('Error deleting intake option', err);
+      alert('Failed to delete intake option');
+    }
+  };
+
   const fetchStudents = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
@@ -109,6 +150,7 @@ export default function ProcessingStudentsPage() {
     fetchDynamicFields();
     fetchStaff();
     fetchSourceStaffList();
+    fetchIntakeOptions();
   }, []);
 
   useEffect(() => {
@@ -234,9 +276,14 @@ export default function ProcessingStudentsPage() {
                 <Download size={18} /> Export
               </button>
               {(canEditAny || canEditOwn) && (
-                <button onClick={openAddModal} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold">
-                  <Plus size={18} /> Add Student
-                </button>
+                <>
+                  <button onClick={() => setIsIntakeModalOpen(true)} className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold">
+                    <List size={18} /> Intakes
+                  </button>
+                  <button onClick={openAddModal} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold">
+                    <Plus size={18} /> Add Student
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -336,6 +383,8 @@ export default function ProcessingStudentsPage() {
           dynamicFields={dynamicFields}
           staffList={staffList}
           sourceStaffList={sourceStaffList}
+          intakeOptions={intakeOptions}
+          setIsIntakeModalOpen={setIsIntakeModalOpen}
           onClose={() => setIsModalOpen(false)}
           onDelete={handleDeleteStudent}
           accessToken={accessToken}
@@ -348,6 +397,17 @@ export default function ProcessingStudentsPage() {
           }}
         />
       )}
+
+
+      <IntakeManagerModal 
+        isOpen={isIntakeModalOpen}
+        onClose={() => setIsIntakeModalOpen(false)}
+        options={intakeOptions}
+        newName={newIntakeName}
+        setNewName={setNewIntakeName}
+        onAdd={handleAddIntake}
+        onDelete={handleDeleteIntake}
+      />
     </div>
   );
 }
@@ -745,7 +805,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
   );
 }
 
-function StudentModal({ student, dynamicFields, staffList, sourceStaffList, onClose, onDelete, onSave, accessToken, user, isOperationRole, canManageFees = false }) {
+function StudentModal({ student, dynamicFields, staffList, sourceStaffList, intakeOptions, setIsIntakeModalOpen, onClose, onDelete, onSave, accessToken, user, isOperationRole, canManageFees = false }) {
   const [formData, setFormData] = useState({
     name: '', mobile_number: '', whatsapp_number: '', email: '', parent_contact: '',
     program_applied: '', university: '', intake: '', registration_fee_status: 'Pending',
@@ -1028,7 +1088,17 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, onCl
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Intake</label>
-                <input name="intake" value={formData.intake || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                <div className="flex gap-2">
+                  <select name="intake" value={formData.intake || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                    <option value="">Select Intake</option>
+                    {intakeOptions.map(opt => (
+                      <option key={opt.id} value={opt.name}>{opt.name}</option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => setIsIntakeModalOpen(true)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 rounded-lg border font-bold flex items-center justify-center" title="Manage Intakes">
+                    <Plus size={16} />
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Date of Registration</label>
@@ -1529,3 +1599,45 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, onCl
     </div>
   );
 }
+
+const IntakeManagerModal = ({ isOpen, onClose, options, newName, setNewName, onAdd, onDelete }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-center p-6 border-b">
+          <h2 className="text-xl font-bold text-gray-800">Manage Intakes</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X size={20} className="text-gray-500" />
+          </button>
+        </div>
+        <div className="p-6 overflow-y-auto">
+          <form onSubmit={onAdd} className="flex gap-2 mb-6">
+            <input
+              type="text"
+              placeholder="New intake name..."
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="flex-1 border rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+            <button type="submit" disabled={!newName.trim()} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+              Add
+            </button>
+          </form>
+          <div className="space-y-2">
+            {options?.map(opt => (
+              <div key={opt.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50">
+                <span className="font-medium text-gray-700">{opt.name}</span>
+                <button onClick={() => onDelete(opt.id)} type="button" className="text-red-500 hover:bg-red-50 p-1.5 rounded text-sm transition-colors">
+                  Delete
+                </button>
+              </div>
+            ))}
+            {(!options || options.length === 0) && <div className="text-gray-500 text-center py-4">No intakes found.</div>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
