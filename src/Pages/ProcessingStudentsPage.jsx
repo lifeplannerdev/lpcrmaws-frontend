@@ -522,7 +522,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
         <tbody className="bg-white divide-y divide-gray-200">
           {students.map((student, idx) => (
             <tr key={student.id} className="hover:bg-gray-50">
-              <td className="px-4 py-2 border-r text-gray-500 sticky left-0 z-10 bg-white">{idx + 1}</td>
+              <td className="px-4 py-2 border-r text-gray-500 sticky left-0 z-10 bg-white">{students.length - idx}</td>
               {fixedColumns.map(col => {
                 if (col.key === 'category') {
                   return (
