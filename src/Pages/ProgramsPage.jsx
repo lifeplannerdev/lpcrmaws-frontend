@@ -18,6 +18,10 @@ const ProgramsPage = () => {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [selectedCountry, setSelectedCountry] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLetter, setSelectedLetter] = useState('All');
+
+  const alphabet = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
 
   const canManage = hasPermission('programs:manage');
 
@@ -111,8 +115,16 @@ const ProgramsPage = () => {
     }
   };
 
+  // Filter programs based on search and selected letter
+  const filteredPrograms = programs.filter(p => {
+    const matchesSearch = (p.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (p.university || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesLetter = selectedLetter === 'All' || (p.title || '').toUpperCase().startsWith(selectedLetter);
+    return matchesSearch && matchesLetter;
+  });
+
   // Group programs by country
-  const programsByCountry = programs.reduce((acc, curr) => {
+  const programsByCountry = filteredPrograms.reduce((acc, curr) => {
     const country = curr.country || 'Other';
     if (!acc[country]) acc[country] = [];
     acc[country].push(curr);
@@ -129,7 +141,14 @@ const ProgramsPage = () => {
     <div className="programs-page">
       <div className="programs-header">
         <h1>Academic Programs & Fees Structure</h1>
-        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <input 
+            type="text" 
+            placeholder="Search programs..." 
+            className="search-input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
           <select 
             className="form-select" 
             style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
@@ -149,7 +168,26 @@ const ProgramsPage = () => {
         </div>
       </div>
 
-      <div className="programs-content">
+      <div className="programs-layout">
+        <div className="az-sidebar">
+          <button 
+            className={`az-btn ${selectedLetter === 'All' ? 'active' : ''}`}
+            onClick={() => setSelectedLetter('All')}
+          >
+            All
+          </button>
+          {alphabet.map(letter => (
+            <button 
+              key={letter}
+              className={`az-btn ${selectedLetter === letter ? 'active' : ''}`}
+              onClick={() => setSelectedLetter(letter)}
+            >
+              {letter}
+            </button>
+          ))}
+        </div>
+
+        <div className="programs-content" style={{ flexGrow: 1 }}>
         {allCountries
           .filter(country => selectedCountry === 'All' || country === selectedCountry)
           .map(country => (
@@ -200,9 +238,10 @@ const ProgramsPage = () => {
             </div>
           </div>
         ))}
-        {programs.length === 0 && (
-          <div className="no-programs">No programs found. Please add some.</div>
+        {filteredPrograms.length === 0 && (
+          <div className="no-programs">No programs found matching your criteria.</div>
         )}
+        </div>
       </div>
 
       <ProgramFormModal 

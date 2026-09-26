@@ -18,6 +18,56 @@
   font-weight: 700;
 }
 
+.programs-layout {
+  display: flex;
+  gap: 20px;
+}
+
+.az-sidebar {
+  width: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  top: 20px;
+  height: max-content;
+  flex-shrink: 0;
+}
+
+.az-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: bold;
+  color: #9d174d;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.az-btn:hover {
+  background: #fbcfe8;
+}
+
+.az-btn.active {
+  background: #ec4899;
+  color: white;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  outline: none;
+  min-width: 250px;
+  font-size: 1rem;
+}
+
+.search-input:focus {
+  border-color: #ec4899;
+}
+
 .btn-add-main {
   background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
   color: white;
