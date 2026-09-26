@@ -8,9 +8,8 @@ export const ApiProvider = ({ children }) => {
   const { accessToken, refreshAccessToken } = useAuth();
   const tokenRef = useRef(accessToken);
 
-  useEffect(() => {
-    tokenRef.current = accessToken;
-  }, [accessToken]);
+  // Update tokenRef synchronously so it's ready when children's useEffects run
+  tokenRef.current = accessToken;
 
   const authFetch = useCallback(async (url, options = {}, signal = null, retry = true) => {
     let token = tokenRef.current;
