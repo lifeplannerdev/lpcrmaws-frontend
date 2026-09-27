@@ -19,6 +19,7 @@ export default function StudentProfilePage() {
   const [exams, setExams] = useState([]);
   const [feeAccount, setFeeAccount] = useState(null);
   const [attendance, setAttendance] = useState([]);
+  const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('current'); // 'current', 'history', 'exams', 'fees', 'attendance'
   
@@ -36,6 +37,7 @@ export default function StudentProfilePage() {
     grade_exam_marks: '',
     is_passed: false,
     total_marks: 100,
+    grade: '',
   });
 
   const fetchStudentData = async () => {
@@ -57,6 +59,17 @@ export default function StudentProfilePage() {
       if (trainersRes && trainersRes.ok) {
         const trainersData = await trainersRes.json();
         setTrainers(trainersData.results !== undefined ? trainersData.results : (Array.isArray(trainersData) ? trainersData : []));
+      }
+
+      // Fetch grades
+      try {
+        const gradesRes = await fetch(`${API_BASE_URL}/students/grades/`, { headers: { Authorization: `Bearer ${token}` } });
+        if (gradesRes.ok) {
+          const gradesData = await gradesRes.json();
+          setGrades(gradesData.results !== undefined ? gradesData.results : (Array.isArray(gradesData) ? gradesData : []));
+        }
+      } catch (e) {
+        console.error('Failed to fetch grades', e);
       }
 
       setStudent(studentData);
@@ -124,10 +137,7 @@ export default function StudentProfilePage() {
       const payload = {
         student: id,
         batch: student.batch,
-        grade: student.current_grade_id || student.batch_grade_id, // ensure we have a grade ID, need to check if current_grade is just a string or object. 
-        // wait, let's just fetch student.current_grade. Wait, we don't have current_grade_id in serializer. 
-        // student.batch is available, but wait, exams usually just take student, batch, grade.
-        // Let's rely on the backend accepting these. We'll pass what we can.
+        grade: examForm.grade || student.current_grade_id || student.batch_grade_id,
         exam_date: examForm.exam_date,
         model_exam_marks: examForm.exam_type === 'model' ? examForm.model_exam_marks : null,
         grade_exam_marks: examForm.exam_type === 'grade' ? examForm.grade_exam_marks : null,
@@ -589,6 +599,16 @@ export default function StudentProfilePage() {
                 <input type="date" value={examForm.exam_date} onChange={(e) => setExamForm({...examForm, exam_date: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500" required />
               </div>
               
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Grade</label>
+                <select value={examForm.grade} onChange={(e) => setExamForm({...examForm, grade: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500" required>
+                  <option value="">Select Grade</option>
+                  {grades.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Exam Type</label>
                 <select value={examForm.exam_type} onChange={(e) => setExamForm({...examForm, exam_type: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500">

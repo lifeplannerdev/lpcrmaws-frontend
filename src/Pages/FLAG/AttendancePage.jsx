@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Check, X, Clock, Calendar, AlertTriangle, Search, Filter, Loader2, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AcademicCalendar from '../../Components/ui/AcademicCalendar';
+import StudentWiseAttendanceReport from './StudentWiseAttendanceReport';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -66,18 +67,25 @@ export default function AttendancePage() {
     try {
       setLoading(true);
       const token = accessToken || await refreshAccessToken();
-      let url = `${API_BASE_URL}/students/students/?batch=${selectedBatch}`;
-      // Do not filter by grade for backfill - list all students in batch irrespective of grade
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
       
-      const stData = (data.results !== undefined ? data.results : (Array.isArray(data) ? data : []));
-      setStudents(stData);
+      let allStudents = [];
+      let url = `${API_BASE_URL}/students/students/?batch=${selectedBatch}`;
+      while (url) {
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (data.results !== undefined) {
+          allStudents = [...allStudents, ...data.results];
+          url = data.next;
+        } else {
+          allStudents = Array.isArray(data) ? data : [];
+          url = null;
+        }
+      }
+      
+      setStudents(allStudents);
       
       const initialAtt = {};
-      stData.forEach(s => {
+      allStudents.forEach(s => {
         initialAtt[s.id] = s.has_pending_fees ? 'pending' : 'present';
       });
       setAttendanceData(initialAtt);
@@ -94,22 +102,36 @@ export default function AttendancePage() {
       setLoading(true);
       const token = accessToken || await refreshAccessToken();
       
-      let url = `${API_BASE_URL}/students/students/?batch=${selectedBatch}`;
-      // Do not filter by grade for backfill - list all students in batch irrespective of grade
-
-      const [studentsRes, attendanceRes] = await Promise.all([
-        fetch(url, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/students/attendance-records/?session__batch=${selectedBatch}`, { headers: { Authorization: `Bearer ${token}` } })
-      ]);
+      let allStudents = [];
+      let studentUrl = `${API_BASE_URL}/students/students/?batch=${selectedBatch}`;
+      while (studentUrl) {
+        const res = await fetch(studentUrl, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (data.results !== undefined) {
+          allStudents = [...allStudents, ...data.results];
+          studentUrl = data.next;
+        } else {
+          allStudents = Array.isArray(data) ? data : [];
+          studentUrl = null;
+        }
+      }
       
-      const sData = await studentsRes.json();
-      const aData = await attendanceRes.json();
+      let allRecords = [];
+      let recordsUrl = `${API_BASE_URL}/students/attendance-records/?session__batch=${selectedBatch}`;
+      while (recordsUrl) {
+        const res = await fetch(recordsUrl, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (data.results !== undefined) {
+          allRecords = [...allRecords, ...data.results];
+          recordsUrl = data.next;
+        } else {
+          allRecords = Array.isArray(data) ? data : [];
+          recordsUrl = null;
+        }
+      }
       
-      const stData = (sData.results !== undefined ? sData.results : (Array.isArray(sData) ? sData : []));
-      const attData = (aData.results !== undefined ? aData.results : (Array.isArray(aData) ? aData : []));
-      
-      setStudents(stData);
-      setViewAttendanceRecords(attData);
+      setStudents(allStudents);
+      setViewAttendanceRecords(allRecords);
     } catch (err) {
       console.error(err);
     } finally {
@@ -141,6 +163,7 @@ export default function AttendancePage() {
         },
         body: JSON.stringify({
           batch: selectedBatch,
+          grade: selectedGrade || null,
           date: date,
           is_finalized: true
         })
@@ -203,41 +226,51 @@ export default function AttendancePage() {
               >
                 View Attendance
               </button>
+              <button 
+                onClick={() => setActiveTab('student-wise')}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'student-wise' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                Student Report
+              </button>
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 flex flex-col md:flex-row gap-4 items-end">
-            <div className="w-full md:w-1/3">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Select Batch</label>
-              <select 
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                value={selectedBatch || ''}
-                onChange={(e) => setSelectedBatch(e.target.value)}
-              >
-                {batches.map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            {activeTab === 'mark' && (
+          {activeTab !== 'student-wise' && (
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 flex flex-col md:flex-row gap-4 items-end">
               <div className="w-full md:w-1/3">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Filter by Current Grade (Backfill)</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Select Batch</label>
                 <select 
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                  value={selectedGrade || ''}
-                  onChange={(e) => setSelectedGrade(e.target.value)}
+                  value={selectedBatch || ''}
+                  onChange={(e) => setSelectedBatch(e.target.value)}
                 >
-                  <option value="">All (Default Batch Students)</option>
-                  {grades.map(g => (
-                    <option key={g.id} value={g.id}>{g.name}</option>
+                  {batches.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
                   ))}
                 </select>
               </div>
-            )}
-          </div>
+              
+              {activeTab === 'mark' && (
+                <div className="w-full md:w-1/3">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Filter by Current Grade (Backfill)</label>
+                  <select 
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    value={selectedGrade || ''}
+                    onChange={(e) => setSelectedGrade(e.target.value)}
+                  >
+                    <option value="">All (Default Batch Students)</option>
+                    {grades.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
 
-          {loading ? (
+          {activeTab === 'student-wise' ? (
+            <StudentWiseAttendanceReport />
+          ) : loading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
             </div>
