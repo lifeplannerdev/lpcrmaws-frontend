@@ -40,25 +40,55 @@ export default function StudentProfilePage() {
     grade: '',
   });
 
+  const fetchAllPages = async (url, token) => {
+    let allData = [];
+    let currentUrl = url;
+    while (currentUrl) {
+      const res = await fetch(currentUrl, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) break;
+      const data = await res.json();
+      if (data.results !== undefined) {
+        allData = [...allData, ...data.results];
+        currentUrl = data.next;
+      } else {
+        allData = Array.isArray(data) ? data : [];
+        currentUrl = null;
+      }
+    }
+    return allData;
+  };
+
   const fetchStudentData = async () => {
     try {
       setLoading(true);
       const token = accessToken || await refreshAccessToken();
-      const [studentRes, historyRes, examsRes, attendanceRes, trainersRes] = await Promise.all([
+      
+      const [studentRes, trainersRes] = await Promise.all([
         fetch(`${API_BASE_URL}/students/students/${id}/`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/students/student-history/?student=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/students/exams/?student=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/students/attendance-records/?student=${id}`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/students/trainers/`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null),
       ]);
       
       const studentData = await studentRes.json();
-      const historyData = await historyRes.json();
-      const examsData = await examsRes.json();
-      const attendanceData = await attendanceRes.json();
+      setStudent(studentData);
+
       if (trainersRes && trainersRes.ok) {
         const trainersData = await trainersRes.json();
         setTrainers(trainersData.results !== undefined ? trainersData.results : (Array.isArray(trainersData) ? trainersData : []));
+      }
+
+      // Fetch paginated lists
+      const [historyData, examsData, attendanceData, feeAccounts] = await Promise.all([
+        fetchAllPages(`${API_BASE_URL}/students/student-history/?student=${id}`, token),
+        fetchAllPages(`${API_BASE_URL}/students/exams/?student=${id}`, token),
+        fetchAllPages(`${API_BASE_URL}/students/attendance-records/?student=${id}`, token),
+        fetchAllPages(`${API_BASE_URL}/fees/accounts/?student=${id}`, token)
+      ]);
+
+      setHistory(historyData);
+      setExams(examsData);
+      setAttendance(attendanceData);
+      if (feeAccounts.length > 0) {
+        setFeeAccount(feeAccounts[0]);
       }
 
       // Fetch grades
@@ -70,25 +100,6 @@ export default function StudentProfilePage() {
         }
       } catch (e) {
         console.error('Failed to fetch grades', e);
-      }
-
-      setStudent(studentData);
-      setHistory((historyData.results !== undefined ? historyData.results : (Array.isArray(historyData) ? historyData : [])));
-      setExams((examsData.results !== undefined ? examsData.results : (Array.isArray(examsData) ? examsData : [])));
-      setAttendance((attendanceData.results !== undefined ? attendanceData.results : (Array.isArray(attendanceData) ? attendanceData : [])));
-      
-      // Fetch fee account if it exists
-      try {
-        const feeRes = await fetch(`${API_BASE_URL}/fees/accounts/?student=${id}`, { headers: { Authorization: `Bearer ${token}` } });
-        if (feeRes.ok) {
-          const feeAccounts = await feeRes.json();
-          const accs = feeAccounts.results !== undefined ? feeAccounts.results : (Array.isArray(feeAccounts) ? feeAccounts : []);
-          if (accs.length > 0) {
-            setFeeAccount(accs[0]);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to fetch fee account', e);
       }
     } catch (err) {
       console.error(err);
