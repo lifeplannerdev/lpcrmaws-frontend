@@ -41,6 +41,9 @@ export default function ProcessingStudentsPage() {
   const [intakeOptions, setIntakeOptions] = useState([]);
   const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(false);
   const [newIntakeName, setNewIntakeName] = useState('');
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [loading, setLoading] = useState(true);
 
   // State for layout & toggles
@@ -53,7 +56,7 @@ export default function ProcessingStudentsPage() {
   const canEditOwn = hasPermission('processing_students:edit_own');
   const canManageFees = hasPermission('processing_students:manage_fees');
 
-  const categories = ['All Students', 'GCC Students', 'European Students'];
+  const categories = ['All Students', ...(categoryOptions.map(c => c.name))];
 
   const fetchStaff = async () => {
     try {
@@ -126,6 +129,44 @@ export default function ProcessingStudentsPage() {
     }
   };
 
+  const fetchCategoryOptions = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/category-options/`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setCategoryOptions(res.data);
+    } catch (err) {
+      console.error('Error fetching category options', err);
+    }
+  };
+
+  const handleAddCategory = async (e) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+    try {
+      const res = await axios.post(`${API_BASE_URL}/category-options/`, { name: newCategoryName }, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setCategoryOptions([...categoryOptions, res.data]);
+      setNewCategoryName('');
+    } catch (err) {
+      console.error('Error adding category option', err);
+      alert('Failed to add category option');
+    }
+  };
+
+  const handleDeleteCategory = async (id) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/category-options/${id}/`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setCategoryOptions(categoryOptions.filter(o => o.id !== id));
+    } catch (err) {
+      console.error('Error deleting category option', err);
+      alert('Failed to delete category option');
+    }
+  };
+
   const fetchStudents = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
@@ -152,6 +193,7 @@ export default function ProcessingStudentsPage() {
     fetchStaff();
     fetchSourceStaffList();
     fetchIntakeOptions();
+    fetchCategoryOptions();
   }, []);
 
   useEffect(() => {
@@ -278,6 +320,9 @@ export default function ProcessingStudentsPage() {
               </button>
               {(canEditAny || canEditOwn) && (
                 <>
+                  <button onClick={() => setIsCategoryModalOpen(true)} className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold">
+                    <List size={18} /> Categories
+                  </button>
                   <button onClick={() => setIsIntakeModalOpen(true)} className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold">
                     <List size={18} /> Intakes
                   </button>
@@ -391,6 +436,7 @@ export default function ProcessingStudentsPage() {
                   dynamicFields={dynamicFields} 
                   handleUpdateField={handleUpdateField} 
                   staffList={staffList} 
+                  categoryOptions={categoryOptions}
                   onStudentClick={openEditModal} 
                   onDeleteStudent={handleDeleteStudent}
                   canManageFees={canManageFees} 
@@ -412,6 +458,7 @@ export default function ProcessingStudentsPage() {
           staffList={staffList}
           sourceStaffList={sourceStaffList}
           intakeOptions={intakeOptions}
+          categoryOptions={categoryOptions}
           setIsIntakeModalOpen={setIsIntakeModalOpen}
           onClose={() => setIsModalOpen(false)}
           onDelete={handleDeleteStudent}
@@ -435,6 +482,16 @@ export default function ProcessingStudentsPage() {
         setNewName={setNewIntakeName}
         onAdd={handleAddIntake}
         onDelete={handleDeleteIntake}
+      />
+
+      <CategoryManagerModal 
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        options={categoryOptions}
+        newName={newCategoryName}
+        setNewName={setNewCategoryName}
+        onAdd={handleAddCategory}
+        onDelete={handleDeleteCategory}
       />
     </div>
   );
@@ -547,12 +604,12 @@ function KanbanView({ students, dynamicFields, handleUpdateField, onStudentClick
   );
 }
 
-function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList, onStudentClick, onDeleteStudent, canManageFees, canDelete = false, isOperationRole }) {
+function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList, categoryOptions, onStudentClick, onDeleteStudent, canManageFees, canDelete = false, isOperationRole }) {
   const fixedColumns = [
     { key: 'name', label: 'Student Name', sticky: true, left: 60, width: 200 },
     { key: 'mobile_number', label: 'Mobile Number', sticky: true, left: 260, width: 140 },
-    { key: 'whatsapp_number', label: 'WhatsApp', sticky: true, left: 400, width: 140 },
-    { key: 'email', label: 'Email', sticky: true, left: 540, width: 220 },
+    { key: 'whatsapp_number', label: 'WhatsApp' },
+    { key: 'email', label: 'Email' },
     { key: 'parent_contact', label: 'Parent Contact' },
     { key: 'program_applied', label: 'Program Applied' },
     { key: 'university', label: 'University' },
@@ -649,8 +706,9 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="All Students">All Students</option>
-                        <option value="GCC Students">GCC Students</option>
-                        <option value="European Students">European Students</option>
+                        {categoryOptions?.map(c => (
+                          <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                        ))}
                       </select>
                     </td>
                   );
@@ -862,7 +920,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
   );
 }
 
-function StudentModal({ student, dynamicFields, staffList, sourceStaffList, intakeOptions, setIsIntakeModalOpen, onClose, onDelete, onSave, accessToken, user, isOperationRole, canManageFees = false }) {
+function StudentModal({ student, dynamicFields, staffList, sourceStaffList, intakeOptions, categoryOptions, setIsIntakeModalOpen, onClose, onDelete, onSave, accessToken, user, isOperationRole, canManageFees = false }) {
   const [formData, setFormData] = useState({
     name: '', mobile_number: '', whatsapp_number: '', email: '', parent_contact: '',
     program_applied: '', university: '', intake: '', registration_fee_status: 'Pending',
@@ -1165,8 +1223,9 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                 <select name="category" value={formData.category} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                   <option value="All Students">All Students</option>
-                  <option value="GCC Students">GCC Students</option>
-                  <option value="European Students">European Students</option>
+                  {categoryOptions?.map(c => (
+                    <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -1656,6 +1715,47 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
     </div>
   );
 }
+
+const CategoryManagerModal = ({ isOpen, onClose, options, newName, setNewName, onAdd, onDelete }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-center p-6 border-b">
+          <h2 className="text-xl font-bold text-gray-800">Manage Categories</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X size={20} className="text-gray-500" />
+          </button>
+        </div>
+        <div className="p-6 overflow-y-auto">
+          <form onSubmit={onAdd} className="flex gap-2 mb-6">
+            <input
+              type="text"
+              placeholder="New category name..."
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="flex-1 border rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+            <button type="submit" disabled={!newName.trim()} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+              Add
+            </button>
+          </form>
+          <div className="space-y-2">
+            {options?.map(opt => (
+              <div key={opt.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50">
+                <span className="font-medium text-gray-700">{opt.name}</span>
+                <button onClick={() => onDelete(opt.id)} type="button" className="text-red-500 hover:bg-red-50 p-1.5 rounded text-sm transition-colors">
+                  Delete
+                </button>
+              </div>
+            ))}
+            {(!options || options.length === 0) && <div className="text-gray-500 text-center py-4">No categories found.</div>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const IntakeManagerModal = ({ isOpen, onClose, options, newName, setNewName, onAdd, onDelete }) => {
   if (!isOpen) return null;
