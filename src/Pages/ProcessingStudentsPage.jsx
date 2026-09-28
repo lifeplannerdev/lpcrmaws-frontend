@@ -45,6 +45,7 @@ export default function ProcessingStudentsPage() {
 
   // State for layout & toggles
   const [activeCategory, setActiveCategory] = useState('All Students');
+  const [activeStatusTab, setActiveStatusTab] = useState('All');
   const [activeView, setActiveView] = useState('spreadsheet'); // 'list', 'kanban', 'spreadsheet'
   const [search, setSearch] = useState('');
 
@@ -305,6 +306,20 @@ export default function ProcessingStudentsPage() {
               </button>
             ))}
           </div>
+          <div className="flex items-center space-x-2 border-b border-gray-200">
+            {['All', 'Running', 'Completed'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveStatusTab(tab)}
+                className={`px-4 py-2 font-medium text-sm transition-colors ${activeStatusTab === tab
+                    ? 'border-b-2 border-blue-600 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
 
           <div className="flex items-center space-x-4">
             <input
@@ -348,20 +363,31 @@ export default function ProcessingStudentsPage() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : (
-            <>
-              {activeView === 'list' && (
-                <ListView 
-                  students={students} 
+            (() => {
+              const filteredStudents = students.filter(student => {
+                if (activeStatusTab === 'Running') {
+                  return student.student_file_status === 'Active' || student.student_file_status === 'File on Hold';
+                }
+                if (activeStatusTab === 'Completed') {
+                  return student.student_file_status === 'Cancelled by the student' || student.student_file_status === 'File closed';
+                }
+                return true;
+              });
+              return (
+                <>
+                  {activeView === 'list' && (
+                    <ListView 
+                      students={filteredStudents} 
                   dynamicFields={dynamicFields} 
                   onStudentClick={openEditModal} 
                   onDeleteStudent={handleDeleteStudent}
                   canDelete={canEditAny || canEditOwn}
                 />
               )}
-              {activeView === 'kanban' && <KanbanView students={students} dynamicFields={dynamicFields} handleUpdateField={handleUpdateField} onStudentClick={openEditModal} />}
+              {activeView === 'kanban' && <KanbanView students={filteredStudents} dynamicFields={dynamicFields} handleUpdateField={handleUpdateField} onStudentClick={openEditModal} />}
               {activeView === 'spreadsheet' && (
                 <SpreadsheetView 
-                  students={students} 
+                  students={filteredStudents} 
                   dynamicFields={dynamicFields} 
                   handleUpdateField={handleUpdateField} 
                   staffList={staffList} 
@@ -372,7 +398,9 @@ export default function ProcessingStudentsPage() {
                   isOperationRole={isOperationRole}
                 />
               )}
-            </>
+                </>
+              );
+            })()
           )}
         </div>
       </div>
@@ -521,10 +549,11 @@ function KanbanView({ students, dynamicFields, handleUpdateField, onStudentClick
 
 function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList, onStudentClick, onDeleteStudent, canManageFees, canDelete = false, isOperationRole }) {
   const fixedColumns = [
-    { key: 'name', label: 'Student Name' },
-    { key: 'mobile_number', label: 'Mobile Number' },
-    { key: 'whatsapp_number', label: 'WhatsApp' },
-    { key: 'email', label: 'Email' },
+    { key: 'student_file_status', label: 'File Status', sticky: true, left: 60, width: 160 },
+    { key: 'name', label: 'Student Name', sticky: true, left: 220, width: 200 },
+    { key: 'mobile_number', label: 'Mobile Number', sticky: true, left: 420, width: 140 },
+    { key: 'whatsapp_number', label: 'WhatsApp', sticky: true, left: 560, width: 140 },
+    { key: 'email', label: 'Email', sticky: true, left: 700, width: 220 },
     { key: 'parent_contact', label: 'Parent Contact' },
     { key: 'program_applied', label: 'Program Applied' },
     { key: 'university', label: 'University' },
@@ -563,11 +592,11 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200 border border-gray-200 text-sm">
-        <thead className="bg-gray-50">
+        <thead className="bg-gray-50 sticky top-0 z-20">
           <tr>
-            <th className="px-4 py-3 text-left font-semibold text-gray-600 border-b border-r sticky left-0 z-10 bg-gray-50">Sl No</th>
+            <th className="px-4 py-3 text-left font-semibold text-gray-600 border-b border-r sticky left-0 z-20 bg-gray-50" style={{ width: 60, minWidth: 60, maxWidth: 60 }}>Sl No</th>
             {fixedColumns.map(col => (
-              <th key={col.key} className="px-4 py-3 text-left font-semibold text-gray-600 border-b border-r whitespace-nowrap">
+              <th key={col.key} className={`px-4 py-3 text-left font-semibold text-gray-600 border-b border-r whitespace-nowrap ${col.sticky ? 'sticky z-20 bg-gray-50' : ''}`} style={col.sticky ? { left: col.left, width: col.width, minWidth: col.width, maxWidth: col.width } : {}}>
                 {col.label}
               </th>
             ))}
@@ -580,13 +609,40 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {students.map((student, idx) => (
-            <tr key={student.id} className="hover:bg-gray-50">
-              <td className="px-4 py-2 border-r text-gray-500 sticky left-0 z-10 bg-white">{students.length - idx}</td>
+          {students.map((student, idx) => {
+            let rowColorClass = 'hover:bg-gray-50 bg-white';
+            if (student.student_file_status === 'Active') rowColorClass = 'bg-green-50 hover:bg-green-100';
+            else if (student.student_file_status === 'Cancelled by the student') rowColorClass = 'bg-red-50 hover:bg-red-100';
+            else if (student.student_file_status === 'File closed') rowColorClass = 'bg-blue-50 hover:bg-blue-100';
+            else if (student.student_file_status === 'File on Hold') rowColorClass = 'bg-orange-50 hover:bg-orange-100';
+
+            return (
+            <tr key={student.id} className={rowColorClass}>
+              <td className={`px-4 py-2 border-r text-gray-500 sticky left-0 z-10 ${rowColorClass}`} style={{ width: 60, minWidth: 60, maxWidth: 60 }}>{students.length - idx}</td>
               {fixedColumns.map(col => {
+                let tdStyle = col.sticky ? { left: col.left, width: col.width, minWidth: col.width, maxWidth: col.width } : {};
+                let tdClass = `px-4 py-2 border-r p-0 ${col.sticky ? `sticky z-10 ${rowColorClass}` : ''}`;
+                
+                if (col.key === 'student_file_status') {
+                  return (
+                    <td key={col.key} className={tdClass} style={tdStyle}>
+                      <select
+                        defaultValue={student[col.key] || 'Active'}
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Cancelled by the student">Cancelled by the student</option>
+                        <option value="File closed">File closed</option>
+                        <option value="File on Hold">File on Hold</option>
+                      </select>
+                    </td>
+                  );
+                }
+                
                 if (col.key === 'category') {
                   return (
-                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                    <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || 'All Students'}
                         className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
@@ -601,7 +657,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                 }
                 if (col.key === 'assigned_to') {
                   return (
-                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                    <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || ''}
                         disabled={!isOperationRole}
@@ -618,7 +674,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                 }
                 if (col.key === 'enrollment_process_status') {
                   return (
-                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                    <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || 'Pending'}
                         className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
@@ -633,7 +689,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                 }
                 if (col.key === 'registration_fee_status') {
                   return (
-                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                    <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || 'Pending'}
                         className="w-full h-full min-w-[150px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
@@ -648,7 +704,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                 }
                 if (col.key === 'registration_fee_receipt_status') {
                   return (
-                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                    <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || 'Pending'}
                         disabled={student.registration_fee_status !== 'Paid with gst'}
@@ -663,7 +719,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                 }
                 if (col.key === 'application_documents_status') {
                   return (
-                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                    <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || 'Pending'}
                         className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
@@ -677,7 +733,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                 }
                 if (col.key === 'date_of_registration' || col.key === 'visa_appointment_date') {
                   return (
-                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                    <td key={col.key} className={tdClass} style={tdStyle}>
                       <input
                         type="date"
                         defaultValue={student[col.key] || ''}
@@ -690,7 +746,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                 
                 if (col.key === 'visa_documentation') {
                   return (
-                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                    <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || 'Pending'}
                         className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
@@ -706,7 +762,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
 
                 if (col.key === 'visa_results') {
                   return (
-                    <td key={col.key} className="px-4 py-2 border-r p-0">
+                    <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || ''}
                         className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
@@ -728,7 +784,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
 
                 if (col.key === 'processing_fee_status' || col.key === 'fee_admission_status' || col.key === 'fee_language_status' || col.key === 'fee_visa_status' || col.key === 'fee_ministry_status') {
                   return (
-                    <td key={col.key} className="px-4 py-2 border-r p-0 bg-gray-50">
+                    <td key={col.key} className={`px-4 py-2 border-r p-0 bg-gray-50 ${col.sticky ? `sticky z-10 ${rowColorClass}` : ''}`} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || 'PENDING'}
                         disabled={!canManageFees || !isFeeApplicable}
@@ -744,7 +800,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                 }
                 
                 return (
-                  <td key={col.key} className={`px-4 py-2 border-r p-0 ${!isFeeApplicable ? 'bg-gray-100' : ''}`}>
+                  <td key={col.key} className={`px-4 py-2 border-r p-0 ${!isFeeApplicable ? 'bg-gray-100' : ''} ${col.sticky ? `sticky z-10 ${rowColorClass}` : ''}`} style={tdStyle}>
                     <input
                       type={col.key.endsWith('_amount') || col.key.endsWith('_paid') ? 'number' : 'text'}
                       defaultValue={!isFeeApplicable ? '' : (student[col.key] || '')}
@@ -785,7 +841,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                   />
                 </td>
               ))}
-              <td className="px-4 py-2 border-l sticky right-0 z-10 bg-white text-center shadow-sm">
+              <td className={`px-4 py-2 border-l sticky right-0 z-10 ${rowColorClass} text-center shadow-sm`}>
                 <div className="flex items-center justify-center gap-2">
                   <button onClick={() => onStudentClick(student)} className="text-blue-600 font-medium hover:text-blue-800 hover:underline">
                     Edit
@@ -798,7 +854,8 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                 </div>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
