@@ -549,11 +549,10 @@ function KanbanView({ students, dynamicFields, handleUpdateField, onStudentClick
 
 function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList, onStudentClick, onDeleteStudent, canManageFees, canDelete = false, isOperationRole }) {
   const fixedColumns = [
-    { key: 'student_file_status', label: 'File Status', sticky: true, left: 60, width: 160 },
-    { key: 'name', label: 'Student Name', sticky: true, left: 220, width: 200 },
-    { key: 'mobile_number', label: 'Mobile Number', sticky: true, left: 420, width: 140 },
-    { key: 'whatsapp_number', label: 'WhatsApp', sticky: true, left: 560, width: 140 },
-    { key: 'email', label: 'Email', sticky: true, left: 700, width: 220 },
+    { key: 'name', label: 'Student Name', sticky: true, left: 60, width: 200 },
+    { key: 'mobile_number', label: 'Mobile Number', sticky: true, left: 260, width: 140 },
+    { key: 'whatsapp_number', label: 'WhatsApp', sticky: true, left: 400, width: 140 },
+    { key: 'email', label: 'Email', sticky: true, left: 540, width: 220 },
     { key: 'parent_contact', label: 'Parent Contact' },
     { key: 'program_applied', label: 'Program Applied' },
     { key: 'university', label: 'University' },
@@ -584,14 +583,15 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
     { key: 'fee_visa_status', label: 'Visa Approval Fee Status' },
     { key: 'fee_ministry_amount', label: 'Ministry Letter Fee Amount' },
     { key: 'fee_ministry_paid', label: 'Ministry Letter Fee Paid' },
-    { key: 'fee_ministry_status', label: 'Ministry Letter Fee Status' }
+    { key: 'fee_ministry_status', label: 'Ministry Letter Fee Status' },
+    { key: 'student_file_status', label: 'File Status' }
   ];
 
   if (students.length === 0) return <div className="text-gray-500 text-center p-8">No students found.</div>;
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200 border border-gray-200 text-sm">
+    <div className="overflow-x-auto overflow-y-auto max-h-[70vh] border border-gray-200 rounded-lg">
+      <table className="min-w-full divide-y divide-gray-200 text-sm">
         <thead className="bg-gray-50 sticky top-0 z-20">
           <tr>
             <th className="px-4 py-3 text-left font-semibold text-gray-600 border-b border-r sticky left-0 z-20 bg-gray-50" style={{ width: 60, minWidth: 60, maxWidth: 60 }}>Sl No</th>
