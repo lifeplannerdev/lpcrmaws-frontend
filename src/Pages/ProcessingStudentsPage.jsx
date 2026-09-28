@@ -410,11 +410,12 @@ export default function ProcessingStudentsPage() {
           ) : (
             (() => {
               const filteredStudents = students.filter(student => {
+                const status = student.student_file_status || 'Active';
                 if (activeStatusTab === 'Running') {
-                  return student.student_file_status === 'Active' || student.student_file_status === 'File on Hold';
+                  return status === 'Active' || status === 'On Hold';
                 }
                 if (activeStatusTab === 'Completed') {
-                  return student.student_file_status === 'Cancelled by the student' || student.student_file_status === 'File closed';
+                  return status === 'Cancelled by Student' || status === 'No Response from Student' || status === 'File Closed forever';
                 }
                 return true;
               });
@@ -669,9 +670,10 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
           {students.map((student, idx) => {
             let rowColorClass = 'hover:bg-gray-50 bg-white';
             if (student.student_file_status === 'Active') rowColorClass = 'bg-green-50 hover:bg-green-100';
-            else if (student.student_file_status === 'Cancelled by the student') rowColorClass = 'bg-red-50 hover:bg-red-100';
-            else if (student.student_file_status === 'File closed') rowColorClass = 'bg-blue-50 hover:bg-blue-100';
-            else if (student.student_file_status === 'File on Hold') rowColorClass = 'bg-orange-50 hover:bg-orange-100';
+            else if (student.student_file_status === 'On Hold') rowColorClass = 'bg-orange-50 hover:bg-orange-100';
+            else if (student.student_file_status === 'Cancelled by Student') rowColorClass = 'bg-red-50 hover:bg-red-100';
+            else if (student.student_file_status === 'No Response from Student') rowColorClass = 'bg-purple-50 hover:bg-purple-100';
+            else if (student.student_file_status === 'File Closed forever') rowColorClass = 'bg-blue-50 hover:bg-blue-100';
 
             return (
             <tr key={student.id} className={rowColorClass}>
@@ -685,13 +687,14 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                     <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || 'Active'}
-                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        className="w-full h-full min-w-[170px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="Active">Active</option>
-                        <option value="Cancelled by the student">Cancelled by the student</option>
-                        <option value="File closed">File closed</option>
-                        <option value="File on Hold">File on Hold</option>
+                        <option value="On Hold">On Hold</option>
+                        <option value="Cancelled by Student">Cancelled by Student</option>
+                        <option value="No Response from Student">No Response from Student</option>
+                        <option value="File Closed forever">File Closed forever</option>
                       </select>
                     </td>
                   );
@@ -923,6 +926,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
 function StudentModal({ student, dynamicFields, staffList, sourceStaffList, intakeOptions, categoryOptions, setIsIntakeModalOpen, onClose, onDelete, onSave, accessToken, user, isOperationRole, canManageFees = false }) {
   const [formData, setFormData] = useState({
     name: '', mobile_number: '', whatsapp_number: '', email: '', parent_contact: '',
+    student_file_status: 'Active',
     program_applied: '', university: '', intake: '', registration_fee_status: 'Pending',
     registration_fee_receipt_status: 'Pending',
     enrollment_process_status: 'Pending', application_documents_status: 'Pending',
@@ -1226,6 +1230,16 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                   {categoryOptions?.map(c => (
                     <option key={c.id || c.name} value={c.name}>{c.name}</option>
                   ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">File Status</label>
+                <select name="student_file_status" value={formData.student_file_status || 'Active'} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                  <option value="Active">Active</option>
+                  <option value="On Hold">On Hold</option>
+                  <option value="Cancelled by Student">Cancelled by Student</option>
+                  <option value="No Response from Student">No Response from Student</option>
+                  <option value="File Closed forever">File Closed forever</option>
                 </select>
               </div>
               <div>
