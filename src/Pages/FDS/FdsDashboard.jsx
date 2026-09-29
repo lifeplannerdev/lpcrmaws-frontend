@@ -6,7 +6,9 @@ import {
 } from 'lucide-react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi } from './fdsApi';
+import FdsBranchSelector, { getBranchLabel, GlobalDataBadge } from './FdsBranchSelector';
 import './fds-theme.css';
 
 const StatCard = ({ icon: Icon, value, label, sub, accentClass = '', onClick }) => (
@@ -59,8 +61,12 @@ const MiniBar = ({ label, value, max, colorClass }) => {
 };
 
 export default function FdsDashboard() {
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
+
+  const isManagement = hasPermission('fds:management') || user?.is_superuser;
+  const [branch, setBranch] = useState('ALL');
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -76,11 +82,13 @@ export default function FdsDashboard() {
   };
 
   useEffect(() => {
-    fdsApi.dashboard(authFetch)
+    setLoading(true);
+    const params = isManagement ? { branch } : {};
+    fdsApi.dashboard(authFetch, params)
       .then(setStats)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [branch, isManagement]);
 
   const totalStudents = stats?.students?.total_active ?? 0;
   const maxCat = Math.max(
@@ -90,6 +98,8 @@ export default function FdsDashboard() {
     1
   );
 
+  const currentBranchLabel = isManagement ? getBranchLabel(branch) : (stats?.branch ? getBranchLabel(stats.branch) : 'Studio Operations');
+
   return (
     <div className="min-h-screen bg-slate-50"><Navbar />
       <div className="fds-theme">
@@ -97,15 +107,25 @@ export default function FdsDashboard() {
           {/* ── Header ── */}
           <div className="fds-page-header">
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
                 <Sparkles size={22} color="var(--fds-primary)" />
                 <h1 className="fds-page-title" style={{ marginBottom: 0 }}>
                   FILMAATIC Dance Studio
                 </h1>
+                {isManagement && branch === 'ALL' && (
+                  <GlobalDataBadge label="Global Data (All Branches)" />
+                )}
               </div>
-              <p className="fds-page-subtitle">KTM 2026 — Studio Operations Dashboard</p>
+              <p className="fds-page-subtitle">
+                {currentBranchLabel} — Studio Operations Dashboard
+              </p>
             </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              {isManagement && (
+                <div style={{ marginRight: 6 }}>
+                  <FdsBranchSelector value={branch} onChange={setBranch} variant="pills" />
+                </div>
+              )}
               <button className="fds-btn fds-btn-secondary" onClick={() => navigate('/fds/analysis')} style={{ borderColor: 'var(--fds-primary)' }}>
                 <BarChart2 size={16} color="var(--fds-primary)" /> Analysis
               </button>

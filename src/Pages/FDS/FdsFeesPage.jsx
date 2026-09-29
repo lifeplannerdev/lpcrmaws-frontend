@@ -12,6 +12,7 @@ import {
   fdsApi, FDS_CATEGORIES, getStatusBadgeClass, getCategoryBadgeClass,
   downloadExcelFromResponse
 } from './fdsApi';
+import FdsBranchSelector, { getBranchLabel, GlobalDataBadge } from './FdsBranchSelector';
 import './fds-theme.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -62,6 +63,7 @@ export default function FdsFeesPage() {
   const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission, hasAnyPermission } = usePermissions();
 
+  const isManagement = hasPermission('fds:management') || user?.is_superuser;
   const canManageFees = hasPermission('fds:admin') || hasPermission('fds:admin_own');
   const canViewFees = hasPermission('fds:admin') || hasPermission('fds:view') || hasPermission('fds_fees:view') || hasPermission('fds:management');
 
@@ -80,6 +82,7 @@ export default function FdsFeesPage() {
   const [feePolicies, setFeePolicies] = useState({ block_without_fee_account: false, pending_if_overdue: false });
 
   // Filters
+  const [filterBranch, setFilterBranch] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -173,6 +176,9 @@ export default function FdsFeesPage() {
       if (search) accountParams.search = search;
       if (categoryFilter !== 'ALL') accountParams.class_category = categoryFilter;
       if (statusFilter) accountParams.status = statusFilter;
+      if (isManagement && filterBranch && filterBranch !== 'ALL') accountParams.branch = filterBranch;
+
+      const branchParam = isManagement && filterBranch && filterBranch !== 'ALL' ? { branch: filterBranch } : {};
 
       const [
         accountsData,
@@ -184,11 +190,11 @@ export default function FdsFeesPage() {
         policiesData
       ] = await Promise.all([
         fdsApi.feeAccounts(authFetchJson, accountParams),
-        fdsApi.feeSummary(authFetchJson, { class_category: categoryFilter !== 'ALL' ? categoryFilter : '' }),
-        fdsApi.pendingFeeStudents(authFetchJson, { class_category: categoryFilter !== 'ALL' ? categoryFilter : '' }),
+        fdsApi.feeSummary(authFetchJson, { class_category: categoryFilter !== 'ALL' ? categoryFilter : '', ...branchParam }),
+        fdsApi.pendingFeeStudents(authFetchJson, { class_category: categoryFilter !== 'ALL' ? categoryFilter : '', ...branchParam }),
         fdsApi.feeStructures(authFetchJson, { is_active: true }),
-        fdsApi.students(authFetchJson, { is_active: true, page_size: 500 }),
-        fdsApi.payments(authFetchJson, { page_size: 100 }),
+        fdsApi.students(authFetchJson, { is_active: true, page_size: 500, ...branchParam }),
+        fdsApi.payments(authFetchJson, { page_size: 100, ...branchParam }),
         fdsApi.feePolicies(authFetchJson).catch(() => ({ block_without_fee_account: false, pending_if_overdue: false })),
       ]);
 
@@ -210,7 +216,7 @@ export default function FdsFeesPage() {
     } finally {
       setLoading(false);
     }
-  }, [authFetchJson, canViewFees, search, categoryFilter, statusFilter, selectedAccountId]);
+  }, [authFetchJson, canViewFees, search, categoryFilter, statusFilter, selectedAccountId, isManagement, filterBranch]);
 
   useEffect(() => {
     fetchData();
@@ -513,18 +519,30 @@ export default function FdsFeesPage() {
         {/* Top Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-indigo-100 text-indigo-700 text-sm font-medium shadow-sm mb-3">
-              <IndianRupee size={16} /> FDS Studio Accounting
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-indigo-100 text-indigo-700 text-sm font-medium shadow-sm">
+                <IndianRupee size={16} /> FDS Studio Accounting
+              </div>
+              {isManagement && filterBranch === 'ALL' && (
+                <GlobalDataBadge label="Global Data (All Branches)" />
+              )}
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
               FDS Fees Management
             </h1>
             <p className="text-gray-600 mt-1 text-sm sm:text-base">
-              Manage dance & fitness fee accounts, installments, partial collections, and restructures.
+              {isManagement ? `${getBranchLabel(filterBranch)} — ` : ''}Manage dance & fitness fee accounts, installments, partial collections, and restructures.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {isManagement && (
+              <FdsBranchSelector
+                value={filterBranch}
+                onChange={setFilterBranch}
+                variant="select"
+              />
+            )}
             <button
               type="button"
               onClick={handleExport}

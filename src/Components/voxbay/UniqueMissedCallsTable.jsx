@@ -14,22 +14,27 @@ function buildDateParams(dateRange) {
     }
   }
 
-  const now = new Date(), from = new Date();
+  const from = new Date(), to = new Date();
+  to.setHours(23, 59, 59, 999);
+
   if (dateRange === 'today') {
     from.setHours(0, 0, 0, 0);
   } else if (dateRange === 'yesterday') {
-    from.setDate(now.getDate() - 1);
+    from.setDate(from.getDate() - 1);
     from.setHours(0, 0, 0, 0);
-    now.setDate(now.getDate() - 1);
-    now.setHours(23, 59, 59, 999);
+    to.setDate(to.getDate() - 1);
+    to.setHours(23, 59, 59, 999);
   } else if (dateRange === '7days') {
-    from.setDate(now.getDate() - 7);
+    from.setDate(from.getDate() - 7);
+    from.setHours(0, 0, 0, 0);
   } else if (dateRange === '30days') {
-    from.setDate(now.getDate() - 30);
+    from.setDate(from.getDate() - 30);
+    from.setHours(0, 0, 0, 0);
   } else if (dateRange === '90days') {
-    from.setDate(now.getDate() - 90);
+    from.setDate(from.getDate() - 90);
+    from.setHours(0, 0, 0, 0);
   }
-  return { from: from.toISOString(), to: now.toISOString() };
+  return { from: from.toISOString(), to: to.toISOString() };
 }
 
 export default function UniqueMissedCallsTable({ dateRange = 'today' }) {

@@ -5,6 +5,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, FDS_CATEGORIES, getStatusBadgeClass, downloadExcelFromResponse } from './fdsApi';
+import FdsBranchSelector, { getBranchLabel, GlobalDataBadge } from './FdsBranchSelector';
 import './fds-theme.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -38,6 +39,7 @@ function StarRating({ value, onChange, readOnly = false }) {
 export default function FdsTrialPage() {
   const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
+  const isManagement = hasPermission('fds:management') || user?.is_superuser;
   const canEdit = hasPermission('fds:admin') || hasPermission('fds:admin_own');
   const fileInputRef = useRef();
 
@@ -47,6 +49,7 @@ export default function FdsTrialPage() {
   const [total, setTotal] = useState(0);
 
   const [viewTab, setViewTab] = useState('ACTIVE');
+  const [filterBranch, setFilterBranch] = useState('ALL');
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -104,6 +107,7 @@ export default function FdsTrialPage() {
   const buildParams = useCallback(() => {
     const p = { page, page_size: PAGE_SIZE };
     if (activeCategory !== 'ALL') p.class_category = activeCategory;
+    if (isManagement && filterBranch && filterBranch !== 'ALL') p.branch = filterBranch;
     if (search) p.search = search;
     if (filterStatus) {
       p.status = filterStatus;
@@ -121,15 +125,16 @@ export default function FdsTrialPage() {
     if (followUpDue) p.follow_up_due = 'true';
     p.ordering = sortDir === 'asc' ? `${sortField},id` : `-${sortField},-id`;
     return p;
-  }, [page, activeCategory, search, filterStatus, filterConverted, dateFrom, dateTo, followUpDue, sortField, sortDir, viewTab]);
+  }, [page, activeCategory, isManagement, filterBranch, search, filterStatus, filterConverted, dateFrom, dateTo, followUpDue, sortField, sortDir, viewTab]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const statsParams = isManagement && filterBranch && filterBranch !== 'ALL' ? { branch: filterBranch } : {};
       const [trialsRes, statsRes, enqRes] = await Promise.allSettled([
         fdsApi.trials(authFetchJson, buildParams()),
-        fdsApi.trialStats(authFetchJson),
-        fdsApi.enquiries(authFetchJson, { joined: false, page_size: 150 }),
+        fdsApi.trialStats(authFetchJson, statsParams),
+        fdsApi.enquiries(authFetchJson, { joined: false, page_size: 150, ...(isManagement && filterBranch !== 'ALL' ? { branch: filterBranch } : {}) }),
       ]);
       if (trialsRes.status === 'fulfilled' && trialsRes.value) {
         const data = trialsRes.value;
@@ -145,10 +150,10 @@ export default function FdsTrialPage() {
       }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [authFetchJson, buildParams]);
+  }, [authFetchJson, buildParams, isManagement, filterBranch]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [activeCategory, search, filterStatus, filterConverted, dateFrom, dateTo, followUpDue]);
+  useEffect(() => { setPage(1); }, [activeCategory, filterBranch, search, filterStatus, filterConverted, dateFrom, dateTo, followUpDue]);
 
   const handleSort = (f) => {
     if (sortField === f) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -246,8 +251,15 @@ export default function FdsTrialPage() {
           {/* Header */}
           <div className="fds-page-header">
             <div>
-              <h1 className="fds-page-title">Trials</h1>
-              <p className="fds-page-subtitle">FILMAATIC Dance Studio · {total} total</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <h1 className="fds-page-title" style={{ marginBottom: 0 }}>Trials</h1>
+                {isManagement && filterBranch === 'ALL' && (
+                  <GlobalDataBadge label="Global Data (All Branches)" />
+                )}
+              </div>
+              <p className="fds-page-subtitle">
+                FILMAATIC Dance Studio · {isManagement ? getBranchLabel(filterBranch) : ''} · {total} total
+              </p>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               {canEdit && <button className="fds-btn fds-btn-secondary" onClick={() => fileInputRef.current.click()}><Upload size={15} /> Import</button>}
@@ -290,6 +302,13 @@ export default function FdsTrialPage() {
 
           {/* Filter Bar */}
           <div className="fds-filter-bar">
+            {isManagement && (
+              <FdsBranchSelector
+                value={filterBranch}
+                onChange={setFilterBranch}
+                variant="select"
+              />
+            )}
             <div style={{ display: 'flex', gap: 5 }}>
               <button
                 className={`fds-btn ${viewTab === 'ACTIVE' ? 'fds-btn-primary' : 'fds-btn-secondary'}`}
@@ -352,7 +371,14 @@ export default function FdsTrialPage() {
                   <tr><td colSpan={11}><div className="fds-empty"><div className="fds-empty-title">No trials found</div></div></td></tr>
                 ) : trials.map(t => (
                   <tr key={t.id}>
-                    <td><span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--fds-primary)' }}>{t.trial_id}</span></td>
+                    <td>
+                      <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--fds-primary)' }}>{t.trial_id}</span>
+                      {isManagement && t.branch && (
+                        <div style={{ fontSize: '0.68rem', color: 'var(--fds-text-muted)' }}>
+                          {t.branch === 'KOCHI' ? '🏙️ Kochi' : '🌿 Kottayam'}
+                        </div>
+                      )}
+                    </td>
                     <td>
                       <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{t.date}</div>
                       {t.time && <div style={{ fontSize: '0.75rem', color: 'var(--fds-text-muted)' }}>{t.time}</div>}

@@ -4,6 +4,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, getStatusBadgeClass } from './fdsApi';
+import FdsBranchSelector, { getBranchLabel, GlobalDataBadge } from './FdsBranchSelector';
 import './fds-theme.css';
 
 const PACKAGES = [
@@ -24,8 +25,9 @@ const EMPTY_FORM = {
 const PKG_COLORS = { BASIC: 'var(--fds-dance)', COUPLE: 'var(--fds-zumba)', PREMIUM: 'var(--fds-primary)', FAMILY_GROUP: 'var(--fds-yoga)' };
 
 export default function FdsWeddingGroupsPage() {
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
+  const isManagement = hasPermission('fds:management') || user?.is_superuser;
   const canEdit = hasPermission('fds:admin') || hasPermission('fds:admin_own');
 
   const [groups, setGroups] = useState([]);
@@ -33,6 +35,7 @@ export default function FdsWeddingGroupsPage() {
   const [trainers, setTrainers] = useState([]);
   const [coordinators, setCoordinators] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filterBranch, setFilterBranch] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterPkg, setFilterPkg] = useState('');
   const [search, setSearch] = useState('');
@@ -58,9 +61,12 @@ export default function FdsWeddingGroupsPage() {
       if (filterStatus) params.status = filterStatus;
       if (filterPkg) params.package_type = filterPkg;
       if (search) params.search = search;
+      if (isManagement && filterBranch && filterBranch !== 'ALL') params.branch = filterBranch;
+      const batchParams = { status: 'ACTIVE', page_size: 200 };
+      if (isManagement && filterBranch && filterBranch !== 'ALL') batchParams.branch = filterBranch;
       const [gData, bData, tData, cData] = await Promise.all([
         fdsApi.weddingGroups(authFetchJson, params),
-        fdsApi.batches(authFetchJson, { status: 'ACTIVE', page_size: 200 }),
+        fdsApi.batches(authFetchJson, batchParams),
         fdsApi.trainers(authFetchJson, { roles: 'FDS_TRAINER,FDS TRAINER,FDS_COORDINATOR,FDS COORDINATOR' }),
         fdsApi.coordinators(authFetchJson, { roles: 'FDS_COORDINATOR,FDS COORDINATOR' }),
       ]);
@@ -70,7 +76,7 @@ export default function FdsWeddingGroupsPage() {
       setCoordinators(cData);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [authFetchJson, filterStatus, filterPkg, search]);
+  }, [authFetchJson, filterStatus, filterPkg, search, isManagement, filterBranch]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -124,8 +130,15 @@ export default function FdsWeddingGroupsPage() {
         <div className="fds-page">
           <div className="fds-page-header">
             <div>
-              <h1 className="fds-page-title">Wedding Groups</h1>
-              <p className="fds-page-subtitle">FILMAATIC Dance Studio · {groups.length} groups</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <h1 className="fds-page-title" style={{ marginBottom: 0 }}>Wedding Groups</h1>
+                {isManagement && filterBranch === 'ALL' && (
+                  <GlobalDataBadge label="Global Data (All Branches)" />
+                )}
+              </div>
+              <p className="fds-page-subtitle">
+                FILMAATIC Dance Studio · {isManagement ? getBranchLabel(filterBranch) : ''} · {groups.length} groups
+              </p>
             </div>
             {canEdit && <button className="fds-btn fds-btn-primary" onClick={openAdd}><Plus size={15} /> New Wedding Group</button>}
           </div>
@@ -147,6 +160,13 @@ export default function FdsWeddingGroupsPage() {
 
           {/* Filters */}
           <div className="fds-filter-bar" style={{ marginBottom: 20 }}>
+            {isManagement && (
+              <FdsBranchSelector
+                value={filterBranch}
+                onChange={setFilterBranch}
+                variant="select"
+              />
+            )}
             <input className="fds-search-input" placeholder="Search event name, contact..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1 }} />
             <select className="fds-input fds-select" style={{ maxWidth: 150 }} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
               <option value="">All Statuses</option>
@@ -180,6 +200,11 @@ export default function FdsWeddingGroupsPage() {
                           <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--fds-primary)' }}>{g.group_id}</span>
                         </div>
                         <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                          {isManagement && g.branch && (
+                            <span className="fds-badge fds-badge-gray">
+                              {g.branch === 'KOCHI' ? '🏙️ Kochi' : '🌿 KTM'}
+                            </span>
+                          )}
                           <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: '0.72rem', fontWeight: 700, background: `${pkgColor}22`, color: pkgColor }}>
                             {g.package_type_display || g.package_type.replace('_',' ')}
                           </span>

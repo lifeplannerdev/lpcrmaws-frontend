@@ -9,6 +9,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, FDS_CATEGORIES, getCategoryBadgeClass, getStatusBadgeClass, downloadExcelFromResponse } from './fdsApi';
+import FdsBranchSelector, { getBranchLabel, GlobalDataBadge } from './FdsBranchSelector';
 import './fds-theme.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -41,6 +42,7 @@ export default function FdsEnquiryPage() {
   const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
+  const isManagement = hasPermission('fds:management') || user?.is_superuser;
   const canEdit = hasPermission('fds:admin') || hasPermission('fds:admin_own');
   const fileInputRef = useRef();
 
@@ -51,6 +53,7 @@ export default function FdsEnquiryPage() {
 
   // Filters
   const [viewTab, setViewTab] = useState('ACTIVE');
+  const [filterBranch, setFilterBranch] = useState('ALL');
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -91,13 +94,17 @@ export default function FdsEnquiryPage() {
     const res = await authFetch(url, opts);
     if (!res.ok) throw new Error('Failed');
     if (res.status === 204) return null;
-    if (res.status === 204) return null;
     return res.json();
   }, [authFetch]);
 
   const buildParams = useCallback(() => {
     const p = { page, page_size: PAGE_SIZE };
     if (activeCategory !== 'ALL') p.class_interest = activeCategory;
+    if (isManagement && filterBranch && filterBranch !== 'ALL') {
+      p.branch = filterBranch;
+    } else if (filterLocation) {
+      p.location = filterLocation;
+    }
     if (search) p.search = search;
     if (filterStatus) {
       p.status = filterStatus;
@@ -105,30 +112,30 @@ export default function FdsEnquiryPage() {
       p.status__in = viewTab === 'ACTIVE' ? 'NEW,CONTACTED' : 'TRIAL_SCHEDULED,CONVERTED,LOST';
     }
     if (filterSource) p.source = filterSource;
-    if (filterLocation) p.location = filterLocation;
     if (dateFrom) p.date_from = dateFrom;
     if (dateTo)   p.date_to   = dateTo;
     if (followUpDue) p.follow_up_due = 'true';
     p.ordering = sortDir === 'asc' ? `${sortField},id` : `-${sortField},-id`;
     return p;
-  }, [page, activeCategory, search, filterStatus, filterSource, dateFrom, dateTo, followUpDue, sortField, sortDir, viewTab]);
+  }, [page, activeCategory, isManagement, filterBranch, filterLocation, search, filterStatus, filterSource, dateFrom, dateTo, followUpDue, sortField, sortDir, viewTab]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const statsParams = isManagement && filterBranch && filterBranch !== 'ALL' ? { branch: filterBranch } : {};
       const [enqData, statsData] = await Promise.all([
         fdsApi.enquiries(authFetchJson, buildParams()),
-        fdsApi.enquiryStats(authFetchJson),
+        fdsApi.enquiryStats(authFetchJson, statsParams),
       ]);
       setEnquiries(enqData.results ?? enqData);
       setTotal(enqData.count ?? (enqData.results ? enqData.results.length : enqData.length));
       setStats(statsData);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [authFetchJson, buildParams]);
+  }, [authFetchJson, buildParams, isManagement, filterBranch]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [activeCategory, search, filterStatus, filterSource, dateFrom, dateTo, followUpDue]);
+  useEffect(() => { setPage(1); }, [activeCategory, filterBranch, search, filterStatus, filterSource, filterLocation, dateFrom, dateTo, followUpDue]);
 
   const handleSort = (field) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -305,8 +312,15 @@ export default function FdsEnquiryPage() {
           {/* ── Header ── */}
           <div className="fds-page-header">
             <div>
-              <h1 className="fds-page-title">Enquiries</h1>
-              <p className="fds-page-subtitle">FILMAATIC Dance Studio · {total} total</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <h1 className="fds-page-title" style={{ marginBottom: 0 }}>Enquiries</h1>
+                {isManagement && filterBranch === 'ALL' && (
+                  <GlobalDataBadge label="Global Data (All Branches)" />
+                )}
+              </div>
+              <p className="fds-page-subtitle">
+                FILMAATIC Dance Studio · {isManagement ? getBranchLabel(filterBranch) : ''} · {total} total
+              </p>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {canEdit && (
@@ -370,6 +384,13 @@ export default function FdsEnquiryPage() {
 
           {/* ── Filter Bar ── */}
           <div className="fds-filter-bar">
+            {isManagement && (
+              <FdsBranchSelector
+                value={filterBranch}
+                onChange={setFilterBranch}
+                variant="select"
+              />
+            )}
             <div style={{ display: 'flex', gap: 5 }}>
               <button
                 className={`fds-btn ${viewTab === 'ACTIVE' ? 'fds-btn-primary' : 'fds-btn-secondary'}`}
@@ -397,7 +418,7 @@ export default function FdsEnquiryPage() {
               <option value="">All Sources</option>
               {SOURCES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
             </select>
-            {hasPermission('fds:admin') && (
+            {!isManagement && hasPermission('fds:admin') && (
               <input className="fds-input" placeholder="Location..." style={{ maxWidth: 120 }} value={filterLocation} onChange={e => setFilterLocation(e.target.value)} />
             )}
             <input className="fds-input" type="date" style={{ maxWidth: 140 }} value={dateFrom} onChange={e => setDateFrom(e.target.value)} placeholder="From" />
@@ -457,7 +478,14 @@ export default function FdsEnquiryPage() {
                   </td></tr>
                 ) : enquiries.map(e => (
                   <tr key={e.id}>
-                    <td><span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--fds-primary)' }}>{e.enquiry_id}</span></td>
+                    <td>
+                      <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--fds-primary)' }}>{e.enquiry_id}</span>
+                      {isManagement && e.branch && (
+                        <div style={{ fontSize: '0.68rem', color: 'var(--fds-text-muted)' }}>
+                          {e.branch === 'KOCHI' ? '🏙️ Kochi' : '🌿 Kottayam'}
+                        </div>
+                      )}
+                    </td>
                     <td style={{ whiteSpace: 'nowrap', color: 'var(--fds-text-muted)', fontSize: '0.82rem' }}>{e.date}</td>
                     <td>
                       <div style={{ fontWeight: 600 }}>{e.name}</div>

@@ -4,6 +4,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, FDS_CATEGORIES } from './fdsApi';
+import FdsBranchSelector, { getBranchLabel, GlobalDataBadge } from './FdsBranchSelector';
 import './fds-theme.css';
 
 const DAYS = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
@@ -17,14 +18,16 @@ const EMPTY_FORM = {
 };
 
 export default function FdsBatchManagementPage() {
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
+  const isManagement = hasPermission('fds:management') || user?.is_superuser;
   const canEdit = hasPermission('fds:admin') || hasPermission('fds:admin_own');
 
   const [batches, setBatches] = useState([]);
   const [trainers, setTrainers] = useState([]);
   const [coordinators, setCoordinators] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filterBranch, setFilterBranch] = useState('ALL');
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ACTIVE');
   const [search, setSearch] = useState('');
@@ -51,6 +54,7 @@ export default function FdsBatchManagementPage() {
       if (activeCategory !== 'ALL') params.class_category = activeCategory;
       if (filterStatus) params.status = filterStatus;
       if (search) params.search = search;
+      if (isManagement && filterBranch && filterBranch !== 'ALL') params.branch = filterBranch;
       const [batchData, trainerData, coordinatorData] = await Promise.all([
         fdsApi.batches(authFetchJson, params),
         fdsApi.trainers(authFetchJson, { roles: 'FDS_TRAINER,FDS TRAINER,FDS_COORDINATOR,FDS COORDINATOR' }),
@@ -61,7 +65,7 @@ export default function FdsBatchManagementPage() {
       setCoordinators(coordinatorData);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [authFetchJson, activeCategory, filterStatus, search]);
+  }, [authFetchJson, activeCategory, filterStatus, search, isManagement, filterBranch]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -116,8 +120,15 @@ export default function FdsBatchManagementPage() {
         <div className="fds-page">
           <div className="fds-page-header">
             <div>
-              <h1 className="fds-page-title">Batch Management</h1>
-              <p className="fds-page-subtitle">FILMAATIC Dance Studio · {batches.length} batches</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <h1 className="fds-page-title" style={{ marginBottom: 0 }}>Batch Management</h1>
+                {isManagement && filterBranch === 'ALL' && (
+                  <GlobalDataBadge label="Global Data (All Branches)" />
+                )}
+              </div>
+              <p className="fds-page-subtitle">
+                FILMAATIC Dance Studio · {isManagement ? getBranchLabel(filterBranch) : ''} · {batches.length} batches
+              </p>
             </div>
             {canEdit && <button className="fds-btn fds-btn-primary" onClick={openAdd}><Plus size={15} /> New Batch</button>}
           </div>
@@ -135,6 +146,13 @@ export default function FdsBatchManagementPage() {
 
           {/* Filter Bar */}
           <div className="fds-filter-bar">
+            {isManagement && (
+              <FdsBranchSelector
+                value={filterBranch}
+                onChange={setFilterBranch}
+                variant="select"
+              />
+            )}
             <input className="fds-search-input" placeholder="Search batch name..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1 }} />
             <select className="fds-input fds-select" style={{ maxWidth: 140 }} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
               <option value="">All Statuses</option>
@@ -162,6 +180,11 @@ export default function FdsBatchManagementPage() {
                     <div>
                       <div style={{ fontWeight: 700, color: 'var(--fds-text)', fontSize: '0.95rem' }}>{b.name}</div>
                       <div style={{ marginTop: 4, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {isManagement && b.branch && (
+                          <span className="fds-badge fds-badge-gray">
+                            {b.branch === 'KOCHI' ? '🏙️ Kochi' : '🌿 KTM'}
+                          </span>
+                        )}
                         <span className={`fds-badge fds-badge-${b.class_category?.toLowerCase()}`}>{b.class_category}</span>
                         {b.batch_type !== 'REGULAR' && <span className="fds-badge fds-badge-gold">{b.batch_type?.replace('WEDDING_', '').replace('_', ' ')}</span>}
                         <span className={`fds-badge ${b.status === 'ACTIVE' ? 'fds-badge-green' : b.status === 'PAUSED' ? 'fds-badge-amber' : 'fds-badge-gray'}`}>{b.status}</span>

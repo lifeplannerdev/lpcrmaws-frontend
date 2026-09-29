@@ -4,6 +4,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, FDS_CATEGORIES } from './fdsApi';
+import FdsBranchSelector, { getBranchLabel, GlobalDataBadge } from './FdsBranchSelector';
 import './fds-theme.css';
 
 const STATUS_OPTIONS = ['PRESENT','ABSENT','LEAVE','MAKEUP','HOLIDAY'];
@@ -115,10 +116,12 @@ function FdsCalendar({ selectedDate, onSelectDate, scheduleDaysString }) {
 }
 
 export default function FdsAttendancePage() {
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
+  const isManagement = hasPermission('fds:management') || user?.is_superuser;
   const canEdit = hasPermission('fds:admin') || hasPermission('fds:admin_own');
 
+  const [filterBranch, setFilterBranch] = useState('ALL');
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [batches, setBatches] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState('');
@@ -151,10 +154,11 @@ export default function FdsAttendancePage() {
   useEffect(() => {
     const params = { status: 'ACTIVE', page_size: 200 };
     if (activeCategory !== 'ALL') params.class_category = activeCategory;
+    if (isManagement && filterBranch && filterBranch !== 'ALL') params.branch = filterBranch;
     fdsApi.batches(authFetchJson, params)
       .then(d => { setBatches(d.results ?? d); setSelectedBatch(''); })
       .catch(console.error);
-  }, [authFetchJson, activeCategory]);
+  }, [authFetchJson, activeCategory, isManagement, filterBranch]);
 
   // Load students and existing attendance when batch+date changes
   useEffect(() => {
@@ -228,9 +232,23 @@ export default function FdsAttendancePage() {
         <div className="fds-page">
           <div className="fds-page-header">
             <div>
-              <h1 className="fds-page-title">Attendance</h1>
-              <p className="fds-page-subtitle">FILMAATIC Dance Studio</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <h1 className="fds-page-title" style={{ marginBottom: 0 }}>Attendance</h1>
+                {isManagement && filterBranch === 'ALL' && (
+                  <GlobalDataBadge label="Global Data (All Branches)" />
+                )}
+              </div>
+              <p className="fds-page-subtitle">
+                FILMAATIC Dance Studio · {isManagement ? getBranchLabel(filterBranch) : ''}
+              </p>
             </div>
+            {isManagement && (
+              <FdsBranchSelector
+                value={filterBranch}
+                onChange={(b) => { setFilterBranch(b); setSelectedBatch(''); setReportBatch(''); }}
+                variant="pills"
+              />
+            )}
           </div>
 
           {/* Tab Toggle */}

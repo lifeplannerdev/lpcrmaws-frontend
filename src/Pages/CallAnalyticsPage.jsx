@@ -32,22 +32,27 @@ function buildDateParams(dateRange) {
     }
   }
 
-  const now = new Date(), from = new Date();
+  const from = new Date(), to = new Date();
+  to.setHours(23, 59, 59, 999);
+
   if (dateRange === 'today') {
     from.setHours(0, 0, 0, 0);
   } else if (dateRange === 'yesterday') {
-    from.setDate(now.getDate() - 1);
+    from.setDate(from.getDate() - 1);
     from.setHours(0, 0, 0, 0);
-    now.setDate(now.getDate() - 1);
-    now.setHours(23, 59, 59, 999);
+    to.setDate(to.getDate() - 1);
+    to.setHours(23, 59, 59, 999);
   } else if (dateRange === '7days') {
-    from.setDate(now.getDate() - 7);
+    from.setDate(from.getDate() - 7);
+    from.setHours(0, 0, 0, 0);
   } else if (dateRange === '30days') {
-    from.setDate(now.getDate() - 30);
+    from.setDate(from.getDate() - 30);
+    from.setHours(0, 0, 0, 0);
   } else if (dateRange === '90days') {
-    from.setDate(now.getDate() - 90);
+    from.setDate(from.getDate() - 90);
+    from.setHours(0, 0, 0, 0);
   }
-  return { from: from.toISOString(), to: now.toISOString() };
+  return { from: from.toISOString(), to: to.toISOString() };
 }
 
 function fmtSec(sec) {
@@ -69,6 +74,7 @@ function useCallStats(dateRange, callType, accessToken) {
     try {
       const { from, to } = buildDateParams(dateRange);
       const p = new URLSearchParams({ from, to });
+      if (!dateRange.startsWith('custom')) p.set('date_preset', dateRange);
       if (callType && callType !== 'all') p.set('call_type', callType);
       const res = await fetch(`${API_BASE}/voxbay/stats/?${p}`, { 
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -94,6 +100,7 @@ function useAgentStats(dateRange, callType, accessToken) {
     try {
       const { from, to } = buildDateParams(dateRange);
       const p = new URLSearchParams({ from, to });
+      if (!dateRange.startsWith('custom')) p.set('date_preset', dateRange);
       if (callType && callType !== 'all') p.set('call_type', callType);
       const res = await fetch(`${API_BASE}/voxbay/agent-stats/?${p}`, { 
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -472,7 +479,7 @@ export default function CallAnalyticsPage() {
 
   const [activeTab, setActiveTab] = useState('Missed Call Report');
   const [chartLogs, setChartLogs] = useState([]);
-  const [chartLoading, setChartLoading] = useState(true);
+  const [chartLoading, setChartLoading] = useState(false);
 
   const { stats, loading: sLoading, error: sError, refetch: refetchStats } =
     useCallStats(dateRange, callType, accessToken);
@@ -482,7 +489,7 @@ export default function CallAnalyticsPage() {
 
   const s          = stats || {};
   const totalLogs  = s.total || 0;
-  const anyLoading = sLoading || chartLoading || agentStatsLoading;
+  const anyLoading = sLoading || agentStatsLoading;
   const anyError   = sError;
 
   const refetchAll = () => { refetchStats(); refetchAgentStats(); };
@@ -492,7 +499,8 @@ export default function CallAnalyticsPage() {
     setChartLoading(loading);
   }, []);
 
-  const { callsByHour, topAgents } = buildCharts(chartLogs);
+  const derivedCharts = buildCharts(chartLogs);
+  const callsByHour = s.calls_by_hour?.length ? s.calls_by_hour : derivedCharts.callsByHour;
   const maxHour = Math.max(...callsByHour.map(h => h.calls), 1);
 
   const handleExport = () => {
@@ -697,14 +705,14 @@ export default function CallAnalyticsPage() {
               </button>
             </div>
             <div className="flex items-center gap-4">
-              <DonutChart answered={s.answered} total={s.incoming} loading={sLoading} />
+              <DonutChart answered={s.incoming_answered ?? s.answered} total={s.incoming} loading={sLoading} />
               <div className="space-y-2">
                 <div>
-                  <p className="text-xl font-black text-emerald-600">{sLoading ? '…' : s.answered ?? 0}</p>
+                  <p className="text-xl font-black text-emerald-600">{sLoading ? '…' : (s.incoming_answered ?? s.answered ?? 0)}</p>
                   <p className="text-[10px] text-gray-400 font-semibold">Answered</p>
                 </div>
                 <div>
-                  <p className="text-xl font-black text-red-500">{sLoading ? '…' : s.missed ?? 0}</p>
+                  <p className="text-xl font-black text-red-500">{sLoading ? '…' : (s.incoming_missed ?? s.missed ?? 0)}</p>
                   <p className="text-[10px] text-gray-400 font-semibold">Not Answered</p>
                 </div>
               </div>
@@ -721,12 +729,12 @@ export default function CallAnalyticsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3 mt-2">
               {[
-                { label: 'Answered',    val: s.answered,    color: 'text-emerald-600' },
-                { label: 'Not Answered',val: s.missed,      color: 'text-red-500'     },
-                { label: 'Busy',        val: s.busy,        color: 'text-amber-500'   },
-                { label: 'Congestion',  val: s.congestion,  color: 'text-purple-600'  },
-                { label: 'Unavailable', val: s.chanunavail, color: 'text-gray-500'    },
-                { label: 'Cancel',      val: null,          color: 'text-gray-400'    },
+                { label: 'Answered',    val: s.outgoing_answered ?? s.answered,    color: 'text-emerald-600' },
+                { label: 'Not Answered',val: s.outgoing_missed ?? s.missed,      color: 'text-red-500'     },
+                { label: 'Busy',        val: s.outgoing_busy ?? s.busy,        color: 'text-amber-500'   },
+                { label: 'Congestion',  val: s.outgoing_congestion ?? s.congestion,  color: 'text-purple-600'  },
+                { label: 'Unavailable', val: s.outgoing_chanunavail ?? s.chanunavail, color: 'text-gray-500'    },
+                { label: 'Cancel',      val: s.outgoing_cancel ?? 0,          color: 'text-gray-400'    },
               ].map(({ label, val, color }) => (
                 <div key={label}>
                   <p className={`text-lg font-black ${color}`}>{sLoading ? '…' : val ?? 0}</p>
@@ -741,7 +749,7 @@ export default function CallAnalyticsPage() {
             <h3 className="text-xs font-black text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-1.5">
               <BarChart3 size={13} className="text-indigo-500" /> Calls by Hour
             </h3>
-            {chartLoading ? <Skeleton rows={6} h="h-5" /> : callsByHour.every(h => h.calls === 0)
+            {sLoading && !callsByHour.some(h => h.calls > 0) ? <Skeleton rows={6} h="h-5" /> : callsByHour.every(h => h.calls === 0)
               ? <Empty msg="No hourly data" />
               : (
                 <>

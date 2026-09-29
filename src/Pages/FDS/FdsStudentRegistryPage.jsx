@@ -5,6 +5,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, FDS_CATEGORIES, downloadExcelFromResponse } from './fdsApi';
+import FdsBranchSelector, { getBranchLabel, GlobalDataBadge } from './FdsBranchSelector';
 import './fds-theme.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -212,8 +213,9 @@ function StudentDetailsModal({ student, onClose, onEdit, canEdit, authFetchJson 
 }
 
 export default function FdsStudentRegistryPage() {
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
+  const isManagement = hasPermission('fds:management') || user?.is_superuser;
   const canEdit = hasPermission('fds:admin') || hasPermission('fds:admin_own');
   const fileInputRef = useRef();
 
@@ -223,6 +225,7 @@ export default function FdsStudentRegistryPage() {
   const [batches, setBatches] = useState([]);
   const [feeStructures, setFeeStructures] = useState([]);
 
+  const [filterBranch, setFilterBranch] = useState('ALL');
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [search, setSearch] = useState('');
   const [filterBatch, setFilterBatch] = useState('');
@@ -287,6 +290,7 @@ export default function FdsStudentRegistryPage() {
   const buildParams = useCallback(() => {
     const p = { page, page_size: PAGE_SIZE };
     if (activeCategory !== 'ALL') p.class_category = activeCategory;
+    if (isManagement && filterBranch && filterBranch !== 'ALL') p.branch = filterBranch;
     if (search) p.search = search;
     if (filterBatch) p.batch = filterBatch;
     if (filterActive !== '') p.is_active = filterActive;
@@ -295,14 +299,16 @@ export default function FdsStudentRegistryPage() {
     if (dateTo)   p.joining_date_to   = dateTo;
     p.ordering = sortDir === 'asc' ? sortField : `-${sortField}`;
     return p;
-  }, [page, activeCategory, search, filterBatch, filterActive, filterType, dateFrom, dateTo, sortField, sortDir]);
+  }, [page, activeCategory, isManagement, filterBranch, search, filterBatch, filterActive, filterType, dateFrom, dateTo, sortField, sortDir]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const batchParams = { status: 'ACTIVE', page_size: 200 };
+      if (isManagement && filterBranch && filterBranch !== 'ALL') batchParams.branch = filterBranch;
       const [stuData, batchData, feeData] = await Promise.all([
         fdsApi.students(authFetchJson, buildParams()),
-        fdsApi.batches(authFetchJson, { status: 'ACTIVE', page_size: 200 }),
+        fdsApi.batches(authFetchJson, batchParams),
         fdsApi.feeStructures(authFetchJson, { is_active: true }),
       ]);
       setStudents(stuData.results ?? stuData);
@@ -311,10 +317,10 @@ export default function FdsStudentRegistryPage() {
       setFeeStructures(feeData.results ?? feeData);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [authFetchJson, buildParams]);
+  }, [authFetchJson, buildParams, isManagement, filterBranch]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [activeCategory, search, filterBatch, filterActive, filterType, dateFrom, dateTo]);
+  useEffect(() => { setPage(1); }, [activeCategory, filterBranch, search, filterBatch, filterActive, filterType, dateFrom, dateTo]);
 
   const handleSort = (f) => {
     if (sortField === f) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -404,8 +410,15 @@ export default function FdsStudentRegistryPage() {
           {/* Header */}
           <div className="fds-page-header">
             <div>
-              <h1 className="fds-page-title">Student Registry</h1>
-              <p className="fds-page-subtitle">FILMAATIC Dance Studio · {total} students</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <h1 className="fds-page-title" style={{ marginBottom: 0 }}>Student Registry</h1>
+                {isManagement && filterBranch === 'ALL' && (
+                  <GlobalDataBadge label="Global Data (All Branches)" />
+                )}
+              </div>
+              <p className="fds-page-subtitle">
+                FILMAATIC Dance Studio · {isManagement ? getBranchLabel(filterBranch) : ''} · {total} students
+              </p>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               {canEdit && <button className="fds-btn fds-btn-secondary" onClick={() => fileInputRef.current.click()}><Upload size={15} /> Import Excel</button>}
@@ -428,6 +441,13 @@ export default function FdsStudentRegistryPage() {
 
           {/* Filters */}
           <div className="fds-filter-bar">
+            {isManagement && (
+              <FdsBranchSelector
+                value={filterBranch}
+                onChange={(b) => { setFilterBranch(b); setFilterBatch(''); }}
+                variant="select"
+              />
+            )}
             <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
               <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--fds-text-faint)' }} />
               <input className="fds-search-input" placeholder="Search name, ID, contact, parent..." value={search} onChange={e => setSearch(e.target.value)} />
@@ -469,7 +489,14 @@ export default function FdsStudentRegistryPage() {
                   <tr><td colSpan={10}><div className="fds-empty"><div className="fds-empty-icon"><UserCheck size={40} /></div><div className="fds-empty-title">No students found</div></div></td></tr>
                 ) : students.map(s => (
                   <tr key={s.id}>
-                    <td><span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--fds-primary)' }}>{s.student_id}</span></td>
+                    <td>
+                      <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--fds-primary)' }}>{s.student_id}</span>
+                      {isManagement && s.branch && (
+                        <div style={{ fontSize: '0.68rem', color: 'var(--fds-text-muted)' }}>
+                          {s.branch === 'KOCHI' ? '🏙️ Kochi' : '🌿 Kottayam'}
+                        </div>
+                      )}
+                    </td>
                     <td>
                       <div style={{ fontWeight: 600 }}>{s.name}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--fds-text-muted)' }}>{s.gender ? `${s.gender}` : ''}{s.age ? ` · Age ${s.age}` : ''}</div>

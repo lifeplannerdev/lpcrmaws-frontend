@@ -17,7 +17,7 @@ export function buildQueryString(params) {
 
 export const fdsApi = {
   // Dashboard
-  dashboard: (af) => af(`${FDS_BASE}/dashboard/`),
+  dashboard: (af, params = {}) => af(`${FDS_BASE}/dashboard/${buildQueryString(params)}`),
 
   // Management Analysis (fds:management or fds:admin)
   analysis: (af, params = {}) => af(`${FDS_BASE}/analysis/${buildQueryString(params)}`),
@@ -38,7 +38,7 @@ export const fdsApi = {
 
   // Enquiries
   enquiries: (af, params = {}) => af(`${FDS_BASE}/enquiries/${buildQueryString(params)}`),
-  enquiryStats: (af) => af(`${FDS_BASE}/enquiries/stats/`),
+  enquiryStats: (af, params = {}) => af(`${FDS_BASE}/enquiries/stats/${buildQueryString(params)}`),
   createEnquiry: (af, data) => af(`${FDS_BASE}/enquiries/`, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
   updateEnquiry: (af, id, data) => af(`${FDS_BASE}/enquiries/${id}/`, { method: 'PATCH', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
   deleteEnquiry: (af, id) => af(`${FDS_BASE}/enquiries/${id}/`, { method: 'DELETE' }),
@@ -48,7 +48,7 @@ export const fdsApi = {
 
   // Trials
   trials: (af, params = {}) => af(`${FDS_BASE}/trials/${buildQueryString(params)}`),
-  trialStats: (af) => af(`${FDS_BASE}/trials/stats/`),
+  trialStats: (af, params = {}) => af(`${FDS_BASE}/trials/stats/${buildQueryString(params)}`),
   createTrial: (af, data) => af(`${FDS_BASE}/trials/`, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
   updateTrial: (af, id, data) => af(`${FDS_BASE}/trials/${id}/`, { method: 'PATCH', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
   deleteTrial: (af, id) => af(`${FDS_BASE}/trials/${id}/`, { method: 'DELETE' }),

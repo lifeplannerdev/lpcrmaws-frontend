@@ -9,6 +9,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi } from './fdsApi';
+import FdsBranchSelector, { getBranchLabel, GlobalDataBadge } from './FdsBranchSelector';
 import './fds-theme.css';
 import {
   Users, Music, TrendingUp, IndianRupee, CalendarCheck,
@@ -223,17 +224,20 @@ export default function FdsAnalysisPage() {
           {/* ── Header ── */}
           <div className="fds-page-header" style={{ marginBottom: 20 }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 3 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 3, flexWrap: 'wrap' }}>
                 <BarChart2 size={22} color="var(--fds-primary)" />
                 <h1 className="fds-page-title" style={{ marginBottom: 0 }}>FDS Analysis</h1>
+                {branch === 'ALL' && (
+                  <GlobalDataBadge label="Global Data (All Branches)" />
+                )}
                 {isReadOnly && (
                   <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', background: 'rgba(126,200,164,0.12)', color: 'var(--fds-yoga)', border: '1px solid rgba(126,200,164,0.3)', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase' }}>Read-Only</span>
                 )}
               </div>
-              <p className="fds-page-subtitle">FILMAATIC Dance Studio — Cross-Branch Intelligence{data?.generated_at && <span style={{ marginLeft: 6, opacity: 0.55 }}>· {data.generated_at}</span>}</p>
+              <p className="fds-page-subtitle">FILMAATIC Dance Studio — {getBranchLabel(branch)}{data?.generated_at && <span style={{ marginLeft: 6, opacity: 0.55 }}>· {data.generated_at}</span>}</p>
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <BranchSelector value={branch} onChange={setBranch} />
+              <FdsBranchSelector value={branch} onChange={setBranch} variant="pills" />
               <button onClick={() => setShowFilters(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 8, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${showFilters ? 'var(--fds-primary)' : 'var(--fds-border)'}`, background: showFilters ? 'var(--fds-primary-muted)' : 'var(--fds-surface-2)', color: showFilters ? 'var(--fds-primary)' : 'var(--fds-text-muted)' }}>
                 <Filter size={13} /> Filter
               </button>
