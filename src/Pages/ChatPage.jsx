@@ -264,7 +264,7 @@ const Modal = ({ open, onClose, title, children }) => {
 
 const GroupInfoPanel = ({ conv, currentUser, onClose }) => {
   if (!conv || conv.type !== 'GROUP') return null;
-  const participants = conv.participants || [];
+  const participants = (conv.participants || []).filter(p => p.is_active !== false);
   const createdBy = conv.created_by;
 
   return (
@@ -373,7 +373,7 @@ const ChatPage = () => {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setEmployees((data.results || data).filter(e => e.id !== user?.id));
+      setEmployees((data.results || data).filter(e => e.id !== user?.id && e.is_active !== false));
     } catch { console.error('employees failed'); }
     finally { setEmpLoading(false); }
   }, [getToken, user?.id]);
@@ -707,8 +707,8 @@ const ChatPage = () => {
   const filteredConvs = conversations.filter(c =>
     getConversationName(c, user).toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const filteredForGroup = employees.filter(e => e.username.toLowerCase().includes(groupSearch.toLowerCase()));
-  const filteredForDirect = employees.filter(e => e.username.toLowerCase().includes(directSearch.toLowerCase()));
+  const filteredForGroup = employees.filter(e => e.is_active !== false && e.username.toLowerCase().includes(groupSearch.toLowerCase()));
+  const filteredForDirect = employees.filter(e => e.is_active !== false && e.username.toLowerCase().includes(directSearch.toLowerCase()));
   const currentMessages = selectedConv ? messages[selectedConv.id] || [] : [];
   const convName = selectedConv ? getConversationName(selectedConv, user) : '';
   const isGroup = selectedConv?.type === 'GROUP';
@@ -809,7 +809,7 @@ const ChatPage = () => {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-slate-900 truncate">{convName}</p>
                   <p className="text-xs text-slate-400">
-                    {isGroup ? `${selectedConv.participants?.length || 0} members` : (() => {
+                    {isGroup ? `${(selectedConv.participants || []).filter(p => p.is_active !== false).length} members` : (() => {
                       const other = selectedConv.participants?.find(p => p.id !== user?.id);
                       return other?.role ? other.role : 'Member';
                     })()}
