@@ -8,7 +8,8 @@ import {
   Users, UserCheck, UserX, Search, Filter, X, ChevronDown, ChevronUp,
   ArrowRightLeft, CalendarClock, Phone, MessageSquare, Mail, AlertTriangle,
   CheckCircle2, Clock, Shuffle, Ban, Zap, Info, ExternalLink, RefreshCw,
-  Layers, Calendar, BarChart2, Shield, Activity, XCircle, Flame, CheckSquare
+  Layers, Calendar, BarChart2, Shield, Activity, XCircle, Flame, CheckSquare,
+  Download, FileSpreadsheet
 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -355,6 +356,7 @@ export default function LeadCommandCentre() {
   const [closeRemarks, setCloseRemarks] = useState('');
   const [resolveFollowups, setResolveFollowups] = useState(true);
   const [closing, setClosing] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Debounce search
   const debounceTimer = useRef(null);
@@ -884,6 +886,84 @@ export default function LeadCommandCentre() {
     }
   };
 
+  // ── Excel Export Handler ───────────────────────────────────────────────────
+  const handleExportExcel = async (mode = 'filter') => {
+    if (exporting) return;
+    const isSelectedMode = mode === 'selected' && !selectAllMatching && selectedIds.size > 0;
+    const exportCount = isSelectedMode ? selectedIds.size : totalCount;
+
+    if (exportCount === 0) {
+      toast.error('No leads available to export with the current selection or filters.');
+      return;
+    }
+
+    setExporting(true);
+    const toastId = toast.loading(
+      isSelectedMode
+        ? `Generating Excel export for ${exportCount.toLocaleString()} selected leads...`
+        : `Generating Excel export for ${exportCount.toLocaleString()} filtered leads...`
+    );
+
+    try {
+      const payload = {};
+
+      if (isSelectedMode) {
+        payload.lead_ids = Array.from(selectedIds);
+      } else {
+        if (debouncedSearch)         payload.search = debouncedSearch;
+        if (filterStatus !== 'all')  payload.status = filterStatus.toUpperCase();
+        if (filterPriority !== 'all') payload.priority = filterPriority.toUpperCase();
+        if (filterSource !== 'all')  payload.source = filterSource;
+        if (filterDateFrom)          payload.created_at__gte = filterDateFrom;
+        if (filterDateTo)            payload.created_at__lte = filterDateTo;
+        if (filterFollowUpDate)      payload.followup_date = filterFollowUpDate;
+        if (filterCompany)           payload.company = filterCompany;
+        if (filterOverdue)           payload.overdue = 'true';
+        if (filterHasPending)        payload.has_pending_followup = 'true';
+
+        if (filterStaff !== 'all') {
+          payload.assigned_to = filterStaff;
+        } else if (filterEmpStatus !== 'all') {
+          payload.employee_status = filterEmpStatus;
+        }
+
+        if (filterActivePipeline) {
+          payload.active_pipeline_only = 'true';
+        }
+      }
+
+      const res = await authFetch(`${API_BASE_URL}/leads/export/excel/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || errJson?.detail || 'Export failed');
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const dateStr = getLocalDateString();
+      const filenameSuffix = isSelectedMode ? `Selected_${exportCount}` : 'Filtered';
+      a.download = `Lead_Command_Centre_${filenameSuffix}_${dateStr}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success(`Successfully exported ${exportCount.toLocaleString()} leads to Excel!`, { id: toastId });
+    } catch (err) {
+      console.error('Export error:', err);
+      toast.error(err.message || 'Failed to export leads to Excel', { id: toastId });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // ── Guard ──────────────────────────────────────────────────────────────────
   const isAdmin = user?.role === 'ADMIN' ||
     user?.db_roles?.some(r => ['ADMIN', 'CEO', 'SUPER_ADMIN'].includes(r.name)) ||
@@ -940,6 +1020,15 @@ export default function LeadCommandCentre() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleExportExcel('filter')}
+              disabled={exporting || totalCount === 0}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-emerald-700 bg-emerald-50 border-2 border-emerald-300 rounded-xl hover:bg-emerald-100 transition-all shadow-sm disabled:opacity-50"
+              title="Export all leads matching currently applied filters to Excel (.xlsx)"
+            >
+              {exporting ? <RefreshCw size={16} className="animate-spin text-emerald-600" /> : <Download size={16} className="text-emerald-600" />}
+              {exporting ? 'Exporting...' : 'Export to Excel'}
+            </button>
             <button
               onClick={() => {
                 setRescheduleStaffId(filterStaff !== 'all' ? filterStaff : '');
@@ -1060,7 +1149,16 @@ export default function LeadCommandCentre() {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => handleExportExcel('filter')}
+                disabled={exporting || totalCount === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-300 rounded-lg hover:bg-emerald-100 transition-all disabled:opacity-50"
+                title="Export all leads matching currently applied filters to Excel (.xlsx)"
+              >
+                {exporting ? <RefreshCw size={13} className="animate-spin text-emerald-600" /> : <Download size={13} className="text-emerald-600" />}
+                {exporting ? 'Exporting...' : 'Export to Excel'}
+              </button>
               <button
                 onClick={() => { setCloseMode('filter'); setCloseModalOpen(true); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-100 transition-all"
@@ -1417,6 +1515,15 @@ export default function LeadCommandCentre() {
                 className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-white/90 bg-white/10 rounded-xl hover:bg-white/20 transition-all"
               >
                 <X size={16} /> Clear
+              </button>
+              <button
+                onClick={() => handleExportExcel(selectAllMatching ? 'filter' : 'selected')}
+                disabled={exporting}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-emerald-950 bg-emerald-300 hover:bg-emerald-200 rounded-xl transition-all shadow-md disabled:opacity-50"
+                title="Export selected leads to Excel (.xlsx)"
+              >
+                {exporting ? <RefreshCw size={16} className="animate-spin text-emerald-800" /> : <Download size={16} className="text-emerald-800" />}
+                Export Selected ({selectedCount.toLocaleString()})
               </button>
               <button
                 onClick={() => {
