@@ -120,26 +120,36 @@ export const LiveCallProvider = ({ children }) => {
     setActiveCallId(resolvedCallId);
   }, []);
 
+  // Strict agent verification to ensure no one sees anyone else's live call modal
+  const isCallForMe = useCallback((data) => {
+    if (!data) return false;
+    if (data.agent_user_id && user?.id && Number(data.agent_user_id) !== Number(user.id)) {
+      console.warn(`[LiveCallContext] Ignored call intended for user ${data.agent_user_id} (current user: ${user.id})`);
+      return false;
+    }
+    return true;
+  }, [user?.id]);
+
   // Handle incoming call / ringing / connected webhook event
   const handleIncomingCallEvent = useCallback((data) => {
-    if (!data) return;
+    if (!data || !isCallForMe(data)) return;
     // Always open modal for all incoming and outgoing calls (including ringing on fresh leads)
     upsertCall(data);
     setIsModalOpen(true);
     setIsMinimized(false);
-  }, [upsertCall]);
+  }, [upsertCall, isCallForMe]);
 
   // Handle call connected event
   const handleCallConnectedEvent = useCallback((data) => {
-    if (!data) return;
+    if (!data || !isCallForMe(data)) return;
     upsertCall({ ...data, event_type: 'answered', status: 'connected' });
     setIsModalOpen(true);
     setIsMinimized(false);
-  }, [upsertCall]);
+  }, [upsertCall, isCallForMe]);
 
   // Handle call ended event (from CDR) - Updates status and recording or opens modal if call was not previously in state
   const handleCallEndedEvent = useCallback((data) => {
-    if (!data) return;
+    if (!data || !isCallForMe(data)) return;
     const callUuid = data.call_uuid || data.id;
     const cleanPhone = extractPhone(data);
 
