@@ -41,7 +41,8 @@ export const sourceOptions = [
   { value: 'BULK DATA', label: 'Bulk data' },
   { value: 'OTHER', label: 'Other' },
   { value: 'VOXBAY CALL', label: 'Voxbay' },
-
+  { value: 'VOXBAY-EDITORIAL', label: 'Voxbay-Editorial' },
+  { value: 'IN HOUSE SOCIAL MEDIA', label: 'In House Social Media' },
 ];
 
 export const priorityOptions = [

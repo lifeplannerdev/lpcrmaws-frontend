@@ -71,6 +71,8 @@ const SOURCE_OPTIONS = [
   { id: 'ads', label: 'Ads' },
   { id: 'automation', label: 'Automation' },
   { id: 'voxbay call', label: 'Voxbay' },
+  { id: 'voxbay-editorial', label: 'Voxbay-Editorial' },
+  { id: 'in house social media', label: 'In House Social Media' },
   { id: 'bulk data', label: 'Bulk Data' },
   { id: 'referral', label: 'Referral' },
   { id: 'other', label: 'Other' },

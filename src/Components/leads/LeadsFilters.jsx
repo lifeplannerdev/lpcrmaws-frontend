@@ -51,6 +51,8 @@ const LeadsFilters = ({
     { id: 'automation', label: 'Automation' },
     { id: 'ads', label: 'Ads' },
     { id: 'voxbay call', label: 'Voxbay' },
+    { id: 'voxbay-editorial', label: 'Voxbay-Editorial' },
+    { id: 'in house social media', label: 'In House Social Media' },
     { id: 'bulk data', label: 'Bulk Data' },
     { id: 'other', label: 'Other' },
   ];

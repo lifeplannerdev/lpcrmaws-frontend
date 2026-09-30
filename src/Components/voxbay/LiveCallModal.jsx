@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useVoxbayCall } from '../../hooks/useVoxbayCall';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { sourceOptions } from '../utils/leadConstants';
 
 const STATUS_OPTIONS = [
   { value: 'ENQUIRY',    label: 'Enquiry',    color: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' },
@@ -384,6 +385,9 @@ export default function LiveCallModal() {
           interested_course: formData.interested_course,
           location: formData.location,
         };
+        if (formData.source) {
+          updatePayload.source = formData.source;
+        }
         if (formattedRemark) {
           updatePayload.remarks = updatedRemarks;
         }
@@ -457,6 +461,7 @@ export default function LiveCallModal() {
             interested_country: formData.interested_country,
             interested_course: formData.interested_course,
             location: formData.location,
+            source: formData.source || existingLeadData?.source,
           } 
         }));
         window.dispatchEvent(new CustomEvent('refreshLeads'));
@@ -824,6 +829,22 @@ export default function LiveCallModal() {
                       />
                     </div>
                   </div>
+
+                  {/* Lead Source */}
+                  <div className="pt-1">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Lead Source
+                    </label>
+                    <select
+                      value={formData.source || 'VOXBAY CALL'}
+                      onChange={(e) => handleFieldChange('source', e.target.value)}
+                      className="w-full text-xs font-bold p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-purple-600 transition-all"
+                    >
+                      {sourceOptions.map(src => (
+                        <option key={src.value} value={src.value}>{src.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -990,7 +1011,7 @@ export default function LiveCallModal() {
                     <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800">
                       <p className="text-[10px] font-bold text-slate-400 uppercase">Source</p>
                       <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate mt-0.5">
-                        {existingLeadData?.source || 'VOXBAY CALL'}
+                        {formData.source || existingLeadData?.source || 'VOXBAY CALL'}
                       </p>
                     </div>
                   </div>
@@ -1047,20 +1068,37 @@ export default function LiveCallModal() {
                     <PlusCircle size={16} className="text-emerald-600" /> Add Live Remarks & Update Status
                   </h4>
 
-                  {/* Status Dropdown */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Update Lead Stage / Status
-                    </label>
-                    <select
-                      value={formData.status || existingLeadData?.status || 'ENQUIRY'}
-                      onChange={(e) => handleFieldChange('status', e.target.value)}
-                      className="w-full text-xs font-bold p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none"
-                    >
-                      {STATUS_OPTIONS.map(st => (
-                        <option key={st.value} value={st.value}>{st.label}</option>
-                      ))}
-                    </select>
+                  {/* Status & Source Selection */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Update Lead Stage / Status
+                      </label>
+                      <select
+                        value={formData.status || existingLeadData?.status || 'ENQUIRY'}
+                        onChange={(e) => handleFieldChange('status', e.target.value)}
+                        className="w-full text-xs font-bold p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-purple-600 transition-all"
+                      >
+                        {STATUS_OPTIONS.map(st => (
+                          <option key={st.value} value={st.value}>{st.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Lead Source
+                      </label>
+                      <select
+                        value={formData.source || existingLeadData?.source || 'VOXBAY CALL'}
+                        onChange={(e) => handleFieldChange('source', e.target.value)}
+                        className="w-full text-xs font-bold p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-purple-600 transition-all"
+                      >
+                        {sourceOptions.map(src => (
+                          <option key={src.value} value={src.value}>{src.label}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
                   {/* Remarks Input */}
