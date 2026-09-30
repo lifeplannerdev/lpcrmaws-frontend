@@ -62,6 +62,9 @@ export const LiveCallProvider = ({ children }) => {
         resolvedCallId = prevCall.id;
       }
       
+      const isEnded = callData.event_type === 'ended' || callData.status === 'ended';
+      const isAnswered = callData.event_type === 'answered' || callData.callevent === 'connect' || callData.callevent === 'answer' || callData.call_status === 'ANSWER' || callData.call_status === 'ANSWERED';
+
       const updatedCall = {
         id: callUuid,
         phone: cleanPhone || (prevCall?.phone ?? ''),
@@ -71,10 +74,11 @@ export const LiveCallProvider = ({ children }) => {
           : (prevCall?.leadName && !prevCall.leadName.startsWith('Voxbay ')) ? prevCall.leadName : defaultLeadName,
         isNewLead: (callData.is_new_lead !== undefined) ? Boolean(callData.is_new_lead) : (prevCall?.isNewLead !== undefined ? prevCall.isNewLead : isNew),
         callType: callData.call_type || prevCall?.callType || 'incoming',
-        status: callData.event_type === 'answered' || callData.callevent === 'connect' || callData.callevent === 'answer' ? 'connected' : (callData.status || prevCall?.status || 'ringing'),
+        status: isEnded ? 'ended' : (isAnswered ? 'connected' : (callData.status || prevCall?.status || 'ringing')),
+        callStatus: callData.call_status || callData.callStatus || prevCall?.callStatus || (isEnded ? 'COMPLETED' : null),
         startedAt: isFirstTime ? Date.now() : (prevCall.startedAt || Date.now()),
-        connectedAt: (callData.event_type === 'answered' || callData.callevent === 'connect') ? (prevCall?.connectedAt || Date.now()) : (isFirstTime ? null : prevCall.connectedAt),
-        endedAt: callData.event_type === 'ended' ? Date.now() : (isFirstTime ? null : prevCall.endedAt),
+        connectedAt: isAnswered ? (prevCall?.connectedAt || Date.now()) : (isFirstTime ? null : prevCall.connectedAt),
+        endedAt: isEnded ? Date.now() : (isFirstTime ? null : prevCall.endedAt),
         duration: callData.duration !== undefined ? callData.duration : (isFirstTime ? 0 : prevCall.duration || 0),
         recordingUrl: callData.recording_url || (isFirstTime ? null : prevCall.recordingUrl),
         assignedHandler: callData.assigned_handler || (isFirstTime ? null : prevCall.assignedHandler),
@@ -133,7 +137,7 @@ export const LiveCallProvider = ({ children }) => {
     setIsMinimized(false);
   }, [upsertCall]);
 
-  // Handle call ended event (from CDR) - Updates status and recording without closing modal or disturbing user notes
+  // Handle call ended event (from CDR) - Updates status and recording or opens modal if call was not previously in state
   const handleCallEndedEvent = useCallback((data) => {
     if (!data) return;
     const callUuid = data.call_uuid || data.id;
@@ -148,13 +152,64 @@ export const LiveCallProvider = ({ children }) => {
         idx = prevCalls.findIndex(c => isSamePhone(c.phone, cleanPhone));
       }
 
-      if (idx === -1) return prevCalls;
+      if (idx === -1) {
+        // Call was not in state yet (e.g. app-dialed outgoing call or fast termination)
+        const isIncoming = (data.call_type || 'incoming') === 'incoming';
+        const isNew = data.is_new_lead !== undefined ? Boolean(data.is_new_lead) : !data.lead_id;
+        const defaultLeadName = data.lead_name || data.leadName || (isNew ? `Voxbay ${isIncoming ? 'Incoming' : 'Outgoing'} - ${cleanPhone}` : 'Existing Lead');
+
+        const newCall = {
+          id: callUuid || `call_${Date.now()}`,
+          phone: cleanPhone,
+          leadId: data.lead_id || data.leadId || null,
+          leadName: (data.lead_name && !data.lead_name.startsWith('Voxbay ')) ? data.lead_name : defaultLeadName,
+          isNewLead: isNew,
+          callType: data.call_type || 'outgoing',
+          status: 'ended',
+          callStatus: data.call_status || data.callStatus || 'COMPLETED',
+          startedAt: Date.now() - ((data.duration || 0) * 1000),
+          connectedAt: data.duration > 0 ? (Date.now() - (data.duration * 1000)) : null,
+          endedAt: Date.now(),
+          duration: data.duration !== undefined ? data.duration : 0,
+          recordingUrl: data.recording_url || null,
+          assignedHandler: data.assigned_handler || null,
+          leadDetails: {
+            status: data.lead_status || 'ENQUIRY',
+            priority: data.lead_priority || 'MEDIUM',
+            program: data.program || '',
+            interested_country: data.interested_country || '',
+            interested_course: data.interested_course || '',
+            location: data.location || '',
+          },
+          formData: {
+            name: isNew ? defaultLeadName : (data.lead_name || ''),
+            status: data.lead_status || 'ENQUIRY',
+            priority: data.lead_priority || 'MEDIUM',
+            program: data.program || '',
+            interested_country: data.interested_country || '',
+            interested_course: data.interested_course || '',
+            location: data.location || '',
+            source: 'VOXBAY CALL',
+            remarks: '',
+            follow_up_date: '',
+            follow_up_time: '',
+            followup_status: 'pending',
+            followup_done: false,
+          }
+        };
+
+        setActiveCallId(newCall.id);
+        setIsModalOpen(true);
+        setIsMinimized(false);
+        return [...prevCalls, newCall];
+      }
 
       const next = [...prevCalls];
       next[idx] = {
         ...next[idx],
         id: callUuid || next[idx].id,
         status: 'ended',
+        callStatus: data.call_status || data.callStatus || next[idx].callStatus || 'COMPLETED',
         endedAt: Date.now(),
         duration: data.duration !== undefined ? data.duration : next[idx].duration,
         recordingUrl: data.recording_url || next[idx].recordingUrl,

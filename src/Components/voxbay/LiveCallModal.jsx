@@ -590,7 +590,9 @@ export default function LiveCallModal() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-lg sm:text-xl font-black text-white tracking-tight">
-                  {activeCall.isNewLead ? '✨ New Incoming Lead' : (existingLeadData?.name || activeCall.leadName)}
+                  {activeCall.isNewLead 
+                    ? (activeCall.callType === 'outgoing' ? '✨ New Outgoing Call' : '✨ New Incoming Lead') 
+                    : (existingLeadData?.name || activeCall.leadName)}
                 </span>
                 
                 {/* Status Indicator */}
@@ -612,7 +614,9 @@ export default function LiveCallModal() {
                 ) : (
                   <span className="flex items-center gap-1.5 text-xs font-bold text-slate-300 bg-slate-800/80 border border-slate-700 px-2.5 py-0.5 rounded-full">
                     <CheckCircle2 size={12} className="text-slate-400" />
-                    Call Completed
+                    {activeCall.callStatus && !['ANSWER', 'ANSWERED', 'COMPLETED'].includes(String(activeCall.callStatus).toUpperCase())
+                      ? `Call Ended (${activeCall.callStatus})`
+                      : 'Call Completed'}
                   </span>
                 )}
               </div>
