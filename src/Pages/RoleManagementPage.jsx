@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 import { useAuth } from '../context/AuthContext';
 import { Can } from '../context/PermissionsContext';
+import Navbar from '../Components/layouts/Navbar';
+import { Shield, ShieldCheck, Plus, Edit2, Trash2, X, Search, Lock, Layers } from 'lucide-react';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function RoleManagementPage() {
   const { accessToken } = useAuth();
   const [roles, setRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Form State
   const [showModal, setShowModal] = useState(false);
@@ -104,93 +108,174 @@ export default function RoleManagementPage() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading...</div>;
+  const filteredRoles = roles.filter(r => 
+    (r.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (r.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Role Management</h1>
-          <p className="text-sm text-gray-500">Manage database-driven roles and granular permissions.</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <Navbar />
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center text-blue-600 shadow-sm">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Role Management</h1>
+              <p className="text-sm text-slate-500 mt-0.5">Manage database-driven roles and granular access permissions.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search roles..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="pl-9 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-sm w-48 sm:w-64"
+              />
+            </div>
+            <Can perform="staff:edit_any">
+              <button 
+                onClick={() => handleOpenModal()} 
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                Create Role
+              </button>
+            </Can>
+          </div>
         </div>
-        <Can perform="staff:edit_any">
-          <button 
-            onClick={() => handleOpenModal()} 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
-          >
-            + Create Role
-          </button>
-        </Can>
-      </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Permissions</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {roles.map(role => (
-              <tr key={role.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{role.name}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{role.description}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {role.permissions.length} perms
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <Can perform="staff:edit_any">
-                    <button onClick={() => handleOpenModal(role)} className="text-indigo-600 hover:text-indigo-900 mr-4">Edit</button>
-                    <button onClick={() => handleDelete(role.id)} className="text-red-600 hover:text-red-900">Delete</button>
-                  </Can>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        {loading ? (
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-sm">
+            <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-slate-500 font-medium text-sm">Loading roles and permissions...</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-100">
+                <thead className="bg-slate-50/80">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Role Name</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Permissions</th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-100">
+                  {filteredRoles.map(role => (
+                    <tr key={role.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                            {role.name.substring(0, 2).toUpperCase()}
+                          </div>
+                          <span className="font-semibold text-sm text-slate-900">{role.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">
+                        {role.description || <span className="text-slate-400 italic">No description</span>}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200/60 shadow-xs">
+                          <Layers className="w-3.5 h-3.5 text-blue-500" />
+                          {role.permissions.length} perms
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <Can perform="staff:edit_any">
+                          <button 
+                            onClick={() => handleOpenModal(role)} 
+                            className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-3 py-1.5 rounded-lg font-medium transition-colors mr-2"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            Edit
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(role.id)} 
+                            className="inline-flex items-center gap-1 text-red-600 hover:text-red-800 hover:bg-red-50 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete
+                          </button>
+                        </Can>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredRoles.length === 0 && (
+                    <tr>
+                      <td colSpan="4" className="px-6 py-12 text-center text-slate-400 text-sm">
+                        No roles found matching your search.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-hidden">
-          <div className="bg-white rounded-3xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col relative">
-            <form onSubmit={handleSave} className="flex flex-col h-full overflow-hidden">
-              <div className="shrink-0 p-6 border-b border-gray-100 flex items-center justify-between bg-white rounded-t-3xl z-10">
-                <h3 className="text-2xl font-bold text-gray-900">
-                  {editingRole ? 'Edit Role' : 'Create Role'}
-                </h3>
-                <button type="button" onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 transition-colors">
-                  ✕
-                </button>
-              </div>
-              <div className="p-6 overflow-y-auto flex-1">
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">Role Name</label>
+        {/* Modal */}
+        {showModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-hidden animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-3xl max-h-[90vh] flex flex-col relative overflow-hidden">
+              <form onSubmit={handleSave} className="flex flex-col h-full overflow-hidden">
+                <div className="shrink-0 p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                      <Shield className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900">
+                        {editingRole ? 'Edit Role' : 'Create New Role'}
+                      </h3>
+                      <p className="text-xs text-slate-500">Configure role identity and assign granular access permissions</p>
+                    </div>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={handleCloseModal} 
+                    className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto flex-1 space-y-5">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Role Name</label>
                     <input 
                       type="text" 
                       required 
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      placeholder="e.g. ADM_COUNSELLOR"
+                      className="block w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-xs"
                       value={formData.name}
                       onChange={e => setFormData({...formData, name: e.target.value})}
                     />
                   </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Description</label>
                     <input 
                       type="text" 
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      placeholder="Brief summary of duties and responsibilities"
+                      className="block w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-xs"
                       value={formData.description}
                       onChange={e => setFormData({...formData, description: e.target.value})}
                     />
                   </div>
                   
-                  <div className="mb-2">
-                    <label className="block text-sm font-medium text-gray-700">Permissions</label>
-                    <div className="mt-2 space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">Permissions ({formData.permission_ids.length} selected)</label>
+                    </div>
+                    <div className="space-y-4">
                       {Object.entries(
                         permissions.reduce((acc, perm) => {
                           const prefix = perm.name.split(':')[0] || 'other';
@@ -200,45 +285,63 @@ export default function RoleManagementPage() {
                           return acc;
                         }, {})
                       ).map(([groupName, groupPerms]) => (
-                        <div key={groupName} className="border border-gray-200 p-4 rounded-xl bg-slate-50">
-                          <h4 className="text-md font-semibold text-gray-800 mb-3 border-b border-gray-200 pb-2">{groupName}</h4>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {groupPerms.map(perm => (
-                              <div key={perm.id} className="flex items-start">
-                                <div className="flex items-center h-5">
+                        <div key={groupName} className="border border-slate-200 rounded-2xl p-4 bg-slate-50/70">
+                          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 pb-2 border-b border-slate-200 flex items-center justify-between">
+                            <span>{groupName}</span>
+                            <span className="text-slate-400 font-normal">
+                              {groupPerms.filter(p => formData.permission_ids.includes(p.id)).length} / {groupPerms.length}
+                            </span>
+                          </h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                            {groupPerms.map(perm => {
+                              const isChecked = formData.permission_ids.includes(perm.id);
+                              return (
+                                <label 
+                                  key={perm.id} 
+                                  className={`flex items-center gap-2.5 p-2 rounded-xl border text-xs cursor-pointer select-none transition-all ${
+                                    isChecked 
+                                      ? 'bg-blue-50/80 border-blue-300 text-blue-900 font-semibold shadow-xs' 
+                                      : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                                  }`}
+                                >
                                   <input
-                                    id={`perm-${perm.id}`}
                                     type="checkbox"
-                                    checked={formData.permission_ids.includes(perm.id)}
+                                    checked={isChecked}
                                     onChange={() => handleTogglePermission(perm.id)}
-                                    className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                                    className="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
                                   />
-                                </div>
-                                <div className="ml-2 text-sm">
-                                  <label htmlFor={`perm-${perm.id}`} className="font-medium text-gray-700">
-                                    {perm.name}
-                                  </label>
-                                </div>
-                              </div>
-                            ))}
+                                  <span className="truncate">{perm.name}</span>
+                                </label>
+                              );
+                            })}
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
-              </div>
-              <div className="shrink-0 p-6 border-t border-gray-100 bg-white flex items-center justify-end gap-3 rounded-b-3xl z-10">
-                <button type="button" onClick={handleCloseModal} className="px-5 py-2.5 rounded-xl font-medium text-gray-700 hover:bg-gray-50 border border-gray-200 transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors shadow-sm">
-                  Save
-                </button>
-              </div>
-            </form>
+                </div>
+
+                <div className="shrink-0 p-5 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
+                  <button 
+                    type="button" 
+                    onClick={handleCloseModal} 
+                    className="px-5 py-2.5 rounded-xl font-medium text-slate-700 hover:bg-slate-100 border border-slate-200 text-sm transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-sm shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+                  >
+                    {editingRole ? 'Update Role' : 'Create Role'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   );
 }
+

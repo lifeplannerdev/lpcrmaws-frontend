@@ -7,6 +7,7 @@ import TaskFormFields from '../Components/tasks/TaskFormFields';
 import PrioritySelector from '../Components/tasks/PrioritySelector';
 import StatusSelector from '../Components/tasks/StatusSelector';
 import { usePermissions } from '../context/PermissionsContext';
+import Navbar from '../Components/layouts/Navbar';
 
 export default function TaskFormPage() {
   const { id } = useParams();
@@ -214,17 +215,19 @@ export default function TaskFormPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 p-6 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate(id ? `/tasks/${id}` : '/staff/tasks')}
-          className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-6 transition-colors duration-200"
-          disabled={submitting}
-        >
-          <ArrowLeft size={20} />
-          <span className="font-medium">{id ? 'Back to Task' : 'Back to Tasks'}</span>
-        </button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">
+      <Navbar />
+      <div className="p-6 md:p-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Back Button */}
+          <button
+            onClick={() => navigate(id ? `/tasks/${id}` : '/staff/tasks')}
+            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-6 transition-colors duration-200"
+            disabled={submitting}
+          >
+            <ArrowLeft size={20} />
+            <span className="font-medium">{id ? 'Back to Task' : 'Back to Tasks'}</span>
+          </button>
 
         {/* Header */}
         <div className="mb-8">
@@ -286,6 +289,7 @@ export default function TaskFormPage() {
             </div>
           </div>
         </form>
+      </div>
       </div>
     </div>
   );

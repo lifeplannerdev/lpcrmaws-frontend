@@ -9,6 +9,7 @@ import {
   Circle, AlertCircle, XCircle, MessageSquare,
   StickyNote, Flag, Trash2, Send
 } from 'lucide-react';
+import Navbar from '../Components/layouts/Navbar';
 
 
 export default function TaskViewPage() {
@@ -371,8 +372,10 @@ export default function TaskViewPage() {
   // ── Main render ────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <Navbar />
+      <div className="py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
 
         {/* Back */}
         <button
@@ -867,7 +870,7 @@ export default function TaskViewPage() {
             </div>
           </div>
         )}
-
+        </div>
       </div>
     </div>
   );

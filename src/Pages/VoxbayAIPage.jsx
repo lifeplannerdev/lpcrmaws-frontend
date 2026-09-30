@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import Navbar from '../Components/layouts/Navbar';
 import './VoxbayAIPage.css';
 
 export default function VoxbayAIPage() {
@@ -60,8 +61,29 @@ export default function VoxbayAIPage() {
     }, 100);
   };
 
-  if (loading && !data) return <div style={{ color: '#fff', padding: 20 }}>Loading Voxbay AI Report...</div>;
-  if (!data) return <div style={{ color: '#fff', padding: 20 }}>Error loading data.</div>;
+  if (loading && !data) {
+    return (
+      <div className="min-h-screen bg-[#0a0f1a]">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-[#93a5c2]">
+          <div className="w-10 h-10 border-2 border-[#38e8c6] border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-sm font-medium">Loading Voxbay Telecalling Report...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-[#0a0f1a]">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-[#93a5c2]">
+          <p className="text-base font-semibold text-rose-400 mb-2">Unable to load report</p>
+          <p className="text-sm text-[#93a5c2]">Please check your network or try another date.</p>
+        </div>
+      </div>
+    );
+  }
 
   const employees = data.employees || {};
   let totalCalls = 0;
@@ -297,76 +319,79 @@ export default function VoxbayAIPage() {
   };
 
   return (
-    <div className={`voxbay-page-wrap ${playerState.open ? 'player-active' : ''}`}>
-      <header className="top">
-        <div className="brand-row">
-          <div className="brand">
-            <div className="brand-mark">
-              <svg viewBox="0 0 24 24" fill="none"><path d="M3 12c0-3 1-5 2-6M21 12c0-3-1-5-2-6M7 12a5 5 0 0110 0v3a2 2 0 01-2 2h-1v-4h3M7 12v3a2 2 0 002 2h1v-4H7" stroke="#04140f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+    <div className="min-h-screen bg-[#0a0f1a]">
+      <Navbar />
+      <div className={`voxbay-page-wrap ${playerState.open ? 'player-active' : ''}`}>
+        <header className="top">
+          <div className="brand-row">
+            <div className="brand">
+              <div className="brand-mark">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M3 12c0-3 1-5 2-6M21 12c0-3-1-5-2-6M7 12a5 5 0 0110 0v3a2 2 0 01-2 2h-1v-4h3M7 12v3a2 2 0 002 2h1v-4H7" stroke="#04140f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+              <div>
+                <div className="brand-name">VOXBAY</div>
+                <div className="brand-sub">Telecalling Ops</div>
+              </div>
             </div>
-            <div>
-              <div className="brand-name">VOXBAY</div>
-              <div className="brand-sub">Telecalling Ops</div>
-            </div>
-          </div>
-          <div className="date-picker-wrap">
-            {isToday && <span className="live-dot"></span>}
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} max={new Date().toISOString().split('T')[0]} />
-          </div>
-        </div>
-
-        <div className="hero">
-          <div className="hero-title">Daily performance snapshot for <span className="accent">{agents.length}</span> agents on the floor</div>
-          <div className="hero-date">{date}</div>
-          <div className="eq"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-        </div>
-
-        <div className="gauge-row">
-          <div className="gauge-wrap">
-            <svg viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(148,178,220,0.12)" strokeWidth="10"/>
-              <circle cx="60" cy="60" r="52" fill="none" stroke="#38e8c6" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${gaugeDash} 1000`}/>
-            </svg>
-            <div className="gauge-center">
-              <div className="gauge-num">{connectRate}%</div>
-              <div className="gauge-lbl">Connect</div>
+            <div className="date-picker-wrap">
+              {isToday && <span className="live-dot"></span>}
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} max={new Date().toISOString().split('T')[0]} />
             </div>
           </div>
-          <div className="gauge-stats">
-            <div className="gstat"><div className="gstat-num">{totalCalls}</div><div className="gstat-lbl">Total Calls</div></div>
-            <div className="gstat"><div className="gstat-num">{totalAnswered}</div><div className="gstat-lbl">Answered</div></div>
-            <div className="gstat"><div className="gstat-num">{leadsSet.size}</div><div className="gstat-lbl">Leads Worked</div></div>
-            <div className="gstat"><div className="gstat-num">{totalTalkTimeMins}m</div><div className="gstat-lbl">Talk Time</div></div>
+
+          <div className="hero">
+            <div className="hero-title">Daily performance snapshot for <span className="accent">{agents.length}</span> agents on the floor</div>
+            <div className="hero-date">{date}</div>
+            <div className="eq"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
           </div>
-        </div>
-      </header>
 
-      <nav className="tabs">
-        <button className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>Overview</button>
-        <button className={`tab-btn ${activeTab === 'employees' ? 'active' : ''}`} onClick={() => setActiveTab('employees')}>Employees</button>
-        <button className={`tab-btn ${activeTab === 'leads' ? 'active' : ''}`} onClick={() => setActiveTab('leads')}>Leads</button>
-      </nav>
-
-      <main>
-        {renderOverview()}
-        {renderEmployees()}
-        {renderLeads()}
-      </main>
-
-      <footer className="foot">
-        Generated from Voxbay call center export · <span className="fmark">For internal MD review</span><br/>
-        All figures derived from outgoing call logs matched to leads.
-      </footer>
-
-      <div id="miniPlayer" className={playerState.open ? 'open' : ''}>
-        <div className="mp-top">
-          <div className="mp-info">
-            <div className="mp-lead">{playerState.lead}</div>
-            <div className="mp-emp">{playerState.emp}</div>
+          <div className="gauge-row">
+            <div className="gauge-wrap">
+              <svg viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(148,178,220,0.12)" strokeWidth="10"/>
+                <circle cx="60" cy="60" r="52" fill="none" stroke="#38e8c6" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${gaugeDash} 1000`}/>
+              </svg>
+              <div className="gauge-center">
+                <div className="gauge-num">{connectRate}%</div>
+                <div className="gauge-lbl">Connect</div>
+              </div>
+            </div>
+            <div className="gauge-stats">
+              <div className="gstat"><div className="gstat-num">{totalCalls}</div><div className="gstat-lbl">Total Calls</div></div>
+              <div className="gstat"><div className="gstat-num">{totalAnswered}</div><div className="gstat-lbl">Answered</div></div>
+              <div className="gstat"><div className="gstat-num">{leadsSet.size}</div><div className="gstat-lbl">Leads Worked</div></div>
+              <div className="gstat"><div className="gstat-num">{totalTalkTimeMins}m</div><div className="gstat-lbl">Talk Time</div></div>
+            </div>
           </div>
-          <div className="mp-close" onClick={() => { setPlayerState({...playerState, open: false}); if(audioRef.current) audioRef.current.pause(); }}>✕</div>
+        </header>
+
+        <nav className="tabs">
+          <button className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>Overview</button>
+          <button className={`tab-btn ${activeTab === 'employees' ? 'active' : ''}`} onClick={() => setActiveTab('employees')}>Employees</button>
+          <button className={`tab-btn ${activeTab === 'leads' ? 'active' : ''}`} onClick={() => setActiveTab('leads')}>Leads</button>
+        </nav>
+
+        <main>
+          {renderOverview()}
+          {renderEmployees()}
+          {renderLeads()}
+        </main>
+
+        <footer className="foot">
+          Generated from Voxbay call center export · <span className="fmark">For internal MD review</span><br/>
+          All figures derived from outgoing call logs matched to leads.
+        </footer>
+
+        <div id="miniPlayer" className={playerState.open ? 'open' : ''}>
+          <div className="mp-top">
+            <div className="mp-info">
+              <div className="mp-lead">{playerState.lead}</div>
+              <div className="mp-emp">{playerState.emp}</div>
+            </div>
+            <div className="mp-close" onClick={() => { setPlayerState({...playerState, open: false}); if(audioRef.current) audioRef.current.pause(); }}>✕</div>
+          </div>
+          <audio ref={audioRef} src={playerState.url} controls></audio>
         </div>
-        <audio ref={audioRef} src={playerState.url} controls></audio>
       </div>
     </div>
   );

@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useApi } from '../../context/ApiContext';
 import { useVoxbayCall } from '../../hooks/useVoxbayCall';
-import './ProgramFormModal.css'; // Reusing some modal styles
+import { Share2, X, Search, Phone, Mail, MessageSquare, Copy, Check, Send, User } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const ShareProgramModal = ({ isOpen, onClose, program }) => {
   const { authFetch, apiBaseUrl } = useApi();
-  const { callingNumber } = useVoxbayCall(); // If there is an active call in this context
+  const { callingNumber } = useVoxbayCall();
   const [leads, setLeads] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLead, setSelectedLead] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [copied, setCopied] = useState(false);
   
   const [contactInfo, setContactInfo] = useState({
     phone: callingNumber || '',
@@ -23,7 +25,7 @@ const ShareProgramModal = ({ isOpen, onClose, program }) => {
   useEffect(() => {
     if (program) {
       const feesText = program.fees_structure && program.fees_structure.length > 0
-        ? program.fees_structure.map(f => `- ${f.name}: ${f.amount}`).join('\n')
+        ? program.fees_structure.map(f => `• ${f.name}: ${f.amount}`).join('\n')
         : 'Contact for details';
         
       const servicesText = program.services && program.services.length > 0
@@ -32,22 +34,19 @@ const ShareProgramModal = ({ isOpen, onClose, program }) => {
 
       const template = `Hello,
 
-Here are the details for the ${program.title} program in ${program.country}.
+Here are the details for the *${program.title}* program in *${program.country || 'N/A'}*.
 
-Institution: ${program.university || 'N/A'}
-Duration: ${program.course_duration || 'N/A'}
-Intake: ${program.intake || 'N/A'}
+🏛️ Institution: ${program.university || 'N/A'}
+⏱️ Duration: ${program.course_duration || 'N/A'}
+📅 Intake: ${program.intake || 'N/A'}
 
-Qualifications Required:
+📋 Qualifications Required:
 ${program.qualification || 'N/A'}
 
-Fee Structure:
+💰 Fee Structure:
 ${feesText}
-
-Services Included:
-${servicesText}
-
-Please let me know if you have any questions!`;
+${servicesText ? `\n🎁 Services Included:\n${servicesText}\n` : ''}
+Feel free to contact us if you have any questions or would like to proceed with your application!`;
 
       setMessage(template);
     }
@@ -55,7 +54,6 @@ Please let me know if you have any questions!`;
 
   // Search leads
   useEffect(() => {
-    // Do not search if the query exactly matches the selected lead's name
     if (searchQuery.length > 2 && (!selectedLead || searchQuery !== selectedLead.name)) {
       setIsSearching(true);
       const fetchLeads = async () => {
@@ -72,7 +70,7 @@ Please let me know if you have any questions!`;
           setIsSearching(false);
         }
       };
-      const timeoutId = setTimeout(fetchLeads, 500);
+      const timeoutId = setTimeout(fetchLeads, 400);
       return () => clearTimeout(timeoutId);
     } else {
       setLeads([]);
@@ -93,9 +91,21 @@ Please let me know if you have any questions!`;
     setLeads([]);
   };
 
+  const handleClearLead = () => {
+    setSelectedLead(null);
+    setSearchQuery('');
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(message);
+    setCopied(true);
+    toast.success('Message copied to clipboard');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const shareViaWhatsApp = () => {
     if (!contactInfo.phone) {
-      alert('Please enter a phone number to share via WhatsApp.');
+      toast.error('Please enter a WhatsApp number.');
       return;
     }
     const cleanPhone = contactInfo.phone.replace(/\D/g, '');
@@ -105,95 +115,180 @@ Please let me know if you have any questions!`;
 
   const shareViaEmail = () => {
     if (!contactInfo.email) {
-      alert('Please enter an email address to share via Email.');
+      toast.error('Please enter an email address.');
       return;
     }
-    const subject = encodeURIComponent(`Details for ${program.title} - ${program.country}`);
+    const subject = encodeURIComponent(`Academic Program Details: ${program.title} (${program.country || ''})`);
     const body = encodeURIComponent(message);
     window.location.href = `mailto:${contactInfo.email}?subject=${subject}&body=${body}`;
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content program-modal">
-        <h2>Share Program: {program.title}</h2>
-        
-        <div className="share-section program-form">
-          <div className="form-group" style={{position: 'relative'}}>
-            <label>Search Existing Lead (Optional)</label>
-            <input 
-              type="text" 
-              style={{ padding: '10px' }}
-              placeholder="Search by name, email, or phone..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-hidden animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-xl max-h-[90vh] flex flex-col relative overflow-hidden">
+        {/* Header */}
+        <div className="shrink-0 p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+              <Share2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">Share Program Details</h3>
+              <p className="text-xs text-slate-500 truncate max-w-sm">{program.title} • {program.country}</p>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 overflow-y-auto flex-1 space-y-4">
+          {/* Lead Search */}
+          <div className="relative">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+              Search Lead (Auto-fill Contact)
+            </label>
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input 
+                type="text" 
+                placeholder="Search lead by name, phone or email..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-9 py-2.5 text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-xs"
+              />
+              {selectedLead && (
+                <button 
+                  type="button" 
+                  onClick={handleClearLead}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Dropdown search results */}
             {searchQuery.length > 2 && (!selectedLead || searchQuery !== selectedLead.name) && (
-              <ul className="lead-dropdown" style={{
-                position: 'absolute', top: '100%', left: 0, right: 0, 
-                background: 'white', border: '1px solid #ccc', zIndex: 1000,
-                maxHeight: '150px', overflowY: 'auto', listStyle: 'none', padding: 0, margin: 0,
-                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-              }}>
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 max-h-48 overflow-y-auto divide-y divide-slate-100">
                 {isSearching ? (
-                  <li style={{padding: '8px', color: '#666'}}>Searching...</li>
+                  <div className="p-3 text-xs text-slate-500 text-center">Searching leads...</div>
                 ) : leads.length > 0 ? (
                   leads.map(lead => (
-                    <li 
+                    <div 
                       key={lead.id} 
                       onClick={() => handleSelectLead(lead)}
-                      style={{padding: '8px', borderBottom: '1px solid #eee', cursor: 'pointer'}}
+                      className="p-3 hover:bg-blue-50/70 transition-colors cursor-pointer flex items-center justify-between"
                     >
-                      <strong>{lead.name}</strong> - {lead.phone}
-                    </li>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+                          {lead.name ? lead.name[0].toUpperCase() : 'L'}
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-slate-900">{lead.name}</div>
+                          <div className="text-xs text-slate-500">{lead.phone || lead.email || 'No contact'}</div>
+                        </div>
+                      </div>
+                      <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/50">
+                        {lead.status || 'Lead'}
+                      </span>
+                    </div>
                   ))
                 ) : hasSearched ? (
-                  <li style={{padding: '8px', color: '#666'}}>No leads found.</li>
+                  <div className="p-3 text-xs text-slate-400 text-center">No leads found matching "{searchQuery}"</div>
                 ) : null}
-              </ul>
+              </div>
             )}
           </div>
 
-          <div className="form-row" style={{marginTop: '15px'}}>
-            <div className="form-group">
-              <label>WhatsApp Number</label>
-              <input 
-                type="text" 
-                value={contactInfo.phone} 
-                onChange={(e) => setContactInfo({...contactInfo, phone: e.target.value})} 
-                placeholder="+91..."
-              />
+          {/* Contact Fields */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                WhatsApp Phone
+              </label>
+              <div className="relative">
+                <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input 
+                  type="text" 
+                  value={contactInfo.phone} 
+                  onChange={(e) => setContactInfo({...contactInfo, phone: e.target.value})} 
+                  placeholder="+91..."
+                  className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-xs"
+                />
+              </div>
             </div>
-            <div className="form-group">
-              <label>Email Address</label>
-              <input 
-                type="email" 
-                value={contactInfo.email} 
-                onChange={(e) => setContactInfo({...contactInfo, email: e.target.value})} 
-                placeholder="email@example.com"
-              />
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input 
+                  type="email" 
+                  value={contactInfo.email} 
+                  onChange={(e) => setContactInfo({...contactInfo, email: e.target.value})} 
+                  placeholder="student@example.com"
+                  className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-xs"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="form-group" style={{marginTop: '15px'}}>
-            <label>Message Preview (Edit before sending)</label>
+          {/* Message Preview */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Customizable Message Preview
+              </label>
+              <button 
+                type="button" 
+                onClick={copyToClipboard}
+                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-semibold cursor-pointer"
+              >
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? 'Copied!' : 'Copy Text'}
+              </button>
+            </div>
             <textarea 
-              rows="10" 
+              rows="8" 
               value={message} 
               onChange={(e) => setMessage(e.target.value)}
-              style={{width: '100%'}}
+              className="w-full p-3.5 text-xs font-sans text-slate-800 bg-slate-50/70 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all shadow-xs resize-y leading-relaxed"
             />
           </div>
         </div>
 
-        <div className="modal-actions" style={{justifyContent: 'space-between', marginTop: '20px'}}>
-          <button className="btn-cancel" onClick={onClose}>Close</button>
-          <div style={{display: 'flex', gap: '10px'}}>
-            <button className="btn-submit" style={{background: '#25D366'}} onClick={shareViaWhatsApp}>
-              Share via WhatsApp
+        {/* Footer actions */}
+        <div className="shrink-0 p-5 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-medium text-slate-700 hover:bg-slate-100 border border-slate-200 text-sm transition-colors cursor-pointer text-center"
+          >
+            Close
+          </button>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <button 
+              type="button" 
+              onClick={shareViaWhatsApp}
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba59] text-white px-4 py-2.5 rounded-xl font-semibold text-sm shadow-md shadow-green-500/20 transition-all cursor-pointer"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Share on WhatsApp
             </button>
-            <button className="btn-submit" onClick={shareViaEmail}>
-              Share via Email
+            <button 
+              type="button" 
+              onClick={shareViaEmail}
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+            >
+              <Send className="w-4 h-4" />
+              Email
             </button>
           </div>
         </div>
@@ -203,3 +298,4 @@ Please let me know if you have any questions!`;
 };
 
 export default ShareProgramModal;
+

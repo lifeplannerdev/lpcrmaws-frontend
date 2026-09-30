@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions, Can } from '../context/PermissionsContext';
 import { useApi } from '../context/ApiContext';
+import Navbar from '../Components/layouts/Navbar';
 import { 
   Key, Plus, Eye, EyeOff, Copy, Search, Shield, 
   History, CheckCircle, XCircle, Clock, Lock, Edit2, Trash2
@@ -338,6 +339,7 @@ export default function CredentialsVault() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
+      <Navbar />
       {/* Header with Premium Gradient */}
       <div className="bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-800 pb-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
