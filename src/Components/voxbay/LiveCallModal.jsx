@@ -3,7 +3,8 @@ import {
   Phone, PhoneIncoming, PhoneOutgoing, PhoneOff, PhoneCall, Clock, User, 
   MapPin, Globe, BookOpen, Calendar, Tag, Shield, CheckCircle2, 
   X, Minus, Maximize2, Minimize2, Copy, Check, MessageSquare, 
-  History, ExternalLink, Loader2, Sparkles, AlertCircle, PlusCircle, Layers
+  History, ExternalLink, Loader2, Sparkles, AlertCircle, PlusCircle, Layers,
+  Edit2
 } from 'lucide-react';
 import { useLiveCall } from '../../context/LiveCallContext';
 import { useApi } from '../../context/ApiContext';
@@ -11,7 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useVoxbayCall } from '../../hooks/useVoxbayCall';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { sourceOptions } from '../utils/leadConstants';
+import { sourceOptions, programOptions } from '../utils/leadConstants';
 
 const STATUS_OPTIONS = [
   { value: 'ENQUIRY',    label: 'Enquiry',    color: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' },
@@ -60,6 +61,37 @@ export default function LiveCallModal() {
   const [pastRemarks, setPastRemarks] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
+  const [academicPrograms, setAcademicPrograms] = useState([]);
+
+  // Fetch academic curriculum programs from API to enrich dropdown
+  useEffect(() => {
+    let isMounted = true;
+    authFetch(`${apiBaseUrl}/programs/`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!isMounted || !data) return;
+        const list = Array.isArray(data) ? data : (data.results || []);
+        setAcademicPrograms(list.map(p => ({ value: p.title || p.name, label: p.title || p.name })));
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, [authFetch, apiBaseUrl]);
+
+  // Combined program options: standard options + database programs
+  const combinedProgramOptions = React.useMemo(() => {
+    const map = new Map();
+    programOptions.forEach(opt => map.set(opt.value, opt.label));
+    academicPrograms.forEach(opt => {
+      if (opt.value && !map.has(opt.value)) {
+        map.set(opt.value, opt.label);
+      }
+    });
+    const curProg = (activeCall?.formData?.program) || existingLeadData?.program;
+    if (curProg && !map.has(curProg)) {
+      map.set(curProg, curProg);
+    }
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [academicPrograms, activeCall?.formData?.program, existingLeadData?.program]);
 
   // Live Timer Stopwatch
   useEffect(() => {
@@ -169,10 +201,17 @@ export default function LiveCallModal() {
           const data = await resLead.json();
           if (isMounted) {
             setExistingLeadData(data);
-            // Pre-fill formData status if not already filled
-            if (!activeCall.formData.status) {
-              updateCallFormData(activeCall.id, { status: data.status, priority: data.priority });
-            }
+            // Pre-fill formData name, program, status and details
+            updateCallFormData(activeCall.id, {
+              name: activeCall.formData?.name || data.name || activeCall.leadName || '',
+              status: activeCall.formData?.status || data.status || 'ENQUIRY',
+              priority: activeCall.formData?.priority || data.priority || 'MEDIUM',
+              program: activeCall.formData?.program !== undefined ? activeCall.formData.program : (data.program || ''),
+              interested_country: activeCall.formData?.interested_country || data.interested_country || '',
+              interested_course: activeCall.formData?.interested_course || data.interested_course || '',
+              location: activeCall.formData?.location || data.location || '',
+              source: activeCall.formData?.source || data.source || 'VOXBAY CALL',
+            });
           }
         }
 
@@ -377,13 +416,19 @@ export default function LiveCallModal() {
           ? `${existingRemarks}\n\n${formattedRemark}`
           : (formattedRemark || existingRemarks);
 
-        // Update Lead status/country/course/location/remarks
+        const updatedName = (formData.name && formData.name.trim()) 
+          ? formData.name.trim() 
+          : (existingLeadData?.name || activeCall.leadName || 'Lead');
+
+        // Update Lead name/program/status/country/course/location/remarks
         const updatePayload = {
-          status: formData.status,
-          priority: formData.priority,
-          interested_country: formData.interested_country,
-          interested_course: formData.interested_course,
-          location: formData.location,
+          name: updatedName,
+          status: formData.status || existingLeadData?.status,
+          priority: formData.priority || existingLeadData?.priority,
+          program: formData.program !== undefined ? formData.program : (existingLeadData?.program || ''),
+          interested_country: formData.interested_country !== undefined ? formData.interested_country : (existingLeadData?.interested_country || ''),
+          interested_course: formData.interested_course !== undefined ? formData.interested_course : (existingLeadData?.interested_course || ''),
+          location: formData.location !== undefined ? formData.location : (existingLeadData?.location || ''),
         };
         if (formData.source) {
           updatePayload.source = formData.source;
@@ -397,6 +442,9 @@ export default function LiveCallModal() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updatePayload),
         });
+
+        // Update local call state immediately with the new lead name
+        updateCall(activeCall.id, { leadName: updatedName });
 
         // 1. Resolve any existing pending followups for this lead directly (update in-place, DO NOT create duplicates!)
         let resolvedExistingCount = 0;
@@ -455,19 +503,21 @@ export default function LiveCallModal() {
         window.dispatchEvent(new CustomEvent('leadUpdated', { 
           detail: { 
             id: leadId, 
+            name: updatedName,
+            program: updatePayload.program,
             remarks: updatedRemarks, 
-            status: formData.status,
-            priority: formData.priority,
-            interested_country: formData.interested_country,
-            interested_course: formData.interested_course,
-            location: formData.location,
-            source: formData.source || existingLeadData?.source,
+            status: updatePayload.status,
+            priority: updatePayload.priority,
+            interested_country: updatePayload.interested_country,
+            interested_course: updatePayload.interested_course,
+            location: updatePayload.location,
+            source: updatePayload.source || existingLeadData?.source,
           } 
         }));
         window.dispatchEvent(new CustomEvent('refreshLeads'));
         window.dispatchEvent(new CustomEvent('refreshFollowups'));
 
-        toast.success(`💾 Remarks & Lead status updated for ${existingLeadData?.name || activeCall.leadName}!`);
+        toast.success(`💾 Lead "${updatedName}" updated successfully!`);
       }
 
       // Close this call tab
@@ -763,28 +813,74 @@ export default function LiveCallModal() {
                     </div>
                   </div>
 
-                  {/* Priority & Location Grid */}
+                  {/* Priority Level */}
+                  <div className="pt-1">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Priority Level
+                    </label>
+                    <div className="flex gap-1.5">
+                      {PRIORITY_OPTIONS.map(pr => (
+                        <button
+                          key={pr.value}
+                          type="button"
+                          onClick={() => handleFieldChange('priority', pr.value)}
+                          className={`flex-1 text-xs font-bold py-2 rounded-lg border text-center transition-all ${
+                            (formData.priority || 'MEDIUM') === pr.value
+                              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white shadow-sm'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent hover:bg-slate-200'
+                          }`}
+                        >
+                          {pr.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Academic Program & Course Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Priority
+                        Academic Program
                       </label>
-                      <div className="flex gap-1.5">
-                        {PRIORITY_OPTIONS.map(pr => (
-                          <button
-                            key={pr.value}
-                            type="button"
-                            onClick={() => handleFieldChange('priority', pr.value)}
-                            className={`flex-1 text-xs font-bold py-2 rounded-lg border text-center transition-all ${
-                              (formData.priority || 'MEDIUM') === pr.value
-                                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white shadow-sm'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent hover:bg-slate-200'
-                            }`}
-                          >
-                            {pr.label}
-                          </button>
+                      <select
+                        value={formData.program || ''}
+                        onChange={(e) => handleFieldChange('program', e.target.value)}
+                        className="w-full text-xs font-bold p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-purple-600 transition-all"
+                      >
+                        <option value="">Select Program...</option>
+                        {combinedProgramOptions.map(p => (
+                          <option key={p.value} value={p.value}>{p.label}</option>
                         ))}
-                      </div>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Interested Course / Stream
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.interested_course || ''}
+                        onChange={(e) => handleFieldChange('interested_course', e.target.value)}
+                        placeholder="e.g. Nursing, German, Study Abroad"
+                        className="w-full text-xs font-medium px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-purple-600 outline-none text-slate-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Target Country & Location */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Interested Country
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.interested_country || ''}
+                        onChange={(e) => handleFieldChange('interested_country', e.target.value)}
+                        placeholder="e.g. Germany, UK, Canada"
+                        className="w-full text-xs font-medium px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-purple-600 outline-none text-slate-900 dark:text-white"
+                      />
                     </div>
 
                     <div>
@@ -796,35 +892,6 @@ export default function LiveCallModal() {
                         value={formData.location || ''}
                         onChange={(e) => handleFieldChange('location', e.target.value)}
                         placeholder="e.g. Kochi, Calicut, Dubai"
-                        className="w-full text-xs font-medium px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-purple-600 outline-none text-slate-900 dark:text-white"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Target Country & Course */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Interested Country
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.interested_country || ''}
-                        onChange={(e) => handleFieldChange('interested_country', e.target.value)}
-                        placeholder="e.g. UK, Germany, Canada"
-                        className="w-full text-xs font-medium px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-purple-600 outline-none text-slate-900 dark:text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Interested Course / Program
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.interested_course || ''}
-                        onChange={(e) => handleFieldChange('interested_course', e.target.value)}
-                        placeholder="e.g. Film Direction, Cinematography"
                         className="w-full text-xs font-medium px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-purple-600 outline-none text-slate-900 dark:text-white"
                       />
                     </div>
@@ -947,12 +1014,24 @@ export default function LiveCallModal() {
                 
                 {/* Lead Summary Header Card */}
                 <div className="bg-white dark:bg-slate-800/90 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                        {existingLeadData?.name || activeCall.leadName}
-                      </h3>
-                      <p className="text-xs text-slate-500 font-mono mt-0.5">{activeCall.phone}</p>
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="flex-1 min-w-[240px]">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                          <User size={12} className="text-purple-600" /> Edit Lead Name
+                        </label>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={formData.name !== undefined ? formData.name : (existingLeadData?.name || activeCall.leadName || '')}
+                          onChange={(e) => handleFieldChange('name', e.target.value)}
+                          placeholder="Lead Name"
+                          className="w-full text-base font-black px-3 py-1.5 pr-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 text-slate-900 dark:text-white outline-none transition-all shadow-sm"
+                        />
+                        <Edit2 size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      </div>
+                      <p className="text-xs text-slate-500 font-mono mt-1">{activeCall.phone}</p>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -969,9 +1048,9 @@ export default function LiveCallModal() {
                         </button>
                       )}
                       <span className={`text-xs font-black px-2.5 py-1 rounded-lg border ${
-                        STATUS_OPTIONS.find(s => s.value === (existingLeadData?.status || activeCall.leadDetails?.status || 'ENQUIRY'))?.color || 'bg-purple-100 text-purple-700 border-purple-200'
+                        STATUS_OPTIONS.find(s => s.value === (formData.status || existingLeadData?.status || activeCall.leadDetails?.status || 'ENQUIRY'))?.color || 'bg-purple-100 text-purple-700 border-purple-200'
                       }`}>
-                        {STATUS_OPTIONS.find(s => s.value === (existingLeadData?.status || activeCall.leadDetails?.status || 'ENQUIRY'))?.label || (existingLeadData?.status || activeCall.leadDetails?.status || 'ENQUIRY')}
+                        {STATUS_OPTIONS.find(s => s.value === (formData.status || existingLeadData?.status || activeCall.leadDetails?.status || 'ENQUIRY'))?.label || (formData.status || existingLeadData?.status || 'ENQUIRY')}
                       </span>
                       {existingLeadData?.id && (
                         <button
@@ -997,14 +1076,14 @@ export default function LiveCallModal() {
                     <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800">
                       <p className="text-[10px] font-bold text-slate-400 uppercase">Country</p>
                       <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate mt-0.5">
-                        {existingLeadData?.interested_country || 'Not specified'}
+                        {formData.interested_country || existingLeadData?.interested_country || 'Not specified'}
                       </p>
                     </div>
 
                     <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Course/Program</p>
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate mt-0.5">
-                        {existingLeadData?.program || existingLeadData?.interested_course || 'Not specified'}
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">Academic Program</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate mt-0.5" title={formData.program || existingLeadData?.program || 'Not specified'}>
+                        {formData.program || existingLeadData?.program || existingLeadData?.interested_course || 'Not specified'}
                       </p>
                     </div>
 
@@ -1068,7 +1147,7 @@ export default function LiveCallModal() {
                     <PlusCircle size={16} className="text-emerald-600" /> Add Live Remarks & Update Status
                   </h4>
 
-                  {/* Status & Source Selection */}
+                  {/* Status & Academic Program Selection */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -1081,6 +1160,40 @@ export default function LiveCallModal() {
                       >
                         {STATUS_OPTIONS.map(st => (
                           <option key={st.value} value={st.value}>{st.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Academic Program
+                      </label>
+                      <select
+                        value={formData.program !== undefined ? formData.program : (existingLeadData?.program || '')}
+                        onChange={(e) => handleFieldChange('program', e.target.value)}
+                        className="w-full text-xs font-bold p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-purple-600 transition-all"
+                      >
+                        <option value="">Select Program...</option>
+                        {combinedProgramOptions.map(p => (
+                          <option key={p.value} value={p.value}>{p.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Priority & Source Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Priority Level
+                      </label>
+                      <select
+                        value={formData.priority || existingLeadData?.priority || 'MEDIUM'}
+                        onChange={(e) => handleFieldChange('priority', e.target.value)}
+                        className="w-full text-xs font-bold p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:border-purple-600 transition-all"
+                      >
+                        {PRIORITY_OPTIONS.map(pr => (
+                          <option key={pr.value} value={pr.value}>{pr.label}</option>
                         ))}
                       </select>
                     </div>
