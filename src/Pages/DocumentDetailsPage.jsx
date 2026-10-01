@@ -127,7 +127,9 @@ export default function DocumentDetailsPage() {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (companyFilter) params.set('company', companyFilter);
+      // '' means "All companies" — send company=all so backend returns cross-company data
+      if (companyFilter === '') params.set('company', 'all');
+      else if (companyFilter) params.set('company', companyFilter);
       if (statusFilter)  params.set('status',  statusFilter);
       const data = await fetchWithAuth(`${API_BASE_URL}/documents/?${params}`);
       setDocuments(data.results || data || []);
@@ -229,7 +231,7 @@ export default function DocumentDetailsPage() {
             <p className="text-sm text-gray-500 mt-0.5">Track company licenses, contracts & their renewal lifecycle.</p>
           </div>
           <div className="flex items-center gap-3">
-            <CompanySwitcher currentCompany={companyFilter} onChange={setCompanyFilter} />
+            <CompanySwitcher activeCompany={companyFilter} onChange={setCompanyFilter} showAll={true} />
             <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
               <Plus className="w-4 h-4" /> Add Document
             </Button>
