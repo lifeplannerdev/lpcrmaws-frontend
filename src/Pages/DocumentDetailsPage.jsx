@@ -4,7 +4,6 @@ import Navbar from '../Components/layouts/Navbar';
 import { Plus, Edit, Trash, FileText, AlertCircle, CheckCircle, Clock, RefreshCw, Filter, DollarSign } from 'lucide-react';
 import LoadingState from '../Components/common/LoadingState';
 import EmptyState from '../Components/common/EmptyState';
-import CompanySwitcher from '../Components/common/CompanySwitcher';
 import FormField from '../Components/common/FormField';
 import Alert from '../Components/common/Alert';
 import Button from '../Components/common/Button';
@@ -231,11 +230,39 @@ export default function DocumentDetailsPage() {
             <p className="text-sm text-gray-500 mt-0.5">Track company licenses, contracts & their renewal lifecycle.</p>
           </div>
           <div className="flex items-center gap-3">
-            <CompanySwitcher activeCompany={companyFilter} onChange={setCompanyFilter} showAll={true} />
             <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
               <Plus className="w-4 h-4" /> Add Document
             </Button>
           </div>
+        </div>
+
+        {/* Branch / Company Filter Tabs */}
+        <div className="flex items-center gap-1.5 mb-5 flex-wrap">
+          {[
+            { key: '', label: 'All' },
+            { key: 'LP',       label: 'LP',         color: 'text-blue-600',   activeBg: 'bg-blue-600'   },
+            { key: 'LP_HQ',    label: 'LP HQ',      color: 'text-blue-700',   activeBg: 'bg-blue-700'   },
+            { key: 'LP_KOCHI', label: 'LP Kochi',   color: 'text-blue-500',   activeBg: 'bg-blue-500'   },
+            { key: 'FLAG',      label: 'FLAG',       color: 'text-emerald-600',activeBg: 'bg-emerald-600'},
+            { key: 'FLAG_KOCHI',label: 'FLAG Kochi', color: 'text-emerald-700',activeBg: 'bg-emerald-700'},
+            { key: 'FDS',       label: 'FDS',        color: 'text-amber-600',  activeBg: 'bg-amber-600'  },
+            { key: 'FDS_KOCHI', label: 'FDS Kochi',  color: 'text-amber-700',  activeBg: 'bg-amber-700'  },
+          ].map(({ key, label, color = 'text-gray-700', activeBg = 'bg-gray-900' }) => {
+            const isActive = companyFilter === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setCompanyFilter(key)}
+                className={`px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all whitespace-nowrap ${
+                  isActive
+                    ? `${activeBg} text-white border-transparent shadow-sm`
+                    : `bg-white ${color} border-gray-200 hover:border-gray-400`
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Stats bar */}
@@ -391,9 +418,19 @@ export default function DocumentDetailsPage() {
                     value={formData.company}
                     onChange={updateForm('company')}
                   >
-                    <option value="LP">LP</option>
-                    <option value="FLAG">FLAG</option>
-                    <option value="FDS">FDS</option>
+                    <optgroup label="LP">
+                      <option value="LP">LP (All Branches)</option>
+                      <option value="LP_HQ">LP — HQ</option>
+                      <option value="LP_KOCHI">LP — Kochi</option>
+                    </optgroup>
+                    <optgroup label="FLAG">
+                      <option value="FLAG">FLAG</option>
+                      <option value="FLAG_KOCHI">FLAG — Kochi</option>
+                    </optgroup>
+                    <optgroup label="FDS">
+                      <option value="FDS">FDS (All Branches)</option>
+                      <option value="FDS_KOCHI">FDS — Kochi</option>
+                    </optgroup>
                   </select>
                 </div>
 
