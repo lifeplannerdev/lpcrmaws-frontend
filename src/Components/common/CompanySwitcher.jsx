@@ -13,15 +13,19 @@ const CompanySwitcher = ({ activeCompany, onChange, showAll = false }) => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
 
-  // Only show the switcher if the user is admin/superuser, has cross-company access, reports:kochi, or reports:sales_all
+  // Show the switcher if user has any cross-company access
+  // Uses role_names (what the backend returns) not role/roles (which don't exist)
   const canSwitchCompany = 
-    user?.is_superuser || 
-    user?.role === 'ADMIN' || 
-    user?.role === 'MANAGING_DIRECTOR' ||
-    user?.role === 'CEO' ||
-    (Array.isArray(user?.roles) && (user.roles.includes('ADMIN') || user.roles.includes('MANAGING_DIRECTOR') || user.roles.includes('CEO'))) || 
-    hasPermission('staff:access_flag') || 
-    hasPermission('reports:kochi') || 
+    user?.is_superuser === true ||
+    (Array.isArray(user?.role_names) && (
+      user.role_names.includes('ADMIN') ||
+      user.role_names.includes('MANAGING_DIRECTOR') ||
+      user.role_names.includes('CEO') ||
+      user.role_names.includes('BUSINESS_HEAD')
+    )) ||
+    hasPermission('staff:access_flag') ||
+    hasPermission('license:admin') ||
+    hasPermission('reports:kochi') ||
     hasPermission('reports:sales_all');
 
   if (!user || !canSwitchCompany) {
