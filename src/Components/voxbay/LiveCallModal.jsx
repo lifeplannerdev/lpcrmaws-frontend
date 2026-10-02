@@ -10,6 +10,7 @@ import { useLiveCall } from '../../context/LiveCallContext';
 import { useApi } from '../../context/ApiContext';
 import { useAuth } from '../../context/AuthContext';
 import { useVoxbayCall } from '../../hooks/useVoxbayCall';
+import { usePermissions } from '../../context/PermissionsContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { sourceOptions, programOptions } from '../utils/leadConstants';
@@ -62,10 +63,13 @@ export default function LiveCallModal() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [academicPrograms, setAcademicPrograms] = useState([]);
+  const { hasPermission } = usePermissions();
 
   // Fetch academic curriculum programs from API to enrich dropdown
   useEffect(() => {
     let isMounted = true;
+    if (!hasPermission('programs:view')) return;
+    
     authFetch(`${apiBaseUrl}/programs/`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
