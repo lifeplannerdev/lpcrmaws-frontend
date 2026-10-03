@@ -165,3 +165,5 @@ export const fetchFdsWeeklyTasks = (authFetch, weekStart, userId) => {
 export const submitFdsWeeklyTask = (authFetch, id, notes) => authFetch(`${FDS_BASE}/weekly-tasks/${id}/submit/`, { method: 'POST', body: JSON.stringify({ coordinator_notes: notes }), headers: {'Content-Type': 'application/json'} });
 export const approveFdsWeeklyTask = (authFetch, id) => authFetch(`${FDS_BASE}/weekly-tasks/${id}/approve/`, { method: 'POST', headers: {'Content-Type': 'application/json'} });
 export const rejectFdsWeeklyTask = (authFetch, id, remarks) => authFetch(`${FDS_BASE}/weekly-tasks/${id}/reject/`, { method: 'POST', body: JSON.stringify({ admin_remarks: remarks }), headers: {'Content-Type': 'application/json'} });
+
+export const fetchFdsTrainers = (authFetch, roles = '') => authFetch(`${FDS_BASE}/trainers/?roles=${roles}`);

@@ -5,35 +5,42 @@ import {
     rejectFdsWeeklyTask,
     fetchFdsTaskTemplates,
     createFdsTaskTemplate,
-    deleteFdsTaskTemplate
+    deleteFdsTaskTemplate,
+    fetchFdsTrainers
 } from './fdsApi';
 import { format, startOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import { Users, BookOpen, UserCheck, Plus, X, Check, XCircle } from 'lucide-react';
 
 const FdsTaskManagementPage = () => {
     const { authFetch } = useAuth();
-    const [tasks, setTasks] = useState([]);
-    const [templates, setTemplates] = useState([]);
+    const [trainers, setTrainers] = useState([]);
+    const [globalTemplates, setGlobalTemplates] = useState([]);
+    
+    const [selectedTrainer, setSelectedTrainer] = useState(null);
+    const [coordinatorTasks, setCoordinatorTasks] = useState([]);
+    const [coordinatorTemplates, setCoordinatorTemplates] = useState([]);
+    
     const [loading, setLoading] = useState(false);
     const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
     const [rejectRemarks, setRejectRemarks] = useState({});
     
-    // For new template
+    const [showLibraryForm, setShowLibraryForm] = useState(false);
     const [newTemplateTitle, setNewTemplateTitle] = useState('');
     const [newTemplateDesc, setNewTemplateDesc] = useState('');
-    const [newTemplateAssignee, setNewTemplateAssignee] = useState('');
+    
+    const [activeTab, setActiveTab] = useState('approvals'); // approvals | assigned
 
-    const loadData = async () => {
+    const loadInitialData = async () => {
         setLoading(true);
         try {
-            const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
-            // Admins fetch tasks for all users for this week
-            const tasksData = await fetchFdsWeeklyTasks(authFetch, weekStartStr);
-            const templatesData = await fetchFdsTaskTemplates(authFetch);
+            const trainersData = await fetchFdsTrainers(authFetch);
+            setTrainers(trainersData);
             
-            setTasks(tasksData.results || tasksData);
-            setTemplates(templatesData.results || templatesData);
+            const allTemplates = await fetchFdsTaskTemplates(authFetch);
+            const templatesArray = allTemplates.results || allTemplates;
+            setGlobalTemplates(templatesArray.filter(t => !t.assignee));
         } catch (error) {
             toast.error("Failed to load data");
         } finally {
@@ -42,14 +49,93 @@ const FdsTaskManagementPage = () => {
     };
 
     useEffect(() => {
-        loadData();
-    }, [currentWeek]);
+        loadInitialData();
+    }, []);
+
+    const loadCoordinatorData = async (trainer) => {
+        if (!trainer) return;
+        setLoading(true);
+        try {
+            const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
+            const tasksData = await fetchFdsWeeklyTasks(authFetch, weekStartStr, trainer.id);
+            const allTemplates = await fetchFdsTaskTemplates(authFetch);
+            
+            setCoordinatorTasks(tasksData.results || tasksData);
+            const templatesArray = allTemplates.results || allTemplates;
+            setCoordinatorTemplates(templatesArray.filter(t => t.assignee === trainer.id));
+        } catch (error) {
+            toast.error("Failed to load coordinator data");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (selectedTrainer) {
+            loadCoordinatorData(selectedTrainer);
+        }
+    }, [selectedTrainer, currentWeek]);
+
+    const handleCreateGlobalTemplate = async (e) => {
+        e.preventDefault();
+        if (!newTemplateTitle) return;
+        try {
+            await createFdsTaskTemplate(authFetch, {
+                title: newTemplateTitle,
+                description: newTemplateDesc,
+                assignee: null // Global
+            });
+            toast.success("Global task added to library!");
+            setNewTemplateTitle('');
+            setNewTemplateDesc('');
+            setShowLibraryForm(false);
+            loadInitialData();
+        } catch (e) {
+            toast.error("Failed to add task to library");
+        }
+    };
+
+    const handleAssignToCoordinator = async (template) => {
+        try {
+            await createFdsTaskTemplate(authFetch, {
+                title: template.title,
+                description: template.description,
+                assignee: selectedTrainer.id
+            });
+            toast.success("Task assigned to coordinator!");
+            loadCoordinatorData(selectedTrainer);
+        } catch (e) {
+            toast.error("Failed to assign task");
+        }
+    };
+
+    const handleTakeBackTemplate = async (id) => {
+        if (!window.confirm("Remove this recurring task from this coordinator?")) return;
+        try {
+            await deleteFdsTaskTemplate(authFetch, id);
+            toast.success("Task taken back");
+            loadCoordinatorData(selectedTrainer);
+        } catch (e) {
+            toast.error("Failed to remove task");
+        }
+    };
+
+    const handleDeleteGlobalTemplate = async (id) => {
+        if (!window.confirm("Delete this task from the global library?")) return;
+        try {
+            await deleteFdsTaskTemplate(authFetch, id);
+            toast.success("Global task deleted");
+            loadInitialData();
+        } catch (e) {
+            toast.error("Failed to delete task");
+        }
+    };
 
     const handleApprove = async (taskId) => {
         try {
             await approveFdsWeeklyTask(authFetch, taskId);
             toast.success("Task approved");
-            loadData();
+            loadCoordinatorData(selectedTrainer);
         } catch (e) {
             toast.error("Failed to approve");
         }
@@ -63,168 +149,246 @@ const FdsTaskManagementPage = () => {
         try {
             await rejectFdsWeeklyTask(authFetch, taskId, rejectRemarks[taskId]);
             toast.success("Task rejected");
-            loadData();
+            loadCoordinatorData(selectedTrainer);
         } catch (e) {
             toast.error("Failed to reject");
         }
     };
 
-    const handleCreateTemplate = async (e) => {
-        e.preventDefault();
-        if (!newTemplateAssignee || !newTemplateTitle) {
-            toast.error("Assignee ID and Title are required");
-            return;
-        }
-        try {
-            await createFdsTaskTemplate(authFetch, {
-                title: newTemplateTitle,
-                description: newTemplateDesc,
-                assignee: newTemplateAssignee
-            });
-            toast.success("Recurring task created!");
-            setNewTemplateTitle('');
-            setNewTemplateDesc('');
-            loadData();
-        } catch (e) {
-            toast.error("Failed to create task template");
-        }
-    };
-
-    const handleDeleteTemplate = async (id) => {
-        if (!window.confirm("Delete this recurring task? It won't generate in future weeks.")) return;
-        try {
-            await deleteFdsTaskTemplate(authFetch, id);
-            toast.success("Recurring task deleted");
-            loadData();
-        } catch (e) {
-            toast.error("Failed to delete");
-        }
-    };
-
-    const pendingApprovalTasks = tasks.filter(t => t.status === 'PENDING_APPROVAL');
-
     const weekEndDate = new Date(currentWeek);
     weekEndDate.setDate(currentWeek.getDate() + 6);
 
     return (
-        <div className="p-4 fds-theme grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* LEFT COLUMN: APPROVALS */}
-            <div>
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold">FDS Approvals</h1>
-                </div>
-                
-                <div className="flex items-center gap-4 mb-4 bg-white p-2 rounded shadow inline-flex">
-                    <button onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))} className="px-3 py-1 bg-gray-200 rounded text-sm">Prev</button>
-                    <span className="font-semibold text-sm">
-                        {format(currentWeek, 'MMM dd')} - {format(weekEndDate, 'MMM dd')}
-                    </span>
-                    <button onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))} className="px-3 py-1 bg-gray-200 rounded text-sm">Next</button>
-                </div>
-
-                <h2 className="text-xl mb-4 font-semibold">Needs Approval ({pendingApprovalTasks.length})</h2>
-                
-                {loading ? <p>Loading...</p> : (
-                    <div className="grid gap-4">
-                        {pendingApprovalTasks.map(task => (
-                            <div key={task.id} className="bg-white p-4 rounded shadow border-l-4 border-yellow-500">
-                                <div className="flex justify-between">
-                                    <div>
-                                        <h3 className="text-lg font-bold">{task.title}</h3>
-                                        <p className="text-sm text-gray-500">Assignee: {task.assignee_name}</p>
-                                    </div>
-                                </div>
-                                <div className="mt-3 p-3 bg-gray-50 rounded text-sm">
-                                    <strong>Coordinator Notes:</strong> 
-                                    <p className="mt-1 whitespace-pre-wrap">{task.coordinator_notes || 'No notes provided.'}</p>
-                                </div>
-
-                                <div className="mt-4 flex flex-col gap-2">
-                                    <textarea 
-                                        placeholder="Remarks (if rejecting)..."
-                                        className="border rounded p-2 text-sm w-full"
-                                        value={rejectRemarks[task.id] || ''}
-                                        onChange={e => setRejectRemarks({...rejectRemarks, [task.id]: e.target.value})}
-                                        rows={2}
-                                    />
-                                    <div className="flex gap-2">
-                                        <button 
-                                            onClick={() => handleApprove(task.id)}
-                                            className="bg-green-600 text-white px-4 py-2 rounded text-sm flex-1"
-                                        >
-                                            Approve
-                                        </button>
-                                        <button 
-                                            onClick={() => handleReject(task.id)}
-                                            className="bg-red-600 text-white px-4 py-2 rounded text-sm flex-1"
-                                        >
-                                            Reject
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                        {pendingApprovalTasks.length === 0 && <p className="text-gray-500 italic bg-white p-4 rounded shadow">No tasks pending approval for this week.</p>}
-                    </div>
-                )}
+        <div className="p-4 fds-theme-global min-h-screen bg-[#1A1A1A] text-[#F5E6CC]">
+            <div className="mb-6 border-b border-[#3A2C1E] pb-4">
+                <h1 className="text-3xl font-bold text-[#C9A96E]">Task Management Center</h1>
+                <p className="text-[#8B7355] mt-1">Manage global task library and coordinate assignments</p>
             </div>
 
-            {/* RIGHT COLUMN: MANAGE RECURRING TASKS */}
-            <div>
-                <h1 className="text-2xl font-bold mb-6">Manage Recurring Tasks</h1>
-                
-                <div className="bg-white p-4 rounded shadow mb-6">
-                    <h2 className="text-lg font-bold mb-3">Assign New Task</h2>
-                    <form onSubmit={handleCreateTemplate} className="flex flex-col gap-3">
-                        <input 
-                            type="text"
-                            placeholder="Assignee User ID (e.g. 5)"
-                            className="border p-2 rounded"
-                            value={newTemplateAssignee}
-                            onChange={e => setNewTemplateAssignee(e.target.value)}
-                        />
-                        <input 
-                            type="text"
-                            placeholder="Task Title (e.g. 3 Reels per week)"
-                            className="border p-2 rounded"
-                            value={newTemplateTitle}
-                            onChange={e => setNewTemplateTitle(e.target.value)}
-                        />
-                        <textarea 
-                            placeholder="Task Description"
-                            className="border p-2 rounded"
-                            value={newTemplateDesc}
-                            onChange={e => setNewTemplateDesc(e.target.value)}
-                        />
-                        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
-                            Create Recurring Task
-                        </button>
-                    </form>
-                </div>
+            {!selectedTrainer ? (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Coordinators List */}
+                    <div className="lg:col-span-2">
+                        <h2 className="text-xl font-bold text-[#C9A96E] mb-4 flex items-center gap-2">
+                            <Users size={20} /> Select Coordinator
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {trainers.map(t => (
+                                <div 
+                                    key={t.id} 
+                                    onClick={() => setSelectedTrainer(t)}
+                                    className="bg-[#251A14] border border-[#3A2C1E] p-4 rounded-xl cursor-pointer hover:border-[#C9A96E] transition-all group"
+                                >
+                                    <h3 className="text-lg font-bold text-white group-hover:text-[#C9A96E] transition-colors">{t.name || t.username}</h3>
+                                    <p className="text-sm text-[#8B7355] mt-1 capitalize">{t.branch?.toLowerCase()} Branch</p>
+                                    <div className="mt-3 flex gap-2">
+                                        <span className="text-xs bg-[#3A2C1E] text-[#C9A96E] px-2 py-1 rounded">Manage Tasks &rarr;</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
 
-                <div className="bg-white p-4 rounded shadow">
-                    <h2 className="text-lg font-bold mb-3">Active Recurring Tasks ({templates.length})</h2>
-                    {loading ? <p>Loading...</p> : (
+                    {/* Global Task Library */}
+                    <div>
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-[#C9A96E] flex items-center gap-2">
+                                <BookOpen size={20} /> Task Library
+                            </h2>
+                            <button 
+                                onClick={() => setShowLibraryForm(!showLibraryForm)}
+                                className="bg-[#C9A96E] text-[#1A1A1A] px-2 py-1 rounded text-sm font-bold flex items-center gap-1 hover:bg-yellow-600"
+                            >
+                                {showLibraryForm ? <X size={16} /> : <Plus size={16} />}
+                            </button>
+                        </div>
+
+                        {showLibraryForm && (
+                            <form onSubmit={handleCreateGlobalTemplate} className="bg-[#251A14] border border-[#C9A96E] p-4 rounded-xl mb-4 flex flex-col gap-3">
+                                <input 
+                                    type="text"
+                                    placeholder="Task Title (e.g. 3 Reels per week)"
+                                    className="bg-[#1A1A1A] border border-[#3A2C1E] p-2 rounded text-[#F5E6CC] placeholder-[#8B7355]"
+                                    value={newTemplateTitle}
+                                    onChange={e => setNewTemplateTitle(e.target.value)}
+                                />
+                                <textarea 
+                                    placeholder="Task Description"
+                                    className="bg-[#1A1A1A] border border-[#3A2C1E] p-2 rounded text-[#F5E6CC] placeholder-[#8B7355]"
+                                    value={newTemplateDesc}
+                                    onChange={e => setNewTemplateDesc(e.target.value)}
+                                />
+                                <button type="submit" className="bg-[#C9A96E] text-[#1A1A1A] px-4 py-2 rounded font-bold">
+                                    Add to Library
+                                </button>
+                            </form>
+                        )}
+
                         <div className="grid gap-3">
-                            {templates.map(tpl => (
-                                <div key={tpl.id} className="border p-3 rounded flex justify-between items-center">
+                            {globalTemplates.map(tpl => (
+                                <div key={tpl.id} className="bg-[#251A14] border border-[#3A2C1E] p-3 rounded-xl flex justify-between items-start">
                                     <div>
-                                        <p className="font-bold">{tpl.title}</p>
-                                        <p className="text-sm text-gray-600">Assignee: {tpl.assignee_name}</p>
+                                        <h4 className="font-bold text-white">{tpl.title}</h4>
+                                        <p className="text-xs text-[#8B7355] mt-1 line-clamp-2">{tpl.description}</p>
                                     </div>
                                     <button 
-                                        onClick={() => handleDeleteTemplate(tpl.id)}
-                                        className="text-red-500 hover:text-red-700 text-sm font-semibold"
+                                        onClick={() => handleDeleteGlobalTemplate(tpl.id)}
+                                        className="text-red-400 hover:text-red-300 ml-2"
+                                        title="Delete from Library"
                                     >
-                                        Remove
+                                        <XCircle size={16} />
                                     </button>
                                 </div>
                             ))}
-                            {templates.length === 0 && <p className="text-gray-500 text-sm">No recurring tasks found.</p>}
+                            {globalTemplates.length === 0 && <p className="text-[#8B7355] italic text-sm">Library is empty.</p>}
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                /* SELECTED COORDINATOR VIEW */
+                <div>
+                    <button 
+                        onClick={() => setSelectedTrainer(null)}
+                        className="text-[#C9A96E] hover:text-white mb-4 font-bold flex items-center gap-1"
+                    >
+                        &larr; Back to Coordinators
+                    </button>
+                    
+                    <div className="flex justify-between items-end mb-6">
+                        <div>
+                            <h2 className="text-2xl font-bold text-white">{selectedTrainer.name || selectedTrainer.username}</h2>
+                            <p className="text-[#8B7355] capitalize">{selectedTrainer.branch?.toLowerCase()} Branch</p>
+                        </div>
+                        
+                        <div className="flex items-center gap-3 bg-[#251A14] border border-[#3A2C1E] p-1.5 rounded-lg">
+                            <button onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))} className="px-3 py-1 bg-[#1A1A1A] hover:bg-[#3A2C1E] rounded text-sm transition-colors">Prev</button>
+                            <span className="font-semibold text-sm text-[#C9A96E] px-2">
+                                {format(currentWeek, 'MMM dd')} - {format(weekEndDate, 'MMM dd')}
+                            </span>
+                            <button onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))} className="px-3 py-1 bg-[#1A1A1A] hover:bg-[#3A2C1E] rounded text-sm transition-colors">Next</button>
+                        </div>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="flex gap-4 border-b border-[#3A2C1E] mb-6">
+                        <button 
+                            className={`pb-2 px-2 font-bold transition-colors ${activeTab === 'approvals' ? 'text-[#C9A96E] border-b-2 border-[#C9A96E]' : 'text-[#8B7355] hover:text-white'}`}
+                            onClick={() => setActiveTab('approvals')}
+                        >
+                            Weekly Approvals
+                        </button>
+                        <button 
+                            className={`pb-2 px-2 font-bold transition-colors ${activeTab === 'assigned' ? 'text-[#C9A96E] border-b-2 border-[#C9A96E]' : 'text-[#8B7355] hover:text-white'}`}
+                            onClick={() => setActiveTab('assigned')}
+                        >
+                            Assigned Recurring Tasks
+                        </button>
+                    </div>
+
+                    {loading ? <p className="text-[#8B7355]">Loading...</p> : activeTab === 'approvals' ? (
+                        <div className="grid gap-4">
+                            {coordinatorTasks.filter(t => t.status === 'PENDING_APPROVAL').length > 0 ? (
+                                coordinatorTasks.filter(t => t.status === 'PENDING_APPROVAL').map(task => (
+                                    <div key={task.id} className="bg-[#251A14] border border-[#C9A96E] p-4 rounded-xl shadow-lg">
+                                        <div className="flex justify-between mb-2">
+                                            <h3 className="text-lg font-bold text-white">{task.title}</h3>
+                                            <span className="bg-yellow-500/20 text-yellow-500 px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">Pending Review</span>
+                                        </div>
+                                        <div className="mt-3 p-3 bg-[#1A1A1A] border border-[#3A2C1E] rounded-lg text-sm">
+                                            <strong className="text-[#8B7355]">Coordinator Notes:</strong> 
+                                            <p className="mt-1 whitespace-pre-wrap">{task.coordinator_notes || 'No notes provided.'}</p>
+                                        </div>
+
+                                        <div className="mt-4 flex flex-col gap-3">
+                                            <textarea 
+                                                placeholder="Remarks (required if rejecting)..."
+                                                className="bg-[#1A1A1A] border border-[#3A2C1E] p-2 rounded text-[#F5E6CC] placeholder-[#8B7355] text-sm w-full focus:border-[#C9A96E] outline-none"
+                                                value={rejectRemarks[task.id] || ''}
+                                                onChange={e => setRejectRemarks({...rejectRemarks, [task.id]: e.target.value})}
+                                                rows={2}
+                                            />
+                                            <div className="flex gap-3">
+                                                <button 
+                                                    onClick={() => handleApprove(task.id)}
+                                                    className="bg-green-600/20 hover:bg-green-600/40 text-green-400 border border-green-600/50 px-4 py-2 rounded font-bold flex-1 transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <Check size={18} /> Approve
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleReject(task.id)}
+                                                    className="bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-600/50 px-4 py-2 rounded font-bold flex-1 transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <X size={18} /> Reject
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-[#8B7355] italic bg-[#251A14] p-4 rounded-xl border border-[#3A2C1E]">No tasks pending approval for this week.</p>
+                            )}
+                            
+                            <h3 className="text-lg font-bold text-[#C9A96E] mt-6 border-b border-[#3A2C1E] pb-2">Other Statuses</h3>
+                            {coordinatorTasks.filter(t => t.status !== 'PENDING_APPROVAL').map(task => (
+                                <div key={task.id} className="bg-[#1A1A1A] border border-[#3A2C1E] p-3 rounded-xl flex justify-between items-center opacity-70">
+                                    <h4 className="font-bold text-white">{task.title}</h4>
+                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wider ${
+                                        task.status === 'APPROVED' ? 'bg-green-900/40 text-green-500' :
+                                        task.status === 'REJECTED' ? 'bg-red-900/40 text-red-500' :
+                                        'bg-gray-800 text-gray-400'
+                                    }`}>
+                                        {task.status}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Assigned Templates */}
+                            <div>
+                                <h3 className="text-lg font-bold text-white mb-4">Currently Assigned</h3>
+                                <div className="grid gap-3">
+                                    {coordinatorTemplates.map(tpl => (
+                                        <div key={tpl.id} className="bg-[#251A14] border border-[#C9A96E]/50 p-4 rounded-xl">
+                                            <h4 className="font-bold text-[#C9A96E]">{tpl.title}</h4>
+                                            <p className="text-sm text-[#8B7355] mt-1">{tpl.description}</p>
+                                            <button 
+                                                onClick={() => handleTakeBackTemplate(tpl.id)}
+                                                className="mt-3 text-red-400 hover:text-red-300 text-xs font-bold flex items-center gap-1"
+                                            >
+                                                <XCircle size={14} /> Take Back
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {coordinatorTemplates.length === 0 && <p className="text-[#8B7355] italic">No recurring tasks assigned.</p>}
+                                </div>
+                            </div>
+                            
+                            {/* Available Library */}
+                            <div>
+                                <h3 className="text-lg font-bold text-white mb-4">Assign from Library</h3>
+                                <div className="grid gap-3">
+                                    {globalTemplates.filter(gt => !coordinatorTemplates.find(ct => ct.title === gt.title)).map(tpl => (
+                                        <div key={tpl.id} className="bg-[#1A1A1A] border border-[#3A2C1E] p-4 rounded-xl group hover:border-[#8B7355] transition-colors">
+                                            <h4 className="font-bold text-white">{tpl.title}</h4>
+                                            <p className="text-sm text-[#8B7355] mt-1 line-clamp-2">{tpl.description}</p>
+                                            <button 
+                                                onClick={() => handleAssignToCoordinator(tpl)}
+                                                className="mt-3 bg-[#3A2C1E] hover:bg-[#C9A96E] hover:text-[#1A1A1A] text-[#C9A96E] px-3 py-1 rounded text-xs font-bold transition-colors flex items-center gap-1"
+                                            >
+                                                <Plus size={14} /> Assign to Coordinator
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {globalTemplates.filter(gt => !coordinatorTemplates.find(ct => ct.title === gt.title)).length === 0 && (
+                                        <p className="text-[#8B7355] italic">All library tasks are already assigned to this coordinator.</p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
-            </div>
+            )}
         </div>
     );
 };
