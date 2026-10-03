@@ -43,7 +43,7 @@ import VoxbayAIPage from "./Pages/VoxbayAIPage.jsx";
 import StaffAnalysisPage from "./Pages/StaffAnalysisPage.jsx";
 import StaffAnalysisReportPage from "./Pages/StaffAnalysisReportPage.jsx";
 import DocumentDetailsPage from "./Pages/DocumentDetailsPage.jsx";
-import GmailCallbackPage from "./pages/GmailCallbackPage.jsx";
+import GmailCallbackPage from "./Pages/GmailCallbackPage.jsx";
 import DocumentExpiryNotifier from "./Components/dashboard/DocumentExpiryNotifier.jsx";
 import FdsDashboard from './Pages/FDS/FdsDashboard.jsx';
 import FdsEnquiryPage from './Pages/FDS/FdsEnquiryPage.jsx';
