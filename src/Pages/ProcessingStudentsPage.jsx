@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { Plus, List, Grid, Trello, X, Download, Columns, Table } from 'lucide-react';
+import { Plus, List, Grid, Trello, X, Download, Columns, Table, Mail } from 'lucide-react';
 import Navbar from '../Components/layouts/Navbar';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
@@ -188,12 +188,41 @@ export default function ProcessingStudentsPage() {
     }
   };
 
+  const [isGmailConnected, setIsGmailConnected] = useState(false);
+
+  const checkGmailStatus = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/accounts/gmail/status/`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setIsGmailConnected(res.data.connected);
+    } catch (err) {
+      console.error('Error checking Gmail status', err);
+    }
+  };
+
+  const handleConnectGmail = async () => {
+    try {
+      const redirectUri = window.location.origin + '/gmail-callback';
+      const res = await axios.get(`${API_BASE_URL}/accounts/gmail/authorize/?redirect_uri=${encodeURIComponent(redirectUri)}`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (res.data.authorization_url) {
+        window.location.href = res.data.authorization_url;
+      }
+    } catch (err) {
+      console.error('Error getting authorization URL', err);
+      alert('Failed to initiate Gmail connection.');
+    }
+  };
+
   useEffect(() => {
     fetchDynamicFields();
     fetchStaff();
     fetchSourceStaffList();
     fetchIntakeOptions();
     fetchCategoryOptions();
+    checkGmailStatus();
   }, []);
 
   useEffect(() => {
@@ -315,6 +344,13 @@ export default function ProcessingStudentsPage() {
               <p className="text-gray-600 text-lg">Manage abroad study processing and track statuses</p>
             </div>
             <div className="flex gap-3">
+              <button 
+                onClick={handleConnectGmail} 
+                className={`border px-4 py-3 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold ${isGmailConnected ? 'bg-green-50 border-green-200 text-green-700' : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-700'}`}
+                title={isGmailConnected ? 'Gmail Connected' : 'Connect Gmail for Drafts'}
+              >
+                <Mail size={18} /> {isGmailConnected ? 'Gmail Connected' : 'Connect Gmail'}
+              </button>
               <button onClick={handleExportExcel} className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold">
                 <Download size={18} /> Export
               </button>
