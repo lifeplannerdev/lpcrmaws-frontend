@@ -11,10 +11,12 @@ import {
 import { format, startOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import { useApi } from '../../context/ApiContext';
 import { Users, BookOpen, UserCheck, Plus, X, Check, XCircle } from 'lucide-react';
 
 const FdsTaskManagementPage = () => {
-    const { authFetch } = useAuth();
+    const { user } = useAuth();
+    const { authFetch } = useApi();
     const [trainers, setTrainers] = useState([]);
     const [globalTemplates, setGlobalTemplates] = useState([]);
     

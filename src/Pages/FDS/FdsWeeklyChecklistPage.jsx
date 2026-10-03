@@ -6,9 +6,11 @@ import {
 import { format, startOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import { useApi } from '../../context/ApiContext';
 
 const FdsWeeklyChecklistPage = () => {
-    const { user, authFetch } = useAuth();
+    const { user } = useAuth();
+    const { authFetch } = useApi();
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(false);
     const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
