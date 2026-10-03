@@ -8,7 +8,7 @@ import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 
 const FdsWeeklyChecklistPage = () => {
-    const { user } = useAuth();
+    const { user, authFetch } = useAuth();
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(false);
     const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -18,12 +18,14 @@ const FdsWeeklyChecklistPage = () => {
         setLoading(true);
         try {
             const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
-            const data = await fetchFdsWeeklyTasks(weekStartStr);
-            setTasks(data);
+            const data = await fetchFdsWeeklyTasks(authFetch, weekStartStr);
+            // Handle DRF pagination object if it exists
+            const tasksArray = data.results || data;
+            setTasks(tasksArray);
             
             // Initialize notes state
             const initialNotes = {};
-            data.forEach(t => {
+            tasksArray.forEach(t => {
                 initialNotes[t.id] = t.coordinator_notes || '';
             });
             setNotesState(initialNotes);
@@ -44,7 +46,7 @@ const FdsWeeklyChecklistPage = () => {
 
     const handleSubmit = async (taskId) => {
         try {
-            await submitFdsWeeklyTask(taskId, notesState[taskId]);
+            await submitFdsWeeklyTask(authFetch, taskId, notesState[taskId]);
             toast.success("Task submitted for approval");
             loadTasks();
         } catch (e) {
@@ -54,6 +56,10 @@ const FdsWeeklyChecklistPage = () => {
 
     const approvedCount = tasks.filter(t => t.status === 'APPROVED').length;
     const progress = tasks.length ? Math.round((approvedCount / tasks.length) * 100) : 0;
+    
+    // Week end date is 6 days after start date
+    const weekEndDate = new Date(currentWeek);
+    weekEndDate.setDate(currentWeek.getDate() + 6);
 
     return (
         <div className="p-4 fds-theme">
@@ -61,7 +67,9 @@ const FdsWeeklyChecklistPage = () => {
                 <h1 className="text-2xl font-bold">My Weekly Checklist</h1>
                 <div className="flex items-center gap-4">
                     <button onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))} className="px-3 py-1 bg-gray-200 rounded">Prev Week</button>
-                    <span className="font-semibold">{format(currentWeek, 'MMM dd, yyyy')}</span>
+                    <span className="font-semibold">
+                        {format(currentWeek, 'MMM dd')} - {format(weekEndDate, 'MMM dd, yyyy')}
+                    </span>
                     <button onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))} className="px-3 py-1 bg-gray-200 rounded">Next Week</button>
                 </div>
             </div>

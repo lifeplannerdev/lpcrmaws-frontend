@@ -150,18 +150,18 @@ export async function downloadExcelFromResponse(response, filename) {
 
 
 // Task Templates
-export const fetchFdsTaskTemplates = () => authFetch('/api/fds/task-templates/');
-export const createFdsTaskTemplate = (data) => authFetch('/api/fds/task-templates/', { method: 'POST', body: JSON.stringify(data) });
-export const updateFdsTaskTemplate = (id, data) => authFetch(`/api/fds/task-templates/${id}/`, { method: 'PUT', body: JSON.stringify(data) });
-export const deleteFdsTaskTemplate = (id) => authFetch(`/api/fds/task-templates/${id}/`, { method: 'DELETE' });
+export const fetchFdsTaskTemplates = (authFetch) => authFetch(`${FDS_BASE}/task-templates/`);
+export const createFdsTaskTemplate = (authFetch, data) => authFetch(`${FDS_BASE}/task-templates/`, { method: 'POST', body: JSON.stringify(data), headers: {'Content-Type': 'application/json'} });
+export const updateFdsTaskTemplate = (authFetch, id, data) => authFetch(`${FDS_BASE}/task-templates/${id}/`, { method: 'PUT', body: JSON.stringify(data), headers: {'Content-Type': 'application/json'} });
+export const deleteFdsTaskTemplate = (authFetch, id) => authFetch(`${FDS_BASE}/task-templates/${id}/`, { method: 'DELETE' });
 
 // Weekly Tasks
-export const fetchFdsWeeklyTasks = (weekStart, userId) => {
-    let url = '/api/fds/weekly-tasks/?';
+export const fetchFdsWeeklyTasks = (authFetch, weekStart, userId) => {
+    let url = `${FDS_BASE}/weekly-tasks/?`;
     if (weekStart) url += `week_start_date=${weekStart}&`;
     if (userId) url += `user_id=${userId}`;
     return authFetch(url);
 };
-export const submitFdsWeeklyTask = (id, notes) => authFetch(`/api/fds/weekly-tasks/${id}/submit/`, { method: 'POST', body: JSON.stringify({ coordinator_notes: notes }) });
-export const approveFdsWeeklyTask = (id) => authFetch(`/api/fds/weekly-tasks/${id}/approve/`, { method: 'POST' });
-export const rejectFdsWeeklyTask = (id, remarks) => authFetch(`/api/fds/weekly-tasks/${id}/reject/`, { method: 'POST', body: JSON.stringify({ admin_remarks: remarks }) });
+export const submitFdsWeeklyTask = (authFetch, id, notes) => authFetch(`${FDS_BASE}/weekly-tasks/${id}/submit/`, { method: 'POST', body: JSON.stringify({ coordinator_notes: notes }), headers: {'Content-Type': 'application/json'} });
+export const approveFdsWeeklyTask = (authFetch, id) => authFetch(`${FDS_BASE}/weekly-tasks/${id}/approve/`, { method: 'POST', headers: {'Content-Type': 'application/json'} });
+export const rejectFdsWeeklyTask = (authFetch, id, remarks) => authFetch(`${FDS_BASE}/weekly-tasks/${id}/reject/`, { method: 'POST', body: JSON.stringify({ admin_remarks: remarks }), headers: {'Content-Type': 'application/json'} });
