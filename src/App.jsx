@@ -165,7 +165,7 @@ export default function App() {
         {/* ── FDS: FILMAATIC Dance Studio ── */}
         <Route path="/fds" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view','fds:management']}><FdsDashboard /></PermissionRoute>} />
         <Route path="/fds/my-tasks" element={<PermissionRoute permissions={['fds:admin_own','fds:admin','fds:management']}><FdsWeeklyChecklistPage /></PermissionRoute>} />
-        <Route path="/fds/manage-tasks" element={<PermissionRoute permissions={['fds:admin','fds:management']}><FdsTaskManagementPage /></PermissionRoute>} />
+        <Route path="/fds/manage-tasks" element={<PermissionRoute permissions={['fds:management']}><FdsTaskManagementPage /></PermissionRoute>} />
         <Route path="/fds/enquiries" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds:management']}><FdsEnquiryPage /></PermissionRoute>} />
         <Route path="/fds/trials" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds:management']}><FdsTrialPage /></PermissionRoute>} />
         <Route path="/fds/students" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds:management']}><FdsStudentRegistryPage /></PermissionRoute>} />
@@ -174,7 +174,7 @@ export default function App() {
         <Route path="/fds/fees" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view','fds:management']}><FdsFeesPage /></PermissionRoute>} />
         <Route path="/fds/fee-policies" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view','fds:management']}><FdsFeePoliciesPage /></PermissionRoute>} />
         <Route path="/fds/weddings" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds:management']}><FdsWeddingGroupsPage /></PermissionRoute>} />
-        <Route path="/fds/analysis" element={<PermissionRoute permissions={['fds:management','fds:admin']}><FdsAnalysisPage /></PermissionRoute>} />
+        <Route path="/fds/analysis" element={<PermissionRoute permissions={['fds:management']}><FdsAnalysisPage /></PermissionRoute>} />
 
         {/* ── FLAG: German Language Training ── */}
         <Route path="/flag" element={<PermissionRoute permissions={['flag:admin','flag:trainer','flag:view','flag:fees']}><FlagDashboard /></PermissionRoute>} />
