@@ -37,10 +37,14 @@ const FdsTaskManagementPage = () => {
     const loadInitialData = async () => {
         setLoading(true);
         try {
-            const trainersData = await fetchFdsTrainers(authFetch);
+            const trainersRes = await fetchFdsTrainers(authFetch);
+            if (!trainersRes.ok) throw new Error();
+            const trainersData = await trainersRes.json();
             setTrainers(trainersData);
             
-            const allTemplates = await fetchFdsTaskTemplates(authFetch);
+            const allTemplatesRes = await fetchFdsTaskTemplates(authFetch);
+            if (!allTemplatesRes.ok) throw new Error();
+            const allTemplates = await allTemplatesRes.json();
             const templatesArray = allTemplates.results || allTemplates;
             setGlobalTemplates(templatesArray.filter(t => !t.assignee));
         } catch (error) {
@@ -59,8 +63,13 @@ const FdsTaskManagementPage = () => {
         setLoading(true);
         try {
             const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
-            const tasksData = await fetchFdsWeeklyTasks(authFetch, weekStartStr, trainer.id);
-            const allTemplates = await fetchFdsTaskTemplates(authFetch);
+            const tasksRes = await fetchFdsWeeklyTasks(authFetch, weekStartStr, trainer.id);
+            if (!tasksRes.ok) throw new Error();
+            const tasksData = await tasksRes.json();
+            
+            const allTemplatesRes = await fetchFdsTaskTemplates(authFetch);
+            if (!allTemplatesRes.ok) throw new Error();
+            const allTemplates = await allTemplatesRes.json();
             
             setCoordinatorTasks(tasksData.results || tasksData);
             const templatesArray = allTemplates.results || allTemplates;
@@ -82,11 +91,12 @@ const FdsTaskManagementPage = () => {
         e.preventDefault();
         if (!newTemplateTitle) return;
         try {
-            await createFdsTaskTemplate(authFetch, {
+            const res = await createFdsTaskTemplate(authFetch, {
                 title: newTemplateTitle,
                 description: newTemplateDesc,
                 assignee: null // Global
             });
+            if (!res.ok) throw new Error();
             toast.success("Global task added to library!");
             setNewTemplateTitle('');
             setNewTemplateDesc('');
@@ -99,11 +109,12 @@ const FdsTaskManagementPage = () => {
 
     const handleAssignToCoordinator = async (template) => {
         try {
-            await createFdsTaskTemplate(authFetch, {
+            const res = await createFdsTaskTemplate(authFetch, {
                 title: template.title,
                 description: template.description,
                 assignee: selectedTrainer.id
             });
+            if (!res.ok) throw new Error();
             toast.success("Task assigned to coordinator!");
             loadCoordinatorData(selectedTrainer);
         } catch (e) {
@@ -114,7 +125,8 @@ const FdsTaskManagementPage = () => {
     const handleTakeBackTemplate = async (id) => {
         if (!window.confirm("Remove this recurring task from this coordinator?")) return;
         try {
-            await deleteFdsTaskTemplate(authFetch, id);
+            const res = await deleteFdsTaskTemplate(authFetch, id);
+            if (!res.ok) throw new Error();
             toast.success("Task taken back");
             loadCoordinatorData(selectedTrainer);
         } catch (e) {
@@ -125,7 +137,8 @@ const FdsTaskManagementPage = () => {
     const handleDeleteGlobalTemplate = async (id) => {
         if (!window.confirm("Delete this task from the global library?")) return;
         try {
-            await deleteFdsTaskTemplate(authFetch, id);
+            const res = await deleteFdsTaskTemplate(authFetch, id);
+            if (!res.ok) throw new Error();
             toast.success("Global task deleted");
             loadInitialData();
         } catch (e) {
@@ -135,7 +148,8 @@ const FdsTaskManagementPage = () => {
 
     const handleApprove = async (taskId) => {
         try {
-            await approveFdsWeeklyTask(authFetch, taskId);
+            const res = await approveFdsWeeklyTask(authFetch, taskId);
+            if (!res.ok) throw new Error();
             toast.success("Task approved");
             loadCoordinatorData(selectedTrainer);
         } catch (e) {
@@ -149,7 +163,8 @@ const FdsTaskManagementPage = () => {
             return;
         }
         try {
-            await rejectFdsWeeklyTask(authFetch, taskId, rejectRemarks[taskId]);
+            const res = await rejectFdsWeeklyTask(authFetch, taskId, rejectRemarks[taskId]);
+            if (!res.ok) throw new Error();
             toast.success("Task rejected");
             loadCoordinatorData(selectedTrainer);
         } catch (e) {

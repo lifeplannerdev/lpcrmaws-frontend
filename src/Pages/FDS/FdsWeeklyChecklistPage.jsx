@@ -20,7 +20,10 @@ const FdsWeeklyChecklistPage = () => {
         setLoading(true);
         try {
             const weekStartStr = format(currentWeek, 'yyyy-MM-dd');
-            const data = await fetchFdsWeeklyTasks(authFetch, weekStartStr);
+            const res = await fetchFdsWeeklyTasks(authFetch, weekStartStr);
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            
             // Handle DRF pagination object if it exists
             const tasksArray = data.results || data;
             setTasks(tasksArray);
@@ -48,7 +51,8 @@ const FdsWeeklyChecklistPage = () => {
 
     const handleSubmit = async (taskId) => {
         try {
-            await submitFdsWeeklyTask(authFetch, taskId, notesState[taskId]);
+            const res = await submitFdsWeeklyTask(authFetch, taskId, notesState[taskId]);
+            if (!res.ok) throw new Error();
             toast.success("Task submitted for approval");
             loadTasks();
         } catch (e) {
