@@ -54,6 +54,8 @@ import FdsFeesPage from './Pages/FDS/FdsFeesPage.jsx';
 import FdsWeddingGroupsPage from './Pages/FDS/FdsWeddingGroupsPage.jsx';
 import FdsFeePoliciesPage from './Pages/FDS/FdsFeePoliciesPage.jsx';
 import FdsAnalysisPage from './Pages/FDS/FdsAnalysisPage.jsx';
+import FdsWeeklyChecklistPage from './Pages/FDS/FdsWeeklyChecklistPage.jsx';
+import FdsTaskManagementPage from './Pages/FDS/FdsTaskManagementPage.jsx';
 import LiveCallModal from './Components/voxbay/LiveCallModal.jsx';
 
 // ── FLAG: German Language Training ──
@@ -162,6 +164,8 @@ export default function App() {
 
         {/* ── FDS: FILMAATIC Dance Studio ── */}
         <Route path="/fds" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view','fds:management']}><FdsDashboard /></PermissionRoute>} />
+        <Route path="/fds/my-tasks" element={<PermissionRoute permissions={['fds:admin_own','fds:admin','fds:management']}><FdsWeeklyChecklistPage /></PermissionRoute>} />
+        <Route path="/fds/manage-tasks" element={<PermissionRoute permissions={['fds:admin','fds:management']}><FdsTaskManagementPage /></PermissionRoute>} />
         <Route path="/fds/enquiries" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds:management']}><FdsEnquiryPage /></PermissionRoute>} />
         <Route path="/fds/trials" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds:management']}><FdsTrialPage /></PermissionRoute>} />
         <Route path="/fds/students" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds:management']}><FdsStudentRegistryPage /></PermissionRoute>} />
