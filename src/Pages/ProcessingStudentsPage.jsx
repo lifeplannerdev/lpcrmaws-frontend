@@ -192,7 +192,7 @@ export default function ProcessingStudentsPage() {
 
   const checkGmailStatus = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/accounts/gmail/status/`, {
+      const res = await axios.get(`${API_BASE_URL}/gmail/status/`, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       setIsGmailConnected(res.data.connected);
@@ -204,7 +204,7 @@ export default function ProcessingStudentsPage() {
   const handleConnectGmail = async () => {
     try {
       const redirectUri = window.location.origin + '/gmail-callback';
-      const res = await axios.get(`${API_BASE_URL}/accounts/gmail/authorize/?redirect_uri=${encodeURIComponent(redirectUri)}`, {
+      const res = await axios.get(`${API_BASE_URL}/gmail/authorize/?redirect_uri=${encodeURIComponent(redirectUri)}`, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       if (res.data.authorization_url) {

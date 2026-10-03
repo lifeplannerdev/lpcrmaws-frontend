@@ -35,7 +35,7 @@ export default function GmailCallbackPage() {
     // Post the code back to the backend
     const redirectUri = window.location.origin + '/gmail-callback';
     
-    axios.post(`${API_BASE_URL}/accounts/gmail/callback/`, {
+    axios.post(`${API_BASE_URL}/gmail/callback/`, {
       code,
       redirect_uri: redirectUri
     }, {
