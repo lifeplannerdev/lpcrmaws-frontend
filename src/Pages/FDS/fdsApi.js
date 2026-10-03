@@ -147,3 +147,21 @@ export async function downloadExcelFromResponse(response, filename) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+
+// Task Templates
+export const fetchFdsTaskTemplates = () => authFetch('/api/fds/task-templates/');
+export const createFdsTaskTemplate = (data) => authFetch('/api/fds/task-templates/', { method: 'POST', body: JSON.stringify(data) });
+export const updateFdsTaskTemplate = (id, data) => authFetch(`/api/fds/task-templates/${id}/`, { method: 'PUT', body: JSON.stringify(data) });
+export const deleteFdsTaskTemplate = (id) => authFetch(`/api/fds/task-templates/${id}/`, { method: 'DELETE' });
+
+// Weekly Tasks
+export const fetchFdsWeeklyTasks = (weekStart, userId) => {
+    let url = '/api/fds/weekly-tasks/?';
+    if (weekStart) url += `week_start_date=${weekStart}&`;
+    if (userId) url += `user_id=${userId}`;
+    return authFetch(url);
+};
+export const submitFdsWeeklyTask = (id, notes) => authFetch(`/api/fds/weekly-tasks/${id}/submit/`, { method: 'POST', body: JSON.stringify({ coordinator_notes: notes }) });
+export const approveFdsWeeklyTask = (id) => authFetch(`/api/fds/weekly-tasks/${id}/approve/`, { method: 'POST' });
+export const rejectFdsWeeklyTask = (id, remarks) => authFetch(`/api/fds/weekly-tasks/${id}/reject/`, { method: 'POST', body: JSON.stringify({ admin_remarks: remarks }) });
