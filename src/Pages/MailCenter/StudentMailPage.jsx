@@ -31,11 +31,17 @@ export const StudentMailPage = () => {
     });
 
     const [isSyncing, setIsSyncing] = useState(false);
-    // const [studentData, setStudentData] = useState(null); // Unused
+    const [studentEmail, setStudentEmail] = useState('');
 
     const fetchData = async () => {
         try {
-            // In a real app we'd load the student data as well
+            try {
+                const studentRes = await axios.get(`${API_BASE_URL}/processing-students/${id}/`, { headers: { Authorization: `Bearer ${accessToken}` } });
+                setStudentEmail(studentRes.data.email || '');
+            } catch (err) {
+                console.error("Failed to load student", err);
+            }
+            
             const msgRes = await axios.get(`${API_BASE_URL}/mail/messages/?student_id=${id}`, { headers: { Authorization: `Bearer ${accessToken}` } });
             setMessages(msgRes.data.results || msgRes.data);
             
@@ -76,7 +82,7 @@ export const StudentMailPage = () => {
         setIsDraft(true);
         setDraft({
             account: accounts.length > 0 ? accounts[0].id : '',
-            to: [''], // Assume we prepopulate with student email if we have it
+            to: studentEmail ? [studentEmail] : [''],
             subject: '',
             body_html: '',
             signature_html: ''
@@ -117,6 +123,20 @@ export const StudentMailPage = () => {
         } catch (error) {
             toast.error("Failed to send email");
         }
+    };
+
+    const handleDiscard = async () => {
+        if (selectedMessage && selectedMessage.id) {
+            try {
+                await axios.delete(`${API_BASE_URL}/mail/messages/${selectedMessage.id}/`, { headers: { Authorization: `Bearer ${accessToken}` } });
+                toast.success("Draft discarded");
+            } catch (err) {
+                toast.error("Failed to discard draft");
+            }
+        }
+        setIsDraft(false);
+        setSelectedMessage(null);
+        fetchData();
     };
 
     const applyTemplate = (tpl) => {
@@ -242,7 +262,7 @@ export const StudentMailPage = () => {
                                     <div dangerouslySetInnerHTML={{ __html: draft.signature_html }} className="text-sm text-gray-600 bg-gray-50 p-3 rounded min-h-[50px] border border-dashed" />
                                 </div>
                                 <div className="flex justify-between items-center mt-4">
-                                    <Button color="error" startIcon={<Trash className="w-4 h-4" />}>Discard</Button>
+                                    <Button color="error" onClick={handleDiscard} startIcon={<Trash className="w-4 h-4" />}>Discard</Button>
                                     <div className="flex gap-2">
                                         <Button variant="outlined" startIcon={<Save className="w-4 h-4" />} onClick={handleSaveDraft}>Save Draft</Button>
                                         <Button variant="contained" startIcon={<Send className="w-4 h-4" />} onClick={handleSendDraft}>Send</Button>
