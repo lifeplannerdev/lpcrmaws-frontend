@@ -611,16 +611,17 @@ function KanbanView({ students, dynamicFields, handleUpdateField, onStudentClick
                 </div>
                 <div className="mt-1 flex justify-between items-center border-t pt-2">
                   <div className="text-xs text-gray-400">{student.mobile_number}</div>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); navigate(`/processing-students/${student.id}/mail`); }}
-                    className="p-1.5 rounded-full hover:bg-blue-50 text-blue-500 transition-colors"
-                    title="Mail Panel"
-                  >
-                    <Mail size={16} />
-                  </button>
-                </div>
-                  <div className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">
-                    {student.assigned_to_name ? student.assigned_to_name.split(' ')[0] : 'Unassigned'}
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">
+                      {student.assigned_to_name ? student.assigned_to_name.split(' ')[0] : 'Unassigned'}
+                    </div>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); navigate(`/processing-students/${student.id}/mail`); }}
+                      className="p-1.5 rounded-full hover:bg-blue-50 text-blue-500 transition-colors"
+                      title="Mail Panel"
+                    >
+                      <Mail size={16} />
+                    </button>
                   </div>
                 </div>
               </div>
