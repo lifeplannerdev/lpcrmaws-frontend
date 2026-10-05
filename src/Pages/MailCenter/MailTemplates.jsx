@@ -27,6 +27,19 @@ export const MailTemplates = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const handleDelete = async () => {
+        if (!currentTemplate || !currentTemplate.id) return;
+        if (!window.confirm('Are you sure you want to delete this template?')) return;
+        try {
+            await axios.delete(`${API_BASE_URL}/mail/templates/${currentTemplate.id}/`, { headers: { Authorization: `Bearer ${accessToken}` } });
+            toast.success("Template deleted");
+            setOpenModal(false);
+            fetchTemplates();
+        } catch (error) {
+            toast.error("Failed to delete template");
+        }
+    };
+
     const handleSave = async () => {
         try {
             if (currentTemplate.id) {
@@ -96,9 +109,16 @@ export const MailTemplates = () => {
                             control={<Switch checked={currentTemplate?.is_active ?? true} onChange={e => setCurrentTemplate({...currentTemplate, is_active: e.target.checked})} />}
                             label="Active"
                         />
-                        <div className="flex justify-end gap-2 mt-4">
-                            <Button onClick={() => setOpenModal(false)}>Cancel</Button>
-                            <Button variant="contained" onClick={handleSave}>Save</Button>
+                        <div className="flex justify-between mt-4">
+                            <div>
+                                {currentTemplate?.id && (
+                                    <Button color="error" onClick={handleDelete}>Delete</Button>
+                                )}
+                            </div>
+                            <div className="flex gap-2">
+                                <Button onClick={() => setOpenModal(false)}>Cancel</Button>
+                                <Button variant="contained" onClick={handleSave}>Save</Button>
+                            </div>
                         </div>
                     </div>
                 </div>

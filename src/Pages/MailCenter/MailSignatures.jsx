@@ -57,6 +57,19 @@ export const MailSignatures = () => {
         setIsImporting(false);
     };
 
+    const handleDelete = async () => {
+        if (!currentSignature || !currentSignature.id) return;
+        if (!window.confirm('Are you sure you want to delete this signature?')) return;
+        try {
+            await axios.delete(`${API_BASE_URL}/mail/signatures/${currentSignature.id}/`, { headers: { Authorization: `Bearer ${accessToken}` } });
+            toast.success("Signature deleted");
+            setOpenModal(false);
+            fetchSignatures();
+        } catch (error) {
+            toast.error("Failed to delete signature");
+        }
+    };
+
     const handleSave = async () => {
         try {
             if (currentSignature.id) {
@@ -125,9 +138,16 @@ export const MailSignatures = () => {
                             control={<Switch checked={currentSignature?.is_shared || false} onChange={e => setCurrentSignature({...currentSignature, is_shared: e.target.checked})} />}
                             label="Shared with all users"
                         />
-                        <div className="flex justify-end gap-2 mt-4">
-                            <Button onClick={() => setOpenModal(false)}>Cancel</Button>
-                            <Button variant="contained" onClick={handleSave}>Save</Button>
+                        <div className="flex justify-between mt-4">
+                            <div>
+                                {currentSignature?.id && (
+                                    <Button color="error" onClick={handleDelete}>Delete</Button>
+                                )}
+                            </div>
+                            <div className="flex gap-2">
+                                <Button onClick={() => setOpenModal(false)}>Cancel</Button>
+                                <Button variant="contained" onClick={handleSave}>Save</Button>
+                            </div>
                         </div>
                     </div>
                 </div>

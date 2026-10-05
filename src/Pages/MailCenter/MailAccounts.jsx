@@ -24,6 +24,17 @@ export const MailAccounts = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const handleDeleteAccount = async (id) => {
+        if (!window.confirm('Are you sure you want to disconnect this account?')) return;
+        try {
+            await axios.delete(`${API_BASE_URL}/mail/accounts/${id}/`, { headers: { Authorization: `Bearer ${accessToken}` } });
+            toast.success('Account disconnected');
+            fetchAccounts();
+        } catch (error) {
+            toast.error('Failed to disconnect account');
+        }
+    };
+
     const handleConnectGmail = async () => {
         try {
             const res = await axios.get(`${API_BASE_URL}/mail/authorize/`, { headers: { Authorization: `Bearer ${accessToken}` } });
@@ -54,12 +65,15 @@ export const MailAccounts = () => {
                                 Status: {acc.status.toUpperCase()}
                             </p>
                         </div>
-                        <div>
+                        <div className="flex gap-2">
                             {acc.status !== 'connected' && (
                                 <Button variant="outlined" color="warning" onClick={handleConnectGmail}>
                                     Reconnect
                                 </Button>
                             )}
+                            <Button variant="outlined" color="error" onClick={() => handleDeleteAccount(acc.id)}>
+                                Disconnect
+                            </Button>
                         </div>
                     </div>
                 ))}

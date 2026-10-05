@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 import { Table, TableBody, TableCell, TableHead, TableRow, TablePagination, Button, Chip } from '@mui/material';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -16,6 +17,17 @@ export const MailLogList = ({ stateFilter, directionFilter }) => {
             fetchMessages();
         }
     }, [accessToken, stateFilter, directionFilter]);
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('Are you sure you want to permanently delete this email log? If this is a Draft, it will also be deleted from Gmail.')) return;
+        try {
+            await axios.delete(`${API_BASE_URL}/mail/messages/${id}/`, { headers: { Authorization: `Bearer ${accessToken}` } });
+            toast.success("Message deleted");
+            fetchMessages();
+        } catch (error) {
+            toast.error("Failed to delete message");
+        }
+    };
 
     const fetchMessages = async () => {
         try {
@@ -59,9 +71,14 @@ export const MailLogList = ({ stateFilter, directionFilter }) => {
                                 {msg.created_at ? new Date(msg.created_at).toLocaleString() : ''}
                             </TableCell>
                             <TableCell>
-                                <Button size='small' variant='outlined' onClick={() => navigate(`/processing-students/${msg.student}/mail`)}>
-                                    View Thread
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button size='small' variant='outlined' onClick={() => navigate(`/processing-students/${msg.student}/mail`)}>
+                                        View Thread
+                                    </Button>
+                                    <Button size='small' variant='outlined' color='error' onClick={() => handleDelete(msg.id)}>
+                                        Delete
+                                    </Button>
+                                </div>
                             </TableCell>
                         </TableRow>
                     ))}
