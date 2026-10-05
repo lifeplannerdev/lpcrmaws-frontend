@@ -6,7 +6,7 @@ import { Button, Select, MenuItem, TextField } from '@mui/material';
 import { ArrowLeft, RefreshCw, Send, Save, Trash } from 'lucide-react';
 import MailEditor from '../../Components/Mail/MailEditor';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const StudentMailPage = () => {
     const { id } = useParams();
@@ -34,16 +34,16 @@ export const StudentMailPage = () => {
     const fetchData = async () => {
         try {
             // In a real app we'd load the student data as well
-            const msgRes = await axios.get(`${API_BASE_URL}/api/mail/messages/?student_id=${id}`, { withCredentials: true });
+            const msgRes = await axios.get(`${API_BASE_URL}/mail/messages/?student_id=${id}`, { withCredentials: true });
             setMessages(msgRes.data.results || msgRes.data);
             
-            const accRes = await axios.get(`${API_BASE_URL}/api/mail/accounts/`, { withCredentials: true });
+            const accRes = await axios.get(`${API_BASE_URL}/mail/accounts/`, { withCredentials: true });
             setAccounts(accRes.data.results || accRes.data);
             
-            const tplRes = await axios.get(`${API_BASE_URL}/api/mail/templates/`, { withCredentials: true });
+            const tplRes = await axios.get(`${API_BASE_URL}/mail/templates/`, { withCredentials: true });
             setTemplates(tplRes.data.results || tplRes.data);
             
-            const sigRes = await axios.get(`${API_BASE_URL}/api/mail/signatures/`, { withCredentials: true });
+            const sigRes = await axios.get(`${API_BASE_URL}/mail/signatures/`, { withCredentials: true });
             setSignatures(sigRes.data.results || sigRes.data);
 
         } catch (error) {
@@ -59,7 +59,7 @@ export const StudentMailPage = () => {
     const handleSync = async () => {
         setIsSyncing(true);
         try {
-            await axios.post(`${API_BASE_URL}/api/mail/messages/sync/`, { student_id: id }, { withCredentials: true });
+            await axios.post(`${API_BASE_URL}/mail/messages/sync/`, { student_id: id }, { withCredentials: true });
             toast.success("Inbox synced");
             fetchData();
         } catch (error) {
@@ -85,10 +85,10 @@ export const StudentMailPage = () => {
         try {
             const payload = { ...draft, student: id };
             if (selectedMessage && selectedMessage.id) {
-                await axios.put(`${API_BASE_URL}/api/mail/messages/${selectedMessage.id}/`, payload, { withCredentials: true });
+                await axios.put(`${API_BASE_URL}/mail/messages/${selectedMessage.id}/`, payload, { withCredentials: true });
                 toast.success("Draft updated");
             } else {
-                await axios.post(`${API_BASE_URL}/api/mail/messages/`, payload, { withCredentials: true });
+                await axios.post(`${API_BASE_URL}/mail/messages/`, payload, { withCredentials: true });
                 toast.success("Draft saved");
             }
             fetchData();
@@ -102,13 +102,13 @@ export const StudentMailPage = () => {
             let draftId = selectedMessage?.id;
             const payload = { ...draft, student: id };
             if (draftId) {
-                await axios.put(`${API_BASE_URL}/api/mail/messages/${draftId}/`, payload, { withCredentials: true });
+                await axios.put(`${API_BASE_URL}/mail/messages/${draftId}/`, payload, { withCredentials: true });
             } else {
-                const res = await axios.post(`${API_BASE_URL}/api/mail/messages/`, payload, { withCredentials: true });
+                const res = await axios.post(`${API_BASE_URL}/mail/messages/`, payload, { withCredentials: true });
                 draftId = res.data.id;
             }
             
-            await axios.post(`${API_BASE_URL}/api/mail/messages/${draftId}/send/`, {}, { withCredentials: true });
+            await axios.post(`${API_BASE_URL}/mail/messages/${draftId}/send/`, {}, { withCredentials: true });
             toast.success("Email sent!");
             setIsDraft(false);
             fetchData();

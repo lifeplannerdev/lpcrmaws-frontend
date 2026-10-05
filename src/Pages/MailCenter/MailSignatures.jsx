@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { Button, Dialog, TextField, FormControlLabel, Switch } from '@mui/material';
 import MailEditor from '../../Components/Mail/MailEditor';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const MailSignatures = () => {
     const [signatures, setSignatures] = useState([]);
@@ -13,7 +13,7 @@ export const MailSignatures = () => {
 
     const fetchSignatures = async () => {
         try {
-            const res = await axios.get(`${API_BASE_URL}/api/mail/signatures/`, { withCredentials: true });
+            const res = await axios.get(`${API_BASE_URL}/mail/signatures/`, { withCredentials: true });
             setSignatures(res.data.results || res.data);
         } catch (error) {
             toast.error("Failed to load signatures");
@@ -28,10 +28,10 @@ export const MailSignatures = () => {
     const handleSave = async () => {
         try {
             if (currentSignature.id) {
-                await axios.put(`${API_BASE_URL}/api/mail/signatures/${currentSignature.id}/`, currentSignature, { withCredentials: true });
+                await axios.put(`${API_BASE_URL}/mail/signatures/${currentSignature.id}/`, currentSignature, { withCredentials: true });
                 toast.success("Signature updated");
             } else {
-                await axios.post(`${API_BASE_URL}/api/mail/signatures/`, currentSignature, { withCredentials: true });
+                await axios.post(`${API_BASE_URL}/mail/signatures/`, currentSignature, { withCredentials: true });
                 toast.success("Signature created");
             }
             setOpenModal(false);

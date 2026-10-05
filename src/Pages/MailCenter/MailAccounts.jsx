@@ -3,14 +3,14 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { Button } from '@mui/material';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const MailAccounts = () => {
     const [accounts, setAccounts] = useState([]);
 
     const fetchAccounts = async () => {
         try {
-            const res = await axios.get(`${API_BASE_URL}/api/mail/accounts/`, { withCredentials: true });
+            const res = await axios.get(`${API_BASE_URL}/mail/accounts/`, { withCredentials: true });
             setAccounts(res.data.results || res.data);
         } catch (error) {
             toast.error("Failed to load accounts");
@@ -24,7 +24,7 @@ export const MailAccounts = () => {
 
     const handleConnectGmail = async () => {
         try {
-            const res = await axios.get(`${API_BASE_URL}/api/mail/authorize/`, { withCredentials: true });
+            const res = await axios.get(`${API_BASE_URL}/mail/authorize/`, { withCredentials: true });
             if (res.data.authorization_url) {
                 window.location.href = res.data.authorization_url;
             }
