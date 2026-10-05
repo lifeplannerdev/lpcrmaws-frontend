@@ -4,6 +4,7 @@ import { Tabs, Tab, Box } from '@mui/material';
 import { MailTemplates } from './MailTemplates';
 import { MailSignatures } from './MailSignatures';
 import { MailAccounts } from './MailAccounts';
+import { MailLogList } from './MailLogList';
 
 export const MailControlCenter = () => {
     const { accessToken } = useAuth();
@@ -18,12 +19,18 @@ export const MailControlCenter = () => {
                     <Tab label="Accounts & Settings" />
                     <Tab label="Templates" />
                     <Tab label="Signatures" />
+                    <Tab label="Drafts" />
+                    <Tab label="Sent Mail" />
+                    <Tab label="Inbox" />
                 </Tabs>
             </Box>
 
             {tab === 0 && <MailAccounts />}
             {tab === 1 && <MailTemplates />}
             {tab === 2 && <MailSignatures />}
+            {tab === 3 && <MailLogList stateFilter="DRAFT" />}
+            {tab === 4 && <MailLogList stateFilter="SENT" directionFilter="OUT" />}
+            {tab === 5 && <MailLogList stateFilter="RECEIVED" directionFilter="IN" />}
         </div>
     );
 };

@@ -1,13 +1,27 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import Color from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
+import { useAuth } from '../../context/AuthContext';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 import { FormatBold, FormatItalic, FormatListBulleted, FormatListNumbered, Link as LinkIcon, Image as ImageIcon, FormatColorText } from '@mui/icons-material';
 
 const MenuBar = ({ editor }) => {
+  const { accessToken } = useAuth();
+  const [variables, setVariables] = useState([]);
+
+  useEffect(() => {
+    if (accessToken) {
+      axios.get(`${API_BASE_URL}/mail/template-variables/`, { headers: { Authorization: `Bearer ${accessToken}` } })
+        .then(res => setVariables(res.data))
+        .catch(err => console.error(err));
+    }
+  }, [accessToken]);
+
   if (!editor) {
     return null;
   }
@@ -93,6 +107,25 @@ const MenuBar = ({ editor }) => {
       >
         <ImageIcon fontSize="small" />
       </button>
+
+      <div className="w-px bg-gray-300 mx-1"></div>
+      
+      <select 
+        onChange={(e) => {
+            if (e.target.value) {
+                editor.chain().focus().insertContent(`{{${e.target.value}}}`).run();
+                e.target.value = '';
+            }
+        }}
+        className="p-1 border border-gray-300 rounded text-sm text-gray-700 bg-white cursor-pointer"
+        title="Insert Template Variable"
+        defaultValue=""
+      >
+        <option value="" disabled>@ Insert Variable...</option>
+        {variables.map(v => (
+            <option key={v.id} value={v.id}>{v.label} ({`{{${v.id}}}`})</option>
+        ))}
+      </select>
 
       <div className="w-px bg-gray-300 mx-1"></div>
 
