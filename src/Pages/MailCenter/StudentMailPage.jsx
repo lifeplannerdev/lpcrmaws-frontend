@@ -4,7 +4,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { Button, Select, MenuItem, TextField } from '@mui/material';
 import { ArrowLeft, RefreshCw, Send, Save, Trash } from 'lucide-react';
-import MailEditor from '../../components/Mail/MailEditor';
+import MailEditor from '../../Components/Mail/MailEditor';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
