@@ -200,12 +200,13 @@ export const StudentMailPage = () => {
                             <div className="flex justify-between items-start mb-1">
                                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                                     msg.state === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                                    msg.direction === 'in' ? 'bg-indigo-100 text-indigo-800' :
                                     msg.state === 'sent' ? 'bg-green-100 text-green-800' :
                                     'bg-gray-100 text-gray-800'
                                 }`}>
-                                    {msg.state.toUpperCase()}
+                                    {msg.state === 'draft' ? 'DRAFT' : msg.direction === 'in' ? 'INBOX' : 'SENT'}
                                 </span>
-                                <span className="text-xs text-gray-500">{new Date(msg.effective_time).toLocaleDateString()}</span>
+                                <span className="text-xs text-gray-500">{new Date(msg.effective_time).toLocaleString()}</span>
                             </div>
                             <h3 className="font-medium text-sm text-gray-900 truncate">{msg.subject || '(No subject)'}</h3>
                             <p className="text-xs text-gray-500 mt-1 truncate">{msg.direction === 'in' ? `From: ${msg.from_email}` : `To: ${(msg.to || []).join(', ')}`}</p>
