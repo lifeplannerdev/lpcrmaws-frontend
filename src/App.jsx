@@ -37,6 +37,8 @@ import FeesManagementPage from "./Pages/FeesManagementPage.jsx";
 import RoleManagementPage from "./Pages/RoleManagementPage.jsx";
 import CredentialsVault from "./Pages/CredentialsVault.jsx";
 import ProcessingStudentsPage from "./Pages/ProcessingStudentsPage.jsx";
+import MailControlCenter from './Pages/MailCenter/MailControlCenter.jsx';
+import StudentMailPage from './Pages/MailCenter/StudentMailPage.jsx';
 import FeedsPage from "./Pages/FeedsPage.jsx";
 import ProgramsPage from "./Pages/ProgramsPage.jsx";
 import VoxbayAIPage from "./Pages/VoxbayAIPage.jsx";
@@ -143,6 +145,8 @@ export default function App() {
         <Route path="/myreports/" element={<ProtectedRoute><MyReportsPage /></ProtectedRoute>} />
 
         <Route path="/processing-students" element={<PermissionRoute resources={['processing_students']}><ProcessingStudentsPage /></PermissionRoute>} />
+        <Route path="/processing-students/:id/mail" element={<PermissionRoute resources={['processing_students']}><StudentMailPage /></PermissionRoute>} />
+        <Route path="/mail-center" element={<PermissionRoute permissions={['mail:manage']}><MailControlCenter /></PermissionRoute>} />
         <Route path="/gmail-callback" element={<ProtectedRoute><GmailCallbackPage /></ProtectedRoute>} />
         
         <Route path="/hr/documents" element={<PermissionRoute permissions={['license:admin']}><DocumentDetailsPage /></PermissionRoute>} />

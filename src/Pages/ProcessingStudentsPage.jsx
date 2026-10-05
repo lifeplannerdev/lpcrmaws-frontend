@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, List, Grid, Trello, X, Download, Columns, Table, Mail } from 'lucide-react';
 import Navbar from '../Components/layouts/Navbar';
@@ -33,6 +34,7 @@ const fixedDocumentTypes = [
 export default function ProcessingStudentsPage() {
   const { hasPermission } = usePermissions();
   const { accessToken, user } = useAuth();
+  const navigate = useNavigate();
   const isOperationRole = user?.role_names?.includes('OPERATION') || user?.role_names?.includes('MANAGING_DIRECTOR');
   const [students, setStudents] = useState([]);
   const [dynamicFields, setDynamicFields] = useState([]);
@@ -190,31 +192,7 @@ export default function ProcessingStudentsPage() {
 
   const [isGmailConnected, setIsGmailConnected] = useState(false);
 
-  const checkGmailStatus = async () => {
-    try {
-      const res = await axios.get(`${API_BASE_URL}/gmail/status/`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      setIsGmailConnected(res.data.connected);
-    } catch (err) {
-      console.error('Error checking Gmail status', err);
-    }
-  };
 
-  const handleConnectGmail = async () => {
-    try {
-      const redirectUri = window.location.origin + '/gmail-callback';
-      const res = await axios.get(`${API_BASE_URL}/gmail/authorize/?redirect_uri=${encodeURIComponent(redirectUri)}`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      if (res.data.authorization_url) {
-        window.location.href = res.data.authorization_url;
-      }
-    } catch (err) {
-      console.error('Error getting authorization URL', err);
-      alert('Failed to initiate Gmail connection.');
-    }
-  };
 
   useEffect(() => {
     fetchDynamicFields();
@@ -222,7 +200,6 @@ export default function ProcessingStudentsPage() {
     fetchSourceStaffList();
     fetchIntakeOptions();
     fetchCategoryOptions();
-    checkGmailStatus();
   }, []);
 
   useEffect(() => {
@@ -345,11 +322,11 @@ export default function ProcessingStudentsPage() {
             </div>
             <div className="flex gap-3">
               <button 
-                onClick={handleConnectGmail} 
-                className={`border px-4 py-3 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold ${isGmailConnected ? 'bg-green-50 border-green-200 text-green-700' : 'bg-white border-gray-300 hover:bg-gray-50 text-gray-700'}`}
-                title={isGmailConnected ? 'Gmail Connected' : 'Connect Gmail for Drafts'}
+                onClick={() => navigate('/mail-center')} 
+                className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold"
+                title="Mail Control Center"
               >
-                <Mail size={18} /> {isGmailConnected ? 'Gmail Connected' : 'Connect Gmail'}
+                <Mail size={18} /> Mail Center
               </button>
               <button onClick={handleExportExcel} className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold">
                 <Download size={18} /> Export
@@ -535,6 +512,7 @@ export default function ProcessingStudentsPage() {
 }
 
 function ListView({ students, dynamicFields, onStudentClick, onDeleteStudent, canDelete = false }) {
+  const navigate = useNavigate();
   if (students.length === 0) return <div className="text-gray-500 text-center p-8">No students found.</div>;
 
   return (
@@ -562,7 +540,10 @@ function ListView({ students, dynamicFields, onStudentClick, onDeleteStudent, ca
           </div>
 
           <div className="flex gap-2 mt-5">
-            <button onClick={() => onStudentClick(student)} className="flex-1 bg-gray-50 hover:bg-gray-100 text-blue-600 font-medium py-2 rounded-lg text-sm border border-gray-200 transition-colors">
+            <button onClick={() => navigate(`/processing-students/${student.id}/mail`)} className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 rounded-lg flex items-center justify-center transition-colors" title="Mail Panel">
+              <Mail size={18} />
+            </button>
+            <button onClick={() => onStudentClick(student)} className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium py-2 rounded-lg text-sm border border-gray-200 transition-colors">
               View Details
             </button>
             {canDelete && onDeleteStudent && (
@@ -582,6 +563,7 @@ function ListView({ students, dynamicFields, onStudentClick, onDeleteStudent, ca
 }
 
 function KanbanView({ students, dynamicFields, handleUpdateField, onStudentClick }) {
+  const navigate = useNavigate();
   const statuses = ['Pending', 'Shared', 'Completed'];
 
   const handleDragStart = (e, studentId) => {
@@ -621,13 +603,22 @@ function KanbanView({ students, dynamicFields, handleUpdateField, onStudentClick
                 key={student.id}
                 draggable
                 onDragStart={(e) => handleDragStart(e, student.id)}
-                onClick={() => onStudentClick(student)}
-                className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm cursor-pointer hover:border-blue-300 active:cursor-grabbing"
+                className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm cursor-grab hover:border-blue-300 active:cursor-grabbing flex flex-col gap-2"
               >
-                <h4 className="font-medium text-gray-800">{student.name}</h4>
-                <p className="text-xs text-gray-500 mt-1">{student.university || 'No university'}</p>
-                <div className="mt-3 flex justify-between items-center">
+                <div onClick={() => onStudentClick(student)} className="cursor-pointer">
+                  <h4 className="font-medium text-gray-800">{student.name}</h4>
+                  <p className="text-xs text-gray-500 mt-1">{student.university || 'No university'}</p>
+                </div>
+                <div className="mt-1 flex justify-between items-center border-t pt-2">
                   <div className="text-xs text-gray-400">{student.mobile_number}</div>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); navigate(`/processing-students/${student.id}/mail`); }}
+                    className="p-1.5 rounded-full hover:bg-blue-50 text-blue-500 transition-colors"
+                    title="Mail Panel"
+                  >
+                    <Mail size={16} />
+                  </button>
+                </div>
                   <div className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">
                     {student.assigned_to_name ? student.assigned_to_name.split(' ')[0] : 'Unassigned'}
                   </div>
@@ -642,6 +633,7 @@ function KanbanView({ students, dynamicFields, handleUpdateField, onStudentClick
 }
 
 function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList, categoryOptions, onStudentClick, onDeleteStudent, canManageFees, canDelete = false, isOperationRole }) {
+  const navigate = useNavigate();
   const fixedColumns = [
     { key: 'name', label: 'Student Name', sticky: true, left: 60, width: 200 },
     { key: 'mobile_number', label: 'Mobile Number', sticky: true, left: 260, width: 140 },
@@ -713,7 +705,16 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
 
             return (
             <tr key={student.id} className={rowColorClass}>
-              <td className={`px-4 py-2 border-r text-gray-500 sticky left-0 z-10 ${rowColorClass}`} style={{ width: 60, minWidth: 60, maxWidth: 60 }}>{students.length - idx}</td>
+              <td className={`px-4 py-2 border-r text-gray-500 sticky left-0 z-10 flex items-center justify-between ${rowColorClass}`} style={{ width: 60, minWidth: 60, maxWidth: 60 }}>
+                {students.length - idx}
+                <button 
+                  onClick={() => navigate(`/processing-students/${student.id}/mail`)} 
+                  className="text-blue-500 hover:text-blue-700 transition-colors"
+                  title="Mail Panel"
+                >
+                  <Mail size={14} />
+                </button>
+              </td>
               {fixedColumns.map(col => {
                 let tdStyle = col.sticky ? { left: col.left, width: col.width, minWidth: col.width, maxWidth: col.width } : {};
                 let tdClass = `px-4 py-2 border-r p-0 ${col.sticky ? `sticky z-10 ${rowColorClass}` : ''}`;

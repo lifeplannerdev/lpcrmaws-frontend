@@ -18,6 +18,8 @@ export default function GmailCallbackPage() {
     const code = params.get('code');
     const error = params.get('error');
 
+    const state = params.get('state');
+
     if (error) {
       setStatus('error');
       setMessage(`Google returned an error: ${error}`);
@@ -32,25 +34,22 @@ export default function GmailCallbackPage() {
 
     if (!accessToken) return; // Wait for auth
 
-    // Post the code back to the backend
-    const redirectUri = window.location.origin + '/gmail-callback';
-    
-    axios.post(`${API_BASE_URL}/gmail/callback/`, {
+    axios.post(`${API_BASE_URL}/mail/callback/`, {
       code,
-      redirect_uri: redirectUri
+      state
     }, {
       headers: { Authorization: `Bearer ${accessToken}` }
     })
     .then(res => {
       setStatus('success');
-      setMessage('Gmail connected successfully! You can now close this window or return to the CRM.');
+      setMessage('Gmail connected successfully!');
       setTimeout(() => {
-        navigate('/processing-students');
+        navigate('/mail-center');
       }, 3000);
     })
     .catch(err => {
       setStatus('error');
-      setMessage(err.response?.data?.error || 'Failed to connect Gmail account.');
+      setMessage(err.response?.data?.detail || 'Failed to connect Gmail account.');
     });
 
   }, [location.search, accessToken, navigate]);
@@ -72,7 +71,7 @@ export default function GmailCallbackPage() {
             <h2 className="text-xl font-bold text-gray-800">Success!</h2>
             <p className="text-gray-500 mt-2">{message}</p>
             <button 
-              onClick={() => navigate('/processing-students')}
+              onClick={() => navigate('/mail-center')}
               className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
             >
               Return to Processing Students
@@ -86,7 +85,7 @@ export default function GmailCallbackPage() {
             <h2 className="text-xl font-bold text-gray-800">Connection Failed</h2>
             <p className="text-red-500 mt-2">{message}</p>
             <button 
-              onClick={() => navigate('/processing-students')}
+              onClick={() => navigate('/mail-center')}
               className="mt-6 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-lg font-medium transition-colors"
             >
               Go Back
