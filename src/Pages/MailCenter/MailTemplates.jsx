@@ -1,3 +1,4 @@
+import { useAuth } from '../../context/AuthContext';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -7,13 +8,14 @@ import MailEditor from '../../Components/Mail/MailEditor';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const MailTemplates = () => {
+    const { accessToken } = useAuth();
     const [templates, setTemplates] = useState([]);
     const [openModal, setOpenModal] = useState(false);
     const [currentTemplate, setCurrentTemplate] = useState(null);
 
     const fetchTemplates = async () => {
         try {
-            const res = await axios.get(`${API_BASE_URL}/mail/templates/`, { withCredentials: true });
+            const res = await axios.get(`${API_BASE_URL}/mail/templates/`, { headers: { Authorization: `Bearer ${accessToken}` } });
             setTemplates(res.data.results || res.data);
         } catch (error) {
             toast.error("Failed to load templates");
@@ -28,10 +30,10 @@ export const MailTemplates = () => {
     const handleSave = async () => {
         try {
             if (currentTemplate.id) {
-                await axios.put(`${API_BASE_URL}/mail/templates/${currentTemplate.id}/`, currentTemplate, { withCredentials: true });
+                await axios.put(`${API_BASE_URL}/mail/templates/${currentTemplate.id}/`, currentTemplate, { headers: { Authorization: `Bearer ${accessToken}` } });
                 toast.success("Template updated");
             } else {
-                await axios.post(`${API_BASE_URL}/mail/templates/`, currentTemplate, { withCredentials: true });
+                await axios.post(`${API_BASE_URL}/mail/templates/`, currentTemplate, { headers: { Authorization: `Bearer ${accessToken}` } });
                 toast.success("Template created");
             }
             setOpenModal(false);

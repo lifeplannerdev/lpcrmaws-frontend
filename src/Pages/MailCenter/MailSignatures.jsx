@@ -1,3 +1,4 @@
+import { useAuth } from '../../context/AuthContext';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -7,13 +8,14 @@ import MailEditor from '../../Components/Mail/MailEditor';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const MailSignatures = () => {
+    const { accessToken } = useAuth();
     const [signatures, setSignatures] = useState([]);
     const [openModal, setOpenModal] = useState(false);
     const [currentSignature, setCurrentSignature] = useState(null);
 
     const fetchSignatures = async () => {
         try {
-            const res = await axios.get(`${API_BASE_URL}/mail/signatures/`, { withCredentials: true });
+            const res = await axios.get(`${API_BASE_URL}/mail/signatures/`, { headers: { Authorization: `Bearer ${accessToken}` } });
             setSignatures(res.data.results || res.data);
         } catch (error) {
             toast.error("Failed to load signatures");
@@ -28,10 +30,10 @@ export const MailSignatures = () => {
     const handleSave = async () => {
         try {
             if (currentSignature.id) {
-                await axios.put(`${API_BASE_URL}/mail/signatures/${currentSignature.id}/`, currentSignature, { withCredentials: true });
+                await axios.put(`${API_BASE_URL}/mail/signatures/${currentSignature.id}/`, currentSignature, { headers: { Authorization: `Bearer ${accessToken}` } });
                 toast.success("Signature updated");
             } else {
-                await axios.post(`${API_BASE_URL}/mail/signatures/`, currentSignature, { withCredentials: true });
+                await axios.post(`${API_BASE_URL}/mail/signatures/`, currentSignature, { headers: { Authorization: `Bearer ${accessToken}` } });
                 toast.success("Signature created");
             }
             setOpenModal(false);

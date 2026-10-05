@@ -1,3 +1,4 @@
+import { useAuth } from '../../context/AuthContext';
 import React, { useState } from 'react';
 import { Tabs, Tab, Box } from '@mui/material';
 import { MailTemplates } from './MailTemplates';
@@ -5,6 +6,7 @@ import { MailSignatures } from './MailSignatures';
 import { MailAccounts } from './MailAccounts';
 
 export const MailControlCenter = () => {
+    const { accessToken } = useAuth();
     const [tab, setTab] = useState(0);
 
     return (
