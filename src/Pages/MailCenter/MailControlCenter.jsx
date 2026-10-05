@@ -28,9 +28,9 @@ export const MailControlCenter = () => {
             {tab === 0 && <MailAccounts />}
             {tab === 1 && <MailTemplates />}
             {tab === 2 && <MailSignatures />}
-            {tab === 3 && <MailLogList stateFilter="DRAFT" />}
-            {tab === 4 && <MailLogList stateFilter="SENT" directionFilter="OUT" />}
-            {tab === 5 && <MailLogList stateFilter="RECEIVED" directionFilter="IN" />}
+            {tab === 3 && <MailLogList stateFilter="draft" />}
+            {tab === 4 && <MailLogList stateFilter="sent" directionFilter="out" />}
+            {tab === 5 && <MailLogList stateFilter="received" directionFilter="in" />}
         </div>
     );
 };
