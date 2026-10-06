@@ -4,7 +4,8 @@ import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { 
   User, Mail, Phone, MapPin, Briefcase, Calendar, CheckCircle, 
-  XCircle, Laptop, Smartphone, Clock, Edit, ShieldAlert, ArrowLeft
+  XCircle, Laptop, Smartphone, Clock, Edit, ShieldAlert, ArrowLeft,
+  Monitor, Package, Tv, Printer, Layers, FileText
 } from 'lucide-react';
 import StaffPermissionsModal from '../Components/staffs/StaffPermissionsModal';
 import { Can, usePermissions } from '../context/PermissionsContext';
@@ -343,125 +344,158 @@ export default function StaffDetailsPage() {
                     </span>
                   </div>
 
-                  {staff.assets?.length === 0 ? (
+                  {(!staff.assets || staff.assets.length === 0) ? (
                     <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                       <Laptop size={48} className="mx-auto text-slate-300 mb-4" />
                       <p className="text-slate-500 font-medium">No assets currently assigned to this staff member.</p>
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      {/* Mobile Phones */}
-                      {staff.assets?.filter(a => a.category_details?.name === 'Mobiles').length > 0 && (
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Mobile Phones</h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {staff.assets.filter(a => a.category_details?.name === 'Mobiles').map(asset => (
-                              <div key={asset.id} className="bg-slate-50 rounded-2xl p-5 border border-slate-100 hover:border-indigo-200 transition-colors">
-                                <div className="flex justify-between items-start mb-3">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-indigo-500">
-                                      <Smartphone size={20} />
-                                    </div>
-                                    <div>
-                                      <h4 className="font-bold text-slate-900">{asset.name}</h4>
-                                      <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{asset.category_details?.name}</p>
-                                    </div>
-                                  </div>
-                                  <span className="bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded-lg text-xs font-bold">
-                                    {asset.company}
-                                  </span>
-                                </div>
-                                <div className="space-y-1">
-                                  {asset.serial_number && (
-                                    <p className="text-sm text-slate-600">S/N: <span className="font-medium text-slate-900">{asset.serial_number}</span></p>
-                                  )}
-                                  {asset.primary_sim_details && (
-                                    <div className="text-sm text-slate-600 border-t border-slate-100 pt-2 mt-2">
-                                      <p className="font-semibold text-slate-800 flex items-center gap-1">Primary SIM</p>
-                                      <p>Number: <span className="font-medium text-slate-900">{asset.primary_sim_details.serial_number || asset.primary_sim_details.name}</span></p>
-                                      {asset.primary_sim_details.provider && <p>Provider: <span className="font-medium text-slate-900">{asset.primary_sim_details.provider}</span></p>}
-                                    </div>
-                                  )}
-                                  {asset.secondary_sim_details && (
-                                    <div className="text-sm text-slate-600 border-t border-slate-100 pt-2 mt-2">
-                                      <p className="font-semibold text-slate-800 flex items-center gap-1">Secondary SIM</p>
-                                      <p>Number: <span className="font-medium text-slate-900">{asset.secondary_sim_details.serial_number || asset.secondary_sim_details.name}</span></p>
-                                      {asset.secondary_sim_details.provider && <p>Provider: <span className="font-medium text-slate-900">{asset.secondary_sim_details.provider}</span></p>}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      {(() => {
+                        const CLASSIFICATION_ORDER = [
+                          'Communication Systems',
+                          'System Classification',
+                          'Office Furniture',
+                          'Electronics & Appliances',
+                          'Office Equipment & Utilities',
+                          'General Assets'
+                        ];
 
-                      {/* Standalone SIMs */}
-                      {staff.assets?.filter(a => ['SIM Card', 'SIM'].includes(a.category_details?.name) || a.provider).length > 0 && (
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Standalone SIMs</h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {staff.assets.filter(a => ['SIM Card', 'SIM'].includes(a.category_details?.name) || a.provider).map(asset => (
-                              <div key={asset.id} className="bg-slate-50 rounded-2xl p-5 border border-slate-100 hover:border-indigo-200 transition-colors">
-                                <div className="flex justify-between items-start mb-3">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-indigo-500">
-                                      <Smartphone size={20} />
-                                    </div>
-                                    <div>
-                                      <h4 className="font-bold text-slate-900">{asset.name}</h4>
-                                      <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{asset.category_details?.name || 'SIM Card'}</p>
-                                    </div>
-                                  </div>
-                                  <span className="bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded-lg text-xs font-bold">
-                                    {asset.company}
-                                  </span>
-                                </div>
-                                <div className="space-y-1">
-                                  {asset.provider && (
-                                    <p className="text-sm text-slate-600">Provider: <span className="font-medium text-slate-900">{asset.provider}</span></p>
-                                  )}
-                                  {asset.serial_number && (
-                                    <p className="text-sm text-slate-600">Number: <span className="font-medium text-slate-900">{asset.serial_number}</span></p>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                        const getAssetClassification = (asset) => {
+                          const rawCls = asset.classification || asset.category_details?.classification;
+                          if (rawCls && String(rawCls).trim().toLowerCase() !== 'general assets') {
+                            const canonical = CLASSIFICATION_ORDER.find(c => c.toLowerCase() === String(rawCls).trim().toLowerCase());
+                            if (canonical) return canonical;
+                            return String(rawCls);
+                          }
+                          if (asset.provider) {
+                            return 'Communication Systems';
+                          }
+                          const cat = String(asset.category_details?.name || (typeof asset.category === 'string' ? asset.category : '') || asset.asset_type || asset.name || '').toLowerCase().trim();
+                          if (['mobiles', 'mobile', 'mobile phone', 'mobile phones', 'sim', 'sims', 'sim card', 'sim cards', 'phone', 'phones', 'telephone', 'telephones', 'smartphone', 'smartphones', 'tablet', 'tablets', 'iphone', 'iphones', 'ipad', 'ipads', 'cellphone', 'cellphones', 'handset', 'handsets', 'voip', 'intercom'].includes(cat) || /(?:iphone|ipad|smartphone|mobile|sim card|cellphone)/i.test(cat)) {
+                            return 'Communication Systems';
+                          }
+                          if (['cpu', 'cpus', 'keyboard', 'keyboards', 'mouse', 'mice', 'pc', 'pcs', 'laptop', 'laptops', 'macbook', 'macbooks', 'thinkpad', 'thinkpads', 'imac', 'imacs', 'chromebook', 'chromebooks', 'workstation', 'workstations', 'server', 'servers', 'lap charger', 'laptop charger', 'moniter', 'monitors', 'monitor', 'screen', 'screens', 'display', 'displays', 'wify adaptor', 'wifi adaptor', 'wifi adapter', 'wifi adapters', 'hard disk', 'hard disks', 'hard drive', 'hard drives', 'ram', 'desktop', 'desktops', 'router', 'routers', 'switch', 'switches', 'hub', 'hubs', 'webcam', 'webcams', 'headphone', 'headphones', 'headset', 'headsets', 'earphone', 'earphones', 'mic', 'mics', 'microphone', 'microphones', 'dock', 'docks'].includes(cat) || cat.includes('wifi router') || cat.includes('network switch') || /(?:macbook|thinkpad|laptop|keyboard|mouse|monitor|desktop|router|webcam|headset)/i.test(cat)) {
+                            return 'System Classification';
+                          }
+                          if (['chair', 'chairs', 'office chair', 'office chairs', 'table', 'tables', 'teapoy', 'teapoys', 'sofa', 'sofas', 'shelf', 'shelves', 'stand', 'stands', 'desk', 'desks', 'cupboard', 'cupboards'].includes(cat)) {
+                            return 'Office Furniture';
+                          }
+                          if (['ac', 'air conditioner', 'fan', 'fans', 'tv & remote', 'tv', 'television', 'home theatre', 'speaker', 'speakers', 'ups', 'projector', 'projectors', 'cooler', 'coolers', 'refrigerator', 'refrigerators', 'fridge', 'fridges', 'dispenser', 'dispensers', 'microwave', 'microwaves'].includes(cat) || cat.includes('air condition') || cat.includes('water dispenser')) {
+                            return 'Electronics & Appliances';
+                          }
+                          if (['printer', 'printers', 'camera', 'cameras', 'white board', 'whiteboard', 'whiteboards', 'id card', 'id cards', 'key set box', 'waste in', 'waste bin', 'waste bins', 'wastebin', 'wastebins', 'scanner', 'scanners', 'shredder', 'shredders', 'extinguisher', 'extinguishers'].includes(cat) || cat.includes('paper shredder') || cat.includes('fire extinguisher')) {
+                            return 'Office Equipment & Utilities';
+                          }
+                          return 'General Assets';
+                        };
 
-                      {/* Other Assets */}
-                      {staff.assets?.filter(a => a.category_details?.name !== 'Mobiles' && !['SIM Card', 'SIM'].includes(a.category_details?.name) && !a.provider).length > 0 && (
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Other Assets</h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {staff.assets.filter(a => a.category_details?.name !== 'Mobiles' && !['SIM Card', 'SIM'].includes(a.category_details?.name) && !a.provider).map(asset => (
-                              <div key={asset.id} className="bg-slate-50 rounded-2xl p-5 border border-slate-100 hover:border-indigo-200 transition-colors">
-                                <div className="flex justify-between items-start mb-3">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-indigo-500">
-                                      <Laptop size={20} />
-                                    </div>
-                                    <div>
-                                      <h4 className="font-bold text-slate-900">{asset.name}</h4>
-                                      <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{asset.category_details?.name || 'Asset'}</p>
-                                    </div>
-                                  </div>
-                                  <span className="bg-white border border-slate-200 text-slate-600 px-2 py-1 rounded-lg text-xs font-bold">
-                                    {asset.company}
-                                  </span>
+                        const getClassificationIcon = (classification) => {
+                          switch (classification) {
+                            case 'Communication Systems':
+                              return <Smartphone size={18} className="text-blue-500" />;
+                            case 'System Classification':
+                              return <Laptop size={18} className="text-indigo-500" />;
+                            case 'Office Furniture':
+                              return <Package size={18} className="text-amber-500" />;
+                            case 'Electronics & Appliances':
+                              return <Tv size={18} className="text-rose-500" />;
+                            case 'Office Equipment & Utilities':
+                              return <Printer size={18} className="text-emerald-500" />;
+                            default:
+                              return <Layers size={18} className="text-purple-500" />;
+                          }
+                        };
+
+                        const groupedAssets = (staff.assets || []).reduce((acc, asset) => {
+                          const group = getAssetClassification(asset);
+                          if (!acc[group]) acc[group] = [];
+                          acc[group].push(asset);
+                          return acc;
+                        }, {});
+
+                        const sortedClassificationKeys = Object.keys(groupedAssets).sort((a, b) => {
+                          const idxA = CLASSIFICATION_ORDER.indexOf(a);
+                          const idxB = CLASSIFICATION_ORDER.indexOf(b);
+                          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                          if (idxA !== -1) return -1;
+                          if (idxB !== -1) return 1;
+                          return a.localeCompare(b);
+                        });
+
+                        return sortedClassificationKeys.map(classificationName => (
+                          <div key={classificationName} className="border border-slate-200/80 rounded-2xl p-5 bg-white shadow-xs">
+                            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                              <div className="flex items-center gap-2.5">
+                                <div className="p-2 rounded-xl bg-slate-50 border border-slate-100 shadow-xs">
+                                  {getClassificationIcon(classificationName)}
                                 </div>
-                                <div className="space-y-1">
-                                  {asset.serial_number && (
-                                    <p className="text-sm text-slate-600">S/N: <span className="font-medium text-slate-900">{asset.serial_number}</span></p>
-                                  )}
+                                <div>
+                                  <h4 className="text-base font-bold text-slate-800 tracking-tight">{classificationName}</h4>
+                                  <p className="text-xs text-slate-400">Assigned hardware & equipment</p>
                                 </div>
                               </div>
-                            ))}
+                              <span className="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full text-xs font-bold border border-indigo-100">
+                                {groupedAssets[classificationName].length} {groupedAssets[classificationName].length === 1 ? 'Asset' : 'Assets'}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              {groupedAssets[classificationName].map(asset => (
+                                <div key={asset.id} className="bg-slate-50 rounded-xl p-4 border border-slate-100 hover:border-indigo-200 transition-all flex flex-col justify-between">
+                                  <div>
+                                    <div className="flex justify-between items-start mb-2">
+                                      <div>
+                                        <h5 className="font-bold text-slate-900 text-sm">{asset.name}</h5>
+                                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                                          {asset.category_details?.name || 'Asset'}
+                                        </span>
+                                      </div>
+                                      <span className="bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded-md text-[11px] font-bold">
+                                        {asset.company}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="space-y-1 text-xs text-slate-600 mt-2">
+                                      {asset.serial_number && (
+                                        <p className="flex items-center justify-between">
+                                          <span className="text-slate-400">S/N:</span>
+                                          <span className="font-mono font-medium text-slate-800">{asset.serial_number}</span>
+                                        </p>
+                                      )}
+                                      {asset.provider && (
+                                        <p className="flex items-center justify-between">
+                                          <span className="text-slate-400">Provider:</span>
+                                          <span className="font-medium text-slate-800">{asset.provider}</span>
+                                        </p>
+                                      )}
+                                      {asset.assigned_location_details && (
+                                        <p className="flex items-center justify-between">
+                                          <span className="text-slate-400">Space / Cabin:</span>
+                                          <span className="font-medium text-slate-800">{asset.assigned_location_details.name}</span>
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {asset.attachment_url && (
+                                    <div className="mt-3 pt-2 border-t border-slate-200/60">
+                                      <a 
+                                        href={asset.attachment_url} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold flex items-center gap-1"
+                                      >
+                                        <FileText size={13} /> View Attached Document
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        ));
+                      })()}
                     </div>
                   )}
                 </div>
