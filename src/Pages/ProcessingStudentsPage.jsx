@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, List, Grid, Trello, X, Download, Columns, Table, Mail } from 'lucide-react';
+import { Plus, List, Grid, Trello, X, Download, Columns, Table, Mail, Search } from 'lucide-react';
 import Navbar from '../Components/layouts/Navbar';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
@@ -308,38 +308,43 @@ export default function ProcessingStudentsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/60 to-purple-50/60">
       <Navbar />
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h1 className="text-4xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
+              <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-1">
                 Processing Students
               </h1>
-              <p className="text-gray-600 text-lg">Manage abroad study processing and track statuses</p>
+              <p className="text-gray-600">Manage abroad study processing and track statuses</p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className="px-3 py-1 rounded-full bg-white border border-indigo-100 text-indigo-700 text-xs font-semibold shadow-sm">{students.length} Total</span>
+                <span className="px-3 py-1 rounded-full bg-green-50 border border-green-100 text-green-700 text-xs font-semibold">{students.filter(s => (s.student_file_status || 'Active') === 'Active').length} Active</span>
+                <span className="px-3 py-1 rounded-full bg-orange-50 border border-orange-100 text-orange-700 text-xs font-semibold">{students.filter(s => s.student_file_status === 'On Hold').length} On Hold</span>
+              </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <button 
                 onClick={() => navigate('/mail-center')} 
-                className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold"
+                className="bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 text-gray-700 px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold text-sm"
                 title="Mail Control Center"
               >
                 <Mail size={18} /> Mail Center
               </button>
-              <button onClick={handleExportExcel} className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold">
+              <button onClick={handleExportExcel} className="bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 text-gray-700 px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold text-sm">
                 <Download size={18} /> Export
               </button>
               {(canEditAny || canEditOwn) && (
                 <>
-                  <button onClick={() => setIsCategoryModalOpen(true)} className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold">
+                  <button onClick={() => setIsCategoryModalOpen(true)} className="bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 text-gray-700 px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold text-sm">
                     <List size={18} /> Categories
                   </button>
-                  <button onClick={() => setIsIntakeModalOpen(true)} className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold">
+                  <button onClick={() => setIsIntakeModalOpen(true)} className="bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 text-gray-700 px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-sm font-semibold text-sm">
                     <List size={18} /> Intakes
                   </button>
-                  <button onClick={openAddModal} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold">
+                  <button onClick={openAddModal} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold text-sm">
                     <Plus size={18} /> Add Student
                   </button>
                 </>
@@ -349,29 +354,29 @@ export default function ProcessingStudentsPage() {
         </div>
 
         {/* Controls: Categories, Search, View Toggle */}
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap gap-4 justify-between items-center mb-6">
-          <div className="flex items-center space-x-2 border-b border-gray-200">
+        <div className="bg-white/90 backdrop-blur p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-4 justify-between items-center mb-6">
+          <div className="flex flex-wrap items-center gap-1.5 bg-gray-100/80 p-1 rounded-xl">
             {categories.map(cat => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 font-medium text-sm transition-colors ${activeCategory === cat
-                    ? 'border-b-2 border-blue-600 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${activeCategory === cat
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-800'
                   }`}
               >
                 {cat}
               </button>
             ))}
           </div>
-          <div className="flex items-center space-x-2 border-b border-gray-200">
+          <div className="flex items-center gap-1.5 bg-gray-100/80 p-1 rounded-xl">
             {['All', 'Running', 'Completed'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveStatusTab(tab)}
-                className={`px-4 py-2 font-medium text-sm transition-colors ${activeStatusTab === tab
-                    ? 'border-b-2 border-blue-600 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
+                className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${activeStatusTab === tab
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-800'
                   }`}
               >
                 {tab}
@@ -379,33 +384,41 @@ export default function ProcessingStudentsPage() {
             ))}
           </div>
 
-          <div className="flex items-center space-x-4">
-            <input
-              type="text"
-              placeholder="Search students..."
-              className="px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search students..."
+                className="pl-9 pr-8 py-2 w-64 border border-gray-200 rounded-xl text-sm hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="Clear search" aria-label="Clear search">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
 
-            <div className="flex bg-gray-100 p-1 rounded-lg">
+            <div className="flex bg-gray-100/80 p-1 rounded-xl">
               <button
                 onClick={() => setActiveView('list')}
-                className={`p-2 rounded-md ${activeView === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
+                className={`p-2 rounded-lg transition-all ${activeView === 'list' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-800'}`}
                 title="List View"
               >
                 <List size={18} />
               </button>
               <button
                 onClick={() => setActiveView('kanban')}
-                className={`p-2 rounded-md ${activeView === 'kanban' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
+                className={`p-2 rounded-lg transition-all ${activeView === 'kanban' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-800'}`}
                 title="Kanban View"
               >
                 <Columns size={18} />
               </button>
               <button
                 onClick={() => setActiveView('spreadsheet')}
-                className={`p-2 rounded-md ${activeView === 'spreadsheet' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
+                className={`p-2 rounded-lg transition-all ${activeView === 'spreadsheet' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-800'}`}
                 title="Spreadsheet View"
               >
                 <Table size={18} />
@@ -415,10 +428,10 @@ export default function ProcessingStudentsPage() {
         </div>
 
         {/* Content Area */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 overflow-hidden flex-1 flex flex-col">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 overflow-hidden flex-1 flex flex-col">
           {loading ? (
             <div className="flex justify-center p-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
             </div>
           ) : (
             (() => {
@@ -518,7 +531,7 @@ function ListView({ students, dynamicFields, onStudentClick, onDeleteStudent, ca
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {students.map(student => (
-        <div key={student.id} className="border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+        <div key={student.id} className="border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-indigo-200 hover:-translate-y-0.5 transition-all flex flex-col justify-between bg-white">
           <div>
             <h3 className="font-bold text-lg text-gray-800 mb-1">{student.name}</h3>
             <p className="text-sm text-gray-500 mb-4">{student.program_applied || 'No program'}</p>
@@ -530,7 +543,7 @@ function ListView({ students, dynamicFields, onStudentClick, onDeleteStudent, ca
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Status:</span>
-                <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{student.enrollment_process_status}</span>
+                <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-medium">{student.enrollment_process_status}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Assigned To:</span>
@@ -540,7 +553,7 @@ function ListView({ students, dynamicFields, onStudentClick, onDeleteStudent, ca
           </div>
 
           <div className="flex gap-2 mt-5">
-            <button onClick={() => navigate(`/processing-students/${student.id}/mail`)} className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 rounded-lg flex items-center justify-center transition-colors" title="Mail Panel">
+            <button onClick={() => navigate(`/processing-students/${student.id}/mail`)} className="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 rounded-lg flex items-center justify-center transition-colors" title="Mail Panel">
               <Mail size={18} />
             </button>
             <button onClick={() => onStudentClick(student)} className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium py-2 rounded-lg text-sm border border-gray-200 transition-colors">
@@ -688,7 +701,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
               </th>
             ))}
             {dynamicFields.map(field => (
-              <th key={field.name} className="px-4 py-3 text-left font-semibold text-blue-600 border-b border-r whitespace-nowrap bg-blue-50/50">
+              <th key={field.name} className="px-4 py-3 text-left font-semibold text-indigo-600 border-b border-r whitespace-nowrap bg-indigo-50/60">
                 {field.label}
               </th>
             ))}
@@ -710,7 +723,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                 {students.length - idx}
                 <button 
                   onClick={() => navigate(`/processing-students/${student.id}/mail`)} 
-                  className="text-blue-500 hover:text-blue-700 transition-colors"
+                  className="text-indigo-500 hover:text-indigo-700 transition-colors"
                   title="Mail Panel"
                 >
                   <Mail size={14} />
@@ -725,7 +738,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                     <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || 'Active'}
-                        className="w-full h-full min-w-[170px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        className="w-full h-full min-w-[170px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:bg-white bg-transparent border border-transparent hover:border-gray-300 hover:bg-white/70 rounded-md transition-all"
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="Active">Active</option>
@@ -743,7 +756,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                     <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || 'All Students'}
-                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:bg-white bg-transparent border border-transparent hover:border-gray-300 hover:bg-white/70 rounded-md transition-all"
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="All Students">All Students</option>
@@ -760,7 +773,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                       <select
                         defaultValue={student[col.key] || ''}
                         disabled={!isOperationRole}
-                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:text-gray-500"
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:bg-white bg-transparent border border-transparent hover:border-gray-300 hover:bg-white/70 rounded-md transition-all disabled:text-gray-500"
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="">Unassigned</option>
@@ -776,7 +789,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                     <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || 'Pending'}
-                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:bg-white bg-transparent border border-transparent hover:border-gray-300 hover:bg-white/70 rounded-md transition-all"
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="Pending">Pending</option>
@@ -791,7 +804,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                     <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || 'Pending'}
-                        className="w-full h-full min-w-[150px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        className="w-full h-full min-w-[150px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:bg-white bg-transparent border border-transparent hover:border-gray-300 hover:bg-white/70 rounded-md transition-all"
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="Pending">Pending</option>
@@ -807,7 +820,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                       <select
                         defaultValue={student[col.key] || 'Pending'}
                         disabled={student.registration_fee_status !== 'Paid with gst'}
-                        className="w-full h-full min-w-[150px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        className="w-full h-full min-w-[150px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:bg-white bg-transparent border border-transparent hover:border-gray-300 hover:bg-white/70 rounded-md transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="Pending">Pending</option>
@@ -821,7 +834,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                     <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || 'Pending'}
-                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:bg-white bg-transparent border border-transparent hover:border-gray-300 hover:bg-white/70 rounded-md transition-all"
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="Pending">Pending</option>
@@ -836,7 +849,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                       <input
                         type="date"
                         defaultValue={student[col.key] || ''}
-                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:bg-white bg-transparent border border-transparent hover:border-gray-300 hover:bg-white/70 rounded-md transition-all"
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       />
                     </td>
@@ -848,7 +861,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                     <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || 'Pending'}
-                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:bg-white bg-transparent border border-transparent hover:border-gray-300 hover:bg-white/70 rounded-md transition-all"
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="Pending">Pending</option>
@@ -864,7 +877,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                     <td key={col.key} className={tdClass} style={tdStyle}>
                       <select
                         defaultValue={student[col.key] || ''}
-                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                        className="w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:bg-white bg-transparent border border-transparent hover:border-gray-300 hover:bg-white/70 rounded-md transition-all"
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="">Select Result</option>
@@ -887,7 +900,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                       <select
                         defaultValue={student[col.key] || 'PENDING'}
                         disabled={!canManageFees || !isFeeApplicable}
-                        className={`w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed ${!isFeeApplicable ? 'opacity-50' : ''}`}
+                        className={`w-full h-full min-w-[140px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:bg-white bg-transparent border border-transparent hover:border-gray-300 hover:bg-white/70 rounded-md transition-all disabled:bg-gray-100 disabled:cursor-not-allowed ${!isFeeApplicable ? 'opacity-50' : ''}`}
                         onChange={(e) => handleUpdateField(student.id, col.key, e.target.value)}
                       >
                         <option value="PENDING">Pending</option>
@@ -905,7 +918,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                       defaultValue={!isFeeApplicable ? '' : (student[col.key] || '')}
                       disabled={((col.key.startsWith('processing_fee_') || col.key.startsWith('fee_')) && !canManageFees) || !isFeeApplicable}
                       placeholder={!isFeeApplicable ? 'N/A' : ''}
-                      className={`w-full h-full min-w-[120px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded disabled:bg-gray-100 disabled:cursor-not-allowed ${!isFeeApplicable ? 'opacity-50 placeholder-gray-400' : ''}`}
+                      className={`w-full h-full min-w-[120px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:bg-white bg-transparent border border-transparent hover:border-gray-300 hover:bg-white/70 rounded-md transition-all disabled:bg-gray-100 disabled:cursor-not-allowed ${!isFeeApplicable ? 'opacity-50 placeholder-gray-400' : ''}`}
                       onBlur={(e) => {
                         if (e.target.value !== (student[col.key] || '')) {
                           handleUpdateField(student.id, col.key, e.target.value);
@@ -925,7 +938,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
                   <input
                     type="text"
                     defaultValue={student.dynamic_data?.[field.name] || ''}
-                    className="w-full h-full min-w-[120px] px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-transparent border-transparent hover:border-gray-300 rounded"
+                    className="w-full h-full min-w-[120px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:bg-white bg-transparent border border-transparent hover:border-gray-300 hover:bg-white/70 rounded-md transition-all"
                     onBlur={(e) => {
                       if (e.target.value !== (student.dynamic_data?.[field.name] || '')) {
                         const newDynamicData = { ...student.dynamic_data, [field.name]: e.target.value };
@@ -942,7 +955,7 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
               ))}
               <td className={`px-4 py-2 border-l sticky right-0 z-10 ${rowColorClass} text-center shadow-sm`}>
                 <div className="flex items-center justify-center gap-2">
-                  <button onClick={() => onStudentClick(student)} className="text-blue-600 font-medium hover:text-blue-800 hover:underline">
+                  <button onClick={() => onStudentClick(student)} className="text-indigo-600 font-medium hover:text-indigo-800 hover:underline">
                     Edit
                   </button>
                   {canDelete && onDeleteStudent && (
@@ -1170,11 +1183,19 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-[90vw] lg:max-w-7xl max-h-[90vh] flex flex-col overflow-hidden">
-        <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-          <h2 className="text-xl font-bold text-gray-800">{student ? 'Edit Student' : 'Add New Student'}</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-[90vw] lg:max-w-7xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-indigo-50 via-white to-purple-50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold shadow-md">
+              {student ? (student.name || '?').charAt(0).toUpperCase() : <Plus size={18} />}
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 leading-tight">{student ? 'Edit Student' : 'Add New Student'}</h2>
+              {student && <p className="text-xs text-gray-500">{student.name}{student.program_applied ? ` · ${student.program_applied}` : ''}</p>}
+            </div>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors" aria-label="Close"><X size={20} /></button>
         </div>
 
         <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
@@ -1211,23 +1232,23 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Student Name *</label>
-                  <input required name="name" value={formData.name || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <input required name="name" value={formData.name || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number *</label>
-                  <input required name="mobile_number" value={formData.mobile_number || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <input required name="mobile_number" value={formData.mobile_number || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
-                  <input name="whatsapp_number" value={formData.whatsapp_number || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <input name="whatsapp_number" value={formData.whatsapp_number || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input type="email" name="email" value={formData.email || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <input type="email" name="email" value={formData.email || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Parent Contact</label>
-                  <input name="parent_contact" value={formData.parent_contact || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <input name="parent_contact" value={formData.parent_contact || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all" />
                 </div>
               </div>
             </div>
@@ -1237,16 +1258,16 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Program Applied</label>
-                <input name="program_applied" value={formData.program_applied || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                <input name="program_applied" value={formData.program_applied || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">University</label>
-                <input name="university" value={formData.university || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                <input name="university" value={formData.university || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Intake</label>
                 <div className="flex gap-2">
-                  <select name="intake" value={formData.intake || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                  <select name="intake" value={formData.intake || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white">
                     <option value="">Select Intake</option>
                     {intakeOptions.map(opt => (
                       <option key={opt.id} value={opt.name}>{opt.name}</option>
@@ -1259,11 +1280,11 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Date of Registration</label>
-                <input type="date" name="date_of_registration" value={formData.date_of_registration || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                <input type="date" name="date_of_registration" value={formData.date_of_registration || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select name="category" value={formData.category} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                <select name="category" value={formData.category} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white">
                   <option value="All Students">All Students</option>
                   {categoryOptions?.map(c => (
                     <option key={c.id || c.name} value={c.name}>{c.name}</option>
@@ -1272,7 +1293,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">File Status</label>
-                <select name="student_file_status" value={formData.student_file_status || 'Active'} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                <select name="student_file_status" value={formData.student_file_status || 'Active'} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white">
                   <option value="Active">Active</option>
                   <option value="On Hold">On Hold</option>
                   <option value="Cancelled by Student">Cancelled by Student</option>
@@ -1282,7 +1303,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
-                <select name="assigned_to" value={formData.assigned_to} onChange={handleChange} disabled={!isOperationRole} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                <select name="assigned_to" value={formData.assigned_to} onChange={handleChange} disabled={!isOperationRole} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white disabled:bg-gray-100 disabled:text-gray-500">
                   <option value="">Unassigned</option>
                   {staffList?.map(staff => (
                     <option key={staff.id} value={staff.id}>{staff.name}</option>
@@ -1291,7 +1312,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
-                <select name="source" value={formData.source} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                <select name="source" value={formData.source} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white">
                   <option value="">None</option>
                   {sourceStaffList?.map(staff => (
                     <option key={staff.id} value={staff.id}>{staff.name}</option>
@@ -1300,7 +1321,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Registration Fee Status</label>
-                <select name="registration_fee_status" value={formData.registration_fee_status} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                <select name="registration_fee_status" value={formData.registration_fee_status} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white">
                   <option value="Pending">Pending</option>
                   <option value="Paid without gst">Paid without gst</option>
                   <option value="Paid with gst">Paid with gst</option>
@@ -1313,7 +1334,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                   value={formData.registration_fee_receipt_status} 
                   onChange={handleChange} 
                   disabled={formData.registration_fee_status !== 'Paid with gst'}
-                  className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="Pending">Pending</option>
                   <option value="Shared with student">Shared with student</option>
@@ -1321,7 +1342,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Enrollment Status</label>
-                <select name="enrollment_process_status" value={formData.enrollment_process_status} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                <select name="enrollment_process_status" value={formData.enrollment_process_status} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white">
                   <option value="Pending">Pending</option>
                   <option value="Shared">Shared</option>
                   <option value="Completed">Completed</option>
@@ -1329,26 +1350,26 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">App Documents Status</label>
-                <select name="application_documents_status" value={formData.application_documents_status} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                <select name="application_documents_status" value={formData.application_documents_status} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white">
                   <option value="Pending">Pending</option>
                   <option value="Collected">Collected</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Application Status</label>
-                <input name="application_status" value={formData.application_status || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                <input name="application_status" value={formData.application_status || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Offer Letter Status</label>
-                <input name="offer_letter_status" value={formData.offer_letter_status || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                <input name="offer_letter_status" value={formData.offer_letter_status || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Visa Appointment Date</label>
-                <input type="date" name="visa_appointment_date" value={formData.visa_appointment_date || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                <input type="date" name="visa_appointment_date" value={formData.visa_appointment_date || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Visa Documentation</label>
-                <select name="visa_documentation" value={formData.visa_documentation} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                <select name="visa_documentation" value={formData.visa_documentation} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white">
                   <option value="Pending">Pending</option>
                   <option value="In Process">In Process</option>
                   <option value="Complete">Complete</option>
@@ -1356,7 +1377,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Visa Results</label>
-                <select name="visa_results" value={formData.visa_results || ''} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                <select name="visa_results" value={formData.visa_results || ''} onChange={handleChange} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white">
                   <option value="">Select Result</option>
                   <option value="Granted">Granted</option>
                   <option value="Refused">Refused</option>
@@ -1368,21 +1389,21 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                 {(!canManageFees && !formData.processing_fee_applicable) ? null : (
                   <div className="mb-6">
                     <div className="flex items-center gap-2 mb-4">
-                      <input type="checkbox" name="processing_fee_applicable" checked={formData.processing_fee_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 text-blue-600 rounded" />
+                      <input type="checkbox" name="processing_fee_applicable" checked={formData.processing_fee_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
                       <h4 className="text-md font-semibold text-gray-700">Application/Registration Fee</h4>
                     </div>
                     <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.processing_fee_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                        <input type="number" name="processing_fee_amount" value={formData.processing_fee_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                        <input type="number" name="processing_fee_amount" value={formData.processing_fee_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                        <input type="number" name="processing_fee_paid" value={formData.processing_fee_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                        <input type="number" name="processing_fee_paid" value={formData.processing_fee_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                        <select name="processing_fee_status" value={formData.processing_fee_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                        <select name="processing_fee_status" value={formData.processing_fee_status} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white disabled:bg-gray-100 disabled:text-gray-500">
                           <option value="PENDING">Pending</option>
                           <option value="PARTIAL">Partial</option>
                           <option value="PAID">Paid</option>
@@ -1395,21 +1416,21 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                 {(!canManageFees && !formData.fee_admission_applicable) ? null : (
                   <div className="mb-6">
                     <div className="flex items-center gap-2 mb-4">
-                      <input type="checkbox" name="fee_admission_applicable" checked={formData.fee_admission_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 text-blue-600 rounded" />
+                      <input type="checkbox" name="fee_admission_applicable" checked={formData.fee_admission_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
                       <h4 className="text-md font-semibold text-gray-700">On Admission/Ausbildung/Offer Letter</h4>
                     </div>
                     <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_admission_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                        <input type="number" name="fee_admission_amount" value={formData.fee_admission_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                        <input type="number" name="fee_admission_amount" value={formData.fee_admission_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                        <input type="number" name="fee_admission_paid" value={formData.fee_admission_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                        <input type="number" name="fee_admission_paid" value={formData.fee_admission_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                        <select name="fee_admission_status" value={formData.fee_admission_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                        <select name="fee_admission_status" value={formData.fee_admission_status} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white disabled:bg-gray-100 disabled:text-gray-500">
                           <option value="PENDING">Pending</option>
                           <option value="PARTIAL">Partial</option>
                           <option value="PAID">Paid</option>
@@ -1422,21 +1443,21 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                 {(!canManageFees && !formData.fee_language_applicable) ? null : (
                   <div className="mb-6">
                     <div className="flex items-center gap-2 mb-4">
-                      <input type="checkbox" name="fee_language_applicable" checked={formData.fee_language_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 text-blue-600 rounded" />
+                      <input type="checkbox" name="fee_language_applicable" checked={formData.fee_language_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
                       <h4 className="text-md font-semibold text-gray-700">On Language Confirmation</h4>
                     </div>
                     <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_language_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                        <input type="number" name="fee_language_amount" value={formData.fee_language_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                        <input type="number" name="fee_language_amount" value={formData.fee_language_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                        <input type="number" name="fee_language_paid" value={formData.fee_language_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                        <input type="number" name="fee_language_paid" value={formData.fee_language_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                        <select name="fee_language_status" value={formData.fee_language_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                        <select name="fee_language_status" value={formData.fee_language_status} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white disabled:bg-gray-100 disabled:text-gray-500">
                           <option value="PENDING">Pending</option>
                           <option value="PARTIAL">Partial</option>
                           <option value="PAID">Paid</option>
@@ -1449,21 +1470,21 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                 {(!canManageFees && !formData.fee_visa_applicable) ? null : (
                   <div className="mb-6">
                     <div className="flex items-center gap-2 mb-4">
-                      <input type="checkbox" name="fee_visa_applicable" checked={formData.fee_visa_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 text-blue-600 rounded" />
+                      <input type="checkbox" name="fee_visa_applicable" checked={formData.fee_visa_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
                       <h4 className="text-md font-semibold text-gray-700">On Visa Approval</h4>
                     </div>
                     <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_visa_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                        <input type="number" name="fee_visa_amount" value={formData.fee_visa_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                        <input type="number" name="fee_visa_amount" value={formData.fee_visa_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                        <input type="number" name="fee_visa_paid" value={formData.fee_visa_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                        <input type="number" name="fee_visa_paid" value={formData.fee_visa_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                        <select name="fee_visa_status" value={formData.fee_visa_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                        <select name="fee_visa_status" value={formData.fee_visa_status} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white disabled:bg-gray-100 disabled:text-gray-500">
                           <option value="PENDING">Pending</option>
                           <option value="PARTIAL">Partial</option>
                           <option value="PAID">Paid</option>
@@ -1476,21 +1497,21 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                 {(!canManageFees && !formData.fee_ministry_applicable) ? null : (
                   <div className="mb-6">
                     <div className="flex items-center gap-2 mb-4">
-                      <input type="checkbox" name="fee_ministry_applicable" checked={formData.fee_ministry_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 text-blue-600 rounded" />
+                      <input type="checkbox" name="fee_ministry_applicable" checked={formData.fee_ministry_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
                       <h4 className="text-md font-semibold text-gray-700">On Ministry Letter</h4>
                     </div>
                     <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_ministry_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                        <input type="number" name="fee_ministry_amount" value={formData.fee_ministry_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                        <input type="number" name="fee_ministry_amount" value={formData.fee_ministry_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                        <input type="number" name="fee_ministry_paid" value={formData.fee_ministry_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
+                        <input type="number" name="fee_ministry_paid" value={formData.fee_ministry_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                        <select name="fee_ministry_status" value={formData.fee_ministry_status} onChange={handleChange} disabled={!canManageFees} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                        <select name="fee_ministry_status" value={formData.fee_ministry_status} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white disabled:bg-gray-100 disabled:text-gray-500">
                           <option value="PENDING">Pending</option>
                           <option value="PARTIAL">Partial</option>
                           <option value="PAID">Paid</option>
@@ -1517,7 +1538,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                       <input
                         value={dynamicData[field.name] || ''}
                         onChange={(e) => handleDynamicChange(e, field.name)}
-                        className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all"
                       />
                     </div>
                   ))}
@@ -1657,15 +1678,15 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
             <form onSubmit={handleCreateReminder} className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg border">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <input type="date" required value={newReminder.date} onChange={e => setNewReminder({...newReminder, date: e.target.value})} className="w-full border rounded p-2 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                <input type="date" required value={newReminder.date} onChange={e => setNewReminder({...newReminder, date: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                <input type="time" required value={newReminder.time} onChange={e => setNewReminder({...newReminder, time: e.target.value})} className="w-full border rounded p-2 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                <input type="time" required value={newReminder.time} onChange={e => setNewReminder({...newReminder, time: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all" />
               </div>
               <div className="md:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                <textarea rows="2" value={newReminder.note} onChange={e => setNewReminder({...newReminder, note: e.target.value})} className="w-full border rounded p-2 focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="E.g. Call to check visa status..."></textarea>
+                <textarea rows="2" value={newReminder.note} onChange={e => setNewReminder({...newReminder, note: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all resize-none" placeholder="E.g. Call to check visa status..."></textarea>
               </div>
               <div className="md:col-span-3 flex justify-end">
                 <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors">
@@ -1731,7 +1752,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
               <textarea
                 rows="2"
                 placeholder="Add an internal note..."
-                className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all resize-none"
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
               ></textarea>
@@ -1748,17 +1769,17 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
         )}
       </div>
 
-      <div className="px-6 py-4 border-t flex justify-between gap-3 bg-gray-50 w-full">
+      <div className="px-6 py-4 border-t border-gray-100 flex justify-between gap-3 bg-white/80 backdrop-blur w-full">
           <div>
             {student && (
-              <button type="button" onClick={() => onDelete(student.id)} className="px-4 py-2 text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100">
+              <button type="button" onClick={() => onDelete(student.id)} className="px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-all">
                 Delete Student
               </button>
             )}
           </div>
           <div className="flex gap-3">
-            <button onClick={onClose} type="button" className="px-4 py-2 text-gray-600 bg-white border rounded-lg hover:bg-gray-50">Cancel</button>
-            <button form="student-form" type="submit" disabled={loading} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2">
+            <button onClick={onClose} type="button" className="px-5 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all">Cancel</button>
+            <button form="student-form" type="submit" disabled={loading} className="px-6 py-2 text-sm font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl shadow-md hover:shadow-lg flex items-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed">
               {loading ? 'Saving...' : 'Save Student'}
             </button>
           </div>
@@ -1771,8 +1792,8 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
 const CategoryManagerModal = ({ isOpen, onClose, options, newName, setNewName, onAdd, onDelete }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md flex flex-col max-h-[90vh]">
         <div className="flex justify-between items-center p-6 border-b">
           <h2 className="text-xl font-bold text-gray-800">Manage Categories</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -1786,9 +1807,9 @@ const CategoryManagerModal = ({ isOpen, onClose, options, newName, setNewName, o
               placeholder="New category name..."
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              className="flex-1 border rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all"
             />
-            <button type="submit" disabled={!newName.trim()} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+            <button type="submit" disabled={!newName.trim()} className="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed">
               Add
             </button>
           </form>
@@ -1812,8 +1833,8 @@ const CategoryManagerModal = ({ isOpen, onClose, options, newName, setNewName, o
 const IntakeManagerModal = ({ isOpen, onClose, options, newName, setNewName, onAdd, onDelete }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md flex flex-col max-h-[90vh]">
         <div className="flex justify-between items-center p-6 border-b">
           <h2 className="text-xl font-bold text-gray-800">Manage Intakes</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -1827,9 +1848,9 @@ const IntakeManagerModal = ({ isOpen, onClose, options, newName, setNewName, onA
               placeholder="New intake name..."
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              className="flex-1 border rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all"
             />
-            <button type="submit" disabled={!newName.trim()} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+            <button type="submit" disabled={!newName.trim()} className="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed">
               Add
             </button>
           </form>

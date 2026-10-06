@@ -55,11 +55,11 @@ export default function GmailCallbackPage() {
   }, [location.search, accessToken, navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/60 to-purple-50/60 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center">
         {status === 'processing' && (
           <div className="flex flex-col items-center">
-            <Loader2 className="w-16 h-16 text-blue-500 animate-spin mb-4" />
+            <Loader2 className="w-16 h-16 text-indigo-500 animate-spin mb-4" />
             <h2 className="text-xl font-bold text-gray-800">Please wait...</h2>
             <p className="text-gray-500 mt-2">{message}</p>
           </div>
@@ -72,9 +72,9 @@ export default function GmailCallbackPage() {
             <p className="text-gray-500 mt-2">{message}</p>
             <button 
               onClick={() => navigate('/mail-center')}
-              className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+              className="mt-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-2.5 rounded-xl font-semibold shadow-md transition-all"
             >
-              Return to Processing Students
+              Return to Mail Center
             </button>
           </div>
         )}
@@ -86,7 +86,7 @@ export default function GmailCallbackPage() {
             <p className="text-red-500 mt-2">{message}</p>
             <button 
               onClick={() => navigate('/mail-center')}
-              className="mt-6 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-2 rounded-lg font-medium transition-colors"
+              className="mt-6 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-6 py-2.5 rounded-xl font-semibold transition-all"
             >
               Go Back
             </button>

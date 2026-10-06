@@ -50,12 +50,12 @@ const MenuBar = ({ editor }) => {
   };
 
   return (
-    <div className="flex flex-wrap gap-2 mb-2 p-2 bg-gray-50 border border-gray-200 rounded">
+    <div className="flex flex-wrap items-center gap-1.5 mb-2 p-2 bg-gray-50 border border-gray-200 rounded-xl">
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleBold().run()}
         disabled={!editor.can().chain().focus().toggleBold().run()}
-        className={`p-1 rounded ${editor.isActive('bold') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-200 text-gray-700'}`}
+        className={`p-1 rounded ${editor.isActive('bold') ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-gray-200 text-gray-700'}`}
         title="Bold"
       >
         <FormatBold fontSize="small" />
@@ -64,7 +64,7 @@ const MenuBar = ({ editor }) => {
         type="button"
         onClick={() => editor.chain().focus().toggleItalic().run()}
         disabled={!editor.can().chain().focus().toggleItalic().run()}
-        className={`p-1 rounded ${editor.isActive('italic') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-200 text-gray-700'}`}
+        className={`p-1 rounded ${editor.isActive('italic') ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-gray-200 text-gray-700'}`}
         title="Italic"
       >
         <FormatItalic fontSize="small" />
@@ -75,7 +75,7 @@ const MenuBar = ({ editor }) => {
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleBulletList().run()}
-        className={`p-1 rounded ${editor.isActive('bulletList') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-200 text-gray-700'}`}
+        className={`p-1 rounded ${editor.isActive('bulletList') ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-gray-200 text-gray-700'}`}
         title="Bullet List"
       >
         <FormatListBulleted fontSize="small" />
@@ -83,7 +83,7 @@ const MenuBar = ({ editor }) => {
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        className={`p-1 rounded ${editor.isActive('orderedList') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-200 text-gray-700'}`}
+        className={`p-1 rounded ${editor.isActive('orderedList') ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-gray-200 text-gray-700'}`}
         title="Ordered List"
       >
         <FormatListNumbered fontSize="small" />
@@ -94,7 +94,7 @@ const MenuBar = ({ editor }) => {
       <button
         type="button"
         onClick={setLink}
-        className={`p-1 rounded ${editor.isActive('link') ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-200 text-gray-700'}`}
+        className={`p-1 rounded ${editor.isActive('link') ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-gray-200 text-gray-700'}`}
         title="Insert Link"
       >
         <LinkIcon fontSize="small" />
@@ -117,7 +117,7 @@ const MenuBar = ({ editor }) => {
                 e.target.value = '';
             }
         }}
-        className="p-1 border border-gray-300 rounded text-sm text-gray-700 bg-white cursor-pointer"
+        className="px-2 py-1 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white cursor-pointer hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
         title="Insert Template Variable"
         defaultValue=""
       >
@@ -155,7 +155,7 @@ export const MailEditor = ({ content, onChange, placeholder = 'Write your email 
     editable,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[150px] p-3 border border-gray-200 rounded',
+        class: 'prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[150px] p-3 border border-gray-200 rounded-xl bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 transition-all',
       },
     },
     onUpdate: ({ editor }) => {

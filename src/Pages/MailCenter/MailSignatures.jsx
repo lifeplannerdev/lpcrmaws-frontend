@@ -4,7 +4,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { Button, Dialog, TextField, FormControlLabel, Switch } from '@mui/material';
 import MailEditor from '../../Components/Mail/MailEditor';
-import { CloudDownload } from 'lucide-react';
+import { CloudDownload, Plus, PenLine, X } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -14,6 +14,7 @@ export const MailSignatures = () => {
     const [openModal, setOpenModal] = useState(false);
     const [currentSignature, setCurrentSignature] = useState(null);
     const [isImporting, setIsImporting] = useState(false);
+    const [saving, setSaving] = useState(false);
 
     const fetchSignatures = async () => {
         try {
@@ -71,6 +72,7 @@ export const MailSignatures = () => {
     };
 
     const handleSave = async () => {
+        setSaving(true);
         try {
             if (currentSignature.id) {
                 await axios.put(`${API_BASE_URL}/mail/signatures/${currentSignature.id}/`, currentSignature, { headers: { Authorization: `Bearer ${accessToken}` } });
@@ -83,13 +85,18 @@ export const MailSignatures = () => {
             fetchSignatures();
         } catch (error) {
             toast.error("Failed to save signature");
+        } finally {
+            setSaving(false);
         }
     };
 
     return (
-        <div className="p-4">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Mail Signatures</h2>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="flex justify-between items-center flex-wrap gap-3 mb-6">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800">Mail Signatures</h2>
+                    <p className="text-sm text-gray-500">Signatures appended to outgoing student emails</p>
+                </div>
                 <div className="flex gap-2">
                     <Button 
                         variant="outlined" 
@@ -100,26 +107,38 @@ export const MailSignatures = () => {
                     >
                         {isImporting ? 'Importing...' : 'Import from Gmail'}
                     </Button>
-                    <Button variant="contained" onClick={() => { setCurrentSignature({ name: '', body_html: '', is_shared: false }); setOpenModal(true); }}>
+                    <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => { setCurrentSignature({ name: '', body_html: '', is_shared: false }); setOpenModal(true); }}>
                         New Signature
                     </Button>
                 </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {signatures.length === 0 && <p className="text-gray-500 col-span-full">No signatures found. Create one or import from Gmail.</p>}
+                {signatures.length === 0 && (
+                    <div className="col-span-full text-center py-12 border border-dashed border-gray-300 rounded-2xl bg-gray-50 text-gray-500">
+                        No signatures found. Create one or import from Gmail.
+                    </div>
+                )}
                 {signatures.map(s => (
-                    <div key={s.id} className="border p-4 rounded shadow-sm hover:shadow-md cursor-pointer bg-white" onClick={() => { setCurrentSignature(s); setOpenModal(true); }}>
-                        <h3 className="font-bold">{s.name}</h3>
-                        <p className="text-xs mt-1 text-gray-500">{s.is_shared ? 'Shared' : 'Personal'}</p>
-                        <div className="text-sm mt-2 p-2 bg-gray-50 rounded" dangerouslySetInnerHTML={{ __html: s.body_html }} />
+                    <div key={s.id} className="border border-gray-200 p-5 rounded-2xl hover:shadow-lg hover:border-indigo-200 hover:-translate-y-0.5 transition-all cursor-pointer bg-white" onClick={() => { setCurrentSignature(s); setOpenModal(true); }}>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0"><PenLine size={16} /></div>
+                                <h3 className="font-bold text-gray-800 truncate">{s.name}</h3>
+                            </div>
+                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${s.is_shared ? 'bg-indigo-50 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>{s.is_shared ? 'Shared' : 'Personal'}</span>
+                        </div>
+                        <div className="text-sm mt-3 p-3 bg-gray-50 rounded-xl border border-gray-100 max-h-40 overflow-hidden" dangerouslySetInnerHTML={{ __html: s.body_html }} />
                     </div>
                 ))}
             </div>
 
             <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="md" fullWidth>
+                <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50 via-white to-purple-50 flex justify-between items-center">
+                    <h2 className="text-xl font-bold text-gray-800">{currentSignature?.id ? 'Edit Signature' : 'New Signature'}</h2>
+                    <button onClick={() => setOpenModal(false)} className="w-9 h-9 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors" aria-label="Close"><X size={20} /></button>
+                </div>
                 <div className="p-6">
-                    <h2 className="text-xl font-bold mb-4">{currentSignature?.id ? 'Edit Signature' : 'New Signature'}</h2>
                     <div className="space-y-4">
                         <TextField 
                             label="Name" 
@@ -138,7 +157,7 @@ export const MailSignatures = () => {
                             control={<Switch checked={currentSignature?.is_shared || false} onChange={e => setCurrentSignature({...currentSignature, is_shared: e.target.checked})} />}
                             label="Shared with all users"
                         />
-                        <div className="flex justify-between mt-4">
+                        <div className="flex justify-between mt-4 pt-4 border-t border-gray-100">
                             <div>
                                 {currentSignature?.id && (
                                     <Button color="error" onClick={handleDelete}>Delete</Button>
@@ -146,7 +165,7 @@ export const MailSignatures = () => {
                             </div>
                             <div className="flex gap-2">
                                 <Button onClick={() => setOpenModal(false)}>Cancel</Button>
-                                <Button variant="contained" onClick={handleSave}>Save</Button>
+                                <Button variant="contained" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
                             </div>
                         </div>
                     </div>
