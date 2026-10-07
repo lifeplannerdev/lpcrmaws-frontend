@@ -63,7 +63,8 @@ export default function ReportViewPage() {
         const ptRes = await axios.get(`${API_BASE}/penalty-types/`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
-        setPenaltyTypes(ptRes.data.map(pt => ({ value: pt.id, label: `${pt.name} (-₹${pt.default_amount})` })));
+        const penaltyList = ptRes.data.results || ptRes.data;
+        setPenaltyTypes(penaltyList.map(pt => ({ value: pt.id, label: `${pt.name} (-₹${pt.default_amount})` })));
       }
     } catch (err) {
       console.error('Failed to fetch report:', err);

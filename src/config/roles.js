@@ -49,6 +49,7 @@ export const masterNavigation = [
   { id: "candidates", label: "Candidates", icon: Users, path: "/candidates", requiredResource: "candidates", category: "hr", description: "Job applicants & hiring pipeline" },
   { id: "attendanceDocs", label: "Attendance Docs", icon: FolderClock, path: "/hr/attendance", requiredResource: "staff", category: "hr", description: "Staff monthly attendance & leave docs" },
   { id: "penalties", label: "Penalties", icon: ShieldAlert, path: "/hr/penalties", requiredResource: "penalties", category: "hr", description: "Staff disciplinary records & penalties" },
+    { id: "penaltyLibrary", label: "Penalty Library", icon: ShieldAlert, path: "/hr/penalty-library", requiredResource: "penalties", category: "hr", description: "Manage penalty types and default amounts" },
   { id: "assets", label: "Assets", icon: Monitor, path: "/hr/assets", requiredResource: "assets", category: "hr", description: "Company equipment, devices & resources" },
   { id: "documents", label: "Document Registry", icon: FileText, path: "/hr/documents", requiredPermissions: ["license:admin"], category: "hr", description: "Company licenses, documents & expiries" },
 

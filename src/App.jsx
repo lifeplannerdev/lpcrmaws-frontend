@@ -26,6 +26,7 @@ import ReportTimingSettingsPage from "./Pages/ReportTimingSettingsPage.jsx";
 
 import AttendanceDocumentsPage from "./Pages/AttendanceDocumentsPage.jsx";
 import PenaltyManagementPage from "./Pages/PenaltyManagementPage.jsx";
+import PenaltyLibraryPage from "./Pages/PenaltyLibraryPage.jsx";
 import CallAnalyticsPage from "./Pages/CallAnalyticsPage.jsx";
 import ChatPage from "./Pages/ChatPage.jsx";
 import AllFollowUpsPage from './Pages/AllFollowUpsPage';
@@ -152,6 +153,7 @@ export default function App() {
         <Route path="/hr/documents" element={<PermissionRoute permissions={['license:admin']}><DocumentDetailsPage /></PermissionRoute>} />
         <Route path="/hr/attendance" element={<PermissionRoute resources={['staff']}><AttendanceDocumentsPage /></PermissionRoute>} />
         <Route path="/hr/penalties" element={<PermissionRoute resources={['penalties']}><PenaltyManagementPage /></PermissionRoute>} />
+          <Route path="/hr/penalty-library" element={<PermissionRoute resources={['penalties']}><PenaltyLibraryPage /></PermissionRoute>} />
         <Route path="/candidates" element={<PermissionRoute resources={['candidates']}><CandidatesPage /></PermissionRoute>} />
         <Route path="/candidates/new" element={<PermissionRoute resources={['candidates']}><CandidateFormPage /></PermissionRoute>} />
         <Route path="/candidates/edit/:id" element={<PermissionRoute resources={['candidates']}><CandidateFormPage /></PermissionRoute>} />
