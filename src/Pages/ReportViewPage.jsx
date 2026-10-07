@@ -332,6 +332,83 @@ export default function ReportViewPage() {
           </div>
         </div>
 
+        {/* Agenda Content */}
+        {report.next_day_agenda && (
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <FileText size={20} className="text-amber-600" />
+              Agenda Content
+            </h2>
+            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl p-6">
+              <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                {report.next_day_agenda}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Report Content */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <FileText size={20} className="text-indigo-600" />
+            Report Content
+          </h2>
+          <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6">
+            {(() => {
+              const text = (report.report_text || '').trim();
+              if (text.includes('[Daily Leads Snapshot]')) {
+                try {
+                  let leadsStr = text;
+                  let extraText = '';
+                  if (text.includes('[Evening Report]')) {
+                    const parts = text.split(/\[Evening Report\]\r?\n?/);
+                    leadsStr = parts[0];
+                    extraText = parts[1] ? parts[1].trim() : '';
+                  }
+                  leadsStr = leadsStr.replace(/\[Daily Leads Snapshot\]\r?\n?/, '').trim();
+                  const leads = JSON.parse(leadsStr);
+                  
+                  return (
+                    <div className="space-y-4">
+                      <div className="h-[500px] w-full rounded-lg overflow-hidden border border-indigo-200 bg-white">
+                        <SpreadsheetView leads={leads} isReportMode={true} authFetch={()=>{}} />
+                      </div>
+                      {extraText && (
+                        <div className="bg-white rounded-lg p-4 border border-gray-200">
+                          <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{extraText}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                } catch (e) {
+                  return (
+                    <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{text}</p>
+                  );
+                }
+              } else if (text.startsWith('[')) {
+                try {
+                  const leads = JSON.parse(text);
+                  return (
+                    <div className="h-[500px] w-full rounded-lg overflow-hidden border border-indigo-200 bg-white">
+                      <SpreadsheetView leads={leads} isReportMode={true} authFetch={()=>{}} />
+                    </div>
+                  );
+                } catch (e) {
+                  return (
+                    <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{text}</p>
+                  );
+                }
+              } else {
+                return (
+                  <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                    {text || 'No content provided'}
+                  </p>
+                );
+              }
+            })()}
+          </div>
+        </div>
+
         {/* Report Info */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
