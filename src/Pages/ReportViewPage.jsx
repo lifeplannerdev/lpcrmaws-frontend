@@ -60,7 +60,7 @@ export default function ReportViewPage() {
       setReportComment(res.data.report_review_comment || '');
       
       if (canApproveReports) {
-        const ptRes = await axios.get(`${API_BASE}/hr/penalty-types/`, {
+        const ptRes = await axios.get(`${API_BASE}/penalty-types/`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         setPenaltyTypes(ptRes.data.map(pt => ({ value: pt.id, label: `${pt.name} (-₹${pt.default_amount})` })));
