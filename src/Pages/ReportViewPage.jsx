@@ -22,13 +22,14 @@ import {
   Eye
 } from 'lucide-react';
 import SpreadsheetView from '../Components/leads/SpreadsheetView';
+import Select from 'react-select';
 
 export default function ReportViewPage() {
   const { id } = useParams();
   const { accessToken } = useAuth();
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
-  const canApproveReports = hasPermission('reports:edit_any') || hasPermission('reports:edit_tenant') || hasPermission('reports:approve_any');
+  const canApproveReports = hasPermission('reports:approval');
 
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +37,13 @@ export default function ReportViewPage() {
   const [reviewAction, setReviewAction] = useState('');
   const [reviewComment, setReviewComment] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-
+  
+  const [penaltyTypes, setPenaltyTypes] = useState([]);
+  const [agendaStatus, setAgendaStatus] = useState('pending');
+  const [reportStatus, setReportStatus] = useState('pending');
+  const [agendaComment, setAgendaComment] = useState('');
+  const [reportComment, setReportComment] = useState('');
+  const [selectedPenalties, setSelectedPenalties] = useState([]);
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
   const fetchReport = async () => {
@@ -47,6 +54,17 @@ export default function ReportViewPage() {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       setReport(res.data);
+      setAgendaStatus(res.data.agenda_status || 'pending');
+      setReportStatus(res.data.report_status || 'pending');
+      setAgendaComment(res.data.agenda_review_comment || '');
+      setReportComment(res.data.report_review_comment || '');
+      
+      if (canApproveReports) {
+        const ptRes = await axios.get(`${API_BASE}/hr/penalty-types/`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        setPenaltyTypes(ptRes.data.map(pt => ({ value: pt.id, label: `${pt.name} (-₹${pt.default_amount})` })));
+      }
     } catch (err) {
       console.error('Failed to fetch report:', err);
       alert('Failed to load report details');
@@ -60,26 +78,34 @@ export default function ReportViewPage() {
     fetchReport();
   }, [id, accessToken]);
 
-  const openReviewModal = (action) => {
-    setReviewAction(action);
-    setReviewComment('');
+  const openReviewModal = () => {
     setReviewModal(true);
   };
 
   const handleReviewReport = async () => {
     if (!accessToken) return;
-    if (reviewAction === 'rejected' && !reviewComment.trim()) {
-      alert('Please provide a reason for rejection');
+    if (agendaStatus === 'rejected' && !agendaComment.trim()) {
+      alert('Please provide a comment for rejecting the agenda');
+      return;
+    }
+    if (reportStatus === 'rejected' && !reportComment.trim()) {
+      alert('Please provide a comment for rejecting the report');
       return;
     }
     setActionLoading(true);
     try {
       await axios.patch(
         `${API_BASE}/admin/reports/${id}/review/`,
-        { status: reviewAction, review_comment: reviewComment },
+        { 
+          agenda_status: agendaStatus, 
+          report_status: reportStatus, 
+          agenda_review_comment: agendaComment,
+          report_review_comment: reportComment,
+          penalty_type_ids: selectedPenalties.map(p => p.value)
+        },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      alert(`Report ${reviewAction} successfully!`);
+      alert(`Report reviewed successfully!`);
       setReviewModal(false);
       fetchReport();
     } catch (err) {
@@ -293,102 +319,15 @@ export default function ReportViewPage() {
             )}
 
             {report.status === 'pending' && canApproveReports && (
-              <>
-                <button
-                  onClick={() => openReviewModal('approved')}
-                  disabled={actionLoading}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <CheckCircle size={18} />
-                  Approve Report
-                </button>
-                <button
-                  onClick={() => openReviewModal('rejected')}
-                  disabled={actionLoading}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <XCircle size={18} />
-                  Reject Report
-                </button>
-              </>
+              <button
+                onClick={() => openReviewModal()}
+                disabled={actionLoading}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <CheckCircle size={18} />
+                Review Submission
+              </button>
             )}
-          </div>
-        </div>
-
-        {/* Agenda Content */}
-        {report.next_day_agenda && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <FileText size={20} className="text-amber-600" />
-              Agenda Content
-            </h2>
-            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl p-6">
-              <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-                {report.next_day_agenda}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Report Content */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <FileText size={20} className="text-indigo-600" />
-            Report Content
-          </h2>
-          <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6">
-            {(() => {
-              const text = (report.report_text || '').trim();
-              if (text.includes('[Daily Leads Snapshot]')) {
-                try {
-                  let leadsStr = text;
-                  let extraText = '';
-                  if (text.includes('[Evening Report]')) {
-                    const parts = text.split(/\[Evening Report\]\r?\n?/);
-                    leadsStr = parts[0];
-                    extraText = parts[1] ? parts[1].trim() : '';
-                  }
-                  leadsStr = leadsStr.replace(/\[Daily Leads Snapshot\]\r?\n?/, '').trim();
-                  const leads = JSON.parse(leadsStr);
-                  
-                  return (
-                    <div className="space-y-4">
-                      <div className="h-[500px] w-full rounded-lg overflow-hidden border border-indigo-200 bg-white">
-                        <SpreadsheetView leads={leads} isReportMode={true} authFetch={()=>{}} />
-                      </div>
-                      {extraText && (
-                        <div className="bg-white rounded-lg p-4 border border-gray-200">
-                          <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{extraText}</p>
-                        </div>
-                      )}
-                    </div>
-                  );
-                } catch (e) {
-                  return (
-                    <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{text}</p>
-                  );
-                }
-              } else if (text.startsWith('[')) {
-                try {
-                  const leads = JSON.parse(text);
-                  return (
-                    <div className="h-[500px] w-full rounded-lg overflow-hidden border border-indigo-200 bg-white">
-                      <SpreadsheetView leads={leads} isReportMode={true} authFetch={()=>{}} />
-                    </div>
-                  );
-                } catch (e) {
-                  return (
-                    <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{text}</p>
-                  );
-                }
-              } else {
-                return (
-                  <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-                    {text || 'No content provided'}
-                  </p>
-                );
-              }
-            })()}
           </div>
         </div>
 
@@ -526,46 +465,87 @@ export default function ReportViewPage() {
 
       {/* Review Modal */}
       {reviewModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              {reviewAction === 'approved' ? 'Approve Report' : 'Reject Report'}
-            </h3>
-            <p className="text-gray-600 mb-4">
-              {reviewAction === 'approved'
-                ? 'Are you sure you want to approve this report? You can add an optional comment below.'
-                : 'Please provide a reason for rejecting this report.'}
-            </p>
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-2xl my-8">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">Review Submission</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                <h4 className="font-bold text-amber-800 mb-3">Agenda Review</h4>
+                <div className="mb-3">
+                  <select 
+                    value={agendaStatus} 
+                    onChange={e => setAgendaStatus(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approve</option>
+                    <option value="rejected">Reject</option>
+                  </select>
+                </div>
+                <div>
+                  <textarea
+                    value={agendaComment}
+                    onChange={e => setAgendaComment(e.target.value)}
+                    placeholder="Agenda review remarks..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-amber-500"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-200">
+                <h4 className="font-bold text-indigo-800 mb-3">Report Review</h4>
+                <div className="mb-3">
+                  <select 
+                    value={reportStatus} 
+                    onChange={e => setReportStatus(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approve</option>
+                    <option value="rejected">Reject</option>
+                  </select>
+                </div>
+                <div>
+                  <textarea
+                    value={reportComment}
+                    onChange={e => setReportComment(e.target.value)}
+                    placeholder="Report review remarks..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500"
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Comment {reviewAction === 'rejected' && <span className="text-red-500">*</span>}
-              </label>
-              <textarea
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-                placeholder={reviewAction === 'approved' ? 'Add your comment (optional)...' : 'Please explain why you are rejecting this report...'}
-                rows={4}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              <label className="block text-sm font-bold text-gray-700 mb-2">Apply Penalties (Optional)</label>
+              <Select
+                isMulti
+                options={penaltyTypes}
+                value={selectedPenalties}
+                onChange={setSelectedPenalties}
+                placeholder="Select penalties to apply..."
+                className="react-select-container"
+                classNamePrefix="react-select"
               />
             </div>
+
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setReviewModal(false)}
-                className="px-5 py-2.5 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors duration-200"
+                className="px-5 py-2.5 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
                 disabled={actionLoading}
               >
                 Cancel
               </button>
               <button
                 onClick={handleReviewReport}
-                className={`px-5 py-2.5 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  reviewAction === 'approved'
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:shadow-lg'
-                    : 'bg-gradient-to-r from-red-500 to-rose-600 hover:shadow-lg'
-                }`}
-                disabled={actionLoading || (reviewAction === 'rejected' && !reviewComment.trim())}
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50"
+                disabled={actionLoading}
               >
-                {actionLoading ? 'Processing...' : reviewAction === 'approved' ? 'Approve' : 'Reject'}
+                {actionLoading ? 'Saving...' : 'Submit Review'}
               </button>
             </div>
           </div>

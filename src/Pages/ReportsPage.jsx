@@ -246,36 +246,28 @@ export default function ReportsPage() {
   }, [accessToken, API_BASE]);
 
   const getStatusBadge = useCallback((report) => {
-    const status = report.status?.toLowerCase();
-    if (status === 'approved') {
-      return (
-        <span className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 px-3 py-1.5 rounded-full text-xs font-bold border border-green-200 inline-flex items-center gap-1">
-          <CheckCircle className="w-3.5 h-3.5" />
-          Approved
-        </span>
-      );
-    } else if (status === 'rejected') {
-      return (
-        <span className="bg-gradient-to-r from-red-100 to-rose-100 text-red-700 px-3 py-1.5 rounded-full text-xs font-bold border border-red-200 inline-flex items-center gap-1">
-          <XCircle className="w-3.5 h-3.5" />
-          Rejected
-        </span>
-      );
-    } else if (status === 'missing') {
+    if (report.status === 'missing') {
       return (
         <span className="bg-gradient-to-r from-red-100 to-red-200 text-red-800 px-3 py-1.5 rounded-full text-xs font-bold border border-red-300 inline-flex items-center gap-1">
-          <AlertCircle className="w-3.5 h-3.5" />
-          Missing
-        </span>
-      );
-    } else {
-      return (
-        <span className="bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-700 px-3 py-1.5 rounded-full text-xs font-bold border border-yellow-200 inline-flex items-center gap-1">
-          <AlertCircle className="w-3.5 h-3.5" />
-          Pending
+          <AlertCircle className="w-3.5 h-3.5" /> Missing
         </span>
       );
     }
+    
+    const getMiniBadge = (type, status) => {
+      if (status === 'approved') return <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded text-[10px] font-bold border border-green-200">{type}: ✓</span>;
+      if (status === 'rejected') return <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded text-[10px] font-bold border border-red-200">{type}: ✗</span>;
+      return <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-200">{type}: ⋯</span>;
+    };
+
+    return (
+      <div className="flex flex-col gap-1">
+        <div className="flex gap-1">
+          {getMiniBadge('Agenda', report.agenda_status || report.status)}
+          {getMiniBadge('Report', report.report_status || report.status)}
+        </div>
+      </div>
+    );
   }, []);
 
   const isLateReport = (report) => {

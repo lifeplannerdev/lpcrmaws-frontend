@@ -20,6 +20,7 @@ const PERMISSION_OPTIONS = [
   { id: 'reports:kochi', label: 'View Staff Reports (Kochi Only)', group: 'Reports' },
   { id: 'reports:documentation', label: 'View Documentation Reports', group: 'Reports' },
   { id: 'reports:read_own', label: 'View My Reports', group: 'Reports' },
+  { id: 'reports:approval', label: 'Approve/Reject Reports', group: 'Reports' },
   { id: 'voxbay:read', label: 'View Call Analytics', group: 'Other' },
   { id: 'penalties:read_any', label: 'View Penalties', group: 'HR' },
   { id: 'penalties:edit_any', label: 'Manage Penalties', group: 'HR' },
