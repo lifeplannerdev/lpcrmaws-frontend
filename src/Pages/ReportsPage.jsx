@@ -18,7 +18,7 @@ const ReportRow = React.memo(({ report, isLate, getStatusBadge, navigate, downlo
             <FileText className="text-white w-5 h-5" />
           </div>
           <div className="flex flex-col">
-            <span className="font-semibold text-gray-900">{report.name}</span>
+            <span className="font-semibold text-gray-900">{report.user_name || report.name}</span>
             <div className="flex flex-col items-start gap-1 mt-1">
               {report.agenda_late_by && <span className="text-[10px] text-yellow-700 font-bold bg-yellow-100 px-2 py-0.5 rounded-md border border-yellow-200">Late Agenda ({report.agenda_late_by})</span>}
               {report.report_late_by && <span className="text-[10px] text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded-md border border-red-200">Late Report ({report.report_late_by})</span>}
@@ -287,7 +287,7 @@ export default function ReportsPage() {
   const handleExportCSV = () => {
     const data = recentReports.map(r => ({
       ID: r.id,
-      'Report Name': r.name,
+      'Report Name': r.user_name || r.name,
       'Report Heading': r.report_heading || '',
       'Agenda Heading': r.agenda_heading || '',
       'Progress': `${r.completion_percentage}%`,
@@ -487,29 +487,38 @@ export default function ReportsPage() {
                     </td>
                   </tr>
                 ) : recentReports.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center">
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                          <FileText className="w-8 h-8 text-gray-400" />
+                    <tr>
+                      <td colSpan={6} className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center">
+                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <FileText className="w-8 h-8 text-gray-400" />
+                          </div>
+                          <p className="text-gray-500 text-sm font-medium">No reports found</p>
+                          <p className="text-gray-400 text-xs mt-1">Reports will appear here once submitted</p>
                         </div>
-                        <p className="text-gray-500 text-sm font-medium">No reports found</p>
-                        <p className="text-gray-400 text-xs mt-1">Reports will appear here once submitted</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  recentReports.map((report) => (
-                    <ReportRow 
-                      key={report.id} 
-                      report={report} 
-                      isLate={isLateReport(report)} 
-                      getStatusBadge={getStatusBadge}
-                      navigate={navigate}
-                      downloadFile={downloadFile}
-                    />
-                  ))
-                )}
+                      </td>
+                    </tr>
+                  ) : (
+                    Object.entries(groupedReports).map(([date, reports]) => (
+                      <React.Fragment key={date}>
+                        <tr>
+                          <td colSpan="6" className="px-6 py-3 bg-slate-200 border-y-2 border-slate-300 shadow-inner text-sm font-extrabold text-slate-800 uppercase tracking-widest text-center">
+                            {new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                          </td>
+                        </tr>
+                        {reports.map((report) => (
+                          <ReportRow 
+                            key={report.id} 
+                            report={report} 
+                            isLate={isLateReport(report)} 
+                            getStatusBadge={getStatusBadge}
+                            navigate={navigate}
+                            downloadFile={downloadFile}
+                          />
+                        ))}
+                      </React.Fragment>
+                    ))
+                  )}
               </tbody>
             </table>
           </div>
