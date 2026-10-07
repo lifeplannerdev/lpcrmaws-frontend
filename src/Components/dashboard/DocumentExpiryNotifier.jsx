@@ -25,12 +25,24 @@ export default function DocumentExpiryNotifier() {
             const documents = data.results || data || [];
             
             if (documents.length > 0) {
+              const displayDocs = documents.slice(0, 3);
+              const extraCount = documents.length - 3;
+              
               toast.error(
-                <div>
+                <div className="flex flex-col gap-1">
                   <strong>Document Expiry Alert</strong>
-                  <p className="text-sm mt-1">{documents.length} document(s) are expired or expiring soon!</p>
+                  <p className="text-sm">{documents.length} document(s) are expired or expiring soon:</p>
+                  <ul className="text-xs list-disc pl-4 mt-1 space-y-1 text-gray-700">
+                    {displayDocs.map(doc => (
+                      <li key={doc.id}>
+                        <span className="font-semibold">{doc.title}</span> 
+                        {doc.amount ? ` (₹${doc.amount})` : ''} — <span className="text-red-600">{doc.days_remaining < 0 ? 'Expired' : `in ${doc.days_remaining}d`}</span>
+                      </li>
+                    ))}
+                    {extraCount > 0 && <li>and {extraCount} more...</li>}
+                  </ul>
                 </div>, 
-                { duration: 8000, position: 'top-right' }
+                { duration: 10000, position: 'top-right' }
               );
               setHasNotified(true);
             }

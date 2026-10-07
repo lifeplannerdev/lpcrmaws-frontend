@@ -28,7 +28,7 @@ const FILTER_OPTIONS = [
 
 const BLANK_FORM = {
   title: '', document_type: '', description: '', notes: '',
-  issue_date: '', expiry_date: '', renewal_interval_days: '', company: 'LP',
+  issue_date: '', expiry_date: '', renewal_interval_days: '', company: 'LP', amount: '',
 };
 
 // ── Sub-components ─────────────────────────────────────────────
@@ -166,6 +166,7 @@ export default function DocumentDetailsPage() {
         expiry_date: doc.expiry_date || '',
         renewal_interval_days: doc.renewal_interval_days || '',
         company: doc.company || 'LP',
+        amount: doc.amount || '',
       });
     } else {
       setEditingDoc(null);
@@ -307,7 +308,7 @@ export default function DocumentDetailsPage() {
               <table className="min-w-full divide-y divide-gray-100">
                 <thead className="bg-gray-50">
                   <tr>
-                    {['Document', 'Type', 'Company', 'Status', 'Expiry Date', 'Countdown', 'Next Renewal', 'Actions'].map(h => (
+                    {['Document', 'Type', 'Company', 'Status', 'Expiry Date', 'Countdown', 'Next Renewal', 'Amount', 'Actions'].map(h => (
                       <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         {h}
                       </th>
@@ -344,6 +345,9 @@ export default function DocumentDetailsPage() {
                         {doc.next_renewal_date
                           ? <span className="flex items-center gap-1"><RefreshCw className="w-3 h-3" />{doc.next_renewal_date}</span>
                           : '—'}
+                      </td>
+                      <td className="px-5 py-4 text-sm font-semibold text-gray-700 whitespace-nowrap">
+                        {doc.amount ? `₹${doc.amount}` : '—'}
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-1.5">
@@ -433,6 +437,8 @@ export default function DocumentDetailsPage() {
                     </optgroup>
                   </select>
                 </div>
+                
+                <FormField label="Amount (₹)" type="number" step="0.01" value={formData.amount} onChange={updateForm('amount')} placeholder="e.g. 500.00 (optional)" />
 
                 <div className="grid grid-cols-2 gap-3">
                   <FormField label="Issue Date" type="date" value={formData.issue_date} onChange={updateForm('issue_date')} />
