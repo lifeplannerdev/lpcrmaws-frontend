@@ -637,8 +637,8 @@ export default function MyReportsPage() {
   };
 
   const handleEdit = (report) => {
-    if (report.status !== 'pending') {
-      alert('Only pending reports can be edited');
+    if (report.status !== 'pending' && report.status !== 'rejected') {
+      alert('Only pending or rejected reports can be edited');
       return;
     }
     setEditingReport(report);
@@ -900,7 +900,7 @@ export default function MyReportsPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    {report.status === 'pending' && report.report_date === getLocalYYYYMMDD() && (
+                    {(report.status === 'pending' || report.status === 'rejected') && (
                       <button onClick={() => handleEdit(report)} className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-colors" title="Edit report">
                         <Edit className="w-5 h-5" />
                       </button>

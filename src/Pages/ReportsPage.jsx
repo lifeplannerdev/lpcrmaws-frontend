@@ -11,7 +11,7 @@ import { downloadCSV, downloadPDF } from '../utils/exportUtils';
 
 const ReportRow = React.memo(({ report, isLate, getStatusBadge, navigate, downloadFile }) => {
   return (
-    <tr className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 ${isLate ? 'bg-red-50/50' : ''}`}>
+    <tr className={`hover:bg-gradient-to-r transition-all duration-200 ${report.status === 'rejected' ? 'bg-red-50 hover:from-red-100 hover:to-red-50' : (isLate ? 'bg-amber-50/50 hover:from-amber-100 hover:to-amber-50' : 'hover:from-blue-50 hover:to-indigo-50')}`}>
       <td className="px-6 py-4">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 ${isLate ? 'bg-gradient-to-br from-red-500 to-rose-600' : 'bg-gradient-to-br from-blue-500 to-indigo-600'} rounded-lg flex items-center justify-center shadow-md`}>
@@ -269,6 +269,16 @@ export default function ReportsPage() {
       </div>
     );
   }, []);
+
+
+  const groupedReports = useMemo(() => {
+    return recentReports.reduce((acc, report) => {
+      const date = report.report_date;
+      if (!acc[date]) acc[date] = [];
+      acc[date].push(report);
+      return acc;
+    }, {});
+  }, [recentReports]);
 
   const isLateReport = (report) => {
     return report.is_report_late || report.is_agenda_late;
