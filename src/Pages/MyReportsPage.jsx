@@ -1087,7 +1087,7 @@ export default function MyReportsPage() {
                       )}
                       {selectedReport.agenda_status === 'approved' && (
                         <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
                           <span className="text-green-800 font-semibold text-sm">Agenda Approved</span>
                           {selectedReport.agenda_review_comment && <span className="text-green-700 text-sm ml-2">- {selectedReport.agenda_review_comment}</span>}
                         </div>
