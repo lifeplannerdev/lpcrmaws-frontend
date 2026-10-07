@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { Button, Select, MenuItem, TextField, ThemeProvider } from '@mui/material';
-import { ArrowLeft, RefreshCw, Send, Save, Trash, PenSquare, Mail } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Send, Save, Trash, PenSquare, Mail, Paperclip, Download } from 'lucide-react';
 import MailEditor from '../../Components/Mail/MailEditor';
 import { mailTheme } from './mailTheme';
 
