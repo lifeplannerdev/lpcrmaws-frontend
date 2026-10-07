@@ -544,58 +544,73 @@ export default function ReportViewPage() {
       {/* Review Modal */}
       {reviewModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-2xl my-8">
+          <div className="bg-white rounded-2xl p-6 max-w-5xl w-full shadow-2xl my-8">
             <h3 className="text-2xl font-bold text-gray-900 mb-6">Review Submission</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                <h4 className="font-bold text-amber-800 mb-3">Agenda Review</h4>
-                <div className="mb-3">
+              
+              <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 flex flex-col h-full">
+                <h4 className="font-bold text-amber-800 mb-3 flex justify-between items-center">
+                  <span>Agenda Review</span>
+                </h4>
+                {report.next_day_agenda && (
+                  <div className="mb-4 p-3 bg-white/60 rounded-lg text-sm text-gray-800 whitespace-pre-wrap flex-1 max-h-[30vh] overflow-y-auto border border-amber-100">
+                    <div className="font-semibold text-amber-900 mb-1 text-xs uppercase tracking-wider">Submitted Agenda:</div>
+                    {report.next_day_agenda}
+                  </div>
+                )}
+                <div className="mt-auto space-y-3">
                   <select 
                     value={agendaStatus} 
                     onChange={e => setAgendaStatus(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 font-medium"
                   >
                     <option value="pending">Pending</option>
                     <option value="approved">Approve</option>
                     <option value="rejected">Reject</option>
                   </select>
-                </div>
-                <div>
-                  <textarea
-                    value={agendaComment}
-                    onChange={e => setAgendaComment(e.target.value)}
-                    placeholder="Agenda review remarks..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-amber-500"
-                    rows={3}
-                  />
+                  <div>
+                    <textarea
+                      value={agendaComment}
+                      onChange={e => setAgendaComment(e.target.value)}
+                      placeholder={agendaStatus === 'rejected' ? "Mandatory: Why is this rejected?" : "Agenda review remarks (optional)..."}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-amber-500 ${agendaStatus === 'rejected' ? 'border-red-300 bg-red-50 placeholder-red-400' : 'border-gray-300'}`}
+                      rows={3}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-200">
-                <h4 className="font-bold text-indigo-800 mb-3">Report Review</h4>
-                <div className="mb-3">
+              <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-200 flex flex-col h-full">
+                <h4 className="font-bold text-indigo-800 mb-3 flex justify-between items-center">
+                  <span>Report Review</span>
+                </h4>
+                <div className="mb-4 p-3 bg-white/60 rounded-lg text-sm text-gray-800 whitespace-pre-wrap flex-1 max-h-[30vh] overflow-y-auto border border-indigo-100">
+                  <div className="font-semibold text-indigo-900 mb-1 text-xs uppercase tracking-wider">Submitted Report:</div>
+                  {report.report_text || 'No text content provided.'}
+                </div>
+                <div className="mt-auto space-y-3">
                   <select 
                     value={reportStatus} 
                     onChange={e => setReportStatus(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 font-medium"
                   >
                     <option value="pending">Pending</option>
                     <option value="approved">Approve</option>
                     <option value="rejected">Reject</option>
                   </select>
-                </div>
-                <div>
-                  <textarea
-                    value={reportComment}
-                    onChange={e => setReportComment(e.target.value)}
-                    placeholder="Report review remarks..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500"
-                    rows={3}
-                  />
+                  <div>
+                    <textarea
+                      value={reportComment}
+                      onChange={e => setReportComment(e.target.value)}
+                      placeholder={reportStatus === 'rejected' ? "Mandatory: Why is this rejected?" : "Report review remarks (optional)..."}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-indigo-500 ${reportStatus === 'rejected' ? 'border-red-300 bg-red-50 placeholder-red-400' : 'border-gray-300'}`}
+                      rows={3}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+</div>
 
             <div className="mb-6">
               <label className="block text-sm font-bold text-gray-700 mb-2">Apply Penalties (Optional)</label>
