@@ -520,25 +520,63 @@ export default function ReportViewPage() {
           </div>
         )}
 
-        {/* Review Comment */}
-        {(report.status === 'approved' || report.status === 'rejected') && report.review_comment && (
-          <div className={`rounded-2xl shadow-lg border p-6 ${
-            report.status === 'approved'
-              ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200'
-              : 'bg-gradient-to-br from-red-50 to-rose-50 border-red-200'
-          }`}>
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <MessageSquare size={20} className={report.status === 'approved' ? 'text-green-600' : 'text-red-600'} />
-              Review Comment
-            </h2>
-            <div className="bg-white rounded-xl p-4 mb-3">
-              <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{report.review_comment}</p>
+        {/* Review Remarks */}
+          {(report.agenda_status !== 'pending' || report.report_status !== 'pending' || report.review_comment) && (
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <MessageSquare size={20} className="text-indigo-600" />
+                Review Remarks & Status
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Agenda Review Status */}
+                {report.agenda_status !== 'pending' && (
+                  <div className={`rounded-xl border p-4 ${report.agenda_status === 'approved' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                    <div className={`font-bold flex items-center gap-2 mb-2 ${report.agenda_status === 'approved' ? 'text-green-800' : 'text-red-800'}`}>
+                      {report.agenda_status === 'approved' ? <CheckCircle size={18}/> : <XCircle size={18}/>}
+                      Agenda {report.agenda_status === 'approved' ? 'Approved' : 'Rejected'}
+                    </div>
+                    {report.agenda_review_comment && (
+                      <div className="bg-white rounded-lg p-3 text-sm text-gray-800 whitespace-pre-wrap border border-gray-100 shadow-sm">
+                        {report.agenda_review_comment}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Report Review Status */}
+                {report.report_status !== 'pending' && (
+                  <div className={`rounded-xl border p-4 ${report.report_status === 'approved' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                    <div className={`font-bold flex items-center gap-2 mb-2 ${report.report_status === 'approved' ? 'text-green-800' : 'text-red-800'}`}>
+                      {report.report_status === 'approved' ? <CheckCircle size={18}/> : <XCircle size={18}/>}
+                      Report {report.report_status === 'approved' ? 'Approved' : 'Rejected'}
+                    </div>
+                    {report.report_review_comment && (
+                      <div className="bg-white rounded-lg p-3 text-sm text-gray-800 whitespace-pre-wrap border border-gray-100 shadow-sm">
+                        {report.report_review_comment}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Legacy fallback */}
+              {report.review_comment && (!report.agenda_review_comment && !report.report_review_comment) && (
+                <div className="mt-4 bg-gray-50 rounded-xl p-4 border border-gray-200">
+                  <div className="font-bold text-gray-800 mb-2">Legacy Comment</div>
+                  <div className="bg-white rounded-lg p-3 text-sm text-gray-800 whitespace-pre-wrap border border-gray-100 shadow-sm">
+                    {report.review_comment}
+                  </div>
+                </div>
+              )}
+
+              {report.reviewed_by_name && (
+                <p className="text-sm text-gray-600 font-medium mt-4 flex items-center gap-2 border-t pt-4">
+                  <User size={16} /> Reviewed by: {report.reviewed_by_name}
+                </p>
+              )}
             </div>
-            {report.reviewed_by_name && (
-              <p className="text-sm text-gray-700 font-medium">Reviewed by: {report.reviewed_by_name}</p>
-            )}
-          </div>
-        )}
+          )}
       </div>
 
       {/* Review Modal */}

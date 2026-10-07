@@ -1076,7 +1076,23 @@ export default function MyReportsPage() {
                   <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-6 mb-6">
                     <h4 className="text-sm font-semibold text-indigo-900 mb-3">{selectedReport.agenda_heading || "Morning Agenda"}</h4>
                     <p className="text-indigo-800 whitespace-pre-wrap leading-relaxed">{selectedReport.next_day_agenda}</p>
-                  </div>
+                  
+                      {selectedReport.agenda_status === 'rejected' && (
+                        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="flex items-center gap-2 text-red-800 font-bold mb-2">
+                            <XCircle className="w-5 h-5" /> Agenda Rejected
+                          </div>
+                          <p className="text-red-700 text-sm whitespace-pre-wrap">{selectedReport.agenda_review_comment || "No remarks provided."}</p>
+                        </div>
+                      )}
+                      {selectedReport.agenda_status === 'approved' && (
+                        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <span className="text-green-800 font-semibold text-sm">Agenda Approved</span>
+                          {selectedReport.agenda_review_comment && <span className="text-green-700 text-sm ml-2">- {selectedReport.agenda_review_comment}</span>}
+                        </div>
+                      )}
+</div>
                 )}
 
                 {selectedReport.report_text && (
