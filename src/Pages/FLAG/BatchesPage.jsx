@@ -151,7 +151,7 @@ export default function BatchesPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
-                          {batch.grade_progress}
+                          {batch.package_name}
                         </div>
                         {canEdit && (
                           <button

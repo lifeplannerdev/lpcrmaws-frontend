@@ -3,7 +3,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { useParams, Link } from 'react-router-dom';
-import { User, Phone, MapPin, Calendar, Award, CheckCircle, XCircle, AlertTriangle, BookOpen, Clock, Loader2, RefreshCw, Edit, UserCheck } from 'lucide-react';
+import { User, Phone, MapPin, Calendar, Award, CheckCircle, XCircle, AlertTriangle, BookOpen, Clock, Loader2, RefreshCw, Edit, UserCheck, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import EditStudentModal from './EditStudentModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -28,17 +28,15 @@ export default function StudentProfilePage() {
   const [trainers, setTrainers] = useState([]);
   const [assigningTrainer, setAssigningTrainer] = useState(false);
 
-  // Modal state
-  const [showExamModal, setShowExamModal] = useState(false);
-  const [examForm, setExamForm] = useState({
-    exam_type: 'grade',
-    exam_date: new Date().toISOString().split('T')[0],
-    model_exam_marks: '',
-    grade_exam_marks: '',
-    is_passed: false,
-    total_marks: 100,
-    grade: '',
-  });
+
+
+  // Promote / Demote state
+  const [promoting, setPromoting] = useState(false);
+  const [showDemoteModal, setShowDemoteModal] = useState(false);
+  const [demoting, setDemoting] = useState(false);
+  const [demoteForm, setDemoteForm] = useState({ academic_batch_id: '', grade_batch_id: '', reason: '' });
+  const [availableBatches, setAvailableBatches] = useState([]);
+  const [availableGradeBatches, setAvailableGradeBatches] = useState([]);
 
   const fetchAllPages = async (url, token) => {
     let allData = [];
@@ -57,6 +55,7 @@ export default function StudentProfilePage() {
     }
     return allData;
   };
+
 
   const fetchStudentData = async () => {
     try {
@@ -108,6 +107,90 @@ export default function StudentProfilePage() {
     }
   };
 
+  const handlePromote = async () => {
+    if (!window.confirm("Are you sure you want to promote this student to the next grade?")) return;
+    try {
+      setPromoting(true);
+      const token = accessToken || await refreshAccessToken();
+      const res = await fetch(`${API_BASE_URL}/students/students/${id}/promote/`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        alert("Student promoted successfully!");
+        fetchStudentData();
+      } else {
+        const errorData = await res.json();
+        const msg = errorData.error || errorData.detail || JSON.stringify(errorData);
+        alert('Failed to promote: ' + msg);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error promoting student');
+    } finally {
+      setPromoting(false);
+    }
+  };
+
+  const openDemoteModal = async () => {
+    setShowDemoteModal(true);
+    setDemoteForm({ academic_batch_id: '', grade_batch_id: '', reason: '' });
+    try {
+      const token = accessToken || await refreshAccessToken();
+      const batchesData = await fetchAllPages(`${API_BASE_URL}/students/batches/`, token);
+      setAvailableBatches(batchesData);
+    } catch (e) {
+      console.error("Failed to load batches", e);
+    }
+  };
+
+  useEffect(() => {
+    if (demoteForm.academic_batch_id) {
+      const fetchGradeBatches = async () => {
+        try {
+          const token = accessToken || await refreshAccessToken();
+          const gbData = await fetchAllPages(`${API_BASE_URL}/students/grade-batches/?academic_batch=${demoteForm.academic_batch_id}`, token);
+          setAvailableGradeBatches(gbData);
+        } catch (e) {
+          console.error("Failed to load grade batches", e);
+        }
+      };
+      fetchGradeBatches();
+    } else {
+      setAvailableGradeBatches([]);
+    }
+  }, [demoteForm.academic_batch_id, accessToken]);
+
+  const handleDemote = async (e) => {
+    e.preventDefault();
+    try {
+      setDemoting(true);
+      const token = accessToken || await refreshAccessToken();
+      const res = await fetch(`${API_BASE_URL}/students/students/${id}/demote/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(demoteForm)
+      });
+      if (res.ok) {
+        alert("Student demoted/reassigned successfully!");
+        setShowDemoteModal(false);
+        fetchStudentData();
+      } else {
+        const errorData = await res.json();
+        const msg = errorData.error || errorData.detail || JSON.stringify(errorData);
+        alert('Failed to demote/reassign: ' + msg);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error demoting/reassigning student');
+    } finally {
+      setDemoting(false);
+    }
+  };
+
   const handleQuickAssignTrainer = async (trainerId) => {
     try {
       setAssigningTrainer(true);
@@ -147,8 +230,8 @@ export default function StudentProfilePage() {
       const token = accessToken || await refreshAccessToken();
       const payload = {
         student: id,
-        batch: student.batch,
-        grade: examForm.grade || student.current_grade_id || student.batch_grade_id,
+        batch: student.academic_batch,
+        grade: examForm.grade || student.current_grade_batch_name_id || student.academic_batch_grade_id,
         exam_date: examForm.exam_date,
         model_exam_marks: examForm.exam_type === 'model' ? examForm.model_exam_marks : null,
         grade_exam_marks: examForm.exam_type === 'grade' ? examForm.grade_exam_marks : null,
@@ -231,13 +314,30 @@ export default function StudentProfilePage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-3 mb-2 w-full md:w-auto">
                   {canEdit && (
-                    <button
-                      onClick={() => setShowEditModal(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm text-sm"
-                    >
-                      <Edit size={16} />
-                      Edit Student
-                    </button>
+                    <>
+                      <button
+                        onClick={handlePromote}
+                        disabled={promoting}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors shadow-sm text-sm disabled:opacity-50"
+                      >
+                        <ArrowUpCircle size={16} />
+                        Promote
+                      </button>
+                      <button
+                        onClick={openDemoteModal}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700 transition-colors shadow-sm text-sm"
+                      >
+                        <ArrowDownCircle size={16} />
+                        Demote / Reassign
+                      </button>
+                      <button
+                        onClick={() => setShowEditModal(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm text-sm"
+                      >
+                        <Edit size={16} />
+                        Edit
+                      </button>
+                    </>
                   )}
                   {student.fee_status === 'NO_ACCOUNT' ? (
                     <span className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl border border-gray-200">
@@ -345,11 +445,13 @@ export default function StudentProfilePage() {
                   <div className="relative border-l-2 border-indigo-100 ml-4 space-y-8">
                     {history.map((h, i) => (
                       <div key={h.id} className="relative pl-6">
-                        <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white ${h.is_demotion ? 'bg-red-500' : 'bg-indigo-500'}`}></div>
+                        <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white ${h.action === 'demoted' ? 'bg-red-500' : h.action === 'promoted' ? 'bg-green-500' : 'bg-indigo-500'}`}></div>
                         <h4 className="font-bold text-gray-900 flex items-center gap-2">
                           {h.batch_name} 
-                          {h.is_demotion ? (
+                          {h.action === 'demoted' ? (
                             <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-md font-bold">Demoted</span>
+                          ) : h.action === 'promoted' ? (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-md font-bold">Promoted</span>
                           ) : (
                             <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md font-bold">Enrolled</span>
                           )}
@@ -367,7 +469,7 @@ export default function StudentProfilePage() {
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-bold text-gray-900">Exam Records</h3>
-                  <button onClick={() => setShowExamModal(true)} className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-100 transition-colors">Add Exam Record</button>
+                  <Link to={`/flag/batches/${student.batch}`} className="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-100 transition-colors">Go to Batch for Exams</Link>
                 </div>
                 {exams.length === 0 ? (
                   <p className="text-gray-500 text-sm">No exam records found.</p>
@@ -377,17 +479,16 @@ export default function StudentProfilePage() {
                       <div key={ex.id} className="p-5 rounded-2xl border border-gray-200 hover:border-indigo-300 transition-colors bg-gray-50/50">
                         <div className="flex justify-between items-start mb-3">
                           <span className="inline-block px-2.5 py-1 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-bold uppercase">{ex.exam_type}</span>
-                          <span className={`inline-flex items-center gap-1 font-bold text-sm ${ex.is_passed ? 'text-green-600' : 'text-red-600'}`}>
-                            {ex.is_passed ? <><CheckCircle size={16}/> Passed</> : <><XCircle size={16}/> Failed</>}
+                          <span className={`inline-flex items-center gap-1 font-bold text-sm ${ex.result === 'pass' ? 'text-green-600' : 'text-red-600'}`}>
+                            {ex.result === 'pass' ? <><CheckCircle size={16}/> Passed</> : <><XCircle size={16}/> {ex.result}</>}
                           </span>
                         </div>
-                        <h4 className="font-bold text-gray-900 text-lg mb-1">{ex.grade_name} Exam</h4>
-                        <p className="text-sm text-gray-500 mb-4">Date: {new Date(ex.exam_date).toLocaleDateString()}</p>
+                        <h4 className="font-bold text-gray-900 text-lg mb-1">{ex.grade_batch_name || 'Exam'}</h4>
                         
                         <div className="flex gap-4 border-t border-gray-100 pt-3">
                           <div>
                             <p className="text-xs text-gray-500">Marks</p>
-                            <p className="font-bold text-gray-900">{ex.marks_obtained} / {ex.total_marks}</p>
+                            <p className="font-bold text-gray-900">{ex.achieved_marks || 0} / {ex.max_marks}</p>
                           </div>
                         </div>
                       </div>
@@ -650,6 +751,51 @@ export default function StudentProfilePage() {
               <div className="flex justify-end gap-3 mt-8">
                 <button type="button" onClick={() => setShowExamModal(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
                 <button type="submit" className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">Save Record</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showDemoteModal && (
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Demote / Reassign Student</h3>
+              <button onClick={() => setShowDemoteModal(false)} className="text-gray-400 hover:text-gray-600">
+                <XCircle size={24} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleDemote} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Target Academic Batch</label>
+                <select value={demoteForm.academic_batch_id} onChange={(e) => setDemoteForm({...demoteForm, academic_batch_id: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500" required>
+                  <option value="">Select Academic Batch</option>
+                  {availableBatches.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Target Grade Batch</label>
+                <select value={demoteForm.grade_batch_id} onChange={(e) => setDemoteForm({...demoteForm, grade_batch_id: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500" required disabled={!demoteForm.academic_batch_id}>
+                  <option value="">Select Grade Batch</option>
+                  {availableGradeBatches.map(gb => (
+                    <option key={gb.id} value={gb.id}>{gb.grade_code || gb.grade}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Reason (Optional)</label>
+                <textarea value={demoteForm.reason} onChange={(e) => setDemoteForm({...demoteForm, reason: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500" rows="3" placeholder="Reason for demotion/reassignment"></textarea>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-8">
+                <button type="button" onClick={() => setShowDemoteModal(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
+                <button type="submit" disabled={demoting} className="px-5 py-2.5 bg-orange-600 text-white rounded-xl font-bold hover:bg-orange-700 transition-colors shadow-lg shadow-orange-200 disabled:opacity-50">Confirm Demotion</button>
               </div>
             </form>
           </div>

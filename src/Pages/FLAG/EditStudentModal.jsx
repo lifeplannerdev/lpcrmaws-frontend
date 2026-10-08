@@ -11,26 +11,21 @@ export default function EditStudentModal({ student, isOpen, onClose, onSuccess }
   const [errorMessage, setErrorMessage] = useState('');
 
   // Lookups
+  const [academicBatches, setAcademicBatches] = useState([]);
   const [campuses, setCampuses] = useState([]);
   const [packages, setPackages] = useState([]);
-  const [batches, setBatches] = useState([]);
-  const [trainers, setTrainers] = useState([]);
 
   // Form state
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     email: '',
-    parent_name: '',
-    parent_phone: '',
     campus: '',
     academic_package: '',
     batch: '',
-    trainer: '',
-    mode_of_study: 'offline',
+    grade_batch: '',
     status: 'active',
-    joined_date: '',
-    notes: ''
+    joined_date: ''
   });
 
   // Fetch Lookups
@@ -43,24 +38,21 @@ export default function EditStudentModal({ student, isOpen, onClose, onSuccess }
         const token = accessToken || await refreshAccessToken();
         const headers = { Authorization: `Bearer ${token}` };
 
-        const [cRes, pRes, bRes, tRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/students/campuses/`, { headers }),
-          fetch(`${API_BASE_URL}/students/packages/`, { headers }),
+        const [bRes, cRes, pRes] = await Promise.all([
           fetch(`${API_BASE_URL}/students/batches/`, { headers }),
-          fetch(`${API_BASE_URL}/students/trainers/`, { headers })
+          fetch(`${API_BASE_URL}/students/campuses/`, { headers }),
+          fetch(`${API_BASE_URL}/students/packages/`, { headers })
         ]);
 
-        const [cData, pData, bData, tData] = await Promise.all([
-          cRes.json(),
-          pRes.json(),
+        const [bData, cData, pData] = await Promise.all([
           bRes.json(),
-          tRes.json()
+          cRes.json(),
+          pRes.json()
         ]);
 
+        setAcademicBatches(bData.results !== undefined ? bData.results : (Array.isArray(bData) ? bData : []));
         setCampuses(cData.results !== undefined ? cData.results : (Array.isArray(cData) ? cData : []));
         setPackages(pData.results !== undefined ? pData.results : (Array.isArray(pData) ? pData : []));
-        setBatches(bData.results !== undefined ? bData.results : (Array.isArray(bData) ? bData : []));
-        setTrainers(tData.results !== undefined ? tData.results : (Array.isArray(tData) ? tData : []));
       } catch (err) {
         console.error('Failed to load lookups for edit modal', err);
       } finally {
@@ -78,16 +70,12 @@ export default function EditStudentModal({ student, isOpen, onClose, onSuccess }
         name: student.name || '',
         phone: student.phone || '',
         email: student.email || '',
-        parent_name: student.parent_name || '',
-        parent_phone: student.parent_phone || '',
         campus: student.campus || '',
         academic_package: student.academic_package || '',
         batch: student.batch || '',
-        trainer: student.trainer || '',
-        mode_of_study: student.mode_of_study || 'offline',
+        grade_batch: student.grade_batch_id || '',
         status: student.status || 'active',
-        joined_date: student.joined_date ? student.joined_date.split('T')[0] : '',
-        notes: student.notes || ''
+        joined_date: student.joined_date ? student.joined_date.split('T')[0] : ''
       });
       setErrorMessage('');
     }
@@ -96,7 +84,15 @@ export default function EditStudentModal({ student, isOpen, onClose, onSuccess }
   if (!isOpen) return null;
 
   const handleChange = (e) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    let updates = { [name]: value };
+
+    // Reset grade batch when academic batch changes
+    if (name === 'batch') {
+      updates.grade_batch = '';
+    }
+
+    setFormData(prev => ({ ...prev, ...updates }));
   };
 
   const handleSubmit = async (e) => {
@@ -110,16 +106,10 @@ export default function EditStudentModal({ student, isOpen, onClose, onSuccess }
         name: formData.name,
         phone: formData.phone,
         email: formData.email,
-        parent_name: formData.parent_name,
-        parent_phone: formData.parent_phone,
-        campus: formData.campus ? Number(formData.campus) : null,
-        academic_package: formData.academic_package ? Number(formData.academic_package) : null,
         batch: formData.batch ? Number(formData.batch) : null,
-        trainer: formData.trainer ? Number(formData.trainer) : null,
-        mode_of_study: formData.mode_of_study,
+        grade_batch: formData.grade_batch ? Number(formData.grade_batch) : null,
         status: formData.status,
-        joined_date: formData.joined_date || undefined,
-        notes: formData.notes
+        joined_date: formData.joined_date || undefined
       };
 
       const res = await fetch(`${API_BASE_URL}/students/students/${student.id}/`, {
@@ -148,6 +138,8 @@ export default function EditStudentModal({ student, isOpen, onClose, onSuccess }
     }
   };
 
+  const selectedBatch = academicBatches.find(b => String(b.id) === String(formData.batch));
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in duration-150">
@@ -160,7 +152,7 @@ export default function EditStudentModal({ student, isOpen, onClose, onSuccess }
             </div>
             <div>
               <h2 className="text-lg font-bold text-gray-900">Edit Student Details</h2>
-              <p className="text-xs text-gray-500">Update academic placement, personal info, and assign a trainer</p>
+              <p className="text-xs text-gray-500">Update academic placement and personal info</p>
             </div>
           </div>
           <button 
@@ -218,7 +210,7 @@ export default function EditStudentModal({ student, isOpen, onClose, onSuccess }
                   />
                 </div>
 
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Email Address</label>
                   <input
                     type="email"
@@ -229,113 +221,46 @@ export default function EditStudentModal({ student, isOpen, onClose, onSuccess }
                     placeholder="student@example.com"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Parent / Guardian Name</label>
-                  <input
-                    type="text"
-                    name="parent_name"
-                    value={formData.parent_name}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                    placeholder="Parent's Name"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Parent / Guardian Phone</label>
-                  <input
-                    type="text"
-                    name="parent_phone"
-                    value={formData.parent_phone}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                    placeholder="Parent's Contact"
-                  />
-                </div>
               </div>
             </div>
 
-            {/* Academic & Trainer Assignment */}
+            {/* Academic Assignment */}
             <div className="pt-2 border-t border-gray-100">
               <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                 <GraduationCap size={16} className="text-indigo-600" />
-                Academic & Trainer Assignment
+                Academic Assignment
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Campus *</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Academic Batch *</label>
                   <select
                     required
-                    name="campus"
-                    value={formData.campus}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition"
-                  >
-                    <option value="">Select Campus...</option>
-                    {campuses.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Academic Package *</label>
-                  <select
-                    required
-                    name="academic_package"
-                    value={formData.academic_package}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition"
-                  >
-                    <option value="">Select Package...</option>
-                    {packages.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Current Batch (Optional)</label>
-                  <select
                     name="batch"
                     value={formData.batch}
                     onChange={handleChange}
                     className="w-full border border-gray-300 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition"
                   >
                     <option value="">No Batch Assigned</option>
-                    {batches.map(b => (
+                    {academicBatches.map(b => (
                       <option key={b.id} value={b.id}>{b.name}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center justify-between">
-                    <span>Batch Trainer</span>
-                    <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">Batch Level</span>
-                  </label>
-                  <div className="w-full border border-gray-200 bg-gray-50 rounded-xl px-3.5 py-2 text-sm text-gray-700 font-medium">
-                    {(() => {
-                      const selBatch = batches.find(b => String(b.id) === String(formData.batch));
-                      return selBatch ? (selBatch.trainer_name || 'Unassigned on Batch') : 'No Batch Selected';
-                    })()}
-                  </div>
-                  <p className="text-[11px] text-gray-400 mt-1">
-                    Trainers are assigned directly at the batch level.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Mode of Study</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Grade Batch</label>
                   <select
-                    name="mode_of_study"
-                    value={formData.mode_of_study}
+                    name="grade_batch"
+                    value={formData.grade_batch}
                     onChange={handleChange}
                     className="w-full border border-gray-300 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition"
+                    disabled={!selectedBatch}
                   >
-                    <option value="offline">Offline</option>
-                    <option value="online">Online</option>
+                    <option value="">Select Grade Batch...</option>
+                    {selectedBatch?.grade_batches?.map(gb => (
+                      <option key={gb.id} value={gb.id}>{gb.grade_code}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -354,7 +279,7 @@ export default function EditStudentModal({ student, isOpen, onClose, onSuccess }
                   </select>
                 </div>
 
-                <div className="md:col-span-2">
+                <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Joined Date</label>
                   <input
                     type="date"
@@ -362,18 +287,6 @@ export default function EditStudentModal({ student, isOpen, onClose, onSuccess }
                     value={formData.joined_date}
                     onChange={handleChange}
                     className="w-full border border-gray-300 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Notes</label>
-                  <textarea
-                    rows="2"
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                    placeholder="Additional notes about student..."
                   />
                 </div>
               </div>

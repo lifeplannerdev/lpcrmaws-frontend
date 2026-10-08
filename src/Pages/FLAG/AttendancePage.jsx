@@ -1,95 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
-import { Check, X, Clock, Calendar, AlertTriangle, Search, Filter, Loader2, Info } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import AcademicCalendar from '../../Components/ui/AcademicCalendar';
-import StudentWiseAttendanceReport from './StudentWiseAttendanceReport';
+import { usePermissions } from '../../context/PermissionsContext';
+import { CheckCircle, XCircle, Clock, Calendar, Search, Loader2, Save, ChevronLeft, ChevronRight, CheckSquare } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function AttendancePage() {
   const { accessToken, refreshAccessToken } = useAuth();
-  const [batches, setBatches] = useState([]);
-  const [selectedBatch, setSelectedBatch] = useState(null);
-  const [grades, setGrades] = useState([]);
-  const [selectedGrade, setSelectedGrade] = useState('');
-  const [students, setStudents] = useState([]);
+  
+  const [academicBatches, setAcademicBatches] = useState([]);
+  const [gradeBatches, setGradeBatches] = useState([]);
+  
+  const [selectedAcademicBatch, setSelectedAcademicBatch] = useState('');
+  const [selectedGradeBatch, setSelectedGradeBatch] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  
+  const [students, setStudents] = useState([]);
+  const [attendanceData, setAttendanceData] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('mark'); // 'mark', 'view'
-  const [attendanceData, setAttendanceData] = useState({});
-  const [viewAttendanceRecords, setViewAttendanceRecords] = useState([]);
-  const [expandedStudent, setExpandedStudent] = useState(null);
-
-  const fetchInitialData = async () => {
-    try {
-      setLoading(true);
-      const token = accessToken || await refreshAccessToken();
-      const [batchesRes, gradesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/students/batches/?status=active`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/students/grades/`, { headers: { Authorization: `Bearer ${token}` } })
-      ]);
-      const data = await batchesRes.json();
-      const gradesData = await gradesRes.json();
-      
-      const fetchedBatches = (data.results !== undefined ? data.results : (Array.isArray(data) ? data : []));
-      const fetchedGrades = (gradesData.results !== undefined ? gradesData.results : (Array.isArray(gradesData) ? gradesData : []));
-      
-      setBatches(fetchedBatches);
-      setGrades(fetchedGrades);
-      if (fetchedBatches.length > 0) {
-        setSelectedBatch(fetchedBatches[0].id);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    fetchInitialData();
+    fetchAcademicBatches();
   }, []);
 
   useEffect(() => {
-    if (selectedBatch) {
-      if (activeTab === 'mark') {
-        loadBatchStudents();
-      } else {
-        loadBatchStudentsAndViewData();
-      }
+    if (selectedAcademicBatch) {
+      fetchGradeBatches(selectedAcademicBatch);
+    } else {
+      setGradeBatches([]);
+      setSelectedGradeBatch('');
     }
-  }, [selectedBatch, selectedGrade, date, activeTab]);
+  }, [selectedAcademicBatch]);
 
-  const loadBatchStudents = async () => {
+  useEffect(() => {
+    if (selectedGradeBatch && date) {
+      loadStudentsAndAttendance();
+    } else {
+      setStudents([]);
+      setAttendanceData({});
+    }
+  }, [selectedGradeBatch, date]);
+
+  const fetchAcademicBatches = async () => {
     try {
-      setLoading(true);
       const token = accessToken || await refreshAccessToken();
-      
-      let allStudents = [];
-      let url = `${API_BASE_URL}/students/students/?batch=${selectedBatch}`;
-      while (url) {
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-        const data = await res.json();
-        if (data.results !== undefined) {
-          allStudents = [...allStudents, ...data.results];
-          url = data.next;
-        } else {
-          allStudents = Array.isArray(data) ? data : [];
-          url = null;
-        }
-      }
-      
-      setStudents(allStudents);
-      
-      const initialAtt = {};
-      allStudents.forEach(s => {
-        initialAtt[s.id] = s.has_pending_fees ? 'pending' : 'present';
-      });
-      setAttendanceData(initialAtt);
-
+      const res = await fetch(`${API_BASE_URL}/students/batches/?status=active`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setAcademicBatches(data.results || data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -97,13 +56,27 @@ export default function AttendancePage() {
     }
   };
 
-  const loadBatchStudentsAndViewData = async () => {
+  const fetchGradeBatches = async (academicBatchId) => {
+    try {
+      const token = accessToken || await refreshAccessToken();
+      const res = await fetch(`${API_BASE_URL}/students/grade-batches/?academic_batch=${academicBatchId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      const batches = data.results || data;
+      setGradeBatches(batches);
+      if (batches.length > 0) setSelectedGradeBatch(batches[0].id);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const loadStudentsAndAttendance = async () => {
     try {
       setLoading(true);
       const token = accessToken || await refreshAccessToken();
       
+      // 1. Fetch Students in Grade Batch
       let allStudents = [];
-      let studentUrl = `${API_BASE_URL}/students/students/?batch=${selectedBatch}`;
+      let studentUrl = `${API_BASE_URL}/students/students/?grade_batch=${selectedGradeBatch}&status=active`;
       while (studentUrl) {
         const res = await fetch(studentUrl, { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
@@ -115,23 +88,33 @@ export default function AttendancePage() {
           studentUrl = null;
         }
       }
-      
-      let allRecords = [];
-      let recordsUrl = `${API_BASE_URL}/students/attendance-records/?session__batch=${selectedBatch}`;
-      while (recordsUrl) {
-        const res = await fetch(recordsUrl, { headers: { Authorization: `Bearer ${token}` } });
-        const data = await res.json();
-        if (data.results !== undefined) {
-          allRecords = [...allRecords, ...data.results];
-          recordsUrl = data.next;
-        } else {
-          allRecords = Array.isArray(data) ? data : [];
-          recordsUrl = null;
-        }
-      }
-      
       setStudents(allStudents);
-      setViewAttendanceRecords(allRecords);
+
+      // 2. Fetch Existing Attendance for this date
+      const sessionRes = await fetch(`${API_BASE_URL}/students/attendance-sessions/?grade_batch=${selectedGradeBatch}&date=${date}`, { headers: { Authorization: `Bearer ${token}` } });
+      const sessionData = await sessionRes.json();
+      const sessions = sessionData.results || sessionData;
+      
+      const attMap = {};
+      
+      if (sessions.length > 0) {
+        const sessionId = sessions[0].id;
+        const recordsRes = await fetch(`${API_BASE_URL}/students/attendance-records/?session=${sessionId}`, { headers: { Authorization: `Bearer ${token}` } });
+        const recordsData = await recordsRes.json();
+        const records = recordsData.results || recordsData;
+        records.forEach(r => {
+          attMap[r.student] = r.status;
+        });
+      }
+
+      // 3. Fill defaults for missing students
+      allStudents.forEach(s => {
+        if (!attMap[s.id]) {
+          attMap[s.id] = 'present'; // Default backfill assumption
+        }
+      });
+      setAttendanceData(attMap);
+
     } catch (err) {
       console.error(err);
     } finally {
@@ -139,61 +122,51 @@ export default function AttendancePage() {
     }
   };
 
-  const toggleAttendance = (studentId) => {
-    const student = students.find(s => s.id === studentId);
-    if (student?.has_pending_fees) return; // Cannot toggle pending fees
-
-    setAttendanceData(prev => ({
-      ...prev,
-      [studentId]: prev[studentId] === 'present' ? 'absent' : prev[studentId] === 'absent' ? 'late' : 'present'
-    }));
+  const toggleStudent = (studentId, status) => {
+    setAttendanceData(prev => ({ ...prev, [studentId]: status }));
   };
 
-  const handleSave = async () => {
+  const markAll = (status) => {
+    const newMap = {};
+    students.forEach(s => newMap[s.id] = status);
+    setAttendanceData(newMap);
+  };
+
+  const changeDate = (days) => {
+    const d = new Date(date);
+    d.setDate(d.getDate() + days);
+    setDate(d.toISOString().slice(0, 10));
+  };
+
+  const handleSave = async (autoAdvance = false) => {
     try {
       setSaving(true);
       const token = accessToken || await refreshAccessToken();
       
-      // Step 1: Create Session
-      const sessionRes = await fetch(`${API_BASE_URL}/students/attendance-sessions/`, {
+      const records = Object.keys(attendanceData).map(studentId => ({
+        student: studentId,
+        status: attendanceData[studentId]
+      }));
+
+      const res = await fetch(`${API_BASE_URL}/students/attendance-sessions/bulk_entry/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          batch: selectedBatch,
-          grade: selectedGrade || null,
+          grade_batch: selectedGradeBatch,
           date: date,
-          is_finalized: true
+          records: records
         })
       });
       
-      const session = await sessionRes.json();
-      if (!sessionRes.ok) {
-        alert(session.detail || 'Failed to create session. It might already exist for this date.');
-        setSaving(false);
-        return;
+      if (res.ok) {
+        // alert('Attendance saved successfully!');
+        if (autoAdvance) {
+          changeDate(1);
+        }
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to save attendance');
       }
-
-      // Step 2: Create Records
-      const promises = students.map(s => {
-        return fetch(`${API_BASE_URL}/students/attendance-records/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            session: session.id,
-            student: s.id,
-            status: attendanceData[s.id]
-          })
-        });
-      });
-
-      await Promise.all(promises);
-      alert('Attendance saved successfully!');
     } catch (err) {
       console.error(err);
       alert('Error saving attendance');
@@ -205,245 +178,135 @@ export default function AttendancePage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Navbar />
-      <div className="flex-grow p-4 md:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <main className="flex-grow p-4 md:p-8 max-w-5xl mx-auto w-full">
+        <div className="mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Attendance Backfill UI</h1>
+          <p className="text-gray-500">Rapidly enter and backfill attendance for your grade batches.</p>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Attendance Management</h1>
-              <p className="text-sm text-gray-500 mt-1">Record and view attendance for batches</p>
-            </div>
-            <div className="flex bg-white p-1 rounded-xl shadow-sm border border-gray-100">
-              <button 
-                onClick={() => setActiveTab('mark')}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'mark' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50'}`}
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Academic Batch</label>
+              <select 
+                value={selectedAcademicBatch} 
+                onChange={e => setSelectedAcademicBatch(e.target.value)}
+                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm"
               >
-                Mark Attendance
-              </button>
-              <button 
-                onClick={() => setActiveTab('view')}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'view' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50'}`}
+                <option value="">-- Select Cohort --</option>
+                {academicBatches.map(b => (
+                  <option key={b.id} value={b.id}>{b.name} ({b.package_name})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Grade Batch</label>
+              <select 
+                value={selectedGradeBatch} 
+                onChange={e => setSelectedGradeBatch(e.target.value)}
+                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm"
+                disabled={!selectedAcademicBatch}
               >
-                View Attendance
-              </button>
-              <button 
-                onClick={() => setActiveTab('student-wise')}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'student-wise' ? 'bg-indigo-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50'}`}
-              >
-                Student Report
-              </button>
+                <option value="">-- Select Grade --</option>
+                {gradeBatches.map(b => (
+                  <option key={b.id} value={b.id}>{b.grade_code}</option>
+                ))}
+              </select>
             </div>
-          </div>
-
-          {activeTab !== 'student-wise' && (
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 flex flex-col md:flex-row gap-4 items-end">
-              <div className="w-full md:w-1/3">
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Select Batch</label>
-                <select 
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                  value={selectedBatch || ''}
-                  onChange={(e) => setSelectedBatch(e.target.value)}
-                >
-                  {batches.map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
-              </div>
-              
-              {activeTab === 'mark' && (
-                <div className="w-full md:w-1/3">
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Filter by Current Grade (Backfill)</label>
-                  <select 
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                    value={selectedGrade || ''}
-                    onChange={(e) => setSelectedGrade(e.target.value)}
-                  >
-                    <option value="">All (Default Batch Students)</option>
-                    {grades.map(g => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'student-wise' ? (
-            <StudentWiseAttendanceReport />
-          ) : loading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-            </div>
-          ) : students.length === 0 ? (
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-12 text-center">
-              <Info className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-gray-900">No active students</h3>
-              <p className="text-sm text-gray-500 mt-1">This batch has no students.</p>
-            </div>
-          ) : activeTab === 'mark' ? (
-            <div className="space-y-6">
-              <AcademicCalendar selectedDate={date} onSelectDate={setDate} />
-              
-              <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50/50 gap-4">
-                  <h3 className="text-lg font-bold text-gray-900">Attendance Grid</h3>
-                <div className="flex gap-4 text-sm font-medium">
-                  <span className="flex items-center gap-1.5 text-emerald-600"><Check size={16}/> Present</span>
-                  <span className="flex items-center gap-1.5 text-rose-600"><X size={16}/> Absent</span>
-                  <span className="flex items-center gap-1.5 text-yellow-600"><Clock size={16}/> Late</span>
-                  <span className="flex items-center gap-1.5 text-orange-600"><AlertTriangle size={16}/> Pending</span>
-                </div>
-              </div>
-              
-              <div className="p-0 overflow-x-auto">
-                <table className="w-full text-left whitespace-nowrap">
-                  <thead className="bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-500">
-                    <tr>
-                      <th className="px-6 py-4 font-semibold">Student</th>
-                      <th className="px-6 py-4 font-semibold">ID</th>
-                      <th className="px-6 py-4 font-semibold">Fee Status</th>
-                      <th className="px-6 py-4 font-semibold text-center">Status</th>
-                      <th className="px-6 py-4 font-semibold text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {students.map(student => (
-                      <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 font-semibold text-gray-900">{student.name}</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">#{student.id}</td>
-                        <td className="px-6 py-4">
-                          {student.has_pending_fees ? (
-                            <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2.5 py-1 rounded-md text-xs font-bold border border-red-100">
-                              <AlertTriangle size={12}/> Overdue
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 px-2.5 py-1 rounded-md text-xs font-bold border border-green-100">
-                              <Check size={12}/> Clear
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          {attendanceData[student.id] === 'present' && <span className="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 font-bold text-sm rounded-lg border border-emerald-200">Present</span>}
-                          {attendanceData[student.id] === 'absent' && <span className="inline-block px-3 py-1 bg-rose-100 text-rose-800 font-bold text-sm rounded-lg border border-rose-200">Absent</span>}
-                          {attendanceData[student.id] === 'late' && <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 font-bold text-sm rounded-lg border border-yellow-200">Late</span>}
-                          {attendanceData[student.id] === 'pending' && <span className="inline-block px-3 py-1 bg-orange-100 text-orange-800 font-bold text-sm rounded-lg border border-orange-200">Pending</span>}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <button 
-                            onClick={() => toggleAttendance(student.id)}
-                            disabled={student.has_pending_fees}
-                            className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors
-                              ${student.has_pending_fees ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white border-2 border-indigo-100 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200'}`}
-                          >
-                            Toggle
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end">
-                <button 
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-semibold shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {saving && <Loader2 size={16} className="animate-spin" />}
-                  Save Attendance
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
+              <div className="flex items-center gap-2">
+                <button onClick={() => changeDate(-1)} className="p-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-600 transition-colors">
+                  <ChevronLeft size={18} />
+                </button>
+                <input 
+                  type="date" 
+                  value={date} 
+                  onChange={e => setDate(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm"
+                />
+                <button onClick={() => changeDate(1)} className="p-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-600 transition-colors">
+                  <ChevronRight size={18} />
                 </button>
               </div>
             </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-                <h3 className="text-lg font-bold text-gray-900">Attendance Overview</h3>
-              </div>
-              <div className="p-0 overflow-x-auto">
-                <table className="w-full text-left whitespace-nowrap">
-                  <thead className="bg-gray-50 border-b border-gray-100 text-xs uppercase text-gray-500">
-                    <tr>
-                      <th className="px-6 py-4 font-semibold">Student</th>
-                      <th className="px-6 py-4 font-semibold text-center">Total Classes</th>
-                      <th className="px-6 py-4 font-semibold text-center">Present</th>
-                      <th className="px-6 py-4 font-semibold text-center">Percentage</th>
-                      <th className="px-6 py-4 font-semibold text-right">Details</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {students.map(student => {
-                      const studentRecords = viewAttendanceRecords.filter(r => r.student === student.id);
-                      const totalClasses = studentRecords.length;
-                      const presentClasses = studentRecords.filter(r => r.status === 'present').length;
-                      const percentage = totalClasses > 0 ? Math.round((presentClasses / totalClasses) * 100) : 0;
-                      
-                      const isExpanded = expandedStudent === student.id;
-
-                      return (
-                        <React.Fragment key={student.id}>
-                          <tr className="hover:bg-slate-50 transition-colors">
-                            <td className="px-6 py-4 font-semibold text-gray-900">{student.name}</td>
-                            <td className="px-6 py-4 text-center text-gray-600">{totalClasses}</td>
-                            <td className="px-6 py-4 text-center text-gray-600">{presentClasses}</td>
-                            <td className="px-6 py-4 text-center">
-                              <span className={`inline-block px-3 py-1 font-bold text-sm rounded-lg ${percentage >= 75 ? 'bg-green-100 text-green-700' : percentage >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
-                                {percentage}%
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              <button 
-                                onClick={() => setExpandedStudent(isExpanded ? null : student.id)}
-                                className="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
-                              >
-                                {isExpanded ? 'Hide Records' : 'View Records'}
-                              </button>
-                            </td>
-                          </tr>
-                          
-                          {isExpanded && (
-                            <tr className="bg-slate-50/50">
-                              <td colSpan="5" className="px-8 py-6">
-                                {studentRecords.length === 0 ? (
-                                  <p className="text-sm text-gray-500">No records found for this student.</p>
-                                ) : (
-                                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                                    <table className="w-full text-sm text-left">
-                                      <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
-                                        <tr>
-                                          <th className="px-4 py-3">Date</th>
-                                          <th className="px-4 py-3">Status</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-gray-100">
-                                        {studentRecords.sort((a,b) => new Date(b.session_date) - new Date(a.session_date)).map(rec => (
-                                          <tr key={rec.id}>
-                                            <td className="px-4 py-3 text-gray-700">{new Date(rec.session_date).toLocaleDateString()}</td>
-                                            <td className="px-4 py-3">
-                                              {rec.status === 'present' ? <span className="text-green-600 font-semibold text-xs bg-green-50 px-2 py-1 rounded">Present</span> :
-                                               rec.status === 'absent' ? <span className="text-red-600 font-semibold text-xs bg-red-50 px-2 py-1 rounded">Absent</span> :
-                                               <span className="text-gray-600 font-semibold text-xs bg-gray-50 px-2 py-1 rounded capitalize">{rec.status}</span>}
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                )}
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
+          </div>
         </div>
-      </div>
+
+        {selectedGradeBatch && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Students in Batch</h2>
+                <p className="text-sm text-gray-500">Select attendance status for {date}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => markAll('present')} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-lg text-sm font-semibold transition-colors">
+                  <CheckSquare size={16} /> Mark All Present
+                </button>
+                <button onClick={() => markAll('absent')} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm font-semibold transition-colors">
+                  <XCircle size={16} /> Mark All Absent
+                </button>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="p-12 flex justify-center"><Loader2 className="w-8 h-8 text-indigo-500 animate-spin" /></div>
+            ) : students.length === 0 ? (
+              <div className="p-12 text-center text-gray-500">No active students found in this grade batch.</div>
+            ) : (
+              <div>
+                <div className="divide-y divide-gray-100">
+                  {students.map(student => (
+                    <div key={student.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
+                      <div>
+                        <div className="font-bold text-gray-900">{student.name}</div>
+                        <div className="text-xs text-gray-500">Joined: {student.joined_date}</div>
+                      </div>
+                      <div className="flex bg-gray-100 p-1 rounded-xl w-full md:w-auto">
+                        {['present', 'absent', 'late', 'leave'].map(status => (
+                          <button
+                            key={status}
+                            onClick={() => toggleStudent(student.id, status)}
+                            className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-sm font-semibold capitalize transition-all ${
+                              attendanceData[student.id] === status
+                                ? status === 'present' ? 'bg-green-500 text-white shadow-sm'
+                                : status === 'absent' ? 'bg-red-500 text-white shadow-sm'
+                                : status === 'late' ? 'bg-yellow-500 text-white shadow-sm'
+                                : 'bg-blue-500 text-white shadow-sm'
+                                : 'text-gray-500 hover:bg-white/50'
+                            }`}
+                          >
+                            {status}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="p-6 bg-gray-50 border-t border-gray-100 flex flex-col md:flex-row justify-end gap-3">
+                  <button
+                    onClick={() => handleSave(false)}
+                    disabled={saving}
+                    className="flex items-center justify-center gap-2 px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                    Save Attendance
+                  </button>
+                  <button
+                    onClick={() => handleSave(true)}
+                    disabled={saving}
+                    className="flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm hover:shadow"
+                  >
+                    {saving ? <Loader2 size={18} className="animate-spin" /> : <ChevronRight size={18} />}
+                    Save & Next Day
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </main>
     </div>
   );
 }

@@ -19,8 +19,6 @@ export default function BatchFormPage() {
   // Lookups
   const [campuses, setCampuses] = useState([]);
   const [packages, setPackages] = useState([]);
-  const [grades, setGrades] = useState([]);
-  const [policies, setPolicies] = useState([]);
   const [trainers, setTrainers] = useState([]);
 
   // Form State
@@ -28,15 +26,11 @@ export default function BatchFormPage() {
     name: '',
     campus: '',
     package: '',
-    starting_grade: '',
-    current_grade: '',
     trainer: '',
     mode: 'offline',
     status: 'active',
-    schedule: '',
     start_date: '',
-    attendance_policy: '',
-    notes: ''
+    end_date: ''
   });
 
   useEffect(() => {
@@ -47,8 +41,6 @@ export default function BatchFormPage() {
         const fetchPromises = [
           fetch(`${API_BASE_URL}/students/campuses/`, { headers }),
           fetch(`${API_BASE_URL}/students/packages/`, { headers }),
-          fetch(`${API_BASE_URL}/students/grades/`, { headers }),
-          fetch(`${API_BASE_URL}/students/attendance-policies/`, { headers }),
           fetch(`${API_BASE_URL}/students/trainers/`, { headers })
         ];
 
@@ -57,14 +49,12 @@ export default function BatchFormPage() {
         }
 
         const responses = await Promise.all(fetchPromises);
-        const [cData, pData, gData, polData, tData, bData] = await Promise.all(
+        const [cData, pData, tData, bData] = await Promise.all(
           responses.map(r => r.json())
         );
         
         setCampuses(cData.results !== undefined ? cData.results : (Array.isArray(cData) ? cData : []));
         setPackages(pData.results !== undefined ? pData.results : (Array.isArray(pData) ? pData : []));
-        setGrades(gData.results !== undefined ? gData.results : (Array.isArray(gData) ? gData : []));
-        setPolicies(polData.results !== undefined ? polData.results : (Array.isArray(polData) ? polData : []));
         setTrainers(tData.results !== undefined ? tData.results : (Array.isArray(tData) ? tData : []));
 
         if (isEdit && bData) {
@@ -72,18 +62,13 @@ export default function BatchFormPage() {
             name: bData.name || '',
             campus: bData.campus || '',
             package: bData.package || '',
-            starting_grade: bData.starting_grade || '',
-            current_grade: bData.current_grade || '',
             trainer: bData.trainer || '',
             mode: bData.mode || 'offline',
             status: bData.status || 'active',
-            schedule: bData.schedule || '',
             start_date: bData.start_date || '',
-            attendance_policy: bData.attendance_policy || '',
-            notes: bData.notes || ''
+            end_date: bData.end_date || ''
           });
         } else if (!isEdit && user) {
-          // If trainer creates a batch, pre-select themselves
           const isTrainerRole = user.role_names?.includes('TRAINER') || hasPermission('flag:trainer');
           if (isTrainerRole && !hasPermission('flag:admin')) {
             setFormData(prev => ({ ...prev, trainer: user.id }));
@@ -111,15 +96,11 @@ export default function BatchFormPage() {
         name: formData.name,
         campus: Number(formData.campus),
         package: Number(formData.package),
-        starting_grade: Number(formData.starting_grade),
-        current_grade: Number(formData.current_grade),
         trainer: formData.trainer ? Number(formData.trainer) : null,
         mode: formData.mode,
         status: formData.status,
-        schedule: formData.schedule,
         start_date: formData.start_date || null,
-        attendance_policy: formData.attendance_policy ? Number(formData.attendance_policy) : null,
-        notes: formData.notes
+        end_date: formData.end_date || null
       };
 
       const url = isEdit 
@@ -176,7 +157,6 @@ export default function BatchFormPage() {
 
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Batch Name *</label>
@@ -196,22 +176,6 @@ export default function BatchFormPage() {
                   <select required name="package" value={formData.package} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500">
                     <option value="">Select Package...</option>
                     {packages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Starting Grade *</label>
-                  <select required name="starting_grade" value={formData.starting_grade} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500">
-                    <option value="">Select Starting Grade...</option>
-                    {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Current Grade *</label>
-                  <select required name="current_grade" value={formData.current_grade} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500">
-                    <option value="">Select Current Grade...</option>
-                    {grades.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
                 </div>
 
@@ -240,7 +204,6 @@ export default function BatchFormPage() {
                   <select name="status" value={formData.status} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500">
                     <option value="active">Active</option>
                     <option value="proposed">Proposed</option>
-                    <option value="promoted">Promoted</option>
                     <option value="closed">Closed</option>
                   </select>
                 </div>
@@ -251,23 +214,9 @@ export default function BatchFormPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Schedule (Days/Times)</label>
-                  <input type="text" name="schedule" value={formData.schedule} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Mon-Wed-Fri 10AM" />
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">End Date</label>
+                  <input type="date" name="end_date" value={formData.end_date} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500" />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Attendance Policy</label>
-                  <select name="attendance_policy" value={formData.attendance_policy} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500">
-                    <option value="">None (Use Default)</option>
-                    {policies.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Notes</label>
-                  <textarea name="notes" value={formData.notes} onChange={handleChange} rows="3" className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500"></textarea>
-                </div>
-
               </div>
 
               <div className="flex justify-end pt-4 border-t border-gray-100">
@@ -280,10 +229,8 @@ export default function BatchFormPage() {
                   {isEdit ? 'Save Changes' : 'Create Batch'}
                 </button>
               </div>
-
             </form>
           </div>
-
         </div>
       </div>
     </div>

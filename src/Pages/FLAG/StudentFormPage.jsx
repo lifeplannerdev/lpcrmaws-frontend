@@ -15,26 +15,21 @@ export default function StudentFormPage() {
   const [saving, setSaving] = useState(false);
   
   // Lookups
+  const [academicBatches, setAcademicBatches] = useState([]);
   const [campuses, setCampuses] = useState([]);
   const [packages, setPackages] = useState([]);
-  const [batches, setBatches] = useState([]);
-  const [trainers, setTrainers] = useState([]);
 
   // Form State
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     email: '',
-    parent_name: '',
-    parent_phone: '',
     campus: '',
     academic_package: '',
     batch: '',
-    trainer: '',
-    mode_of_study: 'offline',
+    grade_batch: '',
     status: 'active',
-    joined_date: new Date().toISOString().split('T')[0],
-    notes: ''
+    joined_date: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => {
@@ -44,10 +39,9 @@ export default function StudentFormPage() {
         const headers = { Authorization: `Bearer ${token}` };
         
         const fetchPromises = [
-          fetch(`${API_BASE_URL}/students/campuses/`, { headers }),
-          fetch(`${API_BASE_URL}/students/packages/`, { headers }),
           fetch(`${API_BASE_URL}/students/batches/`, { headers }),
-          fetch(`${API_BASE_URL}/students/trainers/`, { headers })
+          fetch(`${API_BASE_URL}/students/campuses/`, { headers }),
+          fetch(`${API_BASE_URL}/students/packages/`, { headers })
         ];
 
         if (isEdit) {
@@ -55,30 +49,25 @@ export default function StudentFormPage() {
         }
 
         const responses = await Promise.all(fetchPromises);
-        const [cData, pData, bData, tData, sData] = await Promise.all(
-          responses.map(r => r.json())
+        const [bData, cData, pData, sData] = await Promise.all(
+          responses.map(r => r ? r.json() : null)
         );
         
+        setAcademicBatches(bData.results !== undefined ? bData.results : (Array.isArray(bData) ? bData : []));
         setCampuses(cData.results !== undefined ? cData.results : (Array.isArray(cData) ? cData : []));
         setPackages(pData.results !== undefined ? pData.results : (Array.isArray(pData) ? pData : []));
-        setBatches(bData.results !== undefined ? bData.results : (Array.isArray(bData) ? bData : []));
-        setTrainers(tData.results !== undefined ? tData.results : (Array.isArray(tData) ? tData : []));
 
         if (isEdit && sData) {
           setFormData({
             name: sData.name || '',
             phone: sData.phone || '',
             email: sData.email || '',
-            parent_name: sData.parent_name || '',
-            parent_phone: sData.parent_phone || '',
             campus: sData.campus || '',
             academic_package: sData.academic_package || '',
             batch: sData.batch || '',
-            trainer: sData.trainer || '',
-            mode_of_study: sData.mode_of_study || 'offline',
+            grade_batch: sData.grade_batch || '',
             status: sData.status || 'active',
-            joined_date: sData.joined_date ? sData.joined_date.split('T')[0] : '',
-            notes: sData.notes || ''
+            joined_date: sData.joined_date ? sData.joined_date.split('T')[0] : ''
           });
         }
       } catch (err) {
@@ -91,7 +80,15 @@ export default function StudentFormPage() {
   }, [id, isEdit, accessToken, refreshAccessToken]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    let updates = { [name]: value };
+
+    // Reset grade batch when academic batch changes
+    if (name === 'batch') {
+      updates.grade_batch = '';
+    }
+
+    setFormData(prev => ({ ...prev, ...updates }));
   };
 
   const handleSubmit = async (e) => {
@@ -103,16 +100,10 @@ export default function StudentFormPage() {
         name: formData.name,
         phone: formData.phone,
         email: formData.email,
-        parent_name: formData.parent_name,
-        parent_phone: formData.parent_phone,
-        campus: formData.campus ? Number(formData.campus) : null,
-        academic_package: formData.academic_package ? Number(formData.academic_package) : null,
         batch: formData.batch ? Number(formData.batch) : null,
-        trainer: formData.trainer ? Number(formData.trainer) : null,
-        mode_of_study: formData.mode_of_study,
+        grade_batch: formData.grade_batch ? Number(formData.grade_batch) : null,
         status: formData.status,
-        joined_date: formData.joined_date || undefined,
-        notes: formData.notes
+        joined_date: formData.joined_date || undefined
       };
 
       const url = isEdit 
@@ -144,6 +135,8 @@ export default function StudentFormPage() {
       setSaving(false);
     }
   };
+
+  const selectedBatch = academicBatches.find(b => String(b.id) === String(formData.batch));
 
   if (loading) {
     return (
@@ -180,64 +173,28 @@ export default function StudentFormPage() {
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
                   <input type="text" name="phone" value={formData.phone} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500" placeholder="+1234567890" />
                 </div>
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
                   <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500" placeholder="john@example.com" />
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Parent / Guardian Name</label>
-                  <input type="text" name="parent_name" value={formData.parent_name} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500" placeholder="Parent's Name" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Parent / Guardian Phone</label>
-                  <input type="text" name="parent_phone" value={formData.parent_phone} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500" placeholder="Parent's Phone" />
-                </div>
               </div>
 
-              <h3 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-2 pt-4">Academic & Assignment Information</h3>
+              <h3 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-2 pt-4">Academic Assignment</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Campus *</label>
-                  <select required name="campus" value={formData.campus} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500">
-                    <option value="">Select Campus...</option>
-                    {campuses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Academic Batch *</label>
+                  <select required name="batch" value={formData.batch} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500">
+                    <option value="">Select Academic Batch...</option>
+                    {academicBatches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Academic Package *</label>
-                  <select required name="academic_package" value={formData.academic_package} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500">
-                    <option value="">Select Package...</option>
-                    {packages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Batch (Optional)</label>
-                  <select name="batch" value={formData.batch} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500">
-                    <option value="">No Batch Assigned</option>
-                    {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Batch Trainer</label>
-                  <div className="w-full border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-gray-700 font-medium text-sm">
-                    {(() => {
-                      const selBatch = batches.find(b => String(b.id) === String(formData.batch));
-                      return selBatch ? (selBatch.trainer_name || 'Unassigned on Batch') : 'No Batch Selected';
-                    })()}
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Trainer is assigned directly at the batch level.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Mode of Study</label>
-                  <select name="mode_of_study" value={formData.mode_of_study} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500">
-                    <option value="offline">Offline</option>
-                    <option value="online">Online</option>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Grade Batch</label>
+                  <select name="grade_batch" value={formData.grade_batch} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500" disabled={!selectedBatch}>
+                    <option value="">Select Grade Batch...</option>
+                    {selectedBatch?.grade_batches?.map(gb => <option key={gb.id} value={gb.id}>{gb.grade_code}</option>)}
                   </select>
                 </div>
 
@@ -256,11 +213,6 @@ export default function StudentFormPage() {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Joined Date</label>
                   <input type="date" name="joined_date" value={formData.joined_date} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500" />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Notes</label>
-                  <textarea rows="2" name="notes" value={formData.notes} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500" placeholder="Additional notes..." />
                 </div>
               </div>
 
