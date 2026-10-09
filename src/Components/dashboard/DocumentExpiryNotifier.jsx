@@ -36,9 +36,11 @@ export default function DocumentExpiryNotifier() {
   useEffect(() => {
     if (!isAuthenticated || !accessToken) return;
 
-    // Check if dismissed in this session
-    const isDismissed = sessionStorage.getItem('dismissed_doc_expiry_modal');
-    if (isDismissed) return;
+    // Check if dismissed for the current login session
+    const currentSession = sessionStorage.getItem('login_session_id');
+    const dismissedSession = sessionStorage.getItem('dismissed_doc_expiry_session');
+    if (currentSession && dismissedSession === currentSession) return;
+    if (!currentSession && sessionStorage.getItem('dismissed_doc_expiry_modal')) return;
 
     const checkExpiringDocuments = async () => {
       try {
@@ -71,6 +73,8 @@ export default function DocumentExpiryNotifier() {
   }, [isAuthenticated, accessToken]);
 
   const handleClose = () => {
+    const currentSession = sessionStorage.getItem('login_session_id') || 'dismissed';
+    sessionStorage.setItem('dismissed_doc_expiry_session', currentSession);
     sessionStorage.setItem('dismissed_doc_expiry_modal', 'true');
     setIsOpen(false);
   };

@@ -58,6 +58,12 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('refreshToken', refresh);
+
+    // Each new login creates a unique session ID and clears previous dismissal
+    const loginSessionId = Date.now().toString();
+    sessionStorage.setItem('login_session_id', loginSessionId);
+    sessionStorage.removeItem('dismissed_doc_expiry_session');
+    sessionStorage.removeItem('dismissed_doc_expiry_modal');
   };
 
   // Logout handler
@@ -77,6 +83,9 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       localStorage.removeItem('user');
       localStorage.removeItem('refreshToken');
+      sessionStorage.removeItem('login_session_id');
+      sessionStorage.removeItem('dismissed_doc_expiry_session');
+      sessionStorage.removeItem('dismissed_doc_expiry_modal');
     }
   };
 
@@ -93,6 +102,9 @@ export const AuthProvider = ({ children }) => {
           if (newAccessToken) {
             try {
               setUser(JSON.parse(storedUser));
+              if (!sessionStorage.getItem('login_session_id')) {
+                sessionStorage.setItem('login_session_id', Date.now().toString());
+              }
             } catch (e) {
               console.error('Failed to parse stored user:', e);
               localStorage.removeItem('user');
