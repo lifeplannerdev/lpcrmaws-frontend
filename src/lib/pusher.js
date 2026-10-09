@@ -5,13 +5,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 let pusherInstance = null;
 
 export const getPusherClient = (getToken) => {
-  // Always destroy old instance before creating new one
   if (pusherInstance) {
-    pusherInstance.disconnect();
-    pusherInstance = null;
+    return pusherInstance;
   }
 
-    
   pusherInstance = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
     cluster: import.meta.env.VITE_PUSHER_CLUSTER,
     forceTLS: true,

@@ -51,8 +51,7 @@ export const PusherProvider = ({ children }) => {
       client.connection.unbind('connected', handleConnected);
       client.connection.unbind('disconnected', handleDisconnected);
       client.connection.unbind('failed', handleError);
-      destroyPusherClient();
-      setIsReady(false);
+      // Removed destroyPusherClient() here so strict mode doesn't kill the socket
     };
   }, [isAuthenticated, accessToken]);
 
