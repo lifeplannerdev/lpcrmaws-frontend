@@ -100,6 +100,8 @@ export default function StudentFormPage() {
         name: formData.name,
         phone: formData.phone,
         email: formData.email,
+        campus: formData.campus ? Number(formData.campus) : null,
+        academic_package: formData.academic_package ? Number(formData.academic_package) : null,
         batch: formData.batch ? Number(formData.batch) : null,
         grade_batch: formData.grade_batch ? Number(formData.grade_batch) : null,
         status: formData.status,
@@ -182,6 +184,22 @@ export default function StudentFormPage() {
               <h3 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-2 pt-4">Academic Assignment</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Campus *</label>
+                  <select required name="campus" value={formData.campus} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500">
+                    <option value="">Select Campus...</option>
+                    {campuses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Fee / Academic Package *</label>
+                  <select required name="academic_package" value={formData.academic_package} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500">
+                    <option value="">Select Package...</option>
+                    {packages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Academic Batch *</label>
                   <select required name="batch" value={formData.batch} onChange={handleChange} className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500">
