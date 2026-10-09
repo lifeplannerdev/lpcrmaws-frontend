@@ -46,7 +46,7 @@ const Navbar = () => {
           fetch(`${API_BASE_URL}/notifications/`, {
             headers: { Authorization: `Bearer ${token}` },
           }).catch(() => null),
-          fetch(`${API_BASE_URL}/documents/expiring/`, {
+          fetch(`${API_BASE_URL}/documents/expiring/?company=all`, {
             headers: { Authorization: `Bearer ${token}` },
           }).catch(() => null),
         ]);
@@ -61,7 +61,12 @@ const Navbar = () => {
         if (docRes && docRes.ok) {
           const docsData = await docRes.json();
           const docs = Array.isArray(docsData) ? docsData : (docsData.results || []);
-          docNotifs = docs.map(d => {
+          const sortedDocs = [...docs].sort((a, b) => {
+            const dateA = a.expiry_date ? new Date(a.expiry_date).getTime() : Infinity;
+            const dateB = b.expiry_date ? new Date(b.expiry_date).getTime() : Infinity;
+            return dateA - dateB;
+          });
+          docNotifs = sortedDocs.map(d => {
             const days = d.days_remaining;
             const statusLabel = days < 0 
               ? `${Math.abs(days)}d Overdue` 

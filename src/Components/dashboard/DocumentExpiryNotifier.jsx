@@ -42,7 +42,7 @@ export default function DocumentExpiryNotifier() {
 
     const checkExpiringDocuments = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/documents/expiring/`, {
+        const response = await fetch(`${API_BASE_URL}/documents/expiring/?company=all`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`
           }
@@ -53,7 +53,12 @@ export default function DocumentExpiryNotifier() {
           const docs = Array.isArray(data) ? data : (data.results || []);
           
           if (docs.length > 0) {
-            setDocuments(docs);
+            const sortedDocs = [...docs].sort((a, b) => {
+              const dateA = a.expiry_date ? new Date(a.expiry_date).getTime() : Infinity;
+              const dateB = b.expiry_date ? new Date(b.expiry_date).getTime() : Infinity;
+              return dateA - dateB;
+            });
+            setDocuments(sortedDocs);
             setIsOpen(true);
           }
         }

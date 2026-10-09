@@ -32,8 +32,14 @@ export default function DocumentExpiryWidget() {
 
   const fetchExpiring = async () => {
     try {
-      const data = await fetchWithAuth(`${API_BASE_URL}/documents/expiring/`);
-      setDocuments(data?.results || data || []);
+      const data = await fetchWithAuth(`${API_BASE_URL}/documents/expiring/?company=all`);
+      const docs = data?.results || data || [];
+      const sortedDocs = Array.isArray(docs) ? [...docs].sort((a, b) => {
+        const dateA = a.expiry_date ? new Date(a.expiry_date).getTime() : Infinity;
+        const dateB = b.expiry_date ? new Date(b.expiry_date).getTime() : Infinity;
+        return dateA - dateB;
+      }) : [];
+      setDocuments(sortedDocs);
     } catch { /* silent */ }
     finally { setLoading(false); }
   };
