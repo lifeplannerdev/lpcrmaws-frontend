@@ -77,8 +77,8 @@ export default function StudentProfilePage() {
 
       // Fetch paginated lists
       const [historyData, examsData, attendanceData, feeAccounts] = await Promise.all([
-        fetchAllPages(`${API_BASE_URL}/students/student-history/?student=${id}`, token),
-        fetchAllPages(`${API_BASE_URL}/students/exams/?student=${id}`, token),
+        fetchAllPages(`${API_BASE_URL}/students/batch-history/?student=${id}`, token),
+        fetchAllPages(`${API_BASE_URL}/students/exam-records/?student=${id}`, token),
         fetchAllPages(`${API_BASE_URL}/students/attendance-records/?student=${id}`, token),
         fetchAllPages(`${API_BASE_URL}/fees/accounts/?student=${id}`, token)
       ]);
@@ -221,43 +221,6 @@ export default function StudentProfilePage() {
       alert('Error assigning trainer');
     } finally {
       setAssigningTrainer(false);
-    }
-  };
-
-  const handleExamSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const token = accessToken || await refreshAccessToken();
-      const payload = {
-        student: id,
-        batch: student.academic_batch,
-        grade: examForm.grade || student.current_grade_batch_name_id || student.academic_batch_grade_id,
-        exam_date: examForm.exam_date,
-        model_exam_marks: examForm.exam_type === 'model' ? examForm.model_exam_marks : null,
-        grade_exam_marks: examForm.exam_type === 'grade' ? examForm.grade_exam_marks : null,
-        is_passed: examForm.is_passed,
-        attempt_number: exams.length + 1
-      };
-      
-      const res = await fetch(`${API_BASE_URL}/students/exams/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        setShowExamModal(false);
-        fetchStudentData();
-      } else {
-        const errorData = await res.json();
-        alert('Failed to add exam record: ' + JSON.stringify(errorData));
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Error submitting exam record');
     }
   };
 
@@ -694,68 +657,6 @@ export default function StudentProfilePage() {
 
         </div>
       </div>
-
-      {showExamModal && (
-        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl border border-gray-100">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Add Exam Record</h3>
-              <button onClick={() => setShowExamModal(false)} className="text-gray-400 hover:text-gray-600">
-                <XCircle size={24} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleExamSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Exam Date</label>
-                <input type="date" value={examForm.exam_date} onChange={(e) => setExamForm({...examForm, exam_date: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500" required />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Grade</label>
-                <select value={examForm.grade} onChange={(e) => setExamForm({...examForm, grade: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500" required>
-                  <option value="">Select Grade</option>
-                  {grades.map(g => (
-                    <option key={g.id} value={g.id}>{g.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Exam Type</label>
-                <select value={examForm.exam_type} onChange={(e) => setExamForm({...examForm, exam_type: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500">
-                  <option value="model">Model Exam</option>
-                  <option value="grade">Grade Exam</option>
-                </select>
-              </div>
-
-              {examForm.exam_type === 'model' && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Model Exam Marks</label>
-                  <input type="number" step="0.01" value={examForm.model_exam_marks} onChange={(e) => setExamForm({...examForm, model_exam_marks: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500" required />
-                </div>
-              )}
-
-              {examForm.exam_type === 'grade' && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Grade Exam Marks</label>
-                  <input type="number" step="0.01" value={examForm.grade_exam_marks} onChange={(e) => setExamForm({...examForm, grade_exam_marks: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500" required />
-                </div>
-              )}
-
-              <div className="flex items-center gap-3 mt-4">
-                <input type="checkbox" id="is_passed" checked={examForm.is_passed} onChange={(e) => setExamForm({...examForm, is_passed: e.target.checked})} className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" />
-                <label htmlFor="is_passed" className="text-sm font-semibold text-gray-700">Student Passed</label>
-              </div>
-
-              <div className="flex justify-end gap-3 mt-8">
-                <button type="button" onClick={() => setShowExamModal(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
-                <button type="submit" className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">Save Record</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {showDemoteModal && (
         <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
