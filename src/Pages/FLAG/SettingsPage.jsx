@@ -31,17 +31,17 @@ export default function SettingsPage() {
     try {
       setLoading(true);
       const token = accessToken || await refreshAccessToken();
-      const [gradesRes, campusesRes, packagesRes, policiesRes] = await Promise.all([
+      const [gradesRes, campusesRes, packagesRes] = await Promise.all([
         fetch(`${API_BASE_URL}/students/grades/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/students/campuses/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/students/packages/`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/students/attendance-policies/`, { headers: { Authorization: `Bearer ${token}` } }),
+        
       ]);
       setData({
         grades: await gradesRes.json().then(d => (d.results !== undefined ? d.results : (Array.isArray(d) ? d : []))),
         campuses: await campusesRes.json().then(d => (d.results !== undefined ? d.results : (Array.isArray(d) ? d : []))),
         packages: await packagesRes.json().then(d => (d.results !== undefined ? d.results : (Array.isArray(d) ? d : []))),
-        policies: await policiesRes.json().then(d => (d.results !== undefined ? d.results : (Array.isArray(d) ? d : []))),
+        
       });
     } catch (err) {
       console.error(err);
@@ -158,7 +158,7 @@ export default function SettingsPage() {
             <button onClick={() => setActiveTab('grades')} className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${activeTab === 'grades' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-slate-50'}`}>Grades</button>
             <button onClick={() => setActiveTab('campuses')} className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${activeTab === 'campuses' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-slate-50'}`}>Campuses</button>
             <button onClick={() => setActiveTab('packages')} className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${activeTab === 'packages' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-slate-50'}`}>Academic Packages</button>
-            <button onClick={() => setActiveTab('policies')} className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${activeTab === 'policies' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-slate-50'}`}>Attendance Policies</button>
+            
           </div>
 
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
@@ -180,7 +180,7 @@ export default function SettingsPage() {
                         <div key={grade.id} className="p-4 border border-gray-200 rounded-xl flex justify-between items-center bg-gray-50/50">
                           <div>
                             <p className="font-bold text-gray-900">{grade.name}</p>
-                            <p className="text-xs text-gray-500">Order: {grade.order_index}</p>
+                            <p className="text-xs text-gray-500">Order: {grade.order}</p>
                           </div>
                           <div className="flex gap-2">
                             <button onClick={() => openModal('edit', 'grades', grade)} className="text-gray-400 hover:text-indigo-600"><Edit2 size={16}/></button>
@@ -244,7 +244,7 @@ export default function SettingsPage() {
                 {activeTab === 'policies' && (
                   <div>
                     <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-lg font-bold text-gray-900">Attendance Policies</h3>
+                      <h3 className="text-lg font-bold text-gray-900"></h3>
                       <button onClick={() => openModal('add', 'policies')} className="flex items-center gap-1 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-indigo-100"><Plus size={16}/> Add</button>
                     </div>
                     <div className="grid grid-cols-1 gap-4">
