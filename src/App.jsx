@@ -162,7 +162,7 @@ export default function App() {
         
         <Route path="/call-analytics" element={<PermissionRoute resources={['voxbay']}><CallAnalyticsPage /></PermissionRoute>} />
         <Route path="/hr/assets" element={<PermissionRoute resources={['assets']}><AssetManagementPage /></PermissionRoute>} />
-        <Route path="/fees" element={<PermissionRoute resources={['fees']}><FeesManagementPage /></PermissionRoute>} />
+        <Route path="/fees" element={<PermissionRoute resources={['fees']} permissions={['flag:fees', 'flag:admin']}><FeesManagementPage /></PermissionRoute>} />
         <Route path="/roles" element={<PermissionRoute permissions={['staff:edit_any', 'staff:edit_tenant']}><RoleManagementPage /></PermissionRoute>} />
         <Route path="/credentials" element={<PermissionRoute resources={['credentials']}><CredentialsVault /></PermissionRoute>} />
         <Route path="/programs" element={<PermissionRoute permissions={['programs:view', 'programs:manage']}><ProgramsPage /></PermissionRoute>} />

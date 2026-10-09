@@ -41,7 +41,6 @@ export const masterNavigation = [
   { id: "myStudents",        label: "My Students",        icon: GraduationCap, path: "/my-students",         requiredPermissions: ["attendance:mark"], category: "academics", description: "Trainer assigned students roster" },
   { id: "markAttendance",    label: "Mark Attendance",    icon: CalendarCheck, path: "/attendance/mark",    requiredPermissions: ["attendance:mark"], category: "academics", description: "Daily student roll-call" },
   { id: "attendanceReports", label: "Attendance Reports", icon: CalendarCheck, path: "/attendance/reports",  requiredPermissions: ["attendance:mark", "attendance:approvals"], category: "academics", description: "Student attendance statistics" },
-  { id: "fees", label: "Fees", icon: IndianRupee, path: "/fees", requiredResource: "fees", category: "academics", description: "Fee collections, receipts & balances" },
   { id: "programs", label: "Programs", icon: BookOpen, path: "/programs", requiredResource: "programs", category: "academics", description: "Academic programs & courses" },
 
   // ── HR & Operations ──
@@ -83,6 +82,7 @@ export const masterNavigation = [
   { id: "flagBatches",   label: "FLAG Batches",     icon: BookOpen,      path: "/flag/batches",  requiredPermissions: ["flag:admin","flag:trainer","flag:view"],                group: "flag", category: "divisions", description: "Language levels (A1, A2, B1, B2)" },
   { id: "flagStudents",  label: "FLAG Students",    icon: Users,         path: "/flag/students", requiredPermissions: ["flag:admin","flag:trainer","flag:view"],                group: "flag", category: "divisions", description: "Enrolled language students" },
   { id: "flagAttendance",label: "FLAG Attendance",  icon: CalendarCheck, path: "/flag/attendance",requiredPermissions: ["flag:admin","flag:trainer"],                          group: "flag", category: "divisions", description: "Class session attendance" },
+  { id: "flagFees",      label: "FLAG Fees",        icon: IndianRupee,   path: "/fees",          requiredPermissions: ["flag:admin","flag:fees"], allowWithResource: "fees",   group: "flag", category: "divisions", description: "Fee collections, receipts & balances" },
   { id: "flagSettings",  label: "FLAG Settings",    icon: Settings,      path: "/flag/settings", requiredPermissions: ["flag:admin"],                                         group: "flag", category: "divisions", description: "Academy parameters & configuration" },
 
   // ── System & Administration ──
@@ -92,7 +92,7 @@ export const masterNavigation = [
 
 export const CATEGORIES = [
   { id: "sales", label: "Sales", icon: Users, description: "Leads, calling analytics & pipelines" },
-  { id: "academics", label: "Academics", icon: GraduationCap, description: "Students, batches, attendance & fees" },
+  { id: "academics", label: "Academics", icon: GraduationCap, description: "Students, batches & attendance" },
   { id: "hr", label: "HR & Ops", icon: UserCheck, description: "Staff roster, recruitment & assets" },
   { id: "tasks", label: "Tasks", icon: ListTodo, description: "Personal & team task management" },
   { id: "reports", label: "Reports", icon: BarChart2, description: "Staff reports & performance analytics" },
@@ -105,6 +105,11 @@ export const getFilteredMenu = (hasAnyPermission, hasPermission, user) => {
   return masterNavigation.filter((item) => {
     let allowed = true;
     
+    // If allowWithResource is provided and matched, grant access
+    if (item.allowWithResource && hasAnyPermission(item.allowWithResource)) {
+      return true;
+    }
+
     // Default to true, and we verify if there's any restriction
     if (item.requiredResource && !hasAnyPermission(item.requiredResource)) allowed = false;
     
