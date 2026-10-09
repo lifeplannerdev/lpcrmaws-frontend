@@ -1,13 +1,14 @@
 // Components/layouts/NotificationBell.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, CheckCheck, Trash2, ClipboardList, UserPlus, MessageSquare, FileText } from 'lucide-react';
+import { Bell, CheckCheck, Trash2, ClipboardList, UserPlus, MessageSquare, FileText, AlertTriangle } from 'lucide-react';
 
 const iconMap = {
   task: <ClipboardList size={14} className="text-indigo-500" />,
   lead: <UserPlus size={14} className="text-emerald-500" />,
   chat: <MessageSquare size={14} className="text-blue-500" />,
-  report: <FileText size={14} className="text-orange-500" />
+  report: <FileText size={14} className="text-orange-500" />,
+  document: <AlertTriangle size={14} className="text-amber-500" />
 };
 
 const timeAgo = (date) => {
@@ -51,6 +52,8 @@ const NotificationBell = ({ notifications, unreadCount, onClearNotifications, on
       route = `/leads/view/${n.related_id}`;
     } else if (type === 'chat' || msg.includes('chat') || msg.includes('message')) {
       route = `/chat`;
+    } else if (type === 'document' || type === 'license' || msg.includes('document')) {
+      route = `/hr/documents`;
     }
     
     if (route) {
@@ -104,15 +107,26 @@ const NotificationBell = ({ notifications, unreadCount, onClearNotifications, on
                   <div 
                     key={n.id} 
                     onClick={() => handleNotificationClick(n)}
-                    className="flex items-start gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition cursor-pointer"
+                    className={`flex items-start gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition cursor-pointer ${
+                      n.type === 'document' ? 'bg-amber-50/40' : ''
+                    }`}
                   >
-                    <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      n.type === 'document' ? 'bg-amber-100' : 'bg-gray-100'
+                    }`}>
                       {displayIcon}
                     </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-800 leading-snug">{n.message}</p>
-                    {n.by && <p className="text-xs text-gray-400 mt-0.5">by {n.by}</p>}
-                    <p className="text-[10px] text-gray-300 mt-1">{timeAgo(n.time)}</p>
+                    <p className={`text-sm leading-snug ${n.type === 'document' ? 'font-semibold text-amber-950' : 'text-gray-800'}`}>{n.message}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {n.type === 'document' && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 bg-amber-200/80 text-amber-900 rounded">
+                          Expiry Alert
+                        </span>
+                      )}
+                      {n.by && <span className="text-xs text-gray-400">by {n.by}</span>}
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1">{timeAgo(n.time)}</p>
                   </div>
                 </div>
                 );

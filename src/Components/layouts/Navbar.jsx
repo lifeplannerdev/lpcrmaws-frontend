@@ -36,24 +36,63 @@ const Navbar = () => {
     return accessToken || await refreshAccessToken();
   }, [accessToken, refreshAccessToken]);
 
-  // Load persisted notifications from backend on login
+  // Load persisted notifications + near-to-expiry documents
   useEffect(() => {
     if (!user) return;
     const fetchNotifications = async () => {
       try {
         const token = await getToken();
-        const res = await fetch(`${API_BASE_URL}/notifications/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        setNotifications(data);
-        setUnreadCount(data.filter(n => !n.is_read).length);
+        const [notifRes, docRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/notifications/`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }).catch(() => null),
+          fetch(`${API_BASE_URL}/documents/expiring/`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }).catch(() => null),
+        ]);
+
+        let notifs = [];
+        if (notifRes && notifRes.ok) {
+          const data = await notifRes.json();
+          notifs = Array.isArray(data) ? data : [];
+        }
+
+        let docNotifs = [];
+        if (docRes && docRes.ok) {
+          const docsData = await docRes.json();
+          const docs = Array.isArray(docsData) ? docsData : (docsData.results || []);
+          docNotifs = docs.map(d => {
+            const days = d.days_remaining;
+            const statusLabel = days < 0 
+              ? `${Math.abs(days)}d Overdue` 
+              : days === 0 
+              ? 'Expires Today' 
+              : `${days}d left`;
+            const amountStr = d.amount ? ` • ₹${Number(d.amount).toLocaleString('en-IN')}` : '';
+
+            return {
+              id: `doc-expiry-${d.id}`,
+              type: 'document',
+              message: `[${d.company || 'LP'}] ${d.title}: ${statusLabel}${amountStr}`,
+              by: d.document_type || 'Document Registry',
+              time: d.expiry_date || new Date().toISOString(),
+              is_read: false,
+              related_id: d.id,
+              is_document: true,
+              doc: d,
+            };
+          });
+        }
+
+        const combined = [...docNotifs, ...notifs];
+        setNotifications(combined);
+        setUnreadCount(combined.filter(n => !n.is_read).length);
       } catch (err) {
         console.error('Failed to fetch notifications:', err);
       }
     };
     fetchNotifications();
-  }, [user]);
+  }, [user, getToken]);
 
   const addNotification = useCallback((notif) => {
     setNotifications(prev => [notif, ...prev].slice(0, 20));
