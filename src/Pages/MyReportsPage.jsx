@@ -258,9 +258,9 @@ function FormFields({
             <label className="block text-xs font-semibold text-emerald-800 uppercase mb-1">Additional Report Details</label>
             <textarea
               name="extraReportText" value={formData.extraReportText || ''}
-              onChange={handleInputChange} rows={3}
+              onChange={handleInputChange} rows={6}
               placeholder="Describe your daily activities..."
-              className="w-full px-3 py-2 border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+              className="w-full px-3.5 py-2.5 border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm leading-relaxed min-h-[150px] resize-y"
             />
           </div>
         </div>
@@ -269,9 +269,9 @@ function FormFields({
           <label className="block text-xs font-semibold text-emerald-800 uppercase mb-1">Report Details</label>
           <textarea
             name="report_text" value={formData.report_text || ''}
-            onChange={handleInputChange} rows={4}
+            onChange={handleInputChange} rows={8}
             placeholder="Describe your daily activities..."
-            className="w-full px-3 py-2 border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+            className="w-full px-3.5 py-2.5 border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm leading-relaxed min-h-[200px] resize-y"
           />
         </div>
       )}
@@ -292,9 +292,9 @@ function FormFields({
         <label className="block text-xs font-semibold text-teal-800 uppercase mb-1">Agenda Details</label>
         <textarea
           name="next_day_agenda" value={formData.next_day_agenda || ''}
-          onChange={handleInputChange} rows={3}
+          onChange={handleInputChange} rows={8}
           placeholder="Plan for your next working day..."
-          className="w-full px-3 py-2 border border-teal-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+          className="w-full px-3.5 py-2.5 border border-teal-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm leading-relaxed min-h-[200px] resize-y"
         />
       </div>
     </div>
