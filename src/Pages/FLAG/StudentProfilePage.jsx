@@ -658,7 +658,23 @@ export default function StudentProfilePage() {
 
             {activeTab === 'attendance' && (
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-6">Attendance Records</h3>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Attendance Records ({attendance.length})</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">Live session attendance tracking across batch levels.</p>
+                  </div>
+                  {attendance.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs font-bold">
+                      <span className="px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-lg">
+                        Present: {attendance.filter(r => (r.status === 'present' || r.is_present)).length}
+                      </span>
+                      <span className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg">
+                        Absent: {attendance.filter(r => (r.status === 'absent' || (!r.status && !r.is_present))).length}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
                 {attendance.length === 0 ? (
                   <p className="text-gray-500 text-sm">No attendance records found.</p>
                 ) : (
@@ -668,29 +684,55 @@ export default function StudentProfilePage() {
                         <tr>
                           <th className="px-6 py-4">Date</th>
                           <th className="px-6 py-4">Batch</th>
-                          <th className="px-6 py-4">Type</th>
+                          <th className="px-6 py-4">Level / Topic</th>
                           <th className="px-6 py-4 text-center">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {attendance.map((rec) => (
-                          <tr key={rec.id} className="hover:bg-slate-50">
-                            <td className="px-6 py-4 font-medium text-gray-900">{new Date(rec.session_date).toLocaleDateString()}</td>
-                            <td className="px-6 py-4 text-gray-500">{rec.batch_name}</td>
-                            <td className="px-6 py-4 text-gray-500">{rec.session_type}</td>
-                            <td className="px-6 py-4 text-center">
-                              {rec.is_present ? (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 rounded-lg font-bold text-xs">
-                                  <CheckCircle size={14} /> Present
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 text-red-700 rounded-lg font-bold text-xs">
-                                  <XCircle size={14} /> Absent
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                        {attendance.map((rec) => {
+                          const status = (rec.status || (rec.is_present ? 'present' : 'absent')).toLowerCase();
+                          const isPresent = status === 'present';
+                          const isLate = status === 'late';
+                          const isLeave = status === 'leave';
+
+                          return (
+                            <tr key={rec.id} className="hover:bg-slate-50">
+                              <td className="px-6 py-4 font-semibold text-gray-900">
+                                {rec.session_date ? new Date(rec.session_date).toLocaleDateString() : 'N/A'}
+                              </td>
+                              <td className="px-6 py-4 font-medium text-gray-700">
+                                {rec.batch_name || rec.grade_batch_name || student.batch_name || 'N/A'}
+                              </td>
+                              <td className="px-6 py-4 text-gray-600">
+                                {rec.grade_code && (
+                                  <span className="px-2 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs font-bold text-gray-700 mr-2">
+                                    Grade {rec.grade_code}
+                                  </span>
+                                )}
+                                <span className="text-xs text-gray-500">{rec.topic || rec.session_type || 'Regular Session'}</span>
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                {isPresent ? (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 rounded-lg font-bold text-xs border border-green-200">
+                                    <CheckCircle size={14} /> Present
+                                  </span>
+                                ) : isLate ? (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-700 rounded-lg font-bold text-xs border border-amber-200">
+                                    <Clock size={14} /> Late
+                                  </span>
+                                ) : isLeave ? (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-100 text-purple-700 rounded-lg font-bold text-xs border border-purple-200">
+                                    <UserCheck size={14} /> Leave
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 text-red-700 rounded-lg font-bold text-xs border border-red-200">
+                                    <XCircle size={14} /> Absent
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
