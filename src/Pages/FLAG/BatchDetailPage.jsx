@@ -23,7 +23,10 @@ import {
   CheckSquare, 
   Square,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Calendar,
+  History,
+  RefreshCw
 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -40,7 +43,7 @@ export default function BatchDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [savingTrainer, setSavingTrainer] = useState(false);
   const canEdit = hasPermission('flag:admin') || hasPermission('flag:trainer') || user?.is_superuser;
-  const [activeTab, setActiveTab] = useState('students'); // 'students' or 'exams'
+  const [activeTab, setActiveTab] = useState('students'); // 'students', 'exams', 'history'
   const [selectedGradeBatch, setSelectedGradeBatch] = useState(null);
   const [examMarksForm, setExamMarksForm] = useState({});
   const [savingMarks, setSavingMarks] = useState(false);
@@ -51,6 +54,12 @@ export default function BatchDetailPage() {
   const [promotionPreviewData, setPromotionPreviewData] = useState(null);
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [promotingBatch, setPromotingBatch] = useState(false);
+  const [promotionDate, setPromotionDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [promotionReason, setPromotionReason] = useState('');
+
+  // Batch Progression History
+  const [batchHistory, setBatchHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const handleDeleteBatch = async () => {
     if (!batch) return;
@@ -145,8 +154,27 @@ export default function BatchDetailPage() {
     }
   };
 
+  const fetchBatchHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const token = accessToken || await refreshAccessToken();
+      const res = await fetch(`${API_BASE_URL}/students/batch-history/?batch=${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBatchHistory(data.results !== undefined ? data.results : (Array.isArray(data) ? data : []));
+      }
+    } catch (e) {
+      console.error('Failed to load batch history', e);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   useEffect(() => {
     fetchBatch();
+    fetchBatchHistory();
   }, [id]);
 
   const handleSaveMarks = async (studentId, examType) => {
@@ -228,6 +256,8 @@ export default function BatchDetailPage() {
 
   const handleOpenPromoteModal = () => {
     setShowPromoteModal(true);
+    setPromotionDate(new Date().toISOString().split('T')[0]);
+    setPromotionReason('');
     fetchPromotionPreview(selectedGradeBatch?.id);
   };
 
@@ -256,7 +286,7 @@ export default function BatchDetailPage() {
       alert("No students selected for promotion.");
       return;
     }
-    if (!window.confirm(`Are you sure you want to promote ${selectedStudentIds.length} student(s) to ${promotionPreviewData.to_grade}?`)) {
+    if (!window.confirm(`Are you sure you want to promote ${selectedStudentIds.length} student(s) to ${promotionPreviewData.to_grade} on ${promotionDate}?`)) {
       return;
     }
 
@@ -271,7 +301,9 @@ export default function BatchDetailPage() {
         },
         body: JSON.stringify({
           to_grade_batch_id: promotionPreviewData.to_grade_batch_id,
-          student_ids: selectedStudentIds
+          student_ids: selectedStudentIds,
+          action_date: promotionDate,
+          reason: promotionReason
         })
       });
 
@@ -279,7 +311,7 @@ export default function BatchDetailPage() {
         const data = await res.json();
         alert(data.message || 'Promotion completed successfully!');
         setShowPromoteModal(false);
-        await fetchBatch();
+        await Promise.all([fetchBatch(), fetchBatchHistory()]);
       } else {
         const err = await res.json();
         alert(err.error || 'Failed to promote students');
@@ -490,6 +522,15 @@ export default function BatchDetailPage() {
             >
               Exams & Marks Entry ({selectedGradeBatch ? selectedGradeBatch.grade_code : 'Select Grade'})
             </button>
+            <button 
+              onClick={() => { setActiveTab('history'); fetchBatchHistory(); }} 
+              className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all whitespace-nowrap flex items-center gap-2 ${
+                activeTab === 'history' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:bg-slate-50'
+              }`}
+            >
+              <History size={16} />
+              Progression History ({batchHistory.length})
+            </button>
           </div>
 
           {/* ── TAB CONTENT ── */}
@@ -658,6 +699,110 @@ export default function BatchDetailPage() {
                 )}
               </div>
             )}
+
+            {/* Progression & Batch History Tab */}
+            {activeTab === 'history' && (
+              <div>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-2">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <History size={20} className="text-indigo-600" />
+                      Batch Progression & Promotion History ({batchHistory.length})
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Complete timeline of student promotions, demotions, and enrollments with effective dates.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={fetchBatchHistory}
+                    disabled={loadingHistory}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition"
+                  >
+                    {loadingHistory ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                    Refresh
+                  </button>
+                </div>
+
+                {loadingHistory ? (
+                  <div className="py-12 flex justify-center text-gray-400">
+                    <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                  </div>
+                ) : batchHistory.length === 0 ? (
+                  <div className="p-8 text-center bg-gray-50 rounded-2xl border border-gray-100 text-gray-500 text-sm">
+                    No progression or history events recorded for this batch yet.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                          <th className="pb-3 px-4">Effective Date</th>
+                          <th className="pb-3 px-4">Student</th>
+                          <th className="pb-3 px-4">Action</th>
+                          <th className="pb-3 px-4">Grade / Level</th>
+                          <th className="pb-3 px-4">Details / Reason</th>
+                          <th className="pb-3 px-4">Done By</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50 text-sm">
+                        {batchHistory.map((item) => {
+                          const isPromoted = item.action === 'promoted';
+                          const isDemoted = item.action === 'demoted';
+
+                          return (
+                            <tr key={item.id} className="hover:bg-gray-50/60 transition-colors">
+                              <td className="py-3.5 px-4 font-semibold text-gray-900 whitespace-nowrap">
+                                <div className="flex items-center gap-2">
+                                  <Calendar size={14} className="text-indigo-500 flex-shrink-0" />
+                                  <span>{item.from_date}</span>
+                                  {item.to_date && (
+                                    <span className="text-xs text-gray-400 font-normal">
+                                      &rarr; {item.to_date}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-4 font-bold text-gray-900">
+                                <Link 
+                                  to={`/flag/students/${item.student}`} 
+                                  className="hover:text-indigo-600 hover:underline"
+                                >
+                                  {item.student_name || `Student #${item.student}`}
+                                </Link>
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                  isPromoted 
+                                    ? 'bg-green-100 text-green-800 border border-green-200' 
+                                    : isDemoted 
+                                    ? 'bg-red-100 text-red-800 border border-red-200' 
+                                    : 'bg-purple-100 text-purple-800 border border-purple-200'
+                                }`}>
+                                  {isPromoted ? <CheckCircle size={12} /> : isDemoted ? <AlertTriangle size={12} /> : <UserCheck size={12} />}
+                                  {item.action ? item.action.toUpperCase() : 'UNKNOWN'}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 font-bold text-gray-800">
+                                <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-md text-xs font-extrabold border border-gray-200">
+                                  {item.grade_code ? `Grade ${item.grade_code}` : '—'}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 text-xs text-gray-600 max-w-xs truncate">
+                                {item.reason || '—'}
+                              </td>
+                              <td className="py-3.5 px-4 text-xs text-gray-500 whitespace-nowrap">
+                                {item.done_by_name || 'System'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
         </div>
@@ -728,6 +873,41 @@ export default function BatchDetailPage() {
                       </select>
                     </div>
                   )}
+                </div>
+
+                {/* Promotion Effective Date & Note */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                      <Calendar size={14} className="text-indigo-600" />
+                      Effective Promotion Date
+                    </label>
+                    <input 
+                      type="date"
+                      value={promotionDate}
+                      onChange={(e) => setPromotionDate(e.target.value)}
+                      className="w-full text-xs font-semibold px-3 py-2 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Defaults to today. Change date if backfilling historical batch records.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Promotion Note / Reason (Optional)
+                    </label>
+                    <input 
+                      type="text"
+                      placeholder={`e.g. Promoted to ${promotionPreviewData.to_grade}`}
+                      value={promotionReason}
+                      onChange={(e) => setPromotionReason(e.target.value)}
+                      className="w-full text-xs px-3 py-2 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Will be saved into the student's timeline history.
+                    </p>
+                  </div>
                 </div>
 
                 {/* Section 1: Students Eligible for Promotion */}

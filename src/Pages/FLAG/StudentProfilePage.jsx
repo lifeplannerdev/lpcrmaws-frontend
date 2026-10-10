@@ -31,10 +31,21 @@ export default function StudentProfilePage() {
 
 
   // Promote / Demote state
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [promoteForm, setPromoteForm] = useState({ 
+    action_date: new Date().toISOString().split('T')[0], 
+    reason: '' 
+  });
   const [promoting, setPromoting] = useState(false);
+
   const [showDemoteModal, setShowDemoteModal] = useState(false);
   const [demoting, setDemoting] = useState(false);
-  const [demoteForm, setDemoteForm] = useState({ academic_batch_id: '', grade_batch_id: '', reason: '' });
+  const [demoteForm, setDemoteForm] = useState({ 
+    academic_batch_id: '', 
+    grade_batch_id: '', 
+    reason: '', 
+    action_date: new Date().toISOString().split('T')[0] 
+  });
   const [availableBatches, setAvailableBatches] = useState([]);
   const [availableGradeBatches, setAvailableGradeBatches] = useState([]);
 
@@ -107,17 +118,31 @@ export default function StudentProfilePage() {
     }
   };
 
-  const handlePromote = async () => {
-    if (!window.confirm("Are you sure you want to promote this student to the next grade?")) return;
+  const openPromoteModal = () => {
+    setPromoteForm({
+      action_date: new Date().toISOString().split('T')[0],
+      reason: ''
+    });
+    setShowPromoteModal(true);
+  };
+
+  const handlePromote = async (e) => {
+    if (e) e.preventDefault();
     try {
       setPromoting(true);
       const token = accessToken || await refreshAccessToken();
       const res = await fetch(`${API_BASE_URL}/students/students/${id}/promote/`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify(promoteForm)
       });
       if (res.ok) {
-        alert("Student promoted successfully!");
+        const data = await res.json();
+        alert(data.status || "Student promoted successfully!");
+        setShowPromoteModal(false);
         fetchStudentData();
       } else {
         const errorData = await res.json();
@@ -134,7 +159,12 @@ export default function StudentProfilePage() {
 
   const openDemoteModal = async () => {
     setShowDemoteModal(true);
-    setDemoteForm({ academic_batch_id: '', grade_batch_id: '', reason: '' });
+    setDemoteForm({ 
+      academic_batch_id: '', 
+      grade_batch_id: '', 
+      reason: '', 
+      action_date: new Date().toISOString().split('T')[0] 
+    });
     try {
       const token = accessToken || await refreshAccessToken();
       const batchesData = await fetchAllPages(`${API_BASE_URL}/students/batches/`, token);
@@ -279,7 +309,7 @@ export default function StudentProfilePage() {
                   {canEdit && (
                     <>
                       <button
-                        onClick={handlePromote}
+                        onClick={openPromoteModal}
                         disabled={promoting}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors shadow-sm text-sm disabled:opacity-50"
                       >
@@ -410,7 +440,12 @@ export default function StudentProfilePage() {
                       <div key={h.id} className="relative pl-6">
                         <div className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 border-white ${h.action === 'demoted' ? 'bg-red-500' : h.action === 'promoted' ? 'bg-green-500' : 'bg-indigo-500'}`}></div>
                         <h4 className="font-bold text-gray-900 flex items-center gap-2">
-                          {h.batch_name} 
+                          <span>{h.batch_name}</span>
+                          {h.grade_code && (
+                            <span className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-md font-bold">
+                              Grade {h.grade_code}
+                            </span>
+                          )}
                           {h.action === 'demoted' ? (
                             <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-md font-bold">Demoted</span>
                           ) : h.action === 'promoted' ? (
@@ -419,8 +454,18 @@ export default function StudentProfilePage() {
                             <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md font-bold">Enrolled</span>
                           )}
                         </h4>
-                        <p className="text-sm text-gray-500 mt-1">From {new Date(h.from_date).toLocaleDateString()} {h.to_date ? `to ${new Date(h.to_date).toLocaleDateString()}` : '(Current)'}</p>
-                        {h.reason && <p className="text-sm text-gray-700 mt-2 bg-gray-50 p-3 rounded-xl border border-gray-100">{h.reason}</p>}
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mt-1">
+                          <span className="flex items-center gap-1 font-semibold text-gray-700">
+                            <Calendar size={13} className="text-indigo-600" />
+                            From {h.from_date} {h.to_date ? `to ${h.to_date}` : '(Current Active Level)'}
+                          </span>
+                          {h.done_by_name && (
+                            <span className="text-gray-400">
+                              • By: <strong className="text-gray-600">{h.done_by_name}</strong>
+                            </span>
+                          )}
+                        </div>
+                        {h.reason && <p className="text-xs text-gray-700 mt-2 bg-gray-50 p-3 rounded-xl border border-gray-100">{h.reason}</p>}
                       </div>
                     ))}
                   </div>
@@ -662,7 +707,10 @@ export default function StudentProfilePage() {
         <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl border border-gray-100">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Demote / Reassign Student</h3>
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <ArrowDownCircle className="text-orange-600" size={24} />
+                Demote / Reassign Student
+              </h3>
               <button onClick={() => setShowDemoteModal(false)} className="text-gray-400 hover:text-gray-600">
                 <XCircle size={24} />
               </button>
@@ -690,6 +738,23 @@ export default function StudentProfilePage() {
               </div>
 
               <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                  <Calendar size={15} className="text-orange-600" />
+                  Effective Demotion Date
+                </label>
+                <input 
+                  type="date" 
+                  value={demoteForm.action_date} 
+                  onChange={(e) => setDemoteForm({...demoteForm, action_date: e.target.value})} 
+                  className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-orange-500 focus:border-orange-500 text-sm font-medium" 
+                  required 
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Defaults to today. Change date if backfilling historical records.
+                </p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Reason (Optional)</label>
                 <textarea value={demoteForm.reason} onChange={(e) => setDemoteForm({...demoteForm, reason: e.target.value})} className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500" rows="3" placeholder="Reason for demotion/reassignment"></textarea>
               </div>
@@ -697,6 +762,72 @@ export default function StudentProfilePage() {
               <div className="flex justify-end gap-3 mt-8">
                 <button type="button" onClick={() => setShowDemoteModal(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
                 <button type="submit" disabled={demoting} className="px-5 py-2.5 bg-orange-600 text-white rounded-xl font-bold hover:bg-orange-700 transition-colors shadow-lg shadow-orange-200 disabled:opacity-50">Confirm Demotion</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Promote Student Modal */}
+      {showPromoteModal && (
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <ArrowUpCircle className="text-green-600" size={24} />
+                Promote Student
+              </h3>
+              <button onClick={() => setShowPromoteModal(false)} className="text-gray-400 hover:text-gray-600">
+                <XCircle size={24} />
+              </button>
+            </div>
+            
+            <form onSubmit={handlePromote} className="space-y-4">
+              <div className="p-4 bg-green-50/70 border border-green-200 rounded-2xl">
+                <p className="text-xs text-green-800 font-semibold">Promoting Student:</p>
+                <p className="text-base font-bold text-gray-900 mt-0.5">{student.name}</p>
+                <div className="flex items-center gap-2 mt-2 text-xs text-green-900">
+                  <span className="px-2 py-0.5 bg-white rounded font-bold border border-green-300">
+                    Current: Grade {student.current_grade || 'None'}
+                  </span>
+                  <span>&rarr;</span>
+                  <span className="px-2 py-0.5 bg-green-600 text-white rounded font-bold">
+                    Next Level
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                  <Calendar size={15} className="text-green-600" />
+                  Effective Promotion Date
+                </label>
+                <input 
+                  type="date" 
+                  value={promoteForm.action_date} 
+                  onChange={(e) => setPromoteForm({...promoteForm, action_date: e.target.value})} 
+                  className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-green-500 focus:border-green-500 text-sm font-medium" 
+                  required 
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Defaults to today. Change date if backfilling historical records.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Reason / Note (Optional)</label>
+                <textarea 
+                  value={promoteForm.reason} 
+                  onChange={(e) => setPromoteForm({...promoteForm, reason: e.target.value})} 
+                  className="w-full border-gray-200 rounded-xl px-4 py-3 focus:ring-green-500 focus:border-green-500 text-sm" 
+                  rows="2" 
+                  placeholder="e.g. Cleared grade exam with distinction"
+                ></textarea>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-8">
+                <button type="button" onClick={() => setShowPromoteModal(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
+                <button type="submit" disabled={promoting} className="px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors shadow-lg shadow-green-200 disabled:opacity-50">Confirm Promotion</button>
               </div>
             </form>
           </div>
