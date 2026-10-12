@@ -14,7 +14,7 @@ export default function TaskFormPage() {
   const navigate = useNavigate();
   const { accessToken, refreshAccessToken } = useAuth();
   const { hasPermission } = usePermissions();
-  const canAssignTasks = hasPermission('tasks:edit_any') || hasPermission('tasks:edit_tenant') || hasPermission('tasks:edit_own');
+  const canAssignTasks = hasPermission('tasks:edit_any') || hasPermission('tasks:edit_tenant') || hasPermission('tasks:edit_own') || hasPermission('tasks:kochi') || hasPermission('tasks:kottayam');
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   
   const [teamMembers, setTeamMembers] = useState([]);

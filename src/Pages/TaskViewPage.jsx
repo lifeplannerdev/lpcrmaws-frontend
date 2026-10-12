@@ -51,6 +51,13 @@ export default function TaskViewPage() {
     return u === 'MANAGING_DIRECTOR' || u === 'MD' || u === 'ADMIN';
   });
 
+  const isOwnTask = Number(task?.assigned_to) === Number(user?.id);
+  const taskLoc = (task?.assigned_to_location || '').toLowerCase();
+  const hasKochiTaskPerm = hasPermission('tasks:kochi') && taskLoc === 'kochi';
+  const hasKottayamTaskPerm = hasPermission('tasks:kottayam') && taskLoc === 'kottayam';
+  // "see approving own task is not possible for them"
+  const canApproveTask = !isOwnTask && (isManagingDirector || hasKochiTaskPerm || hasKottayamTaskPerm);
+
   // ── Style maps ─────────────────────────────────────────────────────────────
 
   const priorityBadgeColors = {
@@ -440,7 +447,7 @@ export default function TaskViewPage() {
               </button>
             )}
 
-            {task.status === 'PENDING_APPROVAL' && isManagingDirector && (
+            {task.status === 'PENDING_APPROVAL' && canApproveTask && (
               <>
                 <button
                   onClick={() => setShowApproveModal(true)}
@@ -459,10 +466,10 @@ export default function TaskViewPage() {
               </>
             )}
 
-            {task.status === 'PENDING_APPROVAL' && !isManagingDirector && Number(task.assigned_to) === Number(user?.id) && (
+            {task.status === 'PENDING_APPROVAL' && !canApproveTask && Number(task.assigned_to) === Number(user?.id) && (
               <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-50 border-2 border-purple-300 text-purple-700 font-semibold rounded-xl">
                 <Clock className="w-4 h-4 animate-spin text-purple-600" />
-                Submitted for Managing Director Approval
+                Submitted for Approval
               </span>
             )}
           </div>
@@ -477,18 +484,18 @@ export default function TaskViewPage() {
               </div>
               <div>
                 <h3 className="text-purple-900 font-bold text-lg mb-1 flex items-center gap-2">
-                  Task Awaiting Managing Director Approval
+                  Task Awaiting Approval
                   <span className="text-xs uppercase bg-purple-200 text-purple-800 font-bold px-2 py-0.5 rounded-full">Review Required</span>
                 </h3>
                 <p className="text-purple-700 text-sm">
                   Marked as completed by <span className="font-semibold">{task.assigned_to_name}</span>. 
-                  {isManagingDirector 
+                  {canApproveTask 
                     ? ' Please review the activity notes and decide whether to approve or reject.'
-                    : ' Awaiting review and approval from the Managing Director.'}
+                    : ' Awaiting review and approval from an authorized approver.'}
                 </p>
               </div>
             </div>
-            {isManagingDirector && (
+            {canApproveTask && (
               <div className="flex items-center gap-3 shrink-0 w-full md:w-auto">
                 <button
                   onClick={() => setShowApproveModal(true)}

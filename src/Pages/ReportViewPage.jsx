@@ -26,12 +26,21 @@ import Select from 'react-select';
 
 export default function ReportViewPage() {
   const { id } = useParams();
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
-  const canApproveReports = hasPermission('reports:approval');
 
   const [report, setReport] = useState(null);
+
+  const isOwnReport = report && user && Number(report.user) === Number(user.id);
+  const repLocation = (report?.user_location || '').trim().toLowerCase();
+  // "reports:approval-kochi and reports:approval-kottayam which will allow the permission holders to approve their staffs using their location and they should not be abvle to approve or reject their own reports"
+  const canApproveReports = !isOwnReport && (
+    hasPermission('reports:approval') ||
+    (hasPermission('reports:approval-kochi') && repLocation === 'kochi') ||
+    (hasPermission('reports:approval-kottayam') && repLocation === 'kottayam')
+  );
+
   const [loading, setLoading] = useState(true);
   const [reviewModal, setReviewModal] = useState(false);
   const [reviewAction, setReviewAction] = useState('');
@@ -59,12 +68,17 @@ export default function ReportViewPage() {
       setAgendaComment(res.data.agenda_review_comment || '');
       setReportComment(res.data.report_review_comment || '');
       
-      if (canApproveReports) {
-        const ptRes = await axios.get(`${API_BASE}/penalty-types/`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        const penaltyList = ptRes.data.results || ptRes.data;
-        setPenaltyTypes(penaltyList.map(pt => ({ value: pt.id, label: `${pt.name} (-₹${pt.default_amount})` })));
+      const hasAnyApproval = hasPermission('reports:approval') || hasPermission('reports:approval-kochi') || hasPermission('reports:approval-kottayam');
+      if (hasAnyApproval) {
+        try {
+          const ptRes = await axios.get(`${API_BASE}/penalty-types/`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          const penaltyList = ptRes.data.results || ptRes.data;
+          setPenaltyTypes(penaltyList.map(pt => ({ value: pt.id, label: `${pt.name} (-₹${pt.default_amount})` })));
+        } catch (e) {
+          // ignore
+        }
       }
     } catch (err) {
       console.error('Failed to fetch report:', err);

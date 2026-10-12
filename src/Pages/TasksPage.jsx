@@ -42,8 +42,8 @@ export default function TasksPage({ isMyTasks = false }) {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
 
-  // FIX: any role in TASK_ASSIGNERS can see the Create button, not just ADMIN
-  const canAssignTasks = hasPermission('tasks:edit_any') || hasPermission('tasks:edit_tenant') || hasPermission('tasks:edit_own');
+  // FIX: any role in TASK_ASSIGNERS or location task permission can see the Create button, not just ADMIN
+  const canAssignTasks = hasPermission('tasks:edit_any') || hasPermission('tasks:edit_tenant') || hasPermission('tasks:edit_own') || hasPermission('tasks:kochi') || hasPermission('tasks:kottayam');
 
   // ── Stat card config ───────────────────────────────────────────────────────
   const statsData = stats ? [

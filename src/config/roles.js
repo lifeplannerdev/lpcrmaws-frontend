@@ -31,7 +31,7 @@ export const masterNavigation = [
   { id: "commandCentre", label: "Lead Command Centre", icon: Layers, path: "/leads/command-centre", requiredPermissions: ["staff_analysis:admin", "leads:read_any", "leads:read_tenant"], category: "sales", description: "Manage & transfer all leads across active & inactive staff" },
   { id: "call", label: "Voxbay", icon: PhoneCall, path: "/call-analytics", requiredResource: "voxbay", category: "sales", description: "Call records, agent analytics & logs" },
   { id: "voxbay_ai", label: "Voxbay AI", icon: PhoneCall, path: "/voxbay-ai", requiredPermissions: ["voxbay_ai:admin", "voxbay_ai:read_own"], category: "sales", description: "AI call summaries & sentiment analysis" },
-  { id: "staffAnalysisReport", label: "Report Generator", icon: BarChart2, path: "/staff-analysis/report", requiredPermissions: ["staff_analysis:admin"], category: "sales", description: "Generate performance reports with PDF export" },
+  { id: "staffAnalysisReport", label: "Report Generator", icon: BarChart2, path: "/staff-analysis/report", requiredPermissions: ["staff_analysis:admin", "staff_analysis:kochi", "staff_analysis:kottayam"], category: "sales", description: "Generate performance reports with PDF export" },
 
   // ── Academics & Students ──
   { id: "registry", label: "Student Registry", icon: GraduationCap, path: "/registry", requiredPermissions: ["students:registry_manage"], category: "academics", description: "Master student database & records" },
@@ -54,13 +54,13 @@ export const masterNavigation = [
 
   // ── Tasks & Collaboration ──
   { id: "myTasks", label: "My Tasks", icon: ListTodo, path: "/mytasks", requiredResource: "tasks", requiredSpecificPermission: "tasks:read_own", category: "tasks", description: "Personal assignments & to-dos" },
-  { id: "allTasks", label: "Tasks", icon: ListTodo, path: "/staff/tasks", requiredResource: "tasks", requiredSpecificPermission: "tasks:read_all", category: "tasks", description: "Company-wide task board" },
+  { id: "allTasks", label: "Tasks", icon: ListTodo, path: "/staff/tasks", requiredResource: "tasks", requiredPermissions: ["tasks:read_all", "tasks:kochi", "tasks:kottayam"], category: "tasks", description: "Company-wide task board" },
   { id: "feeds", label: "Feeds", icon: UserCheck, path: "/feeds", category: "tasks", description: "Internal company feed & updates" },
 
   // ── Reports & Analytics ──
-  { id: "reports", label: "Staff Reports", icon: FileText, path: "/daily/reports", requiredResource: "reports", requiredPermissions: ["reports:read_all", "reports:documentation", "reports:kochi", "reports:sales_all"], requiredRoles: ['ADM_MANAGER', 'ADM_COUNSELLOR', 'FLAG_COORDINATOR'], category: "reports", description: "Daily multi-department staff submissions" },
+  { id: "reports", label: "Staff Reports", icon: FileText, path: "/daily/reports", requiredResource: "reports", requiredPermissions: ["reports:read_all", "reports:documentation", "reports:kochi", "reports:sales_all", "reports:approval-kochi", "reports:approval-kottayam"], requiredRoles: ['ADM_MANAGER', 'ADM_COUNSELLOR', 'FLAG_COORDINATOR'], category: "reports", description: "Daily multi-department staff submissions" },
   { id: "myReports", label: "My Reports", icon: FileText, path: "/myreports", category: "reports", description: "Your daily submitted work reports" },
-  { id: "staffAnalysis", label: "Staff Analysis", icon: BarChart2, path: "/staff-analysis", requiredPermissions: ["staff_analysis:admin"], category: "reports", description: "Staff performance & conversion metrics" },
+  { id: "staffAnalysis", label: "Staff Analysis", icon: BarChart2, path: "/staff-analysis", requiredPermissions: ["staff_analysis:admin", "staff_analysis:kochi", "staff_analysis:kottayam"], category: "reports", description: "Staff performance & conversion metrics" },
   { id: "reportSettings", label: "Report Settings", icon: Settings, path: "/admin/reports/settings", requiredResource: "report_settings", requiredSpecificPermission: "report_settings:manage", requiredRoles: ['ADM_MANAGER'], category: "reports", description: "Report schedules & submission windows" },
 
   // ── FDS: FILMAATIC Dance Studio ──

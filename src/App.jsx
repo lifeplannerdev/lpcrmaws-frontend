@@ -140,7 +140,7 @@ export default function App() {
         <Route path="/tasks/:id" element={<PermissionRoute resources={['tasks']}><TaskViewPage /></PermissionRoute>} />
         <Route path="/tasks/edit/:id" element={<PermissionRoute resources={['tasks']}><TaskFormPage /></PermissionRoute>} />
 
-        <Route path="/daily/reports" element={<PermissionRoute resources={['reports']} permissions={['reports:read_all', 'reports:documentation', 'reports:kochi', 'reports:sales_all']} roles={['ADM_MANAGER', 'ADM_COUNSELLOR', 'FLAG_COORDINATOR']}><ReportsPage /></PermissionRoute>} />
+        <Route path="/daily/reports" element={<PermissionRoute resources={['reports']} permissions={['reports:read_all', 'reports:documentation', 'reports:kochi', 'reports:sales_all', 'reports:approval-kochi', 'reports:approval-kottayam']} roles={['ADM_MANAGER', 'ADM_COUNSELLOR', 'FLAG_COORDINATOR']}><ReportsPage /></PermissionRoute>} />
         <Route path="/admin/reports/settings" element={<PermissionRoute resources={['reports']} permissions={['report_settings:manage']} roles={['ADM_MANAGER']}><ReportTimingSettingsPage /></PermissionRoute>} />
         <Route path="/reports/view/:id" element={<ProtectedRoute><ReportViewPage /></ProtectedRoute>} />
         <Route path="/myreports/" element={<ProtectedRoute><MyReportsPage /></ProtectedRoute>} />
@@ -167,8 +167,8 @@ export default function App() {
         <Route path="/credentials" element={<PermissionRoute resources={['credentials']}><CredentialsVault /></PermissionRoute>} />
         <Route path="/programs" element={<PermissionRoute permissions={['programs:view', 'programs:manage']}><ProgramsPage /></PermissionRoute>} />
         <Route path="/voxbay-ai" element={<PermissionRoute permissions={['voxbay_ai:admin', 'voxbay_ai:read_own']}><VoxbayAIPage /></PermissionRoute>} />
-        <Route path="/staff-analysis/report" element={<PermissionRoute permissions={['staff_analysis:admin']} resources={['leads']}><StaffAnalysisReportPage /></PermissionRoute>} />
-        <Route path="/staff-analysis" element={<PermissionRoute permissions={['staff_analysis:admin']} resources={['leads']}><StaffAnalysisPage /></PermissionRoute>} />
+        <Route path="/staff-analysis/report" element={<PermissionRoute permissions={['staff_analysis:admin', 'staff_analysis:kochi', 'staff_analysis:kottayam']} resources={['leads']}><StaffAnalysisReportPage /></PermissionRoute>} />
+        <Route path="/staff-analysis" element={<PermissionRoute permissions={['staff_analysis:admin', 'staff_analysis:kochi', 'staff_analysis:kottayam']} resources={['leads']}><StaffAnalysisPage /></PermissionRoute>} />
 
         {/* ── FDS: FILMAATIC Dance Studio ── */}
         <Route path="/fds" element={<PermissionRoute permissions={['fds:admin','fds:admin_own','fds:view','fds_fees:view','fds:management']}><FdsDashboard /></PermissionRoute>} />
