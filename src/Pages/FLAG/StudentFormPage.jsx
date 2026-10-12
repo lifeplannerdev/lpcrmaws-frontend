@@ -127,8 +127,15 @@ export default function StudentFormPage() {
         const data = await res.json();
         navigate(`/flag/students/${data.id || id}`);
       } else {
-        const err = await res.json();
-        alert(`Failed to ${isEdit ? 'update' : 'register'} student: ` + JSON.stringify(err));
+        let errMessage = `Server error (${res.status})`;
+        try {
+          const err = await res.json();
+          errMessage = typeof err === 'object' ? JSON.stringify(err) : String(err);
+        } catch {
+          const text = await res.text();
+          errMessage = text.slice(0, 300) || `Server error (${res.status})`;
+        }
+        alert(`Failed to ${isEdit ? 'update' : 'register'} student: ` + errMessage);
       }
     } catch (err) {
       console.error(err);
