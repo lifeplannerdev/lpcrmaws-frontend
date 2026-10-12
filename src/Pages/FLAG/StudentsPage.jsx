@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
-import { Users, Search, Plus, Filter, Loader2, AlertTriangle, GraduationCap, Edit } from 'lucide-react';
+import { Users, Search, Plus, Filter, Loader2, AlertTriangle, GraduationCap, Edit, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import EditStudentModal from './EditStudentModal';
 
@@ -16,10 +16,13 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingStudent, setEditingStudent] = useState(null);
+  const [studentToDelete, setStudentToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   
-  // Only FLAG Admin can create students, or if it's open to processing, we check the role.
+  // Only FLAG Admin can create/delete students
   const canCreate = hasPermission('flag:admin');
   const canEdit = hasPermission('flag:admin') || hasPermission('flag:trainer');
+  const canDelete = hasPermission('flag:admin') || user?.is_superuser;
   const isTrainerOnly = (hasPermission('flag:trainer') || user?.role_names?.includes('TRAINER')) && !hasPermission('flag:admin') && !user?.is_superuser;
 
   const fetchStudents = async () => {
@@ -35,6 +38,30 @@ export default function StudentsPage() {
       console.error('Error fetching students:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!studentToDelete) return;
+    try {
+      setDeleting(true);
+      const token = accessToken || await refreshAccessToken();
+      const res = await fetch(`${API_BASE_URL}/students/students/${studentToDelete.id}/`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok || res.status === 204) {
+        setStudents(prev => prev.filter(s => s.id !== studentToDelete.id));
+        setStudentToDelete(null);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert('Failed to delete student: ' + (err.detail || err.error || res.statusText));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error deleting student.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -173,6 +200,16 @@ export default function StudentsPage() {
                             >
                               View Profile
                             </button>
+                            {canDelete && (
+                              <button
+                                onClick={() => setStudentToDelete(student)}
+                                className="inline-flex items-center gap-1 text-slate-400 hover:text-rose-600 font-semibold text-sm transition-colors ml-1"
+                                title="Delete Student"
+                              >
+                                <Trash2 size={14} />
+                                Delete
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -184,6 +221,45 @@ export default function StudentsPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {studentToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-3 bg-rose-50 rounded-2xl border border-rose-100">
+                <Trash2 size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Delete Student</h3>
+                <p className="text-xs text-gray-500">Permanent action</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Are you sure you want to permanently delete <strong className="text-gray-900">{studentToDelete.name}</strong>? All related records including batch enrollments, attendance, and exam marks will be permanently removed.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setStudentToDelete(null)}
+                disabled={deleting}
+                className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition disabled:opacity-60 shadow-md shadow-rose-200"
+              >
+                {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                {deleting ? 'Deleting...' : 'Delete Student'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Student Modal */}
       <EditStudentModal

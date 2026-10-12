@@ -2,17 +2,19 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
-import { useParams, Link } from 'react-router-dom';
-import { User, Phone, MapPin, Calendar, Award, CheckCircle, XCircle, AlertTriangle, BookOpen, Clock, Loader2, RefreshCw, Edit, UserCheck, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { User, Phone, MapPin, Calendar, Award, CheckCircle, XCircle, AlertTriangle, BookOpen, Clock, Loader2, RefreshCw, Edit, UserCheck, ArrowUpCircle, ArrowDownCircle, Trash2 } from 'lucide-react';
 import EditStudentModal from './EditStudentModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function StudentProfilePage() {
   const { id } = useParams();
-  const { accessToken, refreshAccessToken } = useAuth();
+  const navigate = useNavigate();
+  const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
   const canEdit = hasPermission('flag:admin') || hasPermission('flag:trainer');
+  const canDelete = hasPermission('flag:admin') || user?.is_superuser;
 
   const [student, setStudent] = useState(null);
   const [history, setHistory] = useState([]);
@@ -22,6 +24,10 @@ export default function StudentProfilePage() {
   const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('current'); // 'current', 'history', 'exams', 'fees', 'attendance'
+  
+  // Delete state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   // Edit & Trainer Assignment state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -254,6 +260,30 @@ export default function StudentProfilePage() {
     }
   };
 
+  const handleDeleteStudent = async () => {
+    try {
+      setDeleting(true);
+      const token = accessToken || await refreshAccessToken();
+      const res = await fetch(`${API_BASE_URL}/students/students/${id}/`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok || res.status === 204) {
+        alert(`Student "${student?.name || ''}" deleted successfully.`);
+        navigate('/flag/students');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert('Failed to delete student: ' + (err.detail || err.error || res.statusText));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error deleting student.');
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
+
   useEffect(() => {
     fetchStudentData();
   }, [id]);
@@ -331,6 +361,16 @@ export default function StudentProfilePage() {
                         Edit
                       </button>
                     </>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={() => setShowDeleteModal(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold rounded-xl transition-colors shadow-sm text-sm border border-rose-200"
+                      title="Delete Student"
+                    >
+                      <Trash2 size={16} />
+                      Delete
+                    </button>
                   )}
                   {student.fee_status === 'NO_ACCOUNT' ? (
                     <span className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl border border-gray-200">
@@ -872,6 +912,45 @@ export default function StudentProfilePage() {
                 <button type="submit" disabled={promoting} className="px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors shadow-lg shadow-green-200 disabled:opacity-50">Confirm Promotion</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 space-y-4">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-3 bg-rose-50 rounded-2xl border border-rose-100">
+                <Trash2 size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Delete Student</h3>
+                <p className="text-xs text-gray-500">Permanent action</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Are you sure you want to permanently delete <strong className="text-gray-900">{student?.name}</strong>? All their records including batch enrollments, attendance, and exam marks will be permanently removed.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleting}
+                className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteStudent}
+                disabled={deleting}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition disabled:opacity-60 shadow-md shadow-rose-200"
+              >
+                {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                {deleting ? 'Deleting...' : 'Delete Student'}
+              </button>
+            </div>
           </div>
         </div>
       )}

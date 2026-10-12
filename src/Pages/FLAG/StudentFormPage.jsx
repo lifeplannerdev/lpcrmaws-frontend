@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionsContext';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { Save, Loader2, ArrowLeft } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Trash2 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function StudentFormPage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
-  const { accessToken, refreshAccessToken } = useAuth();
+  const { accessToken, refreshAccessToken, user } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canDelete = hasPermission('flag:admin') || user?.is_superuser;
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   // Lookups
   const [academicBatches, setAcademicBatches] = useState([]);
@@ -145,6 +149,34 @@ export default function StudentFormPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm(`Are you sure you want to permanently delete "${formData.name}"? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      setDeleting(true);
+      const token = accessToken || await refreshAccessToken();
+      const res = await fetch(`${API_BASE_URL}/students/students/${id}/`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (res.ok || res.status === 204) {
+        alert('Student deleted successfully.');
+        navigate('/flag/students');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert('Failed to delete student: ' + (err.detail || err.error || res.statusText));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error deleting student.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const selectedBatch = academicBatches.find(b => String(b.id) === String(formData.batch));
 
   if (loading) {
@@ -241,10 +273,21 @@ export default function StudentFormPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                {isEdit && canDelete ? (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleting || saving}
+                    className="bg-rose-50 text-rose-600 border border-rose-200 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-rose-100 transition-colors shadow-sm disabled:opacity-70 text-sm"
+                  >
+                    {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                    {deleting ? 'Deleting...' : 'Delete Student'}
+                  </button>
+                ) : <div />}
                 <button 
                   type="submit" 
-                  disabled={saving}
+                  disabled={saving || deleting}
                   className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-md disabled:opacity-70"
                 >
                   {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
