@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, List, Grid, Trello, X, Download, Columns, Table, Mail, Search } from 'lucide-react';
+import { Plus, List, Grid, Trello, X, Download, Columns, Table, Mail, Search, CalendarClock } from 'lucide-react';
 import Navbar from '../Components/layouts/Navbar';
+import RemindersPage from './RemindersPage';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
@@ -423,6 +424,14 @@ export default function ProcessingStudentsPage() {
               >
                 <Table size={18} />
               </button>
+              <button
+                onClick={() => setActiveView('reminders')}
+                className={`px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-semibold ${activeView === 'reminders' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-800'}`}
+                title="Reminders & Checklist View"
+              >
+                <CalendarClock size={16} />
+                <span className="hidden sm:inline">Reminders</span>
+              </button>
             </div>
           </div>
         </div>
@@ -470,6 +479,11 @@ export default function ProcessingStudentsPage() {
                   canDelete={canEditAny || canEditOwn}
                   isOperationRole={isOperationRole}
                 />
+              )}
+              {activeView === 'reminders' && (
+                <div className="py-2">
+                  <RemindersPage embedded={true} />
+                </div>
               )}
                 </>
               );

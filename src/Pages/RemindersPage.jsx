@@ -38,7 +38,7 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-export default function RemindersPage() {
+export default function RemindersPage({ embedded = false }) {
   const { user, accessToken } = useAuth();
   const { hasPermission } = usePermissions();
 
@@ -53,6 +53,7 @@ export default function RemindersPage() {
   const [reminders, setReminders] = useState([]);
   const [stats, setStats] = useState(null);
   const [staffList, setStaffList] = useState([]);
+  const [studentsList, setStudentsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -98,6 +99,7 @@ export default function RemindersPage() {
     priority: 'MEDIUM',
     category: 'Processing',
     user: '',
+    student: '',
     checklist: []
   });
   const [newChecklistText, setNewChecklistText] = useState('');
@@ -115,6 +117,7 @@ export default function RemindersPage() {
   useEffect(() => {
     fetchReminders();
     fetchStats();
+    fetchStudentsList();
     if (isAdmin) {
       fetchStaffList();
     }
@@ -135,6 +138,15 @@ export default function RemindersPage() {
       setStaffList(res.data || []);
     } catch (err) {
       console.error('Error fetching staff list:', err);
+    }
+  };
+
+  const fetchStudentsList = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/reminders/students/`, authHeaders);
+      setStudentsList(res.data || []);
+    } catch (err) {
+      console.error('Error fetching students list:', err);
     }
   };
 
@@ -195,6 +207,7 @@ export default function RemindersPage() {
         priority: reminderToEdit.priority || 'MEDIUM',
         category: reminderToEdit.category || 'Processing',
         user: reminderToEdit.user || '',
+        student: reminderToEdit.student || '',
         checklist: reminderToEdit.checklist || []
       });
     } else {
@@ -207,6 +220,7 @@ export default function RemindersPage() {
         priority: 'MEDIUM',
         category: 'Processing',
         user: user?.id || '',
+        student: '',
         checklist: []
       });
     }
@@ -261,6 +275,7 @@ export default function RemindersPage() {
         deadline: formData.deadline || null,
         priority: formData.priority,
         category: formData.category,
+        student: formData.student ? Number(formData.student) : null,
         checklist: formData.checklist
       };
 
@@ -558,10 +573,10 @@ export default function RemindersPage() {
   }, [reminders, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/60 to-indigo-50/40 pb-16">
-      <Navbar />
+    <div className={embedded ? "space-y-6" : "min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/60 to-indigo-50/40 pb-16"}>
+      {!embedded && <Navbar />}
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+      <main className={embedded ? "space-y-6" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6"}>
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white/80 backdrop-blur-md p-5 rounded-2xl border border-slate-200/80 shadow-xs">
           <div className="flex items-center gap-3.5">
@@ -893,8 +908,31 @@ export default function RemindersPage() {
                       </span>
                     </div>
 
-                    {/* Title & Description */}
-                    <div>
+                    {/* Prominent Card Last Updated Timestamp */}
+                    <div className="flex items-center justify-between text-[11px] bg-slate-50/90 px-2.5 py-1 rounded-lg border border-slate-100 text-slate-500 font-medium">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <Clock className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        <span className="truncate">
+                          Updated: {new Date(reminder.updated_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(reminder.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Linked Student Chip (if linked) */}
+                    {reminder.student_name && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs text-indigo-950 font-medium">
+                        <span className="text-xs">🎓</span>
+                        <div className="truncate flex items-center gap-1">
+                          <span className="font-semibold text-slate-800 truncate">{reminder.student_name}</span>
+                          {reminder.student_phone && (
+                            <span className="text-[11px] text-indigo-600 shrink-0">({reminder.student_phone})</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Title & Briefing */}
+                    <div className="space-y-1">
                       <h3
                         onClick={() => handleOpenDiscussion(reminder)}
                         className="text-sm font-bold text-slate-900 hover:text-indigo-600 transition-colors cursor-pointer line-clamp-2"
@@ -902,9 +940,12 @@ export default function RemindersPage() {
                         {reminder.title}
                       </h3>
                       {reminder.description && (
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
-                          {reminder.description}
-                        </p>
+                        <div className="bg-slate-50/70 p-2 rounded-xl border border-slate-100 text-xs text-slate-600">
+                          <span className="font-bold text-[10px] uppercase tracking-wider text-slate-400 block mb-0.5">Briefing:</span>
+                          <p className="line-clamp-2 leading-relaxed">
+                            {reminder.description}
+                          </p>
+                        </div>
                       )}
                     </div>
 
@@ -1139,18 +1180,37 @@ export default function RemindersPage() {
                 />
               </div>
 
-              {/* Description */}
+              {/* Briefing / Details */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                  Description / Context Notes
+                  Briefing / Context Details
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Additional background, reference student ID, or instructions..."
+                  placeholder="Briefing notes, background, reference student details, or instructions..."
                   value={formData.description}
                   onChange={e => setFormData({ ...formData, description: e.target.value })}
                   className="w-full border border-slate-200 rounded-xl p-3 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all resize-none"
                 />
+              </div>
+
+              {/* Link Student (Processing Registry) */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Link Student <span className="text-slate-400 font-normal lowercase">(optional - from processing registry)</span>
+                </label>
+                <select
+                  value={formData.student}
+                  onChange={e => setFormData({ ...formData, student: e.target.value })}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                >
+                  <option value="">No student linked (General / Internal reminder)</option>
+                  {studentsList.map(st => (
+                    <option key={st.id} value={st.id}>
+                      {st.name} {st.mobile_number ? `(${st.mobile_number})` : ''} {st.university ? `• ${st.university}` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Date & Deadline row */}
@@ -1607,6 +1667,20 @@ export default function RemindersPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-500">Last Updated:</span>
+                <span className="font-semibold text-slate-700">
+                  {new Date(activeDiscussionReminder.updated_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(activeDiscussionReminder.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              {activeDiscussionReminder.student_name && (
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-500">Linked Student:</span>
+                  <span className="font-semibold text-indigo-700">
+                    🎓 {activeDiscussionReminder.student_name} {activeDiscussionReminder.student_phone ? `(${activeDiscussionReminder.student_phone})` : ''}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-[11px]">
                 <span className="text-slate-500">Scheduled Date:</span>
                 <span className="font-semibold text-slate-700">{activeDiscussionReminder.reminder_date}</span>
               </div>
@@ -1617,9 +1691,12 @@ export default function RemindersPage() {
                 </div>
               )}
               {activeDiscussionReminder.description && (
-                <p className="text-[11px] text-slate-600 italic bg-white p-2 rounded-lg border border-slate-100">
-                  {activeDiscussionReminder.description}
-                </p>
+                <div className="bg-white p-2 rounded-lg border border-slate-100">
+                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-400 block mb-0.5">Briefing:</span>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    {activeDiscussionReminder.description}
+                  </p>
+                </div>
               )}
             </div>
 
