@@ -17,6 +17,7 @@ import EditStaffPage from './Pages/EditStaffPage.jsx';
 import TasksPage from './Pages/TasksPage.jsx';
 import TaskFormPage from './Pages/TaskFormPage.jsx';
 import TaskViewPage from "./Pages/TaskViewPage.jsx";
+import RemindersPage from './Pages/RemindersPage.jsx';
 import ReportsPage from './Pages/ReportsPage.jsx';
 import ReportViewPage from "./Pages/ReportViewPage.jsx";
 
@@ -136,6 +137,7 @@ export default function App() {
 
         <Route path="/staff/tasks" element={<PermissionRoute resources={['tasks']}><TasksPage /></PermissionRoute>} />
         <Route path="/mytasks" element={<PermissionRoute resources={['tasks']}><TasksPage isMyTasks={true} /></PermissionRoute>} />
+        <Route path="/reminders" element={<PermissionRoute permissions={['processing:reminders_admin', 'processing:reminders_users']}><RemindersPage /></PermissionRoute>} />
         <Route path="/tasks/new" element={<PermissionRoute resources={['tasks']}><TaskFormPage /></PermissionRoute>} />
         <Route path="/tasks/:id" element={<PermissionRoute resources={['tasks']}><TaskViewPage /></PermissionRoute>} />
         <Route path="/tasks/edit/:id" element={<PermissionRoute resources={['tasks']}><TaskFormPage /></PermissionRoute>} />
