@@ -226,7 +226,7 @@ export const LiveCallProvider = ({ children }) => {
       };
       return next;
     });
-  }, []);
+  }, [isCallForMe]);
 
   // Dismiss call purely in local React state
   const dismissCallLocally = useCallback((callId) => {

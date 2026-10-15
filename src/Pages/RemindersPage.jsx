@@ -781,10 +781,10 @@ export default function RemindersPage() {
                   onChange={e => setSelectedStaff(e.target.value)}
                   className="w-full py-2 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
                 >
-                  <option value="">Filter by Employee (All Staff)</option>
+                  <option value="">Filter by Employee (Doc & Ops Staff)</option>
                   {staffList.map(st => (
                     <option key={st.id} value={st.id}>
-                      {st.full_name} ({st.username}) - {st.location || st.company}
+                      {st.full_name} ({st.username}) {st.role_names?.length ? `• ${st.role_names.join(', ')}` : ''} - {st.location || st.company}
                     </option>
                   ))}
                 </select>
@@ -1250,7 +1250,7 @@ export default function RemindersPage() {
                 {isAdmin && (
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                      Assign Employee
+                      Assign Employee (Documentation & Operations)
                     </label>
                     <select
                       value={formData.user}
@@ -1260,7 +1260,7 @@ export default function RemindersPage() {
                       <option value={user?.id}>Assign to Self ({user?.username})</option>
                       {staffList.filter(s => s.id !== user?.id).map(st => (
                         <option key={st.id} value={st.id}>
-                          {st.full_name} ({st.username})
+                          {st.full_name} ({st.username}) {st.role_names?.length ? `• ${st.role_names.join(', ')}` : ''}
                         </option>
                       ))}
                     </select>

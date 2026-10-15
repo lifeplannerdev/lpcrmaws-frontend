@@ -35,6 +35,7 @@ export default function DocumentExpiryNotifier() {
 
   useEffect(() => {
     if (!isAuthenticated || !accessToken) return;
+    if (!hasPermission('license:admin')) return;
 
     // Check if dismissed for the current login session
     const currentSession = sessionStorage.getItem('login_session_id');
