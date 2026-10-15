@@ -1068,14 +1068,23 @@ export default function RemindersPage({ embedded = false }) {
                           </p>
 
                           {/* Briefing Work Done / Remarks */}
-                          {reminder.briefing_remarks && (
-                            <div className="mt-2 text-[11px] bg-white p-2 rounded-lg border border-emerald-100 text-emerald-950 shadow-xs">
-                              <span className="font-bold text-[10px] uppercase text-emerald-700 block">Work Done / Remark:</span>
-                              <span className="italic leading-normal block">{reminder.briefing_remarks}</span>
-                              {reminder.briefing_completed_by_name && (
-                                <span className="block text-[9px] text-emerald-600 mt-1 font-medium">
-                                  ✓ Marked by {reminder.briefing_completed_by_name}
-                                </span>
+                          {reminder.briefing_completed && (
+                            <div className="mt-2 text-[11px] bg-white p-2.5 rounded-xl border border-emerald-100 text-emerald-950 shadow-xs space-y-1">
+                              <div className="flex items-center justify-between text-[10px] text-emerald-700 font-bold border-b border-emerald-50 pb-1">
+                                <span>✓ COMPLETED BY {reminder.briefing_completed_by_name?.toUpperCase() || 'STAFF'}</span>
+                                {reminder.briefing_completed_at && (
+                                  <span className="font-normal text-[9px] text-emerald-600">
+                                    {new Date(reminder.briefing_completed_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                  </span>
+                                )}
+                              </div>
+                              {reminder.briefing_remarks ? (
+                                <div>
+                                  <span className="font-bold text-[10px] uppercase text-emerald-800">Work Done: </span>
+                                  <span className="italic leading-normal text-slate-700">{reminder.briefing_remarks}</span>
+                                </div>
+                              ) : (
+                                <div className="italic text-[10px] text-emerald-600">Marked complete without extra remarks</div>
                               )}
                             </div>
                           )}
@@ -1083,7 +1092,7 @@ export default function RemindersPage({ embedded = false }) {
                       </div>
                     </div>
 
-                    {/* Assignee banner (especially relevant for admin) */}
+                    {/* Assignee & Creator banner */}
                     <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
                       <div className="flex items-center gap-1.5 truncate">
                         <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -1091,6 +1100,11 @@ export default function RemindersPage({ embedded = false }) {
                           {reminder.user_name}
                           {isOwner && ' (You)'}
                         </span>
+                        {reminder.created_by_name && reminder.created_by_name !== reminder.user_name && (
+                          <span className="text-[10px] text-slate-400 shrink-0">
+                            (by {reminder.created_by_name})
+                          </span>
+                        )}
                       </div>
 
                       {/* Reminder date chip */}
@@ -1166,13 +1180,21 @@ export default function RemindersPage({ embedded = false }) {
                                 >
                                   {item.text}
                                 </span>
-                                {item.remarks && (
-                                  <div className="mt-1 text-[10px] bg-emerald-50/80 border border-emerald-100 rounded px-2 py-0.5 text-emerald-800">
-                                    <span className="font-semibold">Done: </span>
-                                    <span className="italic">{item.remarks}</span>
-                                    {item.completed_by_name && (
-                                      <span className="text-emerald-600 ml-1">({item.completed_by_name})</span>
-                                    )}
+                                {item.completed && (
+                                  <div className="mt-1 text-[10px] bg-emerald-50/80 border border-emerald-100 rounded-lg px-2 py-1 text-emerald-900 space-y-0.5">
+                                    <div className="flex items-center justify-between font-semibold text-emerald-800">
+                                      <span>✓ Completed by {item.completed_by_name || 'Staff'}</span>
+                                      {item.completed_at && (
+                                        <span className="font-normal text-[9px] text-emerald-600">
+                                          {new Date(item.completed_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {item.remarks ? (
+                                      <div className="italic text-slate-700 pt-0.5">
+                                        <span className="font-medium text-emerald-800 not-italic">Work Done: </span>"{item.remarks}"
+                                      </div>
+                                    ) : null}
                                   </div>
                                 )}
                               </div>
@@ -1202,19 +1224,47 @@ export default function RemindersPage({ embedded = false }) {
 
                     {/* Completion Remarks Display (if submitted) */}
                     {reminder.completion_remarks && (
-                      <div className="p-2.5 bg-amber-50/60 rounded-xl border border-amber-200/70 text-xs text-amber-900 space-y-1">
-                        <div className="font-bold flex items-center gap-1 text-[11px] text-amber-800">
-                          <Info className="w-3.5 h-3.5" />
-                          Completion Remarks:
+                      <div className="p-2.5 bg-amber-50/60 rounded-xl border border-amber-200/70 text-xs text-amber-900 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-amber-800 border-b border-amber-100/80 pb-1">
+                          <span className="flex items-center gap-1">
+                            <Info className="w-3.5 h-3.5" />
+                            Work Completion Submission
+                          </span>
+                          {reminder.completed_at && (
+                            <span className="font-normal text-[9px] text-amber-700">
+                              {new Date(reminder.completed_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                            </span>
+                          )}
                         </div>
                         <p className="text-[11px] italic text-slate-700 leading-normal">
                           "{reminder.completion_remarks}"
                         </p>
+                        <div className="text-[10px] text-amber-800 font-medium">
+                          Submitted by: <span className="font-semibold">{reminder.completed_by_name || reminder.user_name}</span>
+                        </div>
                         {reminder.approved_by_name && (
-                          <div className="text-[10px] text-emerald-700 font-semibold pt-1">
-                            ✓ Approved by {reminder.approved_by_name}
+                          <div className="text-[10px] text-emerald-700 font-semibold pt-1 border-t border-amber-100/60 flex items-center justify-between">
+                            <span>✓ Approved by {reminder.approved_by_name}</span>
+                            {reminder.approved_at && (
+                              <span className="font-normal text-[9px] text-emerald-600">
+                                {new Date(reminder.approved_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                              </span>
+                            )}
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* Rejection Notice (if reverted back to In Progress by admin) */}
+                    {reminder.rejection_reason && reminder.status === 'IN_PROGRESS' && (
+                      <div className="p-2.5 bg-red-50/80 rounded-xl border border-red-200 text-xs text-red-900 space-y-1">
+                        <div className="font-bold flex items-center gap-1 text-[11px] text-red-800">
+                          <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                          Feedback / Rejection Reason:
+                        </div>
+                        <p className="text-[11px] italic text-red-700 leading-normal">
+                          "{reminder.rejection_reason}"
+                        </p>
                       </div>
                     )}
                   </div>
@@ -1899,7 +1949,10 @@ export default function RemindersPage({ embedded = false }) {
                     {activeDiscussionReminder.title}
                   </h3>
                   <div className="text-[11px] text-slate-500">
-                    Assignee: {activeDiscussionReminder.user_name}
+                    Assignee: <span className="font-semibold text-slate-700">{activeDiscussionReminder.user_name}</span>
+                    {activeDiscussionReminder.created_by_name && activeDiscussionReminder.created_by_name !== activeDiscussionReminder.user_name && (
+                      <span className="text-slate-400"> • Created by {activeDiscussionReminder.created_by_name}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1945,11 +1998,47 @@ export default function RemindersPage({ embedded = false }) {
                 </div>
               )}
               {activeDiscussionReminder.description && (
-                <div className="bg-white p-2 rounded-lg border border-slate-100">
-                  <span className="font-bold text-[10px] uppercase tracking-wider text-slate-400 block mb-0.5">Briefing:</span>
+                <div className="bg-white p-2.5 rounded-xl border border-slate-100 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[10px] uppercase tracking-wider text-slate-500">Briefing / Task:</span>
+                    {activeDiscussionReminder.briefing_completed && (
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                        ✓ Done by {activeDiscussionReminder.briefing_completed_by_name || 'Staff'}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[11px] text-slate-600 leading-relaxed">
                     {activeDiscussionReminder.description}
                   </p>
+                  {activeDiscussionReminder.briefing_remarks && (
+                    <div className="text-[10px] text-emerald-800 bg-emerald-50/60 p-1.5 rounded-lg border border-emerald-100">
+                      <span className="font-bold">Work Done: </span>
+                      <span className="italic">{activeDiscussionReminder.briefing_remarks}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              {activeDiscussionReminder.completion_remarks && (
+                <div className="bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/80 text-[11px] space-y-1">
+                  <div className="flex items-center justify-between text-[10px] font-bold text-amber-800">
+                    <span>Work Submission ({activeDiscussionReminder.completed_by_name || activeDiscussionReminder.user_name})</span>
+                    {activeDiscussionReminder.completed_at && (
+                      <span className="font-normal text-amber-700">
+                        {new Date(activeDiscussionReminder.completed_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                      </span>
+                    )}
+                  </div>
+                  <p className="italic text-slate-700">"{activeDiscussionReminder.completion_remarks}"</p>
+                  {activeDiscussionReminder.approved_by_name && (
+                    <div className="text-[10px] text-emerald-700 font-semibold pt-1 border-t border-amber-100 flex items-center justify-between">
+                      <span>✓ Approved by {activeDiscussionReminder.approved_by_name}</span>
+                      {activeDiscussionReminder.approved_at && (
+                        <span className="font-normal text-emerald-600">
+                          {new Date(activeDiscussionReminder.approved_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1980,8 +2069,11 @@ export default function RemindersPage({ embedded = false }) {
                       }`}
                     >
                       {up.is_system_event ? (
-                        <div className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-[10px] font-medium border border-slate-200/60 max-w-xs text-center">
-                          {up.notes}
+                        <div className="px-3.5 py-1.5 bg-slate-100 text-slate-700 rounded-xl text-[10px] font-medium border border-slate-200/60 max-w-sm text-center shadow-2xs space-y-0.5">
+                          <div className="whitespace-pre-wrap">{up.notes}</div>
+                          <div className="text-[9px] text-slate-400">
+                            {new Date(up.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })} at {new Date(up.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
                         </div>
                       ) : (
                         <div
