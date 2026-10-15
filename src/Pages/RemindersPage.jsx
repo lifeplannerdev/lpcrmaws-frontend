@@ -83,6 +83,16 @@ export default function RemindersPage({ embedded = false }) {
   const [approvalNotes, setApprovalNotes] = useState('');
   const [submittingApproval, setSubmittingApproval] = useState(false);
 
+  // Item / Subtask completion remark modal
+  const [itemRemarkModal, setItemRemarkModal] = useState({
+    isOpen: false,
+    reminder: null,
+    itemType: 'checklist', // 'briefing' or 'checklist'
+    item: null,
+    remarks: '',
+    submitting: false
+  });
+
   // Discussion / Details Drawer
   const [activeDiscussionReminder, setActiveDiscussionReminder] = useState(null);
   const [updates, setUpdates] = useState([]);
@@ -300,44 +310,119 @@ export default function RemindersPage({ embedded = false }) {
     }
   };
 
-  // Toggle checklist item directly on card
-  const handleToggleChecklist = async (reminder, itemId, currentCompleted) => {
-    try {
-      const res = await axios.post(
-        `${API_BASE_URL}/reminders/${reminder.id}/checklist/toggle/`,
-        {
-          item_id: itemId,
-          completed: !currentCompleted
-        },
-        authHeaders
-      );
-
-      // Optimistic state update in list
-      setReminders(prev =>
-        prev.map(r => {
-          if (r.id === reminder.id) {
-            return {
-              ...r,
-              checklist: res.data.checklist,
-              status: res.data.status || r.status
-            };
-          }
-          return r;
-        })
-      );
-
-      // Update discussion view if open
-      if (activeDiscussionReminder?.id === reminder.id) {
-        setActiveDiscussionReminder(prev => ({
-          ...prev,
-          checklist: res.data.checklist,
-          status: res.data.status || prev.status
-        }));
-        loadDiscussionUpdates(reminder.id);
+  // Trigger main briefing toggle
+  const handleInitiateToggleBriefing = async (reminder) => {
+    if (reminder.briefing_completed) {
+      try {
+        const res = await axios.post(
+          `${API_BASE_URL}/reminders/${reminder.id}/briefing/toggle/`,
+          { completed: false, remarks: '' },
+          authHeaders
+        );
+        const updated = res.data.reminder;
+        setReminders(prev => prev.map(r => r.id === reminder.id ? { ...r, ...updated } : r));
+        if (activeDiscussionReminder?.id === reminder.id) {
+          setActiveDiscussionReminder(prev => ({ ...prev, ...updated }));
+          loadDiscussionUpdates(reminder.id);
+        }
+        toast.success('Main task unmarked');
+      } catch (err) {
+        console.error('Error unmarking briefing:', err);
+        toast.error('Failed to update main task');
       }
+    } else {
+      setItemRemarkModal({
+        isOpen: true,
+        reminder,
+        itemType: 'briefing',
+        item: null,
+        remarks: '',
+        submitting: false
+      });
+    }
+  };
+
+  // Trigger checklist item toggle
+  const handleInitiateToggleChecklist = async (reminder, item) => {
+    if (item.completed) {
+      try {
+        const res = await axios.post(
+          `${API_BASE_URL}/reminders/${reminder.id}/checklist/toggle/`,
+          { item_id: item.id, completed: false, remarks: '' },
+          authHeaders
+        );
+        const updated = res.data.reminder || { checklist: res.data.checklist, status: res.data.status };
+        setReminders(prev => prev.map(r => r.id === reminder.id ? { ...r, ...updated } : r));
+        if (activeDiscussionReminder?.id === reminder.id) {
+          setActiveDiscussionReminder(prev => ({ ...prev, ...updated }));
+          loadDiscussionUpdates(reminder.id);
+        }
+        toast.success('Checklist item unmarked');
+      } catch (err) {
+        console.error('Error unmarking checklist item:', err);
+        toast.error('Failed to update checklist item');
+      }
+    } else {
+      setItemRemarkModal({
+        isOpen: true,
+        reminder,
+        itemType: 'checklist',
+        item,
+        remarks: '',
+        submitting: false
+      });
+    }
+  };
+
+  // Submit item completion with remarks (or skip remarks)
+  const handleConfirmItemRemark = async (skipRemarks = false) => {
+    const { reminder, itemType, item, remarks } = itemRemarkModal;
+    if (!reminder) return;
+
+    try {
+      setItemRemarkModal(prev => ({ ...prev, submitting: true }));
+      const remarksToSend = skipRemarks ? '' : remarks.trim();
+
+      if (itemType === 'briefing') {
+        const res = await axios.post(
+          `${API_BASE_URL}/reminders/${reminder.id}/briefing/toggle/`,
+          { completed: true, remarks: remarksToSend },
+          authHeaders
+        );
+        const updated = res.data.reminder;
+        setReminders(prev => prev.map(r => r.id === reminder.id ? { ...r, ...updated } : r));
+        if (activeDiscussionReminder?.id === reminder.id) {
+          setActiveDiscussionReminder(prev => ({ ...prev, ...updated }));
+          loadDiscussionUpdates(reminder.id);
+        }
+        toast.success('Main task marked as completed');
+      } else {
+        const res = await axios.post(
+          `${API_BASE_URL}/reminders/${reminder.id}/checklist/toggle/`,
+          { item_id: item.id, completed: true, remarks: remarksToSend },
+          authHeaders
+        );
+        const updated = res.data.reminder || { checklist: res.data.checklist, status: res.data.status };
+        setReminders(prev => prev.map(r => r.id === reminder.id ? { ...r, ...updated } : r));
+        if (activeDiscussionReminder?.id === reminder.id) {
+          setActiveDiscussionReminder(prev => ({ ...prev, ...updated }));
+          loadDiscussionUpdates(reminder.id);
+        }
+        toast.success('Checklist item marked as completed');
+      }
+
+      setItemRemarkModal({
+        isOpen: false,
+        reminder: null,
+        itemType: 'checklist',
+        item: null,
+        remarks: '',
+        submitting: false
+      });
     } catch (err) {
-      console.error('Error toggling checklist:', err);
-      toast.error('Failed to update checklist item');
+      console.error('Error completing item:', err);
+      toast.error('Failed to complete item');
+      setItemRemarkModal(prev => ({ ...prev, submitting: false }));
     }
   };
 
@@ -931,22 +1016,71 @@ export default function RemindersPage({ embedded = false }) {
                       </div>
                     )}
 
-                    {/* Title & Briefing */}
-                    <div className="space-y-1">
+                    {/* Title */}
+                    <div>
                       <h3
                         onClick={() => handleOpenDiscussion(reminder)}
                         className="text-sm font-bold text-slate-900 hover:text-indigo-600 transition-colors cursor-pointer line-clamp-2"
                       >
                         {reminder.title}
                       </h3>
-                      {reminder.description && (
-                        <div className="bg-slate-50/70 p-2 rounded-xl border border-slate-100 text-xs text-slate-600">
-                          <span className="font-bold text-[10px] uppercase tracking-wider text-slate-400 block mb-0.5">Briefing:</span>
-                          <p className="line-clamp-2 leading-relaxed">
-                            {reminder.description}
+                    </div>
+
+                    {/* Briefing / Main Task Section with Interactive Checkbox */}
+                    <div className={`p-3 rounded-xl border transition-all ${
+                      reminder.briefing_completed
+                        ? 'bg-emerald-50/80 border-emerald-200 shadow-xs'
+                        : 'bg-slate-50/90 border-slate-200/90 hover:border-slate-300'
+                    }`}>
+                      <div className="flex items-start gap-2.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleInitiateToggleBriefing(reminder);
+                          }}
+                          className="mt-0.5 text-indigo-600 focus:outline-none hover:scale-110 transition-transform cursor-pointer shrink-0"
+                          title={reminder.briefing_completed ? "Click to unmark" : "Click to mark briefing task as completed"}
+                        >
+                          {reminder.briefing_completed ? (
+                            <CheckSquare className="w-4.5 h-4.5 text-emerald-600" />
+                          ) : (
+                            <Square className="w-4.5 h-4.5 text-slate-400 hover:text-slate-600" />
+                          )}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                              reminder.briefing_completed ? 'text-emerald-700' : 'text-slate-500'
+                            }`}>
+                              Briefing {checklistItems.length === 0 ? '• Main Task' : ''}
+                            </span>
+                            {reminder.briefing_completed && (
+                              <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5 bg-emerald-100/60 px-1.5 py-0.5 rounded">
+                                <Check className="w-3 h-3" /> Done
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-xs mt-1 leading-relaxed ${
+                            reminder.briefing_completed ? 'text-slate-500 line-through' : 'text-slate-700'
+                          }`}>
+                            {reminder.description || reminder.title}
                           </p>
+
+                          {/* Briefing Work Done / Remarks */}
+                          {reminder.briefing_remarks && (
+                            <div className="mt-2 text-[11px] bg-white p-2 rounded-lg border border-emerald-100 text-emerald-950 shadow-xs">
+                              <span className="font-bold text-[10px] uppercase text-emerald-700 block">Work Done / Remark:</span>
+                              <span className="italic leading-normal block">{reminder.briefing_remarks}</span>
+                              {reminder.briefing_completed_by_name && (
+                                <span className="block text-[9px] text-emerald-600 mt-1 font-medium">
+                                  ✓ Marked by {reminder.briefing_completed_by_name}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
 
                     {/* Assignee banner (especially relevant for admin) */}
@@ -983,8 +1117,8 @@ export default function RemindersPage({ embedded = false }) {
                       </div>
                     )}
 
-                    {/* Interactive Checklist Preview */}
-                    {totalChecks > 0 && (
+                    {/* Progress & Checklist Section */}
+                    {totalChecks > 0 ? (
                       <div className="pt-2 border-t border-slate-100 space-y-2">
                         <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
                           <span>Checklist Progress</span>
@@ -1003,16 +1137,20 @@ export default function RemindersPage({ embedded = false }) {
                         </div>
 
                         {/* Interactive checklist sub-tasks */}
-                        <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                        <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                           {checklistItems.map(item => (
                             <div
                               key={item.id}
-                              onClick={() => handleToggleChecklist(reminder, item.id, item.completed)}
-                              className="flex items-start gap-2 p-1.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer text-xs"
+                              onClick={() => handleInitiateToggleChecklist(reminder, item)}
+                              className={`flex items-start gap-2 p-2 rounded-xl transition-all cursor-pointer text-xs border ${
+                                item.completed 
+                                  ? 'bg-slate-50/70 border-slate-100 text-slate-500' 
+                                  : 'bg-white hover:bg-slate-50 border-slate-200/80 text-slate-700'
+                              }`}
                             >
                               <button
                                 type="button"
-                                className="mt-0.5 text-indigo-600 focus:outline-none"
+                                className="mt-0.5 text-indigo-600 focus:outline-none shrink-0"
                               >
                                 {item.completed ? (
                                   <CheckSquare className="w-4 h-4 text-emerald-600" />
@@ -1020,15 +1158,44 @@ export default function RemindersPage({ embedded = false }) {
                                   <Square className="w-4 h-4 text-slate-400 hover:text-slate-600" />
                                 )}
                               </button>
-                              <span
-                                className={`text-[11px] leading-tight ${
-                                  item.completed ? 'line-through text-slate-400' : 'text-slate-700 font-medium'
-                                }`}
-                              >
-                                {item.text}
-                              </span>
+                              <div className="flex-1 min-w-0">
+                                <span
+                                  className={`text-[11px] leading-tight block ${
+                                    item.completed ? 'line-through text-slate-400' : 'text-slate-800 font-medium'
+                                  }`}
+                                >
+                                  {item.text}
+                                </span>
+                                {item.remarks && (
+                                  <div className="mt-1 text-[10px] bg-emerald-50/80 border border-emerald-100 rounded px-2 py-0.5 text-emerald-800">
+                                    <span className="font-semibold">Done: </span>
+                                    <span className="italic">{item.remarks}</span>
+                                    {item.completed_by_name && (
+                                      <span className="text-emerald-600 ml-1">({item.completed_by_name})</span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           ))}
+                        </div>
+                      </div>
+                    ) : (
+                      /* When no subtasks are created: show Main Task Progress bar */
+                      <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
+                          <span>Task Progress</span>
+                          <span className={`text-[11px] font-bold ${reminder.briefing_completed ? 'text-emerald-600' : 'text-slate-400'}`}>
+                            {reminder.briefing_completed ? '1/1 (100%)' : '0/1 (0%)'}
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-300 ${
+                              reminder.briefing_completed ? 'bg-emerald-500' : 'bg-slate-200'
+                            }`}
+                            style={{ width: reminder.briefing_completed ? '100%' : '0%' }}
+                          />
                         </div>
                       </div>
                     )}
@@ -1626,6 +1793,93 @@ export default function RemindersPage({ embedded = false }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* TASK / SUBTASK COMPLETION REMARKS MODAL */}
+      {itemRemarkModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {itemRemarkModal.itemType === 'briefing' ? 'Complete Main Task' : 'Complete Subtask'}
+                  </h3>
+                  <p className="text-xs text-slate-500">Record completion remarks for this task</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setItemRemarkModal(prev => ({ ...prev, isOpen: false }))}
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Item Title/Text */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                  {itemRemarkModal.itemType === 'briefing' ? 'Task / Briefing' : 'Subtask'}
+                </div>
+                <p className="text-xs font-semibold text-slate-800">
+                  {itemRemarkModal.itemType === 'briefing'
+                    ? (itemRemarkModal.reminder?.description || itemRemarkModal.reminder?.title)
+                    : itemRemarkModal.item?.text}
+                </p>
+              </div>
+
+              {/* Remarks input */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Completion Remarks / Work Done
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-normal">Optional</span>
+                </div>
+                <textarea
+                  rows={3}
+                  autoFocus
+                  placeholder="Describe what was done (e.g. verified documents, submitted application, contacted student)..."
+                  value={itemRemarkModal.remarks}
+                  onChange={e => setItemRemarkModal(prev => ({ ...prev, remarks: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-xl p-3 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all resize-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setItemRemarkModal(prev => ({ ...prev, isOpen: false }))}
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={itemRemarkModal.submitting}
+                  onClick={() => handleConfirmItemRemark(true)}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                >
+                  Skip Remarks
+                </button>
+                <button
+                  type="button"
+                  disabled={itemRemarkModal.submitting}
+                  onClick={() => handleConfirmItemRemark(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {itemRemarkModal.submitting ? 'Saving...' : 'Confirm & Complete'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
