@@ -33,8 +33,12 @@ import {
   ListFilter,
   Check,
   Eye,
-  Info
+  Info,
+  Bell,
+  BellRing,
+  BellOff
 } from 'lucide-react';
+import ReminderNotificationSettingsModal from '../Components/reminders/ReminderNotificationSettingsModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -98,7 +102,13 @@ export default function RemindersPage({ embedded = false }) {
   const [updates, setUpdates] = useState([]);
   const [newUpdateText, setNewUpdateText] = useState('');
   const [submittingUpdate, setSubmittingUpdate] = useState(false);
-  const [loadingUpdates, setLoadingUpdates] = useState(false);
+  // Notification Settings Modal state
+  const [settingsReminder, setSettingsReminder] = useState(null);
+
+  const handleNotificationSettingsUpdated = (updatedReminder) => {
+    setReminders(prev => prev.map(r => r.id === updatedReminder.id ? updatedReminder : r));
+    toast.success('Notification schedule & settings updated!');
+  };
 
   // Create/Edit form state
   const [formData, setFormData] = useState({
@@ -1334,6 +1344,26 @@ export default function RemindersPage({ embedded = false }) {
                         )}
                       </button>
 
+                      {/* Notification Schedule & Settings button */}
+                      <button
+                        onClick={() => setSettingsReminder(reminder)}
+                        className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-all cursor-pointer font-medium ${
+                          reminder.notification_setting?.is_enabled === false
+                            ? 'text-slate-400 bg-slate-100/70 border-slate-200 hover:text-slate-600'
+                            : 'text-indigo-600 bg-indigo-50/70 border-indigo-200/80 hover:bg-indigo-100 hover:text-indigo-700'
+                        }`}
+                        title="Notification Schedule & Alert Settings"
+                      >
+                        {reminder.notification_setting?.is_enabled === false ? (
+                          <BellOff className="w-3.5 h-3.5 text-slate-400" />
+                        ) : (
+                          <BellRing className="w-3.5 h-3.5 text-indigo-600" />
+                        )}
+                        <span className="hidden sm:inline">
+                          {reminder.notification_setting?.interval_minutes ? `${reminder.notification_setting.interval_minutes}m` : 'Alerts'}
+                        </span>
+                      </button>
+
                       {/* Edit button */}
                       {(isOwner || isAdmin) && reminder.status !== 'COMPLETED' && (
                         <button
@@ -2165,6 +2195,16 @@ export default function RemindersPage({ embedded = false }) {
             </form>
           </div>
         </div>
+      )}
+
+      {/* PER-REMINDER NOTIFICATION SCHEDULE & SETTINGS MODAL */}
+      {settingsReminder && (
+        <ReminderNotificationSettingsModal
+          isOpen={Boolean(settingsReminder)}
+          reminder={settingsReminder}
+          onClose={() => setSettingsReminder(null)}
+          onUpdated={handleNotificationSettingsUpdated}
+        />
       )}
     </div>
   );

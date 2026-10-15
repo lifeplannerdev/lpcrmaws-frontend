@@ -14,10 +14,11 @@ import {
   ChevronRight,
   Volume2,
   VolumeX,
-  ShieldAlert,
   Sparkles,
-  Calendar
+  Calendar,
+  SlidersHorizontal
 } from 'lucide-react';
+import ReminderNotificationSettingsModal from './ReminderNotificationSettingsModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -74,6 +75,7 @@ export default function GlobalReminderNotifier() {
   const [desktopPermission, setDesktopPermission] = useState(
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'denied'
   );
+  const [configuringReminder, setConfiguringReminder] = useState(null);
 
   const titleIntervalRef = useRef(null);
   const originalTitleRef = useRef(typeof document !== 'undefined' ? document.title : 'LifePlanner CRM');
@@ -189,14 +191,15 @@ export default function GlobalReminderNotifier() {
         // Check if there are newly discovered alerts to notify externally
         const newAlerts = data.alerts.filter(a => !lastAlertedIdsRef.current.has(a.id));
         if (newAlerts.length > 0 || isUserTriggered) {
-          // Play audio chime if enabled
-          if (soundEnabled) {
+          const primaryAlert = newAlerts[0] || data.alerts[0];
+
+          // Play audio chime if enabled globally AND enabled on primary alert
+          if (soundEnabled && primaryAlert?.enable_sound !== false) {
             playReminderChime();
           }
 
-          // Trigger Windows desktop notifications for top new alert
-          const primaryAlert = newAlerts[0] || data.alerts[0];
-          if (primaryAlert) {
+          // Trigger Windows desktop notifications if enabled on primary alert
+          if (primaryAlert && primaryAlert.enable_desktop !== false) {
             triggerWindowsNotification(primaryAlert);
           }
 
@@ -283,16 +286,17 @@ export default function GlobalReminderNotifier() {
     navigate('/reminders');
   };
 
-  if (!isOpen || !alertsData || alertsData.total_alerts === 0) {
+  if ((!isOpen || !alertsData || alertsData.total_alerts === 0) && !configuringReminder) {
     return null;
   }
 
-  const alerts = alertsData.alerts || [];
+  const alerts = alertsData?.alerts || [];
   const currentAlert = alerts[currentIndex] || alerts[0];
-  if (!currentAlert) return null;
 
   return (
-    <div className="fixed bottom-5 right-5 z-[9990] max-w-sm sm:max-w-md w-full animate-in slide-in-from-bottom-5 duration-300 pointer-events-auto">
+    <>
+      {isOpen && currentAlert && (
+        <div className="fixed bottom-5 right-5 z-[9990] max-w-sm sm:max-w-md w-full animate-in slide-in-from-bottom-5 duration-300 pointer-events-auto">
       <div className={`bg-white/95 backdrop-blur-md rounded-2xl border shadow-2xl overflow-hidden transition-all duration-200 ${
         currentAlert.is_overdue
           ? 'border-red-300 ring-2 ring-red-400/20'
@@ -339,6 +343,16 @@ export default function GlobalReminderNotifier() {
               title={soundEnabled ? 'Mute reminder chime' : 'Enable reminder chime'}
             >
               {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5 opacity-60" />}
+            </button>
+
+            {/* Notification Schedule & Frequency Settings */}
+            <button
+              onClick={() => setConfiguringReminder(currentAlert)}
+              type="button"
+              className="p-1 rounded-md hover:bg-white/20 transition-colors cursor-pointer text-white"
+              title="Configure schedule & frequency for this reminder"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
             </button>
 
             {/* Close / Dismiss */}
@@ -479,5 +493,19 @@ export default function GlobalReminderNotifier() {
         </div>
       </div>
     </div>
+      )}
+
+      {/* Per-Reminder Notification Schedule & Interval Settings Modal */}
+      {configuringReminder && (
+        <ReminderNotificationSettingsModal
+          isOpen={Boolean(configuringReminder)}
+          reminder={configuringReminder}
+          onClose={() => setConfiguringReminder(null)}
+          onUpdated={() => {
+            checkReminderAlerts(true);
+          }}
+        />
+      )}
+    </>
   );
 }
