@@ -173,6 +173,30 @@ const Navbar = () => {
       time: new Date().toISOString(),
       is_read: false,
     }),
+    onReminderAssigned: (data) => addNotification({
+      id: Date.now(),
+      type: 'reminder',
+      message: data.message,
+      by: data.assigned_by_name,
+      time: new Date().toISOString(),
+      is_read: false,
+    }),
+    onReminderStatusUpdated: (data) => addNotification({
+      id: Date.now(),
+      type: 'reminder',
+      message: data.message,
+      by: data.submitted_by_name || data.approved_by_name || data.rejected_by_name,
+      time: new Date().toISOString(),
+      is_read: false,
+    }),
+    onReminderRemarkAdded: (data) => addNotification({
+      id: Date.now(),
+      type: 'reminder',
+      message: data.message,
+      by: data.author_name,
+      time: new Date().toISOString(),
+      is_read: false,
+    }),
   });
 
   const baseNavItems = getFilteredMenu(hasAnyPermission, hasPermission, user);

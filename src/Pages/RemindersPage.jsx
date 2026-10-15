@@ -646,9 +646,9 @@ export default function RemindersPage({ embedded = false }) {
     CANCELLED: 'Cancelled',
   };
 
-  // Filtered Reminders List (client search & active/completed partition)
+  // Filtered Reminders List (client search, active/completed partition & nearest deadline sorting)
   const displayedReminders = useMemo(() => {
-    return reminders.filter(r => {
+    const filtered = reminders.filter(r => {
       if (activeTab === 'ACTIVE' && (r.status === 'COMPLETED' || r.status === 'CANCELLED')) {
         return false;
       }
@@ -663,6 +663,33 @@ export default function RemindersPage({ embedded = false }) {
       const matchCategory = (r.category || '').toLowerCase().includes(q);
       return matchTitle || matchDesc || matchUser || matchCategory;
     });
+
+    // If active view, ensure sorted with nearest deadline & overdue at the top
+    if (activeTab === 'ACTIVE') {
+      const priorityWeights = { URGENT: 1, HIGH: 2, MEDIUM: 3, LOW: 4 };
+      const statusWeights = { PENDING_APPROVAL: 1, IN_PROGRESS: 2, PENDING: 3 };
+
+      return [...filtered].sort((a, b) => {
+        // Pending approval first for action
+        const statusDiff = (statusWeights[a.status] || 99) - (statusWeights[b.status] || 99);
+        if (statusDiff !== 0) return statusDiff;
+
+        // Nearest effective deadline at top
+        const dateA = a.deadline || a.reminder_date || '9999-99-99';
+        const dateB = b.deadline || b.reminder_date || '9999-99-99';
+        if (dateA !== dateB) {
+          return dateA.localeCompare(dateB);
+        }
+
+        // Higher priority first
+        const pDiff = (priorityWeights[a.priority] || 99) - (priorityWeights[b.priority] || 99);
+        if (pDiff !== 0) return pDiff;
+
+        return (b.id || 0) - (a.id || 0);
+      });
+    }
+
+    return filtered;
   }, [reminders, searchQuery, activeTab]);
 
   return (

@@ -49,6 +49,7 @@ import StaffAnalysisReportPage from "./Pages/StaffAnalysisReportPage.jsx";
 import DocumentDetailsPage from "./Pages/DocumentDetailsPage.jsx";
 import GmailCallbackPage from "./Pages/GmailCallbackPage.jsx";
 import DocumentExpiryNotifier from "./Components/dashboard/DocumentExpiryNotifier.jsx";
+import GlobalReminderNotifier from "./Components/reminders/GlobalReminderNotifier.jsx";
 import FdsDashboard from './Pages/FDS/FdsDashboard.jsx';
 import FdsEnquiryPage from './Pages/FDS/FdsEnquiryPage.jsx';
 import FdsTrialPage from './Pages/FDS/FdsTrialPage.jsx';
@@ -116,6 +117,7 @@ export default function App() {
       <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
       {isAuthenticated && <LiveCallModal />}
       <DocumentExpiryNotifier />
+      <GlobalReminderNotifier />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<ProtectedRoute><DashboardOverview /></ProtectedRoute>} />

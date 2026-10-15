@@ -13,6 +13,10 @@ export const useUserChannel = ({
   onCallConnected,
   onCallEnded,
   onCallDismissed,
+  onReminderAlert,
+  onReminderAssigned,
+  onReminderStatusUpdated,
+  onReminderRemarkAdded,
 } = {}) => {
   const { pusher, isReady } = usePusher();
   const { user } = useAuth();
@@ -29,6 +33,10 @@ export const useUserChannel = ({
   const onCallConnectedRef = useRef(onCallConnected);
   const onCallEndedRef = useRef(onCallEnded);
   const onCallDismissedRef = useRef(onCallDismissed);
+  const onReminderAlertRef = useRef(onReminderAlert);
+  const onReminderAssignedRef = useRef(onReminderAssigned);
+  const onReminderStatusUpdatedRef = useRef(onReminderStatusUpdated);
+  const onReminderRemarkAddedRef = useRef(onReminderRemarkAdded);
 
   // Update refs on every render (no re-subscription needed)
   useEffect(() => {
@@ -42,6 +50,10 @@ export const useUserChannel = ({
     onCallConnectedRef.current = onCallConnected;
     onCallEndedRef.current = onCallEnded;
     onCallDismissedRef.current = onCallDismissed;
+    onReminderAlertRef.current = onReminderAlert;
+    onReminderAssignedRef.current = onReminderAssigned;
+    onReminderStatusUpdatedRef.current = onReminderStatusUpdated;
+    onReminderRemarkAddedRef.current = onReminderRemarkAdded;
   });
 
   useEffect(() => {
@@ -60,6 +72,10 @@ export const useUserChannel = ({
     const handleCallConnected = (data) => onCallConnectedRef.current?.(data);
     const handleCallEnded = (data) => onCallEndedRef.current?.(data);
     const handleCallDismissed = (data) => onCallDismissedRef.current?.(data);
+    const handleReminderAlert = (data) => onReminderAlertRef.current?.(data);
+    const handleReminderAssigned = (data) => onReminderAssignedRef.current?.(data);
+    const handleReminderStatus = (data) => onReminderStatusUpdatedRef.current?.(data);
+    const handleReminderRemark = (data) => onReminderRemarkAddedRef.current?.(data);
 
     channelRef.current.bind('task.assigned', handleTaskAssigned);
     channelRef.current.bind('task.status_updated', handleTaskStatus);
@@ -71,6 +87,10 @@ export const useUserChannel = ({
     channelRef.current.bind('telephony.call_connected', handleCallConnected);
     channelRef.current.bind('telephony.call_ended', handleCallEnded);
     channelRef.current.bind('telephony.call_dismissed', handleCallDismissed);
+    channelRef.current.bind('reminder.alert', handleReminderAlert);
+    channelRef.current.bind('reminder.assigned', handleReminderAssigned);
+    channelRef.current.bind('reminder.status_updated', handleReminderStatus);
+    channelRef.current.bind('reminder.remark_added', handleReminderRemark);
 
     return () => {
       channelRef.current?.unbind('task.assigned', handleTaskAssigned);
@@ -83,6 +103,10 @@ export const useUserChannel = ({
       channelRef.current?.unbind('telephony.call_connected', handleCallConnected);
       channelRef.current?.unbind('telephony.call_ended', handleCallEnded);
       channelRef.current?.unbind('telephony.call_dismissed', handleCallDismissed);
+      channelRef.current?.unbind('reminder.alert', handleReminderAlert);
+      channelRef.current?.unbind('reminder.assigned', handleReminderAssigned);
+      channelRef.current?.unbind('reminder.status_updated', handleReminderStatus);
+      channelRef.current?.unbind('reminder.remark_added', handleReminderRemark);
     };
   }, [isReady, pusher, user?.id]);
 };
