@@ -58,7 +58,7 @@ export default function RemindersPage({ embedded = false }) {
   const [refreshing, setRefreshing] = useState(false);
 
   // Filter controls
-  const [activeTab, setActiveTab] = useState('ALL'); // ALL, TODAY, PENDING_APPROVAL, IN_PROGRESS, COMPLETED, BACKDATED, OVERDUE
+  const [activeTab, setActiveTab] = useState('ACTIVE'); // ACTIVE, TODAY, PENDING_APPROVAL, IN_PROGRESS, COMPLETED, BACKDATED, OVERDUE, ALL
   const [adminViewScope, setAdminViewScope] = useState('ALL'); // ALL (all staff), MINE (only admin's own)
   const [selectedStaff, setSelectedStaff] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -176,12 +176,14 @@ export default function RemindersPage({ embedded = false }) {
       if (searchQuery.trim()) params.search = searchQuery.trim();
 
       // Tab mappings
-      if (activeTab === 'TODAY') params.today = 'true';
+      if (activeTab === 'ACTIVE') params.status = 'ACTIVE';
+      else if (activeTab === 'TODAY') { params.today = 'true'; params.status = 'ACTIVE'; }
       else if (activeTab === 'PENDING_APPROVAL') params.status = 'PENDING_APPROVAL';
       else if (activeTab === 'IN_PROGRESS') params.status = 'IN_PROGRESS';
       else if (activeTab === 'COMPLETED') params.status = 'COMPLETED';
-      else if (activeTab === 'BACKDATED') params.backdated = 'true';
+      else if (activeTab === 'BACKDATED') { params.backdated = 'true'; params.status = 'ACTIVE'; }
       else if (activeTab === 'OVERDUE') params.overdue = 'true';
+      else if (activeTab === 'ALL') params.status = 'ALL';
 
       const res = await axios.get(`${API_BASE_URL}/reminders/`, {
         ...authHeaders,
@@ -644,9 +646,15 @@ export default function RemindersPage({ embedded = false }) {
     CANCELLED: 'Cancelled',
   };
 
-  // Filtered Reminders List (client search)
+  // Filtered Reminders List (client search & active/completed partition)
   const displayedReminders = useMemo(() => {
     return reminders.filter(r => {
+      if (activeTab === 'ACTIVE' && (r.status === 'COMPLETED' || r.status === 'CANCELLED')) {
+        return false;
+      }
+      if (activeTab === 'COMPLETED' && r.status !== 'COMPLETED') {
+        return false;
+      }
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       const matchTitle = r.title.toLowerCase().includes(q);
@@ -655,7 +663,7 @@ export default function RemindersPage({ embedded = false }) {
       const matchCategory = (r.category || '').toLowerCase().includes(q);
       return matchTitle || matchDesc || matchUser || matchCategory;
     });
-  }, [reminders, searchQuery]);
+  }, [reminders, searchQuery, activeTab]);
 
   return (
     <div className={embedded ? "space-y-6" : "min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/60 to-indigo-50/40 pb-16"}>
@@ -708,15 +716,15 @@ export default function RemindersPage({ embedded = false }) {
         {stats && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
             <div
-              onClick={() => setActiveTab('ALL')}
+              onClick={() => setActiveTab('ACTIVE')}
               className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-                activeTab === 'ALL'
+                activeTab === 'ACTIVE'
                   ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20'
                   : 'bg-white border-slate-200/80 hover:border-slate-300 text-slate-800'
               }`}
             >
               <div className="text-xs font-medium opacity-80 uppercase tracking-wider">Total Active</div>
-              <div className="text-2xl font-bold mt-1.5">{stats.total ?? 0}</div>
+              <div className="text-2xl font-bold mt-1.5">{stats.total_active ?? stats.total ?? 0}</div>
               <div className="text-[11px] opacity-75 mt-1">Across all categories</div>
             </div>
 
@@ -836,13 +844,14 @@ export default function RemindersPage({ embedded = false }) {
             {/* Quick Status Tabs */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
               {[
-                { id: 'ALL', label: 'All' },
+                { id: 'ACTIVE', label: 'Active' },
                 { id: 'TODAY', label: "Today's" },
                 { id: 'PENDING_APPROVAL', label: 'Pending Approval' },
                 { id: 'IN_PROGRESS', label: 'In Progress' },
-                { id: 'COMPLETED', label: 'Completed' },
                 { id: 'BACKDATED', label: 'Backdated' },
-                { id: 'OVERDUE', label: 'Overdue' }
+                { id: 'OVERDUE', label: 'Overdue' },
+                { id: 'COMPLETED', label: 'Completed' },
+                { id: 'ALL', label: 'All History' }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -938,7 +947,7 @@ export default function RemindersPage({ embedded = false }) {
             </div>
             <h3 className="text-base font-bold text-slate-800">No reminders found</h3>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              {searchQuery || activeTab !== 'ALL'
+              {searchQuery || activeTab !== 'ACTIVE'
                 ? 'Try adjusting your search criteria or switching filter tabs.'
                 : 'Get started by creating your first reminder checklist.'}
             </p>
@@ -988,8 +997,19 @@ export default function RemindersPage({ embedded = false }) {
                         )}
                       </div>
 
-                      <span className={`px-2 py-0.5 rounded-md text-[11px] border flex items-center gap-1 ${statusColors[reminder.status] || statusColors.PENDING}`}>
-                        {statusLabels[reminder.status] || reminder.status}
+                      <span className={`px-2 py-0.5 rounded-md text-[11px] border flex items-center gap-1 ${
+                        reminder.status === 'IN_PROGRESS' && reminder.rejection_reason
+                          ? 'bg-rose-50 text-rose-700 border-rose-300 font-semibold'
+                          : statusColors[reminder.status] || statusColors.PENDING
+                      }`}>
+                        {reminder.status === 'IN_PROGRESS' && reminder.rejection_reason ? (
+                          <>
+                            <AlertCircle className="w-3 h-3 text-rose-600" />
+                            Needs Revision (Rejected)
+                          </>
+                        ) : (
+                          statusLabels[reminder.status] || reminder.status
+                        )}
                       </span>
                     </div>
 
