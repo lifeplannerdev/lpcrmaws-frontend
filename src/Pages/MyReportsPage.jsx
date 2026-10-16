@@ -367,6 +367,9 @@ export default function MyReportsPage() {
   const [selectedReport, setSelectedReport] = useState(null);
 
   const userName = user?.name || user?.username || 'User';
+  const roleName = user?.role_names?.[0] ? user.role_names[0].replace(/_/g, ' ') : (user?.role || user?.user_role || 'Employee');
+  const displayName = userName;
+
   const userRoles = [
     ...(Array.isArray(user?.role_names) ? user.role_names : []),
     ...(Array.isArray(user?.roles) ? user.roles : []),
@@ -680,10 +683,41 @@ export default function MyReportsPage() {
           parsedExtraReportText = '';
         }
       }
+    } else if (hasLeadsAccess) {
+      if (rawText.trim().startsWith('[')) {
+        try {
+          const parsed = JSON.parse(rawText.trim());
+          if (Array.isArray(parsed)) {
+            parsedReportText = rawText.trim();
+            parsedExtraReportText = '';
+          } else {
+            parsedReportText = '';
+            parsedExtraReportText = rawText;
+          }
+        } catch (e) {
+          parsedReportText = '';
+          parsedExtraReportText = rawText;
+        }
+      } else {
+        parsedReportText = '';
+        parsedExtraReportText = rawText;
+      }
+    } else if (!hasLeadsAccess && rawText.trim().startsWith('[')) {
+      try {
+        const parsed = JSON.parse(rawText.trim());
+        if (Array.isArray(parsed)) {
+          parsedReportText = '';
+        } else {
+          parsedReportText = rawText;
+        }
+      } catch (e) {
+        parsedReportText = rawText;
+      }
+      parsedExtraReportText = '';
     }
     
     setFormData({
-      name: report.name,
+      name: report.name || userName,
       report_heading: report.report_heading || eveningHeading,
       report_text: parsedReportText,
       extraReportText: parsedExtraReportText,
