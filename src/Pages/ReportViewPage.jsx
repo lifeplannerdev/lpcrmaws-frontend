@@ -373,6 +373,31 @@ export default function ReportViewPage() {
           <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6">
             {(() => {
               const text = (report.report_text || '').trim();
+              const repRoles = [
+                ...(Array.isArray(report?.user_roles) ? report.user_roles : []),
+                report?.user_role,
+                report?.role
+              ].filter(Boolean).map(r => String(r).toUpperCase().trim());
+              const isDocOrOps = repRoles.some(r =>
+                r === 'DOCUMENTATION' || r === 'OPERATION' || r === 'OPERATIONS' || r === 'OPS' ||
+                r.includes('DOCUMENTATION') || r.includes('OPERATION')
+              );
+
+              if (isDocOrOps && text.includes('[Daily Leads Snapshot]')) {
+                let displayText = text;
+                if (text.includes('[Evening Report]')) {
+                  const parts = text.split(/\[Evening Report\]\r?\n?/);
+                  displayText = parts.length > 1 ? (parts[1] || '').trim() : '';
+                } else {
+                  displayText = '';
+                }
+                return (
+                  <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                    {displayText || 'No content provided'}
+                  </p>
+                );
+              }
+
               if (text.includes('[Daily Leads Snapshot]')) {
                 try {
                   let leadsStr = text;

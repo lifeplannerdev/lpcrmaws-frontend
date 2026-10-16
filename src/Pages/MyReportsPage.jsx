@@ -367,9 +367,24 @@ export default function MyReportsPage() {
   const [selectedReport, setSelectedReport] = useState(null);
 
   const userName = user?.name || user?.username || 'User';
-  const roleName = user?.role_names?.[0] ? user.role_names[0].replace(/_/g, ' ') : 'Employee';
-  const displayName = userName;
-  const hasLeadsAccess = hasAnyPermission('leads');
+  const userRoles = [
+    ...(Array.isArray(user?.role_names) ? user.role_names : []),
+    ...(Array.isArray(user?.roles) ? user.roles : []),
+    ...(Array.isArray(user?.db_roles) ? user.db_roles.map(r => r.name || r) : []),
+    user?.role,
+    user?.user_role,
+  ].filter(Boolean).map(r => String(r).toUpperCase().trim());
+
+  const isDocOrOpsRole = userRoles.some(r => 
+    r === 'DOCUMENTATION' || 
+    r === 'OPERATION' || 
+    r === 'OPERATIONS' || 
+    r === 'OPS' || 
+    r.includes('DOCUMENTATION') || 
+    r.includes('OPERATION')
+  );
+
+  const hasLeadsAccess = hasAnyPermission('leads') && !isDocOrOpsRole;
 
   const morningHeading = `${displayName} | ${roleName} | ${formatHeaderDate(getYesterdayDate())} | Morning Agenda`;
   const eveningHeading = `${displayName} | ${roleName} | ${formatHeaderDate(getTodayDate())} | Evening Report`;
@@ -647,13 +662,23 @@ export default function MyReportsPage() {
     let parsedExtraReportText = '';
     
     if (rawText.includes('[Daily Leads Snapshot]')) {
-      if (rawText.includes('[Evening Report]')) {
-        const parts = rawText.split(/\[Evening Report\]\r?\n?/);
-        parsedReportText = parts[0] ? parts[0].replace(/\[Daily Leads Snapshot\]\r?\n?/, '').trim() : '';
-        parsedExtraReportText = parts.length > 1 ? (parts[1] || '').trim() : '';
-      } else {
-        parsedReportText = rawText.replace(/\[Daily Leads Snapshot\]\r?\n?/, '').trim();
+      if (!hasLeadsAccess) {
+        if (rawText.includes('[Evening Report]')) {
+          const parts = rawText.split(/\[Evening Report\]\r?\n?/);
+          parsedReportText = parts.length > 1 ? (parts[1] || '').trim() : '';
+        } else {
+          parsedReportText = '';
+        }
         parsedExtraReportText = '';
+      } else {
+        if (rawText.includes('[Evening Report]')) {
+          const parts = rawText.split(/\[Evening Report\]\r?\n?/);
+          parsedReportText = parts[0] ? parts[0].replace(/\[Daily Leads Snapshot\]\r?\n?/, '').trim() : '';
+          parsedExtraReportText = parts.length > 1 ? (parts[1] || '').trim() : '';
+        } else {
+          parsedReportText = rawText.replace(/\[Daily Leads Snapshot\]\r?\n?/, '').trim();
+          parsedExtraReportText = '';
+        }
       }
     }
     
@@ -1100,6 +1125,27 @@ export default function MyReportsPage() {
                     <h4 className="text-sm font-semibold text-emerald-900 mb-3">{selectedReport.report_heading || "Evening Report"}</h4>
                     {(() => {
                       const text = (selectedReport.report_text || '').trim();
+                      const repRoles = [
+                        ...(Array.isArray(selectedReport.user_roles) ? selectedReport.user_roles : []),
+                        selectedReport.role,
+                        selectedReport.user_role
+                      ].filter(Boolean).map(r => String(r).toUpperCase().trim());
+                      const isDocOrOps = repRoles.some(r =>
+                        r === 'DOCUMENTATION' || r === 'OPERATION' || r === 'OPERATIONS' || r === 'OPS' ||
+                        r.includes('DOCUMENTATION') || r.includes('OPERATION')
+                      );
+
+                      if (isDocOrOps && text.includes('[Daily Leads Snapshot]')) {
+                        let displayText = text;
+                        if (text.includes('[Evening Report]')) {
+                          const parts = text.split(/\[Evening Report\]\r?\n?/);
+                          displayText = parts.length > 1 ? (parts[1] || '').trim() : '';
+                        } else {
+                          displayText = '';
+                        }
+                        return <p className="text-emerald-800 whitespace-pre-wrap leading-relaxed">{displayText || 'No content provided'}</p>;
+                      }
+
                       if (text.includes('[Daily Leads Snapshot]')) {
                         try {
                           let leadsStr = text;
