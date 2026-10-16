@@ -91,6 +91,7 @@ export default function ReportsPage() {
 
   const isKochiOnly = hasPermission('reports:kochi') && !hasPermission('reports:read_all') && !user?.is_superuser;
   const isSalesOnly = hasPermission('reports:sales_all') && !hasPermission('reports:read_all') && !user?.is_superuser;
+  const isDocOnly = hasPermission('reports:documentation') && !hasPermission('reports:read_all') && !user?.is_superuser;
 
   const [dateRange, setDateRange] = useState('this-month');
   const [recentReports, setRecentReports] = useState([]);
@@ -333,6 +334,11 @@ export default function ReportsPage() {
                   📊 Sales Team Reports Only (ADM, BMCO, FLAG)
                 </span>
               )}
+              {isDocOnly && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold rounded-full mt-2">
+                  📄 Documentation Team Reports Only
+                </span>
+              )}
             </div>
             <CompanySwitcher activeCompany={companyFilter} onChange={handleCompanyChange} />
           </div>
@@ -372,6 +378,9 @@ export default function ReportsPage() {
               )}
               {isSalesOnly && (
                 <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg">SALES</span>
+              )}
+              {isDocOnly && (
+                <span className="text-xs font-semibold px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg">DOCUMENTATION</span>
               )}
             </h2>
             <div className="flex items-center gap-3">

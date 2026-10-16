@@ -34,11 +34,14 @@ export default function ReportViewPage() {
 
   const isOwnReport = report && user && Number(report.user) === Number(user.id);
   const repLocation = (report?.user_location || '').trim().toLowerCase();
+  const repRoles = Array.isArray(report?.user_roles) ? report.user_roles : [];
+  const isDocReport = repRoles.length === 0 || repRoles.includes('DOCUMENTATION');
   // "reports:approval-kochi and reports:approval-kottayam which will allow the permission holders to approve their staffs using their location and they should not be abvle to approve or reject their own reports"
   const canApproveReports = !isOwnReport && (
     hasPermission('reports:approval') ||
     (hasPermission('reports:approval-kochi') && repLocation === 'kochi') ||
-    (hasPermission('reports:approval-kottayam') && repLocation === 'kottayam')
+    (hasPermission('reports:approval-kottayam') && repLocation === 'kottayam') ||
+    (hasPermission('reports:documentation') && isDocReport)
   );
 
   const [loading, setLoading] = useState(true);
@@ -68,7 +71,7 @@ export default function ReportViewPage() {
       setAgendaComment(res.data.agenda_review_comment || '');
       setReportComment(res.data.report_review_comment || '');
       
-      const hasAnyApproval = hasPermission('reports:approval') || hasPermission('reports:approval-kochi') || hasPermission('reports:approval-kottayam');
+      const hasAnyApproval = hasPermission('reports:approval') || hasPermission('reports:approval-kochi') || hasPermission('reports:approval-kottayam') || hasPermission('reports:documentation');
       if (hasAnyApproval) {
         try {
           const ptRes = await axios.get(`${API_BASE}/penalty-types/`, {
