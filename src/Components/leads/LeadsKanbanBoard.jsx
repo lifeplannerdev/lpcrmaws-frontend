@@ -1,9 +1,11 @@
 import React from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Calendar, User, Flag, Mail, Phone, MapPin } from 'lucide-react';
+import { Calendar, User, Flag, Mail, Phone, PhoneCall, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useLiveCall } from '../../context/LiveCallContext';
 
 const LeadsKanbanBoard = ({ leads, onDragEnd, onLeadClick, statusColors }) => {
+  const { openLiveCall } = useLiveCall();
   const columns = [
     { id: 'enquiry', title: 'Enquiry', color: 'bg-blue-50 border-blue-200 text-blue-700' },
     { id: 'contacted', title: 'Contacted', color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
@@ -69,12 +71,26 @@ const LeadsKanbanBoard = ({ leads, onDragEnd, onLeadClick, statusColors }) => {
                             </div>
 
                             <div className="space-y-1.5 mt-3">
-                              {/* Phone */}
-                              <div className="flex items-center gap-2 text-xs text-gray-600">
-                                <div className="w-5 h-5 bg-green-50 rounded flex items-center justify-center">
-                                  <Phone size={12} className="text-green-600" />
+                              {/* Phone & Live Call Option */}
+                              <div className="flex items-center justify-between gap-1 text-xs text-gray-600">
+                                <div className="flex items-center gap-2 truncate">
+                                  <div className="w-5 h-5 bg-green-50 rounded flex items-center justify-center flex-shrink-0">
+                                    <Phone size={12} className="text-green-600" />
+                                  </div>
+                                  <span className="font-medium truncate">{lead.phone}</span>
                                 </div>
-                                <span className="font-medium truncate">{lead.phone}</span>
+                                {lead.phone && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openLiveCall(lead);
+                                    }}
+                                    className="p-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded transition-colors"
+                                    title="Open Live Call Modal"
+                                  >
+                                    <PhoneCall size={12} />
+                                  </button>
+                                )}
                               </div>
                               
                               {/* Source */}

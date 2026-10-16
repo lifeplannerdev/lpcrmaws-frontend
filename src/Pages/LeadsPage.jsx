@@ -67,7 +67,8 @@ export default function LeadsPage() {
   const hasGlobalRead = user?.role === 'ADMIN' || 
                         user?.db_roles?.some(r => ['ADMIN', 'CEO', 'SUPER_ADMIN'].includes(r.name)) || 
                         hasPermission('leads:read_any') || 
-                        hasPermission('leads:read_tenant');
+                        hasPermission('leads:read_tenant') ||
+                        hasPermission('staff_analysis:admin');
 
   const tokenRef = useRef(accessToken);
   useEffect(() => { tokenRef.current = accessToken; }, [accessToken]);

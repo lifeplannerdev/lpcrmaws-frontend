@@ -4,6 +4,8 @@ import 'react-data-grid/lib/styles.css';
 import { format, isToday, parseISO, isSameDay, subDays } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
 import { Can } from '../../context/PermissionsContext';
+import { Phone, PhoneCall } from 'lucide-react';
+import { useLiveCall } from '../../context/LiveCallContext';
 import RemarkModal from './RemarkModal';
 
 const STATUS_OPTIONS = [
@@ -106,19 +108,34 @@ function NameEditor({ row, column, onRowChange, onClose }) {
 }
 
 const columns = [
-  { key: 'call_action', name: '', width: 50, renderCell: (p) => (
-    <div className="w-full h-full flex items-center justify-center">
+  { key: 'call_action', name: 'Call', width: 75, renderCell: (p) => (
+    <div className="w-full h-full flex items-center justify-center gap-1.5 px-1">
+      {/* Quick Direct Call */}
       <button 
-        className="text-emerald-600 hover:text-emerald-800 p-1 rounded-md hover:bg-emerald-50 transition-colors"
+        className="text-emerald-600 hover:text-emerald-800 p-1 rounded-md hover:bg-emerald-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         onClick={(e) => {
           e.stopPropagation();
           if (p.row.phone) {
-            window.dispatchEvent(new CustomEvent('initiateVoxbayCall', { detail: p.row.phone }));
+            window.dispatchEvent(new CustomEvent('initiateVoxbayCall', { detail: { phone: p.row.phone, lead: p.row } }));
           }
         }}
-        title="Click to Call"
+        title="Direct Call (Voxbay)"
+        disabled={!p.row.phone}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+        <Phone size={13} />
+      </button>
+
+      {/* Open Live Call Modal */}
+      <button 
+        className="text-indigo-600 hover:text-indigo-800 p-1 rounded-md hover:bg-indigo-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        onClick={(e) => {
+          e.stopPropagation();
+          window.dispatchEvent(new CustomEvent('openLiveCallModal', { detail: p.row }));
+        }}
+        title="Open Live Call Modal (Dossier & Dialer)"
+        disabled={!p.row.phone && !p.row.id}
+      >
+        <PhoneCall size={13} />
       </button>
     </div>
   )},
@@ -226,10 +243,12 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
   });
   const [remarkModalLead, setRemarkModalLead] = useState(null);
   const { initiateCall } = useVoxbayCall();
+  const { openLiveCall } = useLiveCall();
 
   useEffect(() => {
     const handleOpenModal = (e) => setRemarkModalLead(e.detail);
-    const handleCall = (e) => initiateCall(e.detail);
+    const handleCall = (e) => initiateCall(e.detail?.phone || e.detail, e.detail?.lead || null);
+    const handleOpenLiveCall = (e) => openLiveCall(e.detail);
     const handleLeadUpdated = (e) => {
       const updated = e.detail;
       if (updated?.id) {
@@ -255,16 +274,18 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
     
     window.addEventListener('openRemarkModal', handleOpenModal);
     window.addEventListener('initiateVoxbayCall', handleCall);
+    window.addEventListener('openLiveCallModal', handleOpenLiveCall);
     window.addEventListener('leadUpdated', handleLeadUpdated);
     window.addEventListener('leadCreated', handleLeadCreated);
     
     return () => {
       window.removeEventListener('openRemarkModal', handleOpenModal);
       window.removeEventListener('initiateVoxbayCall', handleCall);
+      window.removeEventListener('openLiveCallModal', handleOpenLiveCall);
       window.removeEventListener('leadUpdated', handleLeadUpdated);
       window.removeEventListener('leadCreated', handleLeadCreated);
     };
-  }, [initiateCall, onUpdateLead, isReportMode, onLeadsChange]);
+  }, [initiateCall, openLiveCall, onUpdateLead, isReportMode, onLeadsChange]);
 
   const handleRemarkSubmit = async (leadToUpdate, newRemarkText) => {
     const timestamp = format(new Date(), 'dd/MM/yyyy HH:mm');

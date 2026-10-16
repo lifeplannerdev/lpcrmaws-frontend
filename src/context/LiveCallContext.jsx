@@ -105,14 +105,15 @@ export const LiveCallProvider = ({ children }) => {
           follow_up_time: '',
           followup_status: 'pending',
           followup_done: false,
-        } : prevCall.formData,
+          ...(callData.formData || {}),
+        } : { ...prevCall.formData, ...(callData.formData || {}) },
       };
 
       if (isFirstTime) {
         return [...prevCalls, updatedCall];
       } else {
         const next = [...prevCalls];
-        next[existingIndex] = { ...next[existingIndex], ...updatedCall, formData: next[existingIndex].formData };
+        next[existingIndex] = { ...next[existingIndex], ...updatedCall, formData: { ...next[existingIndex].formData, ...(callData.formData || {}) } };
         return next;
       }
     });
@@ -337,6 +338,72 @@ export const LiveCallProvider = ({ children }) => {
     setIsMinimized(false);
   }, [user, upsertCall]);
 
+  // Open Live Call Modal populated with lead dossier & Make Call button
+  const openLiveCall = useCallback((item) => {
+    if (!item) return;
+    const leadId = item.id && !String(item.id).startsWith('temp-') && !String(item.id).startsWith('followup_') 
+      ? item.id 
+      : (item.lead || item.lead_id || (typeof item.lead === 'object' ? item.lead?.id : null));
+    const phone = item.phone || item.lead_phone || item.phone_number || (typeof item.lead === 'object' ? item.lead?.phone : '') || '';
+    const name = item.name || item.lead_name || item.processing_student_name || (typeof item.lead === 'object' ? item.lead?.name : '') || 'Lead';
+    const cleanPhone = String(phone).replace(/\D/g, '');
+
+    const assignedHandler = item.current_handler?.first_name 
+      ? `${item.current_handler.first_name} ${item.current_handler.last_name || ''}`.trim()
+      : item.assigned_to?.first_name 
+        ? `${item.assigned_to.first_name} ${item.assigned_to.last_name || ''}`.trim() 
+        : (item.assigned_to?.username || (typeof item.assigned_to === 'string' ? item.assigned_to : ''));
+
+    const callPayload = {
+      id: `lead_${leadId || cleanPhone || Date.now()}`,
+      call_uuid: `lead_${leadId || cleanPhone || Date.now()}`,
+      phone: phone,
+      caller_number: phone,
+      call_type: 'outgoing',
+      status: 'ready',
+      is_new_lead: !leadId,
+      lead_id: leadId,
+      lead_name: name,
+      lead_status: (item.status || item.lead_status || 'ENQUIRY').toUpperCase(),
+      lead_priority: (item.priority || item.lead_priority || 'MEDIUM').toUpperCase(),
+      program: item.program || item.interest || item.lead_program || item.processing_student_program || '',
+      interested_country: item.interested_country || item.lead_country || '',
+      interested_course: item.interested_course || item.lead_course || '',
+      location: item.location || item.lead_location || '',
+      assigned_handler: assignedHandler,
+      notes: item.remarks || item.notes || '',
+      formData: {
+        name: name,
+        status: (item.status || item.lead_status || 'ENQUIRY').toUpperCase(),
+        priority: (item.priority || item.lead_priority || 'MEDIUM').toUpperCase(),
+        program: item.program || item.interest || item.lead_program || item.processing_student_program || '',
+        location: item.location || item.lead_location || '',
+        interested_country: item.interested_country || item.lead_country || '',
+        interested_course: item.interested_course || item.lead_course || '',
+        remarks: item.remarks || (item.notes ? `[Follow-up Notes]: ${item.notes}` : ''),
+        follow_up_date: item.follow_up_date || '',
+        follow_up_time: item.follow_up_time || '',
+      }
+    };
+
+    upsertCall(callPayload);
+    setIsModalOpen(true);
+    setIsMinimized(false);
+  }, [upsertCall]);
+
+  // Window event listener for global openLiveCallModal triggers
+  useEffect(() => {
+    const handleOpenLiveCallEvent = (e) => {
+      if (e.detail) {
+        openLiveCall(e.detail);
+      }
+    };
+    window.addEventListener('openLiveCallModal', handleOpenLiveCallEvent);
+    return () => {
+      window.removeEventListener('openLiveCallModal', handleOpenLiveCallEvent);
+    };
+  }, [openLiveCall]);
+
   return (
     <LiveCallContext.Provider
       value={{
@@ -349,6 +416,7 @@ export const LiveCallProvider = ({ children }) => {
         isMinimized,
         setIsMinimized,
         upsertCall,
+        openLiveCall,
         updateCall,
         updateCallFormData,
         closeCall,

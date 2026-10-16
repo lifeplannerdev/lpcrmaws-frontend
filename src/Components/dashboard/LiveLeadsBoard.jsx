@@ -15,7 +15,8 @@ export default function LiveLeadsBoard() {
   const hasGlobalRead = user?.role === 'ADMIN' || 
                         user?.db_roles?.some(r => ['ADMIN', 'CEO', 'SUPER_ADMIN'].includes(r.name)) || 
                         hasPermission('leads:read_any') || 
-                        hasPermission('leads:read_tenant');
+                        hasPermission('leads:read_tenant') ||
+                        hasPermission('staff_analysis:admin');
   const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,8 +29,10 @@ export default function LiveLeadsBoard() {
       if (!hasGlobalRead && !isMine) return;
 
       setLeads((prev) => {
-        if (prev.some(l => l.id === data.lead.id)) return prev;
-        return [data.lead, ...prev].slice(0, 100); // Keep max 100
+        if (prev.some(l => l.id === data.lead.id)) {
+          return prev.map(l => l.id === data.lead.id ? { ...l, ...data.lead } : l);
+        }
+        return [data.lead, ...prev].slice(0, 50); // Keep max 50
       });
     },
     onLeadUpdated: (data) => {
@@ -38,7 +41,13 @@ export default function LiveLeadsBoard() {
         setLeads((prev) => prev.filter(l => l.id !== data.lead.id));
         return;
       }
-      setLeads((prev) => prev.map(l => l.id === data.lead.id ? { ...l, ...data.lead } : l));
+      setLeads((prev) => {
+        const exists = prev.some(l => l.id === data.lead.id);
+        if (exists) {
+          return prev.map(l => l.id === data.lead.id ? { ...l, ...data.lead } : l);
+        }
+        return [data.lead, ...prev].slice(0, 50);
+      });
     },
     onLeadDeleted: (data) => {
       setLeads((prev) => prev.filter(l => l.id !== data.lead_id));
@@ -52,7 +61,8 @@ export default function LiveLeadsBoard() {
       setLoading(true);
       try {
         let token = accessToken;
-        const makeReq = (t) => fetch(`${API_BASE_URL}/leads/?daily_agenda=true&page_size=100`, {
+        // Fetch latest leads ordered by created_at descending (most recent first)
+        const makeReq = (t) => fetch(`${API_BASE_URL}/leads/?ordering=-created_at&page_size=50`, {
           headers: { Authorization: `Bearer ${t}` }
         });
         let res = await makeReq(token);
@@ -64,9 +74,8 @@ export default function LiveLeadsBoard() {
 
         if (res.ok && isMounted) {
           const data = await res.json();
-          // Adjust based on your paginated response structure (usually data.results.leads)
           const results = data.results?.leads || data.results || (Array.isArray(data) ? data : []);
-          setLeads(results.slice(0, 100));
+          setLeads(results.slice(0, 50));
         } else if (isMounted) {
           setError('Failed to load recent leads');
         }
@@ -101,6 +110,38 @@ export default function LiveLeadsBoard() {
     return null;
   };
 
+  const getPersonName = (person) => {
+    if (!person) return null;
+    const name = `${person.first_name || ''} ${person.last_name || ''}`.trim();
+    return name || person.username || person.email || null;
+  };
+
+  const formatLeadTime = (dateStr) => {
+    if (!dateStr) return '—';
+    try {
+      const d = parseISO(dateStr);
+      const now = new Date();
+      const isToday = d.toDateString() === now.toDateString();
+      
+      const yesterday = new Date();
+      yesterday.setDate(now.getDate() - 1);
+      const isYesterday = d.toDateString() === yesterday.toDateString();
+
+      if (isToday) {
+        return format(d, 'h:mm a');
+      }
+      if (isYesterday) {
+        return `Yesterday, ${format(d, 'h:mm a')}`;
+      }
+      if (d.getFullYear() === now.getFullYear()) {
+        return format(d, 'd MMM, h:mm a');
+      }
+      return format(d, 'dd/MM/yy, h:mm a');
+    } catch (e) {
+      return '—';
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 animate-pulse mb-6">
@@ -132,8 +173,8 @@ export default function LiveLeadsBoard() {
         <div className="col-span-2">Lead Info</div>
         <div className="col-span-2">Contact</div>
         <div className="col-span-2">Status</div>
-        <div className="col-span-3">Remarks</div>
-        <div className="col-span-2">Handler</div>
+        <div className="col-span-2">Remarks</div>
+        <div className="col-span-3">Handlers (Primary / Sub)</div>
         <div className="col-span-1 text-right">Time</div>
       </div>
 
@@ -144,9 +185,9 @@ export default function LiveLeadsBoard() {
             No leads found.
           </div>
         ) : (
-          leads.map((lead, index) => {
-            const h = lead.current_handler;
-            const handlerName = h ? `${h.first_name || ''} ${h.last_name || ''}`.trim() || h.email : 'Unassigned';
+          leads.map((lead) => {
+            const primaryHandler = getPersonName(lead.assigned_to) || (!lead.sub_assigned_to ? getPersonName(lead.current_handler) : null);
+            const subHandler = getPersonName(lead.sub_assigned_to);
             
             return (
               <div 
@@ -184,26 +225,51 @@ export default function LiveLeadsBoard() {
                 </div>
 
                 {/* Remarks */}
-                <div className="col-span-3">
+                <div className="col-span-2">
                   <p className="text-xs text-gray-600 truncate" title={lead.remarks || ''}>
                     {lead.remarks || <span className="text-gray-300 italic">No remarks</span>}
                   </p>
                 </div>
 
-                {/* Handler */}
-                <div className="col-span-2 flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-                    <User size={12} className="text-indigo-600" />
-                  </div>
-                  <span className="text-xs font-bold text-gray-700 truncate">
-                    {handlerName}
-                  </span>
+                {/* Handlers (Primary & Sub) */}
+                <div className="col-span-3 flex flex-col justify-center gap-1 min-w-0">
+                  {primaryHandler ? (
+                    <div className="flex items-center gap-1.5 min-w-0" title={`Primary Handler: ${primaryHandler}`}>
+                      <span className="text-[9px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.2 rounded shrink-0">
+                        Primary
+                      </span>
+                      <span className="text-xs font-bold text-gray-800 truncate">
+                        {primaryHandler}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  {subHandler ? (
+                    <div className="flex items-center gap-1.5 min-w-0" title={`Sub Handler: ${subHandler}`}>
+                      <span className="text-[9px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.2 rounded shrink-0">
+                        Sub
+                      </span>
+                      <span className="text-xs font-medium text-gray-700 truncate">
+                        {subHandler}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  {!primaryHandler && !subHandler && (
+                    <div className="flex items-center gap-1.5 text-gray-400 italic text-xs">
+                      <User size={12} className="text-gray-300 shrink-0" />
+                      <span>Unassigned</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Time */}
                 <div className="col-span-1 text-right flex flex-col items-end justify-center">
-                  <div className="text-xs font-bold text-gray-600 group-hover:text-indigo-600 transition-colors">
-                    {lead.created_at ? format(parseISO(lead.created_at), 'h:mm a') : '—'}
+                  <div 
+                    className="text-xs font-bold text-gray-600 group-hover:text-indigo-600 transition-colors whitespace-nowrap"
+                    title={lead.created_at ? format(parseISO(lead.created_at), 'dd/MM/yyyy, hh:mm:ss a') : ''}
+                  >
+                    {formatLeadTime(lead.created_at)}
                   </div>
                 </div>
 

@@ -123,12 +123,12 @@ export default function App() {
         <Route path="/" element={<ProtectedRoute><DashboardOverview /></ProtectedRoute>} />
         <Route path="/feeds" element={<ProtectedRoute><FeedsPage /></ProtectedRoute>} />
 
-        <Route path="/leads" element={<PermissionRoute resources={['leads']}><LeadsPage /></PermissionRoute>} />
-        <Route path="/leads/:leadId" element={<PermissionRoute resources={['leads']}><LeadsPage /></PermissionRoute>} />
-        <Route path="/leads/edit/:id" element={<PermissionRoute resources={['leads']}><EditLeadPage /></PermissionRoute>} />
-        <Route path="/addnewlead" element={<PermissionRoute resources={['leads']}><AddLeadPage /></PermissionRoute>} />
-        <Route path="/leads/view/:id" element={<PermissionRoute resources={['leads']}><LeadDetailPage /></PermissionRoute>} />
-        <Route path="/followups"element={<PermissionRoute resources={['leads']}><AllFollowUpsPage /></PermissionRoute>} />
+        <Route path="/leads" element={<PermissionRoute resources={['leads']} permissions={['staff_analysis:admin']}><LeadsPage /></PermissionRoute>} />
+        <Route path="/leads/:leadId" element={<PermissionRoute resources={['leads']} permissions={['staff_analysis:admin']}><LeadsPage /></PermissionRoute>} />
+        <Route path="/leads/edit/:id" element={<PermissionRoute resources={['leads']} permissions={['staff_analysis:admin']}><EditLeadPage /></PermissionRoute>} />
+        <Route path="/addnewlead" element={<PermissionRoute resources={['leads']} permissions={['staff_analysis:admin']}><AddLeadPage /></PermissionRoute>} />
+        <Route path="/leads/view/:id" element={<PermissionRoute resources={['leads']} permissions={['staff_analysis:admin']}><LeadDetailPage /></PermissionRoute>} />
+        <Route path="/followups" element={<PermissionRoute resources={['leads']} permissions={['staff_analysis:admin']}><AllFollowUpsPage /></PermissionRoute>} />
         <Route path="/leads/command-centre" element={<PermissionRoute permissions={['staff_analysis:admin', 'leads:read_any', 'leads:read_tenant']} resources={['leads']}><LeadCommandCentre /></PermissionRoute>} />
 
 
