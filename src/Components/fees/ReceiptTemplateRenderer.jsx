@@ -174,10 +174,13 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
         className="bg-white text-slate-900 mx-auto relative overflow-hidden"
         style={{
           width: '210mm',
-          minHeight: '297mm',
-          padding: '10mm 12mm',
+          maxHeight: '297mm',
+          padding: '7mm 10mm',
           boxSizing: 'border-box',
           fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+          pageBreakInside: 'avoid',
+          pageBreakAfter: 'avoid',
+          overflow: 'hidden',
         }}
       >
         {['STUDENT COPY', 'OFFICE / ACCOUNTS COPY'].map((copyLabel, idx) => (
@@ -226,7 +229,8 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
                     <img
                       src={issuer.logo_url}
                       alt="Logo"
-                      className="h-11 w-auto object-contain"
+                      className="h-11 w-auto object-contain receipt-logo"
+                      style={{ maxHeight: '42px', maxWidth: '150px', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block' }}
                       crossOrigin="anonymous"
                     />
                   ) : (
@@ -457,7 +461,13 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
               <div className="col-span-7 p-4 border-r border-slate-900">
                 <div className="flex items-start gap-3">
                   {issuer.logo_url ? (
-                    <img src={issuer.logo_url} alt="Logo" className="h-12 w-auto object-contain" crossOrigin="anonymous" />
+                    <img
+                      src={issuer.logo_url}
+                      alt="Logo"
+                      className="h-12 w-auto object-contain receipt-logo"
+                      style={{ maxHeight: '48px', maxWidth: '160px', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block' }}
+                      crossOrigin="anonymous"
+                    />
                   ) : (
                     <div
                       className="h-12 w-12 rounded flex items-center justify-center text-white font-black text-lg"
@@ -728,12 +738,24 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
             {opts.show_signature_and_stamp && (
               <div className="flex items-center justify-end gap-3 my-1">
                 {issuer.stamp_image ? (
-                  <img src={issuer.stamp_image} alt="Official Stamp" className="h-20 w-20 object-contain" crossOrigin="anonymous" />
+                  <img
+                    src={issuer.stamp_image}
+                    alt="Official Stamp"
+                    className="h-20 w-20 object-contain receipt-stamp"
+                    style={{ maxHeight: '72px', maxWidth: '72px', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block' }}
+                    crossOrigin="anonymous"
+                  />
                 ) : (
                   <DefaultAcademySealSvg orgName={issuer.organization_name} brandColor={brandColor} />
                 )}
                 {issuer.signature_image && (
-                  <img src={issuer.signature_image} alt="Signature" className="h-14 w-auto object-contain" crossOrigin="anonymous" />
+                  <img
+                    src={issuer.signature_image}
+                    alt="Signature"
+                    className="h-14 w-auto object-contain receipt-signature"
+                    style={{ maxHeight: '48px', maxWidth: '135px', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block' }}
+                    crossOrigin="anonymous"
+                  />
                 )}
               </div>
             )}
@@ -808,11 +830,12 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
         >
           <div className="flex items-start gap-4">
             {issuer.logo_url ? (
-              <div className="bg-white p-2 rounded-xl shadow-sm shrink-0">
+              <div className="bg-white p-2 rounded-xl shadow-sm shrink-0" style={{ maxHeight: '64px', maxWidth: '180px' }}>
                 <img
                   src={issuer.logo_url}
                   alt="Academy Logo"
-                  className="h-14 w-auto object-contain"
+                  className="h-14 w-auto object-contain receipt-logo"
+                  style={{ maxHeight: '50px', maxWidth: '160px', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block' }}
                   crossOrigin="anonymous"
                 />
               </div>
@@ -1240,7 +1263,8 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
                   <img
                     src={issuer.stamp_image}
                     alt="Official Seal"
-                    className="h-20 w-20 object-contain"
+                    className="h-20 w-20 object-contain receipt-stamp"
+                    style={{ maxHeight: '72px', maxWidth: '72px', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block' }}
                     crossOrigin="anonymous"
                   />
                 ) : (
@@ -1250,7 +1274,8 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
                   <img
                     src={issuer.signature_image}
                     alt="Authorized Signature"
-                    className="h-14 w-auto object-contain"
+                    className="h-14 w-auto object-contain receipt-signature"
+                    style={{ maxHeight: '48px', maxWidth: '135px', width: 'auto', height: 'auto', objectFit: 'contain', display: 'block' }}
                     crossOrigin="anonymous"
                   />
                 )}

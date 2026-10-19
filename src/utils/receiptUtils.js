@@ -654,56 +654,147 @@ export async function exportReceiptElementToPdf(element, filename = 'FLAG_Receip
 export async function printReceiptElement(element, title = 'Official Fee Receipt') {
   if (!element) return;
   await waitForElementAssets(element);
-  const printWindow = window.open('', '_blank', 'width=900,height=1100');
-  if (!printWindow) {
-    window.print();
-    return;
-  }
+
+  // Extract all compiled styles from document stylesheets so print never misses Tailwind rules
+  let inlinedStyles = '';
+  try {
+    for (const sheet of Array.from(document.styleSheets)) {
+      try {
+        if (sheet.cssRules) {
+          for (const rule of Array.from(sheet.cssRules)) {
+            inlinedStyles += rule.cssText + '\n';
+          }
+        }
+      } catch (e) {
+        // Ignore cross-origin stylesheet errors
+      }
+    }
+  } catch (e) {}
+
   const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
     .map((node) => node.outerHTML)
     .join('\n');
 
-  printWindow.document.write(`
+  const printHtml = `
     <!DOCTYPE html>
     <html>
       <head>
         <meta charset="utf-8" />
+        <base href="${window.location.origin}/" />
         <title>${title}</title>
         ${styles}
         <style>
-          @page { size: A4 portrait; margin: 0; }
-          html, body { margin: 0; padding: 0; background: #ffffff; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          ${inlinedStyles}
+          @page {
+            size: A4 portrait;
+            margin: 4mm 6mm;
+          }
+          *, *::before, *::after {
+            box-sizing: border-box !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+          }
+          img {
+            max-width: 100% !important;
+            height: auto !important;
+          }
+          img[alt*="Logo"], img[alt*="logo"], .receipt-logo {
+            max-height: 48px !important;
+            max-width: 170px !important;
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain !important;
+            display: inline-block !important;
+          }
+          img[alt*="Stamp"], img[alt*="stamp"], .receipt-stamp {
+            max-height: 72px !important;
+            max-width: 72px !important;
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain !important;
+          }
+          img[alt*="Signature"], img[alt*="signature"], .receipt-signature {
+            max-height: 46px !important;
+            max-width: 135px !important;
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain !important;
+          }
+          .print-a4-page {
+            width: 210mm !important;
+            max-width: 210mm !important;
+            margin: 0 auto !important;
+            page-break-inside: avoid !important;
+            page-break-after: avoid !important;
+            overflow: hidden !important;
+          }
         </style>
       </head>
       <body>
-        ${element.outerHTML}
-        <script>
-          (function() {
-            function triggerPrint() {
-              setTimeout(function() {
-                window.focus();
-                window.print();
-              }, 150);
-            }
-            window.addEventListener('load', function() {
-              var fontPromise = (document.fonts && document.fonts.ready) ? document.fonts.ready.catch(function(){}) : Promise.resolve();
-              var imgPromises = Array.prototype.slice.call(document.images || []).map(function(img) {
-                if (img.complete) return Promise.resolve();
-                return new Promise(function(resolve) {
-                  img.addEventListener('load', resolve, { once: true });
-                  img.addEventListener('error', resolve, { once: true });
-                });
-              });
-              Promise.race([
-                Promise.all([fontPromise].concat(imgPromises)),
-                new Promise(function(resolve) { setTimeout(resolve, 2500); })
-              ]).then(triggerPrint);
-            });
-          })();
-        </script>
+        <div class="print-a4-page">
+          ${element.outerHTML}
+        </div>
       </body>
     </html>
-  `);
-  printWindow.document.close();
+  `;
+
+  // Use a hidden iframe to print cleanly without leaving an empty about:blank tab
+  try {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.zIndex = '-9999';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(printHtml);
+    doc.close();
+
+    const doPrint = () => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (err) {
+        console.error('Iframe print error', err);
+      } finally {
+        setTimeout(() => {
+          if (iframe.parentNode) {
+            iframe.parentNode.removeChild(iframe);
+          }
+        }, 3000);
+      }
+    };
+
+    if (iframe.contentWindow.document.readyState === 'complete') {
+      setTimeout(doPrint, 250);
+    } else {
+      iframe.contentWindow.addEventListener('load', () => setTimeout(doPrint, 250));
+    }
+  } catch (err) {
+    // Fallback to window.open if iframe is blocked
+    const printWindow = window.open('', '_blank', 'width=900,height=1100');
+    if (printWindow) {
+      printWindow.document.write(printHtml);
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+      }, 500);
+    } else {
+      window.print();
+    }
+  }
 }
 
