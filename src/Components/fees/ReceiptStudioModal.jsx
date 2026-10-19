@@ -89,6 +89,7 @@ export default function ReceiptStudioModal({
   const [manualNumberUnlock, setManualNumberUnlock] = useState(false);
   const [manualFinancialOverride, setManualFinancialOverride] = useState(false);
   const [manualWordsOverride, setManualWordsOverride] = useState(false);
+  const [manualLedgerOverride, setManualLedgerOverride] = useState(false);
 
   // Email popover state
   const [showEmailDrawer, setShowEmailDrawer] = useState(false);
@@ -467,6 +468,7 @@ export default function ReceiptStudioModal({
         setManualNumberUnlock(false);
         setManualFinancialOverride(false);
         setManualWordsOverride(false);
+        setManualLedgerOverride(false);
         setForm(recomputeFromItems(baseDraft, true));
       } catch (err) {
         console.error('Error initializing receipt studio:', err);
@@ -611,6 +613,7 @@ export default function ReceiptStudioModal({
 
     setManualFinancialOverride(hasCustomFinancials);
     setManualWordsOverride(hasCustomWords);
+    setManualLedgerOverride(false);
     setForm(hydrated);
     setEmailForm((prev) => ({
       ...prev,
@@ -1011,6 +1014,7 @@ export default function ReceiptStudioModal({
         ledger_next_due_date: form.ledger_next_due_date || null,
         manual_financial_override: manualFinancialOverride,
         manual_words_override: manualWordsOverride,
+        manual_ledger_override: manualLedgerOverride,
         gst_rate: form.gst_rate,
       };
 
