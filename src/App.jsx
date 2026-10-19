@@ -74,6 +74,7 @@ import FlagStudentFormPage from './Pages/FLAG/StudentFormPage.jsx';
 import FlagStudentProfilePage from './Pages/FLAG/StudentProfilePage.jsx';
 import FlagAttendancePage from './Pages/FLAG/AttendancePage.jsx';
 import FlagSettingsPage from './Pages/FLAG/SettingsPage.jsx';
+import ReceiptVerifyPage from './Pages/ReceiptVerifyPage.jsx';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -120,6 +121,8 @@ export default function App() {
       <GlobalReminderNotifier />
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/verify-receipt/:token" element={<ReceiptVerifyPage />} />
+        <Route path="/verify/receipt/:token" element={<ReceiptVerifyPage />} />
         <Route path="/" element={<ProtectedRoute><DashboardOverview /></ProtectedRoute>} />
         <Route path="/feeds" element={<ProtectedRoute><FeedsPage /></ProtectedRoute>} />
 

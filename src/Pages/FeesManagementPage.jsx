@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../Components/layouts/Navbar';
 import FeesAnalyticsWorkspace from './FeesAnalyticsWorkspace';
 import FeesGridWorkspace from './FeesGridWorkspace';
+import ReceiptsWorkspace from '../Components/fees/ReceiptsWorkspace';
+import ReceiptStudioModal from '../Components/fees/ReceiptStudioModal';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
-import { TrendingUp, RefreshCw, Plus, Receipt, AlertTriangle, Repeat, IndianRupee, Download, CheckCircle, Edit2, Trash2, ShieldCheck } from 'lucide-react';
+import { TrendingUp, RefreshCw, Plus, Receipt, AlertTriangle, Repeat, IndianRupee, Download, CheckCircle, Edit2, Trash2, ShieldCheck, FileCheck2, Sparkles, ExternalLink } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -85,12 +87,20 @@ export default function FeesManagementPage() {
     notes: '',
   });
   const [editingEntity, setEditingEntity] = useState(null);
+  const [receiptStudioState, setReceiptStudioState] = useState({
+    isOpen: false,
+    initialReceipt: null,
+    initialPayment: null,
+    initialAccount: null,
+    initialStudent: null,
+    autoDownloadOnLoad: false,
+  });
 
-  const canManageFees = hasPermission('fees:manage');
+  const canManageFees = hasPermission('fees:manage') || hasPermission('flag:fees') || hasPermission('flag:admin');
   const canRestructureFees = hasPermission('fees:restructure') || canManageFees;
   const canRecordPartial = hasPermission('fees:partial_payment') || canManageFees;
-  const canViewFees = hasAnyPermission('fees');
-  const canViewAnalytics = hasPermission('fees:analytics') || hasPermission('fees:manage');
+  const canViewFees = hasAnyPermission('fees') || hasPermission('flag:fees') || hasPermission('flag:admin');
+  const canViewAnalytics = hasPermission('fees:analytics') || hasPermission('fees:manage') || hasPermission('flag:admin');
 
   const selectedAccount = useMemo(
     () => accounts.find((account) => account.id === selectedAccountId) || null,
@@ -466,13 +476,24 @@ export default function FeesManagementPage() {
     }
   };
 
-  const handlePaymentSubmit = async (e) => {
-    e.preventDefault();
+  const openReceiptStudio = (opts = {}) => {
+    setReceiptStudioState({
+      isOpen: true,
+      initialReceipt: opts.initialReceipt || null,
+      initialPayment: opts.initialPayment || null,
+      initialAccount: opts.initialAccount || null,
+      initialStudent: opts.initialStudent || null,
+      autoDownloadOnLoad: Boolean(opts.autoDownloadOnLoad),
+    });
+  };
+
+  const handlePaymentSubmit = async (e, openReceiptAfter = false) => {
+    if (e) e.preventDefault();
     if (!selectedAccount) return;
     setSaving(true);
     setMessage(null);
     try {
-      await postJson(`${API_BASE_URL}/fees/accounts/${selectedAccount.id}/payments/`, {
+      const createdPayment = await postJson(`${API_BASE_URL}/fees/accounts/${selectedAccount.id}/payments/`, {
         ...paymentForm,
         account: selectedAccount.id,
         installment: paymentForm.installment ? Number(paymentForm.installment) : null,
@@ -482,6 +503,9 @@ export default function FeesManagementPage() {
       setPaymentForm(emptyPayment);
       setMessage({ type: 'success', text: 'Payment recorded.' });
       await fetchData();
+      if (openReceiptAfter && createdPayment?.id) {
+        openReceiptStudio({ initialPayment: createdPayment, initialAccount: selectedAccount });
+      }
     } catch (err) {
       setMessage({ type: 'error', text: err.message });
     } finally {
@@ -621,10 +645,20 @@ export default function FeesManagementPage() {
             <h1 className="text-4xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               Fees Management
             </h1>
-            <p className="text-gray-600 mt-2">Manage fee plans, balances, partial payments, and restructures from one place.</p>
+            <p className="text-gray-600 mt-2">Manage fee plans, balances, partial payments, digital receipts, and restructures from one place.</p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {canManageFees && (
+              <button
+                type="button"
+                onClick={() => openReceiptStudio({ initialAccount: selectedAccount })}
+                className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold shadow-md text-sm"
+              >
+                <Sparkles size={16} />
+                Receipt & Invoice Studio
+              </button>
+            )}
             <button
               type="button"
               onClick={handleExport}
@@ -677,6 +711,9 @@ export default function FeesManagementPage() {
         {/* Top-Level Tabs */}
         <div className="flex space-x-1 bg-white p-1 rounded-2xl shadow-sm border border-gray-100 mb-6 overflow-x-auto">
           <button onClick={() => setMainTab('accounts')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'accounts' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Accounts & Payments</button>
+          <button onClick={() => setMainTab('receipts')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 ${mainTab === 'receipts' ? 'bg-indigo-600 text-white shadow-md' : 'text-indigo-700 bg-indigo-50/60 hover:bg-indigo-100/80'}`}>
+            <FileCheck2 size={15} /> Receipts & Invoices Studio
+          </button>
           <button onClick={() => setMainTab('grid')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'grid' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Spreadsheet View</button>
           <button onClick={() => setMainTab('pending_attendances')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'pending_attendances' ? 'bg-orange-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Pending Attendances {pendingAttendances.length > 0 && <span className="ml-1 bg-white text-orange-600 px-2 py-0.5 rounded-full text-xs">{pendingAttendances.length}</span>}</button>
           <button onClick={() => setMainTab('pending_students')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'pending_students' ? 'bg-red-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Pending Students {pendingStudents.length > 0 && <span className="ml-1 bg-white text-red-600 px-2 py-0.5 rounded-full text-xs">{pendingStudents.length}</span>}</button>
@@ -685,15 +722,25 @@ export default function FeesManagementPage() {
           <button onClick={() => setMainTab('policies')} className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'policies' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-900 hover:bg-slate-50'}`}>Settings & Policies</button>
         </div>
 
-        {mainTab === 'accounts' && (
-          <div className="space-y-6">
-
-          </div>
+        {mainTab === 'receipts' && (
+          <ReceiptsWorkspace
+            getToken={getToken}
+            company={user?.company || 'FLAG'}
+            accounts={accounts}
+            students={students}
+            canManageFees={canManageFees}
+            canManageSettings={canManageFees}
+            canCreateReceipts={canRecordPartial}
+          />
         )}
 
         {mainTab === 'grid' && (
           <div className="space-y-6">
-            <FeesGridWorkspace />
+            <FeesGridWorkspace
+              onOpenReceiptForPayment={(paymentObj, autoDownload = false) =>
+                openReceiptStudio({ initialPayment: paymentObj, autoDownloadOnLoad: autoDownload })
+              }
+            />
           </div>
         )}
 
@@ -1101,14 +1148,25 @@ export default function FeesManagementPage() {
             <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6 min-h-[500px]">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">Selected Account Details</h2>
-                {selectedAccount && canManageFees && (
-                  <div className="flex gap-2">
-                    <button onClick={() => handleEditEntity('ACCOUNT', selectedAccount)} className="px-3 py-1.5 text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 rounded-lg shadow-sm">
-                      Edit
+                {selectedAccount && (canRecordPartial || canManageFees) && (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openReceiptStudio({ initialAccount: selectedAccount })}
+                      className="px-3 py-1.5 text-sm font-bold bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-lg shadow-sm flex items-center gap-1.5"
+                    >
+                      <FileCheck2 size={14} /> Receipt / Proforma Studio
                     </button>
-                    <button onClick={() => handleDeleteEntity('ACCOUNT', selectedAccount.id)} className="px-3 py-1.5 text-sm font-medium bg-white border border-gray-200 text-red-600 hover:bg-red-50 rounded-lg shadow-sm">
-                      Delete
-                    </button>
+                    {canManageFees && (
+                      <>
+                        <button onClick={() => handleEditEntity('ACCOUNT', selectedAccount)} className="px-3 py-1.5 text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 rounded-lg shadow-sm">
+                          Edit
+                        </button>
+                        <button onClick={() => handleDeleteEntity('ACCOUNT', selectedAccount.id)} className="px-3 py-1.5 text-sm font-medium bg-white border border-gray-200 text-red-600 hover:bg-red-50 rounded-lg shadow-sm">
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -1150,7 +1208,7 @@ export default function FeesManagementPage() {
                   {activeTab === 'recordPayment' && (
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-4 hidden">Record Payment</h3>
-                    <form className="space-y-3" onSubmit={handlePaymentSubmit}>
+                    <form className="space-y-3" onSubmit={(e) => handlePaymentSubmit(e, false)}>
                       <div className="grid grid-cols-2 gap-3">
                         <input value={paymentForm.amount} onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))} placeholder="Amount" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
                         <select value={paymentForm.installment} onChange={(e) => setPaymentForm((p) => ({ ...p, installment: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
@@ -1171,10 +1229,21 @@ export default function FeesManagementPage() {
                       </div>
                       <input value={paymentForm.reference} onChange={(e) => setPaymentForm((p) => ({ ...p, reference: e.target.value }))} placeholder="Reference" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" />
                       <textarea value={paymentForm.notes} onChange={(e) => setPaymentForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Payment notes" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 min-h-20" />
-                      <button disabled={saving || !canRecordPartial} className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-indigo-600 text-white font-semibold disabled:opacity-50">
-                        <Receipt size={16} />
-                        Save Payment
-                      </button>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button type="submit" disabled={saving || !canRecordPartial} className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold disabled:opacity-50">
+                          <Receipt size={16} />
+                          Save Payment
+                        </button>
+                        <button
+                          type="button"
+                          disabled={saving || !canRecordPartial}
+                          onClick={(e) => handlePaymentSubmit(e, true)}
+                          className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold shadow-md disabled:opacity-50"
+                        >
+                          <Sparkles size={16} />
+                          Save & Generate Receipt PDF
+                        </button>
+                      </div>
                     </form>
                   </div>
 
@@ -1255,24 +1324,61 @@ export default function FeesManagementPage() {
                       {selectedPayments.length === 0 ? (
                         <p className="text-sm text-gray-500">No payments recorded.</p>
                       ) : selectedPayments.map((payment) => (
-                        <div key={payment.id} className="rounded-2xl border border-gray-100 p-3 bg-white">
-                          <div className="flex items-center justify-between">
+                        <div key={payment.id} className="rounded-2xl border border-gray-100 p-3.5 bg-white hover:border-indigo-200 transition-colors">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div>
-                              <div className="font-medium text-gray-900">{payment.receipt_number}</div>
-                              <div className="text-xs text-gray-500">{payment.payment_method} • {new Date(payment.payment_date).toLocaleString()}</div>
+                              <div className="font-bold text-gray-900 flex items-center gap-2">
+                                <span>{payment.latest_receipt_number || payment.receipt_number}</span>
+                                {payment.latest_receipt_id && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    Digital Receipt Issued
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-0.5">
+                                {payment.payment_method} {payment.reference ? `• Ref: ${payment.reference}` : ''} • {new Date(payment.payment_date).toLocaleString()}
+                              </div>
                             </div>
-                            <div className="flex flex-col items-end gap-2">
-                              <div className="font-bold text-green-700">{currency(payment.amount)}</div>
-                              {canManageFees && (
-                                <div className="flex items-center gap-2">
-                                  <button onClick={() => handleEditEntity('PAYMENT', payment)} className="p-1 text-gray-400 hover:text-indigo-600 rounded bg-gray-50 border border-gray-200">
-                                    <Edit2 size={14} />
-                                  </button>
-                                  <button onClick={() => handleDeleteEntity('PAYMENT', selectedAccount.id, payment.id)} className="p-1 text-gray-400 hover:text-red-600 rounded bg-gray-50 border border-gray-200">
-                                    <Trash2 size={14} />
-                                  </button>
-                                </div>
-                              )}
+                            <div className="flex flex-col sm:items-end gap-2">
+                              <div className="font-extrabold text-green-700 text-base">{currency(payment.amount)}</div>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => openReceiptStudio({ initialPayment: payment, initialAccount: selectedAccount, autoDownloadOnLoad: false })}
+                                  className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1"
+                                >
+                                  <FileCheck2 size={12} /> Preview / Customize Receipt
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openReceiptStudio({ initialPayment: payment, initialAccount: selectedAccount, autoDownloadOnLoad: true })}
+                                  className="px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 flex items-center gap-1"
+                                  title="Download Official Receipt PDF"
+                                >
+                                  <Download size={12} /> PDF
+                                </button>
+                                {payment.latest_receipt_token && (
+                                  <a
+                                    href={`/verify-receipt/${payment.latest_receipt_token}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-1 text-slate-500 hover:text-indigo-600 rounded bg-slate-50 border border-slate-200"
+                                    title="Open Public Verification Page"
+                                  >
+                                    <ExternalLink size={13} />
+                                  </a>
+                                )}
+                                {canManageFees && (
+                                  <>
+                                    <button onClick={() => handleEditEntity('PAYMENT', payment)} className="p-1 text-gray-400 hover:text-indigo-600 rounded bg-gray-50 border border-gray-200">
+                                      <Edit2 size={14} />
+                                    </button>
+                                    <button onClick={() => handleDeleteEntity('PAYMENT', selectedAccount.id, payment.id)} className="p-1 text-gray-400 hover:text-red-600 rounded bg-gray-50 border border-gray-200">
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1548,6 +1654,34 @@ export default function FeesManagementPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {receiptStudioState.isOpen && (
+        <ReceiptStudioModal
+          isOpen={receiptStudioState.isOpen}
+          onClose={() =>
+            setReceiptStudioState((prev) => ({
+              ...prev,
+              isOpen: false,
+              initialReceipt: null,
+              initialPayment: null,
+              initialAccount: null,
+              initialStudent: null,
+              autoDownloadOnLoad: false,
+            }))
+          }
+          getToken={getToken}
+          company={user?.company || 'FLAG'}
+          initialReceipt={receiptStudioState.initialReceipt}
+          initialPayment={receiptStudioState.initialPayment}
+          initialAccount={receiptStudioState.initialAccount}
+          initialStudent={receiptStudioState.initialStudent}
+          autoDownloadOnLoad={receiptStudioState.autoDownloadOnLoad}
+          accounts={accounts}
+          students={students}
+          canManageFees={canManageFees}
+          onSaved={() => fetchData()}
+        />
       )}
     </div>
   );

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Download, RefreshCw, AlertCircle } from 'lucide-react';
+import { Download, RefreshCw, AlertCircle, FileCheck2 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-export default function FeesGridWorkspace() {
+export default function FeesGridWorkspace({ onOpenReceiptForPayment }) {
   const { accessToken, refreshAccessToken } = useAuth();
   const [data, setData] = useState([]);
   const [maxPayments, setMaxPayments] = useState(0);
@@ -198,7 +198,25 @@ export default function FeesGridWorkspace() {
                     const p = row.payments[i] || {};
                     return (
                       <React.Fragment key={`payment_val_${row.id}_${i}`}>
-                        <td className="px-4 py-2 border border-gray-200 text-right font-medium text-green-700">{p.amount || '-'}</td>
+                        <td className="px-4 py-2 border border-gray-200 text-right font-medium text-green-700">
+                          {p.amount ? (
+                            <div className="flex items-center justify-end gap-1.5">
+                              <span>{p.amount}</span>
+                              {p.id && onOpenReceiptForPayment && (
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenReceiptForPayment(p, false)}
+                                  className="px-1.5 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold inline-flex items-center gap-0.5 border border-indigo-200"
+                                  title="Open Receipt Studio / Download PDF"
+                                >
+                                  <FileCheck2 size={11} /> Receipt
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
                         <td className="px-4 py-2 border border-gray-200 text-center">{p.method || '-'}</td>
                         <td className="px-4 py-2 border border-gray-200 text-center text-gray-500">{p.date || '-'}</td>
                       </React.Fragment>

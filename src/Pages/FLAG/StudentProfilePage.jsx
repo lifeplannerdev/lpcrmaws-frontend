@@ -3,8 +3,9 @@ import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { User, Phone, MapPin, Calendar, Award, CheckCircle, XCircle, AlertTriangle, BookOpen, Clock, Loader2, RefreshCw, Edit, UserCheck, ArrowUpCircle, ArrowDownCircle, Trash2 } from 'lucide-react';
+import { User, Phone, MapPin, Calendar, Award, CheckCircle, XCircle, AlertTriangle, BookOpen, Clock, Loader2, RefreshCw, Edit, UserCheck, ArrowUpCircle, ArrowDownCircle, Trash2, FileCheck2, Download } from 'lucide-react';
 import EditStudentModal from './EditStudentModal';
+import ReceiptStudioModal from '../../Components/fees/ReceiptStudioModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -33,6 +34,11 @@ export default function StudentProfilePage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [trainers, setTrainers] = useState([]);
   const [assigningTrainer, setAssigningTrainer] = useState(false);
+  const [receiptStudioState, setReceiptStudioState] = useState({
+    isOpen: false,
+    initialPayment: null,
+    autoDownloadOnLoad: false,
+  });
 
 
 
@@ -646,7 +652,22 @@ export default function StudentProfilePage() {
                     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
                       <div className="px-6 py-4 bg-gray-50/80 border-b border-gray-100 flex justify-between items-center">
                         <h4 className="font-bold text-gray-900 text-sm">Payment History</h4>
-                        <span className="text-xs text-gray-500 font-medium">{feeAccount.payments?.length || 0} Transactions</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-gray-500 font-medium">{feeAccount.payments?.length || 0} Transactions</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setReceiptStudioState({
+                                isOpen: true,
+                                initialPayment: null,
+                                autoDownloadOnLoad: false,
+                              })
+                            }
+                            className="px-3 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 flex items-center gap-1"
+                          >
+                            <FileCheck2 size={13} /> New Receipt / Proforma
+                          </button>
+                        </div>
                       </div>
                       {(!feeAccount.payments || feeAccount.payments.length === 0) ? (
                         <div className="p-6 text-center text-sm text-gray-500">No payments recorded yet.</div>
@@ -660,6 +681,7 @@ export default function StudentProfilePage() {
                                 <th className="px-6 py-3 font-semibold">Method</th>
                                 <th className="px-6 py-3 font-semibold">Reference</th>
                                 <th className="px-6 py-3 font-semibold">Notes</th>
+                                <th className="px-6 py-3 font-semibold text-right">Official Receipt / PDF</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -670,6 +692,36 @@ export default function StudentProfilePage() {
                                   <td className="px-6 py-3.5 text-gray-600 font-medium">{p.payment_method}</td>
                                   <td className="px-6 py-3.5 text-gray-500 text-xs">{p.reference || '-'}</td>
                                   <td className="px-6 py-3.5 text-gray-500 text-xs">{p.notes || '-'}</td>
+                                  <td className="px-6 py-3.5 text-right whitespace-nowrap">
+                                    <div className="inline-flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setReceiptStudioState({
+                                            isOpen: true,
+                                            initialPayment: p,
+                                            autoDownloadOnLoad: false,
+                                          })
+                                        }
+                                        className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 inline-flex items-center gap-1"
+                                      >
+                                        <FileCheck2 size={12} /> Receipt Studio
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setReceiptStudioState({
+                                            isOpen: true,
+                                            initialPayment: p,
+                                            autoDownloadOnLoad: true,
+                                          })
+                                        }
+                                        className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold border border-emerald-200 inline-flex items-center gap-1"
+                                      >
+                                        <Download size={12} /> PDF
+                                      </button>
+                                    </div>
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>
@@ -962,6 +1014,29 @@ export default function StudentProfilePage() {
         onClose={() => setShowEditModal(false)}
         onSuccess={() => fetchStudentData()}
       />
+
+      {/* Receipt Studio Modal */}
+      {receiptStudioState.isOpen && (
+        <ReceiptStudioModal
+          isOpen={receiptStudioState.isOpen}
+          onClose={() =>
+            setReceiptStudioState({
+              isOpen: false,
+              initialPayment: null,
+              autoDownloadOnLoad: false,
+            })
+          }
+          getToken={async () => accessToken || (await refreshAccessToken())}
+          company="FLAG"
+          initialPayment={receiptStudioState.initialPayment}
+          initialAccount={feeAccount}
+          initialStudent={student}
+          autoDownloadOnLoad={receiptStudioState.autoDownloadOnLoad}
+          accounts={feeAccount ? [feeAccount] : []}
+          students={student ? [student] : []}
+          onSaved={() => fetchStudentData()}
+        />
+      )}
 
     </div>
   );
