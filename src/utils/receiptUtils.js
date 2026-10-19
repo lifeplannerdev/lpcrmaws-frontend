@@ -5,6 +5,8 @@
  * - Self-contained ISO/IEC 18004 QR Code Matrix -> Crisp Vector SVG Generator (Zero external network/CORS dependency)
  * - High-DPI A4 PDF Export & Direct Print Runner
  */
+import html2canvas from 'html2canvas-pro';
+import { jsPDF } from 'jspdf';
 import html2pdf from 'html2pdf.js';
 
 export const DEFAULT_DISPLAY_OPTIONS = {
@@ -605,11 +607,10 @@ export async function exportReceiptElementToPdf(element, filename = 'FLAG_Receip
   if (!element) return null;
   await waitForElementAssets(element);
   const cleanName = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
-  const opt = {
-    margin: 0,
-    filename: cleanName,
-    image: { type: 'jpeg', quality: 0.99 },
-    html2canvas: {
+
+  try {
+    // html2canvas-pro natively parses modern CSS color spaces like oklch(), oklab(), lch(), lab() from Tailwind v4
+    const canvas = await html2canvas(element, {
       scale: 2.5,
       useCORS: true,
       allowTaint: true,
@@ -618,37 +619,45 @@ export async function exportReceiptElementToPdf(element, filename = 'FLAG_Receip
       scrollX: 0,
       scrollY: 0,
       windowWidth: 794,
-    },
-    jsPDF: {
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+    const pdf = new jsPDF({
       unit: 'mm',
       format: 'a4',
       orientation: 'portrait',
-    },
-    pagebreak: { mode: ['css', 'legacy'] },
-  };
+    });
 
-  const getRunner = () => {
-    if (typeof html2pdf === 'function') return html2pdf;
-    if (html2pdf && typeof html2pdf.default === 'function') return html2pdf.default;
-    if (typeof window !== 'undefined' && typeof window.html2pdf === 'function') return window.html2pdf;
-    return null;
-  };
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pdfWidth;
+    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-  const runner = getRunner();
-  if (!runner) {
-    console.warn('html2pdf runner not found; falling back to window.print()');
-    if (!returnBase64 && typeof window !== 'undefined') {
-      window.print();
-      return true;
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    // Render first page
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pdfHeight;
+
+    // Multi-page support if receipt ever exceeds A4 height
+    while (heightLeft > 5) {
+      position -= pdfHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
     }
-    throw new Error('PDF generator library is not ready.');
-  }
 
-  if (returnBase64) {
-    return await runner().set(opt).from(element).outputPdf('datauristring');
+    if (returnBase64) {
+      return pdf.output('datauristring');
+    }
+
+    pdf.save(cleanName);
+    return true;
+  } catch (err) {
+    console.error('html2canvas-pro export failed:', err);
+    throw err;
   }
-  await runner().set(opt).from(element).save();
-  return true;
 }
 
 export async function printReceiptElement(element, title = 'Official Fee Receipt') {
