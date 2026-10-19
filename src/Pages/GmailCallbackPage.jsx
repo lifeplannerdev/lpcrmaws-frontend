@@ -34,18 +34,27 @@ export default function GmailCallbackPage() {
 
     if (!accessToken) return; // Wait for auth
 
+    const savedModule = sessionStorage.getItem('gmail_oauth_module_scope');
+    const savedCompany = sessionStorage.getItem('gmail_oauth_company');
+
     axios.post(`${API_BASE_URL}/mail/callback/`, {
       code,
-      state
+      state,
+      module_scope: savedModule || undefined,
+      company: savedCompany || undefined,
     }, {
       headers: { Authorization: `Bearer ${accessToken}` }
     })
     .then(res => {
       setStatus('success');
-      setMessage('Gmail connected successfully!');
+      sessionStorage.removeItem('gmail_oauth_module_scope');
+      sessionStorage.removeItem('gmail_oauth_company');
+      const aliasInfo = res.data.send_as_email ? ` with Sender Alias: ${res.data.send_as_email}` : '';
+      const scopeInfo = res.data.module_scope === 'FEES' ? ' [FLAG Fees & Accounts]' : ' [Processing & Admissions]';
+      setMessage(`Connected ${res.data.email || 'Gmail'}${scopeInfo}${aliasInfo} successfully!`);
       setTimeout(() => {
         navigate('/mail-center');
-      }, 3000);
+      }, 2500);
     })
     .catch(err => {
       setStatus('error');
