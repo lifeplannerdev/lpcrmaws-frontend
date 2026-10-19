@@ -986,6 +986,57 @@ export default function ReceiptStudioModal({
     }));
   };
 
+  const handleRefreshBrandingFromSettings = async () => {
+    try {
+      const token = await getToken();
+      const comp = form.company || company || 'FLAG';
+      const res = await fetch(`${API_BASE_URL}/fees/receipt-settings/?company=${encodeURIComponent(comp)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to load company settings');
+      const s = await res.json();
+      setForm((prev) => ({
+        ...prev,
+        template_style: s.default_template || prev.template_style,
+        terms_and_conditions: s.default_terms_and_conditions || prev.terms_and_conditions,
+        display_options: {
+          ...prev.display_options,
+          ...(s.default_display_options || {}),
+        },
+        issuer_snapshot: {
+          ...prev.issuer_snapshot,
+          organization_name: s.organization_name || prev.issuer_snapshot.organization_name,
+          subtitle: s.subtitle ?? prev.issuer_snapshot.subtitle,
+          address: s.address ?? prev.issuer_snapshot.address,
+          phone: s.phone ?? prev.issuer_snapshot.phone,
+          email: s.email ?? prev.issuer_snapshot.email,
+          website: s.website ?? prev.issuer_snapshot.website,
+          gstin: s.gstin ?? prev.issuer_snapshot.gstin,
+          pan_number: s.pan_number ?? prev.issuer_snapshot.pan_number,
+          place_of_supply: s.place_of_supply || prev.issuer_snapshot.place_of_supply,
+          sac_code: s.sac_code || prev.issuer_snapshot.sac_code,
+          logo_url: s.logo_url ?? prev.issuer_snapshot.logo_url,
+          signature_image: s.signature_image ?? prev.issuer_snapshot.signature_image,
+          stamp_image: s.stamp_image ?? prev.issuer_snapshot.stamp_image,
+          watermark_text: s.watermark_text || prev.issuer_snapshot.watermark_text,
+          authorized_signatory_name: s.authorized_signatory_name || prev.issuer_snapshot.authorized_signatory_name,
+          authorized_signatory_designation: s.authorized_signatory_designation || prev.issuer_snapshot.authorized_signatory_designation,
+          bank_name: s.bank_name ?? prev.issuer_snapshot.bank_name,
+          account_name: s.account_name ?? prev.issuer_snapshot.account_name,
+          account_number: s.account_number ?? prev.issuer_snapshot.account_number,
+          ifsc_code: s.ifsc_code ?? prev.issuer_snapshot.ifsc_code,
+          upi_id: s.upi_id ?? prev.issuer_snapshot.upi_id,
+          footer_note: s.footer_note || prev.issuer_snapshot.footer_note,
+          brand_color: s.brand_color || prev.issuer_snapshot.brand_color,
+        },
+      }));
+      toast.success(`Branding refreshed from ${comp} settings`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to reload settings');
+    }
+  };
+
   const handleSaveReceipt = async (andDownload = false) => {
     if (!form.recipient_name?.trim()) {
       toast.error('Recipient / Student Name is required.');
@@ -2453,9 +2504,19 @@ export default function ReceiptStudioModal({
                 {activeSection === 'issuer_audit' && (
                   <div className="space-y-4">
                     <div className="p-4 rounded-2xl border border-slate-200 space-y-3">
-                      <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
-                        Issuer Header, GSTIN & Signatory Override (For This Receipt)
-                      </h3>
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
+                          Issuer Header, GSTIN & Signatory Override (For This Receipt)
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={handleRefreshBrandingFromSettings}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold transition-colors"
+                        >
+                          <RefreshCw size={12} />
+                          Reload Latest Settings Branding ({form.company || company || 'FLAG'})
+                        </button>
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs font-bold text-slate-700 mb-1">

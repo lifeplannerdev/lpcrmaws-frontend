@@ -725,7 +725,7 @@ export default function FeesManagementPage() {
         {mainTab === 'receipts' && (
           <ReceiptsWorkspace
             getToken={getToken}
-            company={user?.company || 'FLAG'}
+            company="FLAG"
             accounts={accounts}
             students={students}
             canManageFees={canManageFees}
@@ -1671,7 +1671,7 @@ export default function FeesManagementPage() {
             }))
           }
           getToken={getToken}
-          company={user?.company || 'FLAG'}
+          company="FLAG"
           initialReceipt={receiptStudioState.initialReceipt}
           initialPayment={receiptStudioState.initialPayment}
           initialAccount={receiptStudioState.initialAccount}

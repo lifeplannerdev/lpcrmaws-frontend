@@ -16,15 +16,16 @@ import { DEFAULT_DISPLAY_OPTIONS, DEFAULT_ISSUER_SNAPSHOT } from '../../utils/re
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function ReceiptSettingsModal({ isOpen, onClose, getToken, company = 'FLAG', onSaved }) {
+  const [selectedCompany, setSelectedCompany] = useState(company || 'FLAG');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState('branding');
   const [form, setForm] = useState({
-    company,
+    company: selectedCompany,
     ...DEFAULT_ISSUER_SNAPSHOT,
     default_gst_mode: 'INCLUSIVE',
     default_gst_rate: '18.00',
-    receipt_prefix: company || 'FLAG',
+    receipt_prefix: selectedCompany || 'FLAG',
     next_sequence_number: 1,
     default_template: 'EXECUTIVE',
     default_terms_and_conditions:
@@ -41,7 +42,7 @@ export default function ReceiptSettingsModal({ isOpen, onClose, getToken, compan
       try {
         setLoading(true);
         const token = await getToken();
-        const res = await fetch(`${API_BASE_URL}/fees/receipt-settings/?company=${encodeURIComponent(company)}`, {
+        const res = await fetch(`${API_BASE_URL}/fees/receipt-settings/?company=${encodeURIComponent(selectedCompany)}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok && mounted) {
@@ -49,6 +50,7 @@ export default function ReceiptSettingsModal({ isOpen, onClose, getToken, compan
           setForm((prev) => ({
             ...prev,
             ...data,
+            company: selectedCompany,
             default_display_options: {
               ...DEFAULT_DISPLAY_OPTIONS,
               ...(data.default_display_options || {}),
@@ -65,7 +67,7 @@ export default function ReceiptSettingsModal({ isOpen, onClose, getToken, compan
     return () => {
       mounted = false;
     };
-  }, [isOpen, company, getToken]);
+  }, [isOpen, selectedCompany, getToken]);
 
   if (!isOpen) return null;
 
@@ -106,7 +108,7 @@ export default function ReceiptSettingsModal({ isOpen, onClose, getToken, compan
         },
         body: JSON.stringify({
           ...form,
-          company,
+          company: selectedCompany,
           next_sequence_number: Math.max(1, Number(form.next_sequence_number || 1)),
         }),
       });
@@ -140,13 +142,35 @@ export default function ReceiptSettingsModal({ isOpen, onClose, getToken, compan
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
+              {[
+                { id: 'FLAG', label: 'FLAG Academy' },
+                { id: 'LP', label: 'LifePlanner (LP)' },
+                { id: 'FDS', label: 'Filmaatic (FDS)' },
+              ].map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setSelectedCompany(c.id)}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                    selectedCompany === c.id
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Section Tabs */}
