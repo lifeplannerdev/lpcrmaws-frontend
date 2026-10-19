@@ -615,6 +615,9 @@ export async function exportReceiptElementToPdf(element, filename = 'FLAG_Receip
       allowTaint: true,
       backgroundColor: '#ffffff',
       logging: false,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: 794,
     },
     jsPDF: {
       unit: 'mm',
@@ -624,10 +627,27 @@ export async function exportReceiptElementToPdf(element, filename = 'FLAG_Receip
     pagebreak: { mode: ['css', 'legacy'] },
   };
 
-  if (returnBase64) {
-    return await html2pdf().set(opt).from(element).outputPdf('datauristring');
+  const getRunner = () => {
+    if (typeof html2pdf === 'function') return html2pdf;
+    if (html2pdf && typeof html2pdf.default === 'function') return html2pdf.default;
+    if (typeof window !== 'undefined' && typeof window.html2pdf === 'function') return window.html2pdf;
+    return null;
+  };
+
+  const runner = getRunner();
+  if (!runner) {
+    console.warn('html2pdf runner not found; falling back to window.print()');
+    if (!returnBase64 && typeof window !== 'undefined') {
+      window.print();
+      return true;
+    }
+    throw new Error('PDF generator library is not ready.');
   }
-  await html2pdf().set(opt).from(element).save();
+
+  if (returnBase64) {
+    return await runner().set(opt).from(element).outputPdf('datauristring');
+  }
+  await runner().set(opt).from(element).save();
   return true;
 }
 

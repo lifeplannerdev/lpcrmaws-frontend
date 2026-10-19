@@ -131,8 +131,15 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
 
   const isVoid = data.status === 'VOID';
   const isDraft = data.status === 'DRAFT';
+  const isSettled =
+    !isVoid &&
+    data.document_type !== 'PROFORMA' &&
+    round2(data.ledger_balance_due) <= 0 &&
+    round2(data.ledger_total_fee) > 0;
   const statusBadge = isVoid
     ? 'VOID / CANCELLED'
+    : isSettled
+    ? 'SETTLED'
     : data.payment_status_badge || (data.document_type === 'PROFORMA' ? 'PROFORMA' : 'PAID');
 
   const verifyUrl = useMemo(() => {
@@ -288,6 +295,9 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
                   <span className="text-[10px] text-slate-500 block">
                     Ref: {data.payment_reference || 'N/A'} • Status: <strong>{statusBadge}</strong>
                   </span>
+                  <span className="text-[10px] text-slate-600 font-semibold block mt-0.5">
+                    Paid On: {formatDateShort(data.payment_date || data.issue_date)}
+                  </span>
                 </div>
               </div>
 
@@ -349,7 +359,13 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
                       </div>
                       <div>
                         <span className="text-slate-500 block">Balance Due</span>
-                        <strong className="text-rose-700">{formatINR(data.ledger_balance_due)}</strong>
+                        {isSettled ? (
+                          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            SETTLED
+                          </span>
+                        ) : (
+                          <strong className="text-rose-700">{formatINR(data.ledger_balance_due)}</strong>
+                        )}
                       </div>
                     </div>
                   )}
@@ -454,11 +470,15 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
                     <h1 className="text-lg font-black text-slate-900 uppercase">{issuer.organization_name}</h1>
                     <p className="text-xs text-slate-600">{issuer.subtitle}</p>
                     <p className="text-xs text-slate-700 mt-1 whitespace-pre-line">{issuer.address}</p>
-                    <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 text-[11px]">
-                      <div><strong>GSTIN:</strong> {issuer.gstin || 'EXEMPT / NA'}</div>
-                      <div><strong>PAN:</strong> {issuer.pan_number || 'NA'}</div>
-                      <div><strong>Phone:</strong> {issuer.phone || '-'}</div>
-                      <div><strong>Email:</strong> {issuer.email || '-'}</div>
+                    <div className="mt-2 text-[10.5px] space-y-0.5">
+                      <div className="flex flex-wrap items-center gap-x-3 text-slate-700">
+                        <div><strong>GSTIN:</strong> {issuer.gstin || 'EXEMPT / NA'}</div>
+                        <div><strong>PAN:</strong> {issuer.pan_number || 'NA'}</div>
+                        <div><strong>Phone:</strong> {issuer.phone || '-'}</div>
+                      </div>
+                      <div className="text-[10px] text-slate-700 break-all leading-tight">
+                        <strong>Email:</strong> {issuer.email || '-'}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -473,6 +493,12 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
                   <span className="text-slate-500 font-semibold">Issue Date:</span>
                   <span className="font-semibold text-slate-900">{formatDateShort(data.issue_date)}</span>
                 </div>
+                {data.payment_date && (
+                  <div className="flex justify-between border-b border-slate-200 pb-1">
+                    <span className="text-slate-500 font-semibold">Payment Date:</span>
+                    <span className="font-semibold text-slate-900">{formatDateShort(data.payment_date)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between border-b border-slate-200 pb-1">
                   <span className="text-slate-500 font-semibold">Place of Supply:</span>
                   <span className="font-semibold text-slate-900">{data.place_of_supply || issuer.place_of_supply || 'Kerala (32)'}</span>
@@ -522,6 +548,10 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
                   <div className="text-slate-500">Batch & Campus:</div>
                   <div className="font-semibold text-slate-900">
                     {[data.batch_name, data.campus_name].filter(Boolean).join(' • ') || '-'}
+                  </div>
+                  <div className="text-slate-500">Payment Date:</div>
+                  <div className="font-semibold text-slate-900">
+                    {data.payment_date ? formatDateShort(data.payment_date) : formatDateShort(data.issue_date)}
                   </div>
                   <div className="text-slate-500">Payment Mode:</div>
                   <div className="font-semibold text-slate-900">
@@ -597,7 +627,13 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
                       </div>
                       <div>
                         <span className="text-slate-500 block">Balance Due</span>
-                        <strong className="text-rose-700">{formatINR(data.ledger_balance_due)}</strong>
+                        {isSettled ? (
+                          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            SETTLED
+                          </span>
+                        ) : (
+                          <strong className="text-rose-700">{formatINR(data.ledger_balance_due)}</strong>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -833,10 +869,15 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
             </div>
           </div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Issue Date</div>
-            <div className="text-sm font-bold text-slate-900 mt-0.5">
-              {formatDateShort(data.issue_date)}
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Date Info</div>
+            <div className="text-xs font-bold text-slate-900 mt-0.5">
+              Issued: {formatDateShort(data.issue_date)}
             </div>
+            {data.payment_date && (
+              <div className="text-[10px] text-slate-600 font-semibold">
+                Paid: {formatDateShort(data.payment_date)}
+              </div>
+            )}
           </div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Payment Mode & Ref</div>
@@ -1024,9 +1065,13 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
                     <span className="text-[9px] text-emerald-600 uppercase font-bold block">This Receipt</span>
                     <span className="font-extrabold text-emerald-700">{formatINR(data.ledger_current_paid || data.total_amount)}</span>
                   </div>
-                  <div className="bg-white rounded-lg p-2 border border-rose-200">
-                    <span className="text-[9px] text-rose-600 uppercase font-bold block">Balance Due</span>
-                    <span className="font-extrabold text-rose-700">{formatINR(data.ledger_balance_due)}</span>
+                  <div className={`rounded-lg p-2 border ${isSettled ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-rose-200'}`}>
+                    <span className={`text-[9px] uppercase font-bold block ${isSettled ? 'text-emerald-700' : 'text-rose-600'}`}>Balance Due</span>
+                    {isSettled ? (
+                      <span className="font-extrabold text-emerald-700 text-xs tracking-wider">SETTLED</span>
+                    ) : (
+                      <span className="font-extrabold text-rose-700">{formatINR(data.ledger_balance_due)}</span>
+                    )}
                   </div>
                 </div>
               </div>

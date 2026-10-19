@@ -176,17 +176,36 @@ export default function ReceiptStudioModal({
     void_reason: '',
   });
 
+  const recalculateLedgerValues = (state) => {
+    if (manualLedgerOverride) return state;
+    const totalFee = round2(state.ledger_total_fee);
+    const disc = round2(state.ledger_discount);
+    const prevPaid = round2(state.ledger_previously_paid);
+    const isProforma = state.document_type === 'PROFORMA';
+    const thisPaid = isProforma ? 0 : round2(state.total_amount ?? state.ledger_current_paid);
+    const totPaid = round2(prevPaid + thisPaid);
+    const balDue = Math.max(0, round2(totalFee - disc - totPaid));
+
+    return {
+      ...state,
+      ledger_current_paid: thisPaid.toFixed(2),
+      ledger_total_paid: totPaid.toFixed(2),
+      ledger_balance_due: balDue.toFixed(2),
+    };
+  };
+
   // Recalculate financials deterministically whenever line items, discount, or tax rules change (unless manualFinancialOverride is active)
   const recomputeFromItems = (nextState, forceRecalc = false) => {
     if (manualFinancialOverride && !forceRecalc) {
       const words = manualWordsOverride
         ? nextState.amount_in_words
         : amountToWords(nextState.total_amount);
-      return {
+      const updated = {
         ...nextState,
         amount_in_words: words,
         ledger_current_paid: nextState.total_amount,
       };
+      return recalculateLedgerValues(updated);
     }
 
     const calc = calculateReceiptFinancials({
@@ -203,12 +222,13 @@ export default function ReceiptStudioModal({
 
     const words = manualWordsOverride ? nextState.amount_in_words : calc.amount_in_words;
 
-    return {
+    const updated = {
       ...nextState,
       ...calc,
       amount_in_words: words,
       ledger_current_paid: calc.total_amount,
     };
+    return recalculateLedgerValues(updated);
   };
 
   // Hydrate studio when opened
@@ -234,20 +254,27 @@ export default function ReceiptStudioModal({
 
         // Case 2: 1-Click from an existing FeePayment
         if (initialPayment && initialPayment.id) {
-          const res = await fetch(`${API_BASE_URL}/fees/receipts/from-payment/${initialPayment.id}/`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({}),
-          });
-          if (res.ok) {
-            const generatedReceipt = await res.json();
-            if (!mounted) return;
-            hydrateReceiptObject(generatedReceipt);
-            if (onSaved) onSaved(generatedReceipt, true);
-            return;
+          try {
+            const res = await fetch(`${API_BASE_URL}/fees/receipts/from-payment/${initialPayment.id}/`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({}),
+            });
+            if (res.ok) {
+              const generatedReceipt = await res.json();
+              if (!mounted) return;
+              hydrateReceiptObject(generatedReceipt);
+              if (onSaved) onSaved(generatedReceipt, true);
+              return;
+            } else {
+              const errData = await res.json().catch(() => ({}));
+              console.warn('from-payment did not return 200, loading interactive studio with payment preloaded:', errData);
+            }
+          } catch (fetchErr) {
+            console.warn('from-payment fetch error:', fetchErr);
           }
         }
 
@@ -262,6 +289,11 @@ export default function ReceiptStudioModal({
           initialStudent?.id || initialAccount?.student || '';
         const targetAccountId = initialAccount?.id || '';
 
+        const accountPayments = Array.isArray(initialAccount?.payments) ? initialAccount.payments : [];
+        const targetPayment = initialPayment || (accountPayments.length > 0 ? accountPayments[accountPayments.length - 1] : null);
+        const hasPayment = Boolean(targetPayment && targetPayment.amount);
+        const isAccountSettled = Number(initialAccount?.balance_due || 0) <= 0 && Number(initialAccount?.total_paid || 0) > 0;
+
         let previewMeta = null;
         if (targetStudentId || targetAccountId) {
           const prevRes = await fetch(`${API_BASE_URL}/fees/receipts/calculate-preview/`, {
@@ -274,7 +306,12 @@ export default function ReceiptStudioModal({
               company,
               student: targetStudentId || null,
               account: targetAccountId || null,
-              subtotal_amount: initialAccount?.balance_due || initialAccount?.total_due || '0.00',
+              payment: targetPayment?.id || null,
+              subtotal_amount: hasPayment
+                ? targetPayment.amount
+                : isAccountSettled
+                ? initialAccount?.total_paid || '0.00'
+                : initialAccount?.balance_due || '0.00',
             }),
           });
           if (prevRes.ok) {
@@ -315,24 +352,46 @@ export default function ReceiptStudioModal({
 
         const stuMeta = previewMeta?.student_metadata || {};
         const ledMeta = previewMeta?.ledger_snapshot || {};
-        const defaultAmount = round2(
-          initialAccount?.balance_due || initialAccount?.total_due || 0
-        ).toFixed(2);
+
+        let defaultAmount = '0.00';
+        if (hasPayment) {
+          defaultAmount = round2(targetPayment.amount).toFixed(2);
+        } else if (isAccountSettled) {
+          defaultAmount = round2(initialAccount?.total_paid || initialAccount?.total_due || 0).toFixed(2);
+        } else {
+          defaultAmount = round2(initialAccount?.balance_due || initialAccount?.total_due || 0).toFixed(2);
+        }
+
+        const initialDocType = (!hasPayment && !isAccountSettled && round2(initialAccount?.balance_due || 0) > 0) ? 'PROFORMA' : 'RECEIPT';
+        const initialBadge = isAccountSettled ? 'SETTLED' : (initialDocType === 'PROFORMA' ? 'PROFORMA' : 'PAID');
+
         const courseTitle =
           stuMeta.course_or_package_name ||
           initialAccount?.plan_name ||
           initialAccount?.plan_code ||
           'Course Tuition Fee';
 
+        const totFee = ledMeta.ledger_total_fee || String(initialAccount?.total_due || defaultAmount);
+        const disc = ledMeta.ledger_discount || String(initialAccount?.discount || '0.00');
+        let prevPaid = '0.00';
+        if (hasPayment && initialAccount?.total_paid) {
+          prevPaid = Math.max(0, round2(Number(initialAccount.total_paid) - Number(targetPayment.amount))).toFixed(2);
+        } else if (ledMeta.ledger_previously_paid) {
+          prevPaid = ledMeta.ledger_previously_paid;
+        }
+        const curPaid = initialDocType === 'PROFORMA' ? '0.00' : defaultAmount;
+        const totPaid = round2(Number(prevPaid) + Number(curPaid)).toFixed(2);
+        const balDue = Math.max(0, round2(Number(totFee) - Number(disc) - Number(totPaid))).toFixed(2);
+
         const baseDraft = {
           id: null,
           company,
           student: targetStudentId || '',
           account: targetAccountId || '',
-          payment: '',
+          payment: targetPayment ? targetPayment.id : '',
           receipt_number: '',
           financial_year: getIndianFinancialYear(),
-          document_type: 'RECEIPT',
+          document_type: initialDocType,
           status: 'ISSUED',
           issue_date: toLocalDatetimeInput(),
           verification_token: '',
@@ -361,18 +420,18 @@ export default function ReceiptStudioModal({
           supply_type: 'INTRA_STATE',
           gst_rate: String(settingsData.default_gst_rate || '18.00'),
 
-          payment_method: 'UPI',
-          payment_reference: '',
-          payment_date: toLocalDatetimeInput(),
-          installment_label: '',
-          payment_status_badge: 'PAID',
+          payment_method: targetPayment?.payment_method || 'UPI',
+          payment_reference: targetPayment?.reference || '',
+          payment_date: targetPayment?.payment_date ? toLocalDatetimeInput(targetPayment.payment_date) : toLocalDatetimeInput(),
+          installment_label: targetPayment?.installment?.label || (targetPayment?.installment ? `Installment #${targetPayment.installment.sequence_number || ''}` : ''),
+          payment_status_badge: initialBadge,
 
-          ledger_total_fee: ledMeta.ledger_total_fee || String(initialAccount?.total_due || defaultAmount),
-          ledger_discount: ledMeta.ledger_discount || '0.00',
-          ledger_previously_paid: ledMeta.ledger_previously_paid || String(initialAccount?.total_paid || '0.00'),
-          ledger_current_paid: defaultAmount,
-          ledger_total_paid: ledMeta.ledger_total_paid || defaultAmount,
-          ledger_balance_due: ledMeta.ledger_balance_due || '0.00',
+          ledger_total_fee: totFee,
+          ledger_discount: disc,
+          ledger_previously_paid: prevPaid,
+          ledger_current_paid: curPaid,
+          ledger_total_paid: totPaid,
+          ledger_balance_due: balDue,
           ledger_next_due_date: ledMeta.ledger_next_due_date || '',
           installment_schedule_snapshot: ledMeta.installment_schedule_snapshot || [],
 
@@ -382,7 +441,16 @@ export default function ReceiptStudioModal({
             ...(settingsData.default_display_options || {}),
           },
           line_items: [
-            createEmptyLineItem(settingsData.sac_code || '999293', courseTitle, defaultAmount, ''),
+            createEmptyLineItem(
+              settingsData.sac_code || '999293',
+              hasPayment
+                ? `${courseTitle} - Payment (${targetPayment.latest_receipt_number || targetPayment.receipt_number || targetPayment.payment_method})`
+                : isAccountSettled
+                ? `${courseTitle} - Full Course Settlement`
+                : courseTitle,
+              defaultAmount,
+              targetPayment?.installment?.label || ''
+            ),
           ],
           issuer_snapshot: issuerSnap,
           snapshot_data: {},
@@ -553,14 +621,14 @@ export default function ReceiptStudioModal({
 
   // Auto-download PDF if requested once loaded
   useEffect(() => {
-    if (isOpen && !loading && autoDownloadOnLoad && form.id && exportTargetRef.current) {
+    if (isOpen && !loading && autoDownloadOnLoad && exportTargetRef.current) {
       const timer = setTimeout(() => {
         handleDownloadPdf();
-      }, 350);
+      }, 400);
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, loading, autoDownloadOnLoad, form.id]);
+  }, [isOpen, loading, autoDownloadOnLoad]);
 
   const operatingModeLabel = useMemo(() => {
     if (form.payment) {
@@ -659,6 +727,138 @@ export default function ReceiptStudioModal({
     } catch (err) {
       toast.error(err.message || 'Could not auto-pull details');
     }
+  };
+
+  const selectedAccountObj = useMemo(() => {
+    if (!form.account) return null;
+    return accounts.find((a) => String(a.id) === String(form.account)) || initialAccount || null;
+  }, [form.account, accounts, initialAccount]);
+
+  const availablePayments = useMemo(() => {
+    if (!selectedAccountObj) return [];
+    return Array.isArray(selectedAccountObj.payments) ? selectedAccountObj.payments : [];
+  }, [selectedAccountObj]);
+
+  const isCurrentAccountSettled = useMemo(() => {
+    if (!selectedAccountObj) return false;
+    return Number(selectedAccountObj.balance_due || 0) <= 0 && Number(selectedAccountObj.total_paid || 0) > 0;
+  }, [selectedAccountObj]);
+
+  const handleSelectPaymentRecord = (paymentId) => {
+    if (!paymentId) {
+      setForm((prev) => ({ ...prev, payment: '' }));
+      return;
+    }
+    const payObj = availablePayments.find((p) => String(p.id) === String(paymentId));
+    if (!payObj) return;
+
+    setForm((prev) => {
+      const payAmount = round2(payObj.amount).toFixed(2);
+      const payDate = payObj.payment_date ? toLocalDatetimeInput(payObj.payment_date) : prev.payment_date;
+      const ref = payObj.reference || '';
+      const method = payObj.payment_method || 'UPI';
+      const rNum = payObj.latest_receipt_number || payObj.receipt_number || `Payment #${payObj.id}`;
+      const courseTitle = prev.course_or_package_name || selectedAccountObj?.plan_name || 'Course Tuition Fee';
+
+      const totFee = round2(prev.ledger_total_fee || selectedAccountObj?.total_due || payAmount);
+      const disc = round2(prev.ledger_discount || selectedAccountObj?.discount || 0);
+      const accTotPaid = round2(selectedAccountObj?.total_paid || payAmount);
+      const prevPaid = Math.max(0, round2(accTotPaid - Number(payAmount))).toFixed(2);
+      const curPaid = payAmount;
+      const totPaid = (Number(prevPaid) + Number(curPaid)).toFixed(2);
+      const balDue = Math.max(0, round2(totFee - disc - Number(totPaid))).toFixed(2);
+
+      const updated = {
+        ...prev,
+        payment: payObj.id,
+        document_type: 'RECEIPT',
+        payment_status_badge: balDue <= 0 ? 'SETTLED' : 'PAID',
+        payment_method: method,
+        payment_reference: ref,
+        payment_date: payDate,
+        subtotal_amount: payAmount,
+        installment_label: payObj.installment?.label || prev.installment_label || '',
+        ledger_total_fee: totFee.toFixed(2),
+        ledger_discount: disc.toFixed(2),
+        ledger_previously_paid: prevPaid,
+        ledger_current_paid: curPaid,
+        ledger_total_paid: totPaid,
+        ledger_balance_due: balDue,
+        line_items: [
+          createEmptyLineItem(
+            prev.issuer_snapshot?.sac_code || '999293',
+            `${courseTitle} - Payment (${rNum})`,
+            payAmount,
+            payObj.installment?.label || ''
+          ),
+        ],
+      };
+      return recomputeFromItems(updated, true);
+    });
+    toast.success(`Loaded payment record: ${formatINR(payObj.amount)}`);
+  };
+
+  const handleLoadSettlementReceipt = () => {
+    if (!selectedAccountObj) return;
+    setForm((prev) => {
+      const fullAmount = round2(selectedAccountObj.total_paid || selectedAccountObj.total_due || prev.ledger_total_fee).toFixed(2);
+      const courseTitle = prev.course_or_package_name || selectedAccountObj.plan_name || 'Course Tuition Fee';
+      const updated = {
+        ...prev,
+        payment: '',
+        document_type: 'RECEIPT',
+        payment_status_badge: 'SETTLED',
+        subtotal_amount: fullAmount,
+        ledger_total_fee: fullAmount,
+        ledger_discount: '0.00',
+        ledger_previously_paid: '0.00',
+        ledger_current_paid: fullAmount,
+        ledger_total_paid: fullAmount,
+        ledger_balance_due: '0.00',
+        line_items: [
+          createEmptyLineItem(
+            prev.issuer_snapshot?.sac_code || '999293',
+            `${courseTitle} - Full Course Fee Settlement`,
+            fullAmount,
+            'Full Clearance'
+          ),
+        ],
+      };
+      return recomputeFromItems(updated, true);
+    });
+    toast.success('Loaded Full Settlement Clearance Receipt');
+  };
+
+  const handleLoadProformaInvoice = () => {
+    if (!selectedAccountObj) return;
+    setForm((prev) => {
+      const balAmount = round2(selectedAccountObj.balance_due || 0).toFixed(2);
+      const courseTitle = prev.course_or_package_name || selectedAccountObj.plan_name || 'Course Tuition Fee';
+      const totFee = round2(selectedAccountObj.total_due || prev.ledger_total_fee).toFixed(2);
+      const prevPaid = round2(selectedAccountObj.total_paid || 0).toFixed(2);
+      const updated = {
+        ...prev,
+        payment: '',
+        document_type: 'PROFORMA',
+        payment_status_badge: 'PROFORMA',
+        subtotal_amount: balAmount,
+        ledger_total_fee: totFee,
+        ledger_previously_paid: prevPaid,
+        ledger_current_paid: '0.00',
+        ledger_total_paid: prevPaid,
+        ledger_balance_due: balAmount,
+        line_items: [
+          createEmptyLineItem(
+            prev.issuer_snapshot?.sac_code || '999293',
+            `${courseTitle} - Balance Due Invoice`,
+            balAmount,
+            'Remaining Due'
+          ),
+        ],
+      };
+      return recomputeFromItems(updated, true);
+    });
+    toast.success('Loaded Proforma Invoice for Balance Due');
   };
 
   // Line Item Handlers
@@ -1377,6 +1577,69 @@ export default function ReceiptStudioModal({
                           </div>
                         </div>
                       </div>
+
+                      {availablePayments.length > 0 && (
+                        <div className="mt-3 p-3.5 rounded-xl bg-white border border-indigo-200 shadow-sm space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-extrabold text-indigo-950 flex items-center gap-1.5">
+                              <FileCheck2 size={15} className="text-indigo-600" />
+                              Select Payment to Receipt:
+                            </label>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                              {availablePayments.length} Payment{availablePayments.length > 1 ? 's' : ''} on record
+                            </span>
+                          </div>
+
+                          <select
+                            value={form.payment || ''}
+                            onChange={(e) => handleSelectPaymentRecord(e.target.value)}
+                            className="w-full px-3 py-2 rounded-xl border border-indigo-300 bg-indigo-50/20 text-xs font-semibold text-slate-900"
+                          >
+                            <option value="">-- Custom / Manual Bill (No specific payment linked) --</option>
+                            {availablePayments.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.latest_receipt_number || p.receipt_number || `Payment #${p.id}`} — {formatINR(p.amount)} via {p.payment_method} on {p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'} {p.reference ? `(Ref: ${p.reference})` : ''}
+                              </option>
+                            ))}
+                          </select>
+
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                            <span className="text-[10px] uppercase font-bold text-slate-400">Quick Fetch:</span>
+                            {availablePayments.map((p) => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => handleSelectPaymentRecord(p.id)}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
+                                  String(form.payment) === String(p.id)
+                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                    : 'bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50'
+                                }`}
+                              >
+                                {p.latest_receipt_number || p.receipt_number || `Pay #${p.id}`}: {formatINR(p.amount)}
+                              </button>
+                            ))}
+                            {isCurrentAccountSettled && (
+                              <button
+                                type="button"
+                                onClick={handleLoadSettlementReceipt}
+                                className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 shadow-sm"
+                              >
+                                🎓 Full Settlement Receipt ({formatINR(selectedAccountObj?.total_paid || form.ledger_total_fee)})
+                              </button>
+                            )}
+                            {round2(selectedAccountObj?.balance_due || 0) > 0 && (
+                              <button
+                                type="button"
+                                onClick={handleLoadProformaInvoice}
+                                className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300"
+                              >
+                                📄 Proforma for Balance Due ({formatINR(selectedAccountObj?.balance_due)})
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Recipient Override Fields */}
@@ -2388,12 +2651,13 @@ export default function ReceiptStudioModal({
           {/* Offscreen Full-Scale 1:1 A4 Render Target for Crisp PDF & Print Export */}
           <div
             style={{
-              position: 'fixed',
-              left: '-10000px',
+              position: 'absolute',
+              left: 0,
               top: 0,
               width: '210mm',
+              opacity: 0,
               pointerEvents: 'none',
-              zIndex: -1,
+              zIndex: -9999,
             }}
             aria-hidden="true"
           >
