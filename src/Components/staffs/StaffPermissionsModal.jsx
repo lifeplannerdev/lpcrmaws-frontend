@@ -17,6 +17,7 @@ const PERMISSION_OPTIONS = [
   { id: 'tasks:edit_any', label: 'Edit & Assign Tasks', group: 'Tasks' },
   { id: 'tasks:kochi', label: 'Assign & Approve Tasks (Kochi)', group: 'Tasks' },
   { id: 'tasks:kottayam', label: 'Assign & Approve Tasks (Kottayam)', group: 'Tasks' },
+  { id: 'tasks:documentation', label: 'Assign & Approve Tasks (Documentation)', group: 'Tasks' },
   { id: 'reports:read_all', label: 'View Staff Reports (All)', group: 'Reports' },
   { id: 'reports:sales_all', label: 'View Staff Reports (Sales: ADM, BMCO, FLAG)', group: 'Reports' },
   { id: 'reports:kochi', label: 'View Staff Reports (Kochi Only)', group: 'Reports' },

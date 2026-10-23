@@ -55,8 +55,11 @@ export default function TaskViewPage() {
   const taskLoc = (task?.assigned_to_location || '').toLowerCase();
   const hasKochiTaskPerm = hasPermission('tasks:kochi') && taskLoc === 'kochi';
   const hasKottayamTaskPerm = hasPermission('tasks:kottayam') && taskLoc === 'kottayam';
+  const assignedRoles = (task?.assigned_to_roles || []).map(r => String(r).toUpperCase());
+  const isDocAssignee = assignedRoles.includes('DOCUMENTATION');
+  const hasDocTaskPerm = hasPermission('tasks:documentation') && isDocAssignee;
   // "see approving own task is not possible for them"
-  const canApproveTask = !isOwnTask && (isManagingDirector || hasKochiTaskPerm || hasKottayamTaskPerm);
+  const canApproveTask = !isOwnTask && (isManagingDirector || hasKochiTaskPerm || hasKottayamTaskPerm || hasDocTaskPerm);
 
   // ── Style maps ─────────────────────────────────────────────────────────────
 

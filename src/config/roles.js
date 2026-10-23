@@ -54,7 +54,7 @@ export const masterNavigation = [
 
   // ── Tasks & Collaboration ──
   { id: "myTasks", label: "My Tasks", icon: ListTodo, path: "/mytasks", requiredResource: "tasks", requiredSpecificPermission: "tasks:read_own", category: "tasks", description: "Personal assignments & to-dos" },
-  { id: "allTasks", label: "Tasks", icon: ListTodo, path: "/staff/tasks", requiredResource: "tasks", requiredPermissions: ["tasks:read_all", "tasks:kochi", "tasks:kottayam"], category: "tasks", description: "Company-wide task board" },
+  { id: "allTasks", label: "Tasks", icon: ListTodo, path: "/staff/tasks", requiredResource: "tasks", requiredPermissions: ["tasks:read_all", "tasks:kochi", "tasks:kottayam", "tasks:documentation"], category: "tasks", description: "Company-wide task board" },
   { id: "reminders", label: "Reminders", icon: CalendarClock, path: "/reminders", requiredPermissions: ["processing:reminders_admin", "processing:reminders_users"], category: "tasks", description: "Employee checklist & reminder workflow" },
   { id: "feeds", label: "Feeds", icon: UserCheck, path: "/feeds", category: "tasks", description: "Internal company feed & updates" },
 
