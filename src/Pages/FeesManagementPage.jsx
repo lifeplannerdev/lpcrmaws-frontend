@@ -1679,6 +1679,7 @@ export default function FeesManagementPage() {
           autoDownloadOnLoad={receiptStudioState.autoDownloadOnLoad}
           accounts={accounts}
           students={students}
+          readOnly={!canManageFees}
           canManageFees={canManageFees}
           onSaved={() => fetchData()}
         />

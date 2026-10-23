@@ -3,7 +3,7 @@ import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { User, Phone, MapPin, Calendar, Award, CheckCircle, XCircle, AlertTriangle, BookOpen, Clock, Loader2, RefreshCw, Edit, UserCheck, ArrowUpCircle, ArrowDownCircle, Trash2, FileCheck2, Download } from 'lucide-react';
+import { User, Phone, MapPin, Calendar, Award, CheckCircle, XCircle, AlertTriangle, BookOpen, Clock, Loader2, RefreshCw, Edit, UserCheck, ArrowUpCircle, ArrowDownCircle, Trash2, FileCheck2, Download, Eye } from 'lucide-react';
 import EditStudentModal from './EditStudentModal';
 import ReceiptStudioModal from '../../Components/fees/ReceiptStudioModal';
 
@@ -16,6 +16,8 @@ export default function StudentProfilePage() {
   const { hasPermission } = usePermissions();
   const canEdit = hasPermission('flag:admin') || hasPermission('flag:trainer');
   const canDelete = hasPermission('flag:admin') || user?.is_superuser;
+  const isTrainer = (user?.role_names?.some(r => r.toUpperCase() === 'TRAINER') || false) && !hasPermission('flag:admin') && !user?.is_superuser;
+  const canManageReceipts = (hasPermission('flag:admin') || hasPermission('flag:fees') || hasPermission('fees:manage') || hasPermission('fees:partial_payment') || user?.is_superuser) && !isTrainer;
 
   const [student, setStudent] = useState(null);
   const [history, setHistory] = useState([]);
@@ -36,8 +38,10 @@ export default function StudentProfilePage() {
   const [assigningTrainer, setAssigningTrainer] = useState(false);
   const [receiptStudioState, setReceiptStudioState] = useState({
     isOpen: false,
+    initialReceipt: null,
     initialPayment: null,
     autoDownloadOnLoad: false,
+    readOnly: false,
   });
 
 
@@ -654,19 +658,23 @@ export default function StudentProfilePage() {
                         <h4 className="font-bold text-gray-900 text-sm">Payment History</h4>
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-gray-500 font-medium">{feeAccount.payments?.length || 0} Transactions</span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setReceiptStudioState({
-                                isOpen: true,
-                                initialPayment: null,
-                                autoDownloadOnLoad: false,
-                              })
-                            }
-                            className="px-3 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 flex items-center gap-1"
-                          >
-                            <FileCheck2 size={13} /> New Receipt / Proforma
-                          </button>
+                          {canManageReceipts && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setReceiptStudioState({
+                                  isOpen: true,
+                                  initialReceipt: null,
+                                  initialPayment: null,
+                                  autoDownloadOnLoad: false,
+                                  readOnly: false,
+                                })
+                              }
+                              className="px-3 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 flex items-center gap-1"
+                            >
+                              <FileCheck2 size={13} /> New Receipt / Proforma
+                            </button>
+                          )}
                         </div>
                       </div>
                       {(!feeAccount.payments || feeAccount.payments.length === 0) ? (
@@ -694,32 +702,80 @@ export default function StudentProfilePage() {
                                   <td className="px-6 py-3.5 text-gray-500 text-xs">{p.notes || '-'}</td>
                                   <td className="px-6 py-3.5 text-right whitespace-nowrap">
                                     <div className="inline-flex items-center gap-1.5">
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setReceiptStudioState({
-                                            isOpen: true,
-                                            initialPayment: p,
-                                            autoDownloadOnLoad: false,
-                                          })
-                                        }
-                                        className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 inline-flex items-center gap-1"
-                                      >
-                                        <FileCheck2 size={12} /> Receipt Studio
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setReceiptStudioState({
-                                            isOpen: true,
-                                            initialPayment: p,
-                                            autoDownloadOnLoad: true,
-                                          })
-                                        }
-                                        className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold border border-emerald-200 inline-flex items-center gap-1"
-                                      >
-                                        <Download size={12} /> PDF
-                                      </button>
+                                      {canManageReceipts ? (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setReceiptStudioState({
+                                                isOpen: true,
+                                                initialReceipt: p.latest_receipt_id ? { id: p.latest_receipt_id } : null,
+                                                initialPayment: p,
+                                                autoDownloadOnLoad: false,
+                                                readOnly: false,
+                                              })
+                                            }
+                                            className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 inline-flex items-center gap-1"
+                                          >
+                                            <FileCheck2 size={12} /> Receipt Studio
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setReceiptStudioState({
+                                                isOpen: true,
+                                                initialReceipt: p.latest_receipt_id ? { id: p.latest_receipt_id } : null,
+                                                initialPayment: p,
+                                                autoDownloadOnLoad: true,
+                                                readOnly: false,
+                                              })
+                                            }
+                                            className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold border border-emerald-200 inline-flex items-center gap-1"
+                                          >
+                                            <Download size={12} /> PDF
+                                          </button>
+                                        </>
+                                      ) : (
+                                        /* Locked to view generated receipts only for TRAINER / view-only roles */
+                                        p.latest_receipt_id ? (
+                                          <>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                setReceiptStudioState({
+                                                  isOpen: true,
+                                                  initialReceipt: { id: p.latest_receipt_id },
+                                                  initialPayment: p,
+                                                  autoDownloadOnLoad: false,
+                                                  readOnly: true,
+                                                })
+                                              }
+                                              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-300 inline-flex items-center gap-1"
+                                              title="View Official Receipt"
+                                            >
+                                              <Eye size={12} /> View Receipt
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                setReceiptStudioState({
+                                                  isOpen: true,
+                                                  initialReceipt: { id: p.latest_receipt_id },
+                                                  initialPayment: p,
+                                                  autoDownloadOnLoad: true,
+                                                  readOnly: true,
+                                                })
+                                              }
+                                              className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold border border-emerald-200 inline-flex items-center gap-1"
+                                              title="Download Official PDF"
+                                            >
+                                              <Download size={12} /> PDF
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <span className="text-xs text-gray-400 italic">No receipt generated</span>
+                                        )
+                                      )}
                                     </div>
                                   </td>
                                 </tr>
@@ -1022,16 +1078,21 @@ export default function StudentProfilePage() {
           onClose={() =>
             setReceiptStudioState({
               isOpen: false,
+              initialReceipt: null,
               initialPayment: null,
               autoDownloadOnLoad: false,
+              readOnly: false,
             })
           }
           getToken={async () => accessToken || (await refreshAccessToken())}
           company="FLAG"
+          initialReceipt={receiptStudioState.initialReceipt}
           initialPayment={receiptStudioState.initialPayment}
           initialAccount={feeAccount}
           initialStudent={student}
           autoDownloadOnLoad={receiptStudioState.autoDownloadOnLoad}
+          readOnly={receiptStudioState.readOnly || isTrainer || !canManageReceipts}
+          canManageFees={canManageReceipts}
           accounts={feeAccount ? [feeAccount] : []}
           students={student ? [student] : []}
           onSaved={() => fetchStudentData()}

@@ -449,7 +449,7 @@ export default function ReceiptsWorkspace({
                             onClick={() => handleOpenEditStudio(r, false)}
                             className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs"
                           >
-                            Studio / View
+                            {canManageFees ? 'Studio / Edit' : 'View Receipt'}
                           </button>
                           <button
                             type="button"
@@ -562,6 +562,7 @@ export default function ReceiptsWorkspace({
           initialReceipt={selectedReceipt}
           accounts={accounts}
           students={students}
+          readOnly={!canManageFees}
           canManageFees={canManageFees}
           autoDownloadOnLoad={autoDownloadPdf}
           onSaved={() => fetchReceipts()}
