@@ -13,6 +13,8 @@ import {
   downloadExcelFromResponse
 } from './fdsApi';
 import FdsBranchSelector, { getBranchLabel, GlobalDataBadge } from './FdsBranchSelector';
+import ReceiptsWorkspace from '../../Components/fees/ReceiptsWorkspace';
+import ReceiptStudioModal from '../../Components/fees/ReceiptStudioModal';
 import './fds-theme.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -64,12 +66,21 @@ export default function FdsFeesPage() {
   const { hasPermission, hasAnyPermission } = usePermissions();
 
   const isManagement = hasPermission('fds:management') || user?.is_superuser;
-  const canManageFees = hasPermission('fds:admin') || hasPermission('fds:admin_own');
-  const canViewFees = hasPermission('fds:admin') || hasPermission('fds:view') || hasPermission('fds_fees:view') || hasPermission('fds:management');
+  const canManageFees = hasPermission('fds:admin') || hasPermission('fds:admin_own') || hasPermission('fds_fees:manage') || hasPermission('fees:accounts') || hasPermission('fees:fds') || user?.is_superuser;
+  const canViewFees = hasPermission('fds:admin') || hasPermission('fds:view') || hasPermission('fds_fees:view') || hasPermission('fds:management') || hasPermission('fees:accounts') || hasPermission('fees:fds');
 
   // Main navigation & workspace
-  const [mainTab, setMainTab] = useState('accounts'); // 'accounts' | 'spreadsheet' | 'pending_students' | 'all_fees' | 'catalog' | 'policies'
+  const [mainTab, setMainTab] = useState('accounts'); // 'accounts' | 'spreadsheet' | 'pending_students' | 'all_fees' | 'catalog' | 'policies' | 'receipts'
   const [activeSubTab, setActiveSubTab] = useState('recordPayment'); // 'recordPayment' | 'restructure' | 'installments' | 'payments' | 'adjustments'
+
+  const [receiptStudioState, setReceiptStudioState] = useState({
+    isOpen: false,
+    initialReceipt: null,
+    initialPayment: null,
+    initialAccount: null,
+    initialStudent: null,
+    autoDownloadOnLoad: false,
+  });
 
   // Data states
   const [accounts, setAccounts] = useState([]);
@@ -155,60 +166,115 @@ export default function FdsFeesPage() {
     return res.json();
   }, [authFetch]);
 
-  // Selected account memo
-  const selectedAccount = useMemo(() => {
-    return accounts.find(a => a.id === selectedAccountId) || accounts[0] || null;
-  }, [accounts, selectedAccountId]);
+  // Client-side filtered accounts memo
+  const filteredAccounts = useMemo(() => {
+    return accounts.filter(acc => {
+      // 1. Branch filter
+      if (isManagement && filterBranch && filterBranch !== 'ALL') {
+        const targetBranch = filterBranch.toUpperCase();
+        const accBranch = (acc.branch || '').toUpperCase();
+        const planName = (acc.plan_name || '').toUpperCase();
+        if (accBranch && accBranch !== targetBranch) return false;
+        if (!accBranch && planName.includes('KOCHI') && targetBranch !== 'KOCHI') return false;
+        if (!accBranch && planName.includes('KOTTAYAM') && targetBranch !== 'KOTTAYAM') return false;
+      }
 
-  // Auto-set selected account on first load
-  useEffect(() => {
-    if (accounts.length > 0 && !selectedAccountId) {
-      setSelectedAccountId(accounts[0].id);
-    }
-  }, [accounts, selectedAccountId]);
+      // 2. Class Category filter
+      if (categoryFilter && categoryFilter !== 'ALL') {
+        const target = categoryFilter.toUpperCase();
+        const cat = (acc.class_category || acc.active_package_detail?.category || '').toUpperCase();
+        const plan = (acc.plan_name || acc.plan_code || '').toUpperCase();
+        if (cat !== target && !plan.includes(target)) {
+          return false;
+        }
+      }
+
+      // 3. Status filter
+      if (statusFilter && acc.status !== statusFilter) {
+        return false;
+      }
+
+      // 4. Search query
+      if (search && search.trim()) {
+        const q = search.trim().toLowerCase();
+        const name = (acc.student_name || '').toLowerCase();
+        const code = (acc.student_id_code || '').toLowerCase();
+        const plan = (acc.plan_name || acc.plan_code || '').toLowerCase();
+        const batch = (acc.batch_name || '').toLowerCase();
+        const contact = (acc.contact_no || acc.whatsapp_no || '').toLowerCase();
+        if (!name.includes(q) && !code.includes(q) && !plan.includes(q) && !batch.includes(q) && !contact.includes(q)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [accounts, isManagement, filterBranch, categoryFilter, statusFilter, search]);
+
+  // Selected account memo (derives from filtered accounts)
+  const selectedAccount = useMemo(() => {
+    return filteredAccounts.find(a => a.id === selectedAccountId) || filteredAccounts[0] || null;
+  }, [filteredAccounts, selectedAccountId]);
 
   // Main data fetcher
   const fetchData = useCallback(async () => {
     if (!canViewFees) return;
     setLoading(true);
     try {
-      const accountParams = {};
-      if (search) accountParams.search = search;
-      if (categoryFilter !== 'ALL') accountParams.class_category = categoryFilter;
-      if (statusFilter) accountParams.status = statusFilter;
+      const accountParams = { page_size: 500 };
       if (isManagement && filterBranch && filterBranch !== 'ALL') accountParams.branch = filterBranch;
+      if (categoryFilter !== 'ALL') accountParams.class_category = categoryFilter;
 
       const branchParam = isManagement && filterBranch && filterBranch !== 'ALL' ? { branch: filterBranch } : {};
 
       const [
-        accountsData,
-        summaryData,
-        pendingData,
-        structuresData,
-        studentsData,
-        paymentsData,
-        policiesData
-      ] = await Promise.all([
+        accountsRes,
+        summaryRes,
+        pendingRes,
+        structuresRes,
+        studentsRes,
+        paymentsRes,
+        policiesRes,
+      ] = await Promise.allSettled([
         fdsApi.feeAccounts(authFetchJson, accountParams),
         fdsApi.feeSummary(authFetchJson, { class_category: categoryFilter !== 'ALL' ? categoryFilter : '', ...branchParam }),
         fdsApi.pendingFeeStudents(authFetchJson, { class_category: categoryFilter !== 'ALL' ? categoryFilter : '', ...branchParam }),
         fdsApi.feeStructures(authFetchJson, { is_active: true }),
         fdsApi.students(authFetchJson, { is_active: true, page_size: 500, ...branchParam }),
         fdsApi.payments(authFetchJson, { page_size: 100, ...branchParam }),
-        fdsApi.feePolicies(authFetchJson).catch(() => ({ block_without_fee_account: false, pending_if_overdue: false })),
+        fdsApi.feePolicies(authFetchJson),
       ]);
 
-      const accList = accountsData.results ?? accountsData;
-      setAccounts(accList);
-      setSummary(summaryData || { totalDue: 0, totalPaid: 0, balanceDue: 0, overdueAmount: 0 });
-      setPendingStudents(pendingData || []);
-      setFeeStructures(structuresData.results ?? structuresData);
-      setStudents(studentsData.results ?? studentsData);
-      setAllPayments(paymentsData.results ?? paymentsData);
-      setFeePolicies(policiesData || { block_without_fee_account: false, pending_if_overdue: false });
+      if (accountsRes.status === 'fulfilled') {
+        const accList = accountsRes.value?.results ?? accountsRes.value ?? [];
+        setAccounts(accList);
+        setSelectedAccountId(prev => {
+          if (!prev && accList.length > 0) return accList[0].id;
+          if (prev && !accList.some(a => a.id === prev) && accList.length > 0) return accList[0].id;
+          return prev;
+        });
+      } else {
+        console.error('Failed to load fee accounts:', accountsRes.reason);
+        setMessage({ type: 'error', text: 'Failed to load fee accounts: ' + (accountsRes.reason?.message || 'Network error') });
+      }
 
-      if (selectedAccountId && !accList.some(a => a.id === selectedAccountId) && accList.length > 0) {
-        setSelectedAccountId(accList[0].id);
+      if (summaryRes.status === 'fulfilled') {
+        setSummary(summaryRes.value || { totalDue: 0, totalPaid: 0, balanceDue: 0, overdueAmount: 0 });
+      }
+      if (pendingRes.status === 'fulfilled') {
+        setPendingStudents(pendingRes.value || []);
+      }
+      if (structuresRes.status === 'fulfilled') {
+        setFeeStructures(structuresRes.value?.results ?? structuresRes.value ?? []);
+      }
+      if (studentsRes.status === 'fulfilled') {
+        setStudents(studentsRes.value?.results ?? studentsRes.value ?? []);
+      }
+      if (paymentsRes.status === 'fulfilled') {
+        setAllPayments(paymentsRes.value?.results ?? paymentsRes.value ?? []);
+      }
+      if (policiesRes.status === 'fulfilled') {
+        setFeePolicies(policiesRes.value || { block_without_fee_account: false, pending_if_overdue: false });
       }
     } catch (err) {
       console.error('Failed to load FDS fee data', err);
@@ -216,7 +282,7 @@ export default function FdsFeesPage() {
     } finally {
       setLoading(false);
     }
-  }, [authFetchJson, canViewFees, search, categoryFilter, statusFilter, selectedAccountId, isManagement, filterBranch]);
+  }, [authFetchJson, canViewFees, isManagement, filterBranch, categoryFilter]);
 
   useEffect(() => {
     fetchData();
@@ -628,6 +694,12 @@ export default function FdsFeesPage() {
             All Fees
           </button>
           <button
+            onClick={() => setMainTab('receipts')}
+            className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all flex items-center gap-1.5 ${mainTab === 'receipts' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-slate-50'}`}
+          >
+            <Receipt size={16} /> Receipts & Invoices
+          </button>
+          <button
             onClick={() => setMainTab('catalog')}
             className={`whitespace-nowrap px-4 py-3 text-sm font-semibold rounded-xl transition-all ${mainTab === 'catalog' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-600 hover:text-gray-900 hover:bg-slate-50'}`}
           >
@@ -649,7 +721,12 @@ export default function FdsFeesPage() {
               <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">Fee Accounts</h2>
+                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      Fee Accounts
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                        {filteredAccounts.length}
+                      </span>
+                    </h2>
                     <p className="text-xs text-gray-500">Select an account to view and manage</p>
                   </div>
                   {canManageFees && (
@@ -706,14 +783,14 @@ export default function FdsFeesPage() {
                 {/* Accounts List */}
                 {loading ? (
                   <div className="py-16 text-center text-sm text-gray-400">Loading fee accounts...</div>
-                ) : accounts.length === 0 ? (
+                ) : filteredAccounts.length === 0 ? (
                   <div className="py-16 text-center text-sm text-gray-400 flex flex-col items-center gap-2">
                     <Receipt size={32} className="text-gray-300" />
-                    <span>No fee accounts found.</span>
+                    <span>No fee accounts found matching filters.</span>
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-[620px] overflow-y-auto pr-1">
-                    {accounts.map(acc => {
+                    {filteredAccounts.map(acc => {
                       const isSelected = selectedAccount?.id === acc.id;
                       return (
                         <div
@@ -1188,8 +1265,24 @@ export default function FdsFeesPage() {
                                     {pay.pay_date} • {pay.remarks || 'No notes'}
                                   </p>
                                 </div>
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3">
                                   <p className="text-base font-extrabold text-emerald-600">{currency(pay.paid_amount)}</p>
+                                  <button
+                                    type="button"
+                                    onClick={() => setReceiptStudioState({
+                                      isOpen: true,
+                                      initialPayment: pay,
+                                      initialReceipt: null,
+                                      initialAccount: selectedAccount,
+                                      initialStudent: null,
+                                      autoDownloadOnLoad: false,
+                                    })}
+                                    className="px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-100 flex items-center gap-1 shadow-xs transition-colors"
+                                    title="Generate or View Digital Receipt"
+                                  >
+                                    <Receipt size={13} />
+                                    <span>Receipt</span>
+                                  </button>
                                   {canManageFees && (
                                     <div className="flex items-center gap-1">
                                       <button
@@ -1295,7 +1388,7 @@ export default function FdsFeesPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100 text-sm">
-                  {accounts.map((acc, idx) => (
+                  {filteredAccounts.map((acc, idx) => (
                     <tr
                       key={acc.id}
                       onClick={() => { setSelectedAccountId(acc.id); setMainTab('accounts'); }}
@@ -1433,6 +1526,7 @@ export default function FdsFeesPage() {
                     <th className="px-4 py-3.5 text-left">Status</th>
                     <th className="px-4 py-3.5 text-right">Amount Paid</th>
                     <th className="px-4 py-3.5 text-right">Balance</th>
+                    <th className="px-4 py-3.5 text-right">Receipt</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100 text-sm">
@@ -1457,12 +1551,43 @@ export default function FdsFeesPage() {
                       </td>
                       <td className="px-4 py-3 text-right font-extrabold text-emerald-600">{currency(p.paid_amount)}</td>
                       <td className="px-4 py-3 text-right font-semibold text-indigo-600">{currency(p.balance)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setReceiptStudioState({
+                            isOpen: true,
+                            initialPayment: p,
+                            initialReceipt: null,
+                            initialAccount: accounts.find(a => a.id === p.account) || null,
+                            initialStudent: null,
+                            autoDownloadOnLoad: false,
+                          })}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-colors shadow-xs"
+                          title="Generate or view official digital receipt"
+                        >
+                          <Receipt size={13} />
+                          <span>Receipt</span>
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
+        )}
+
+        {/* ─── TAB: DIGITAL RECEIPTS & INVOICES ───────────────────────────── */}
+        {mainTab === 'receipts' && (
+          <ReceiptsWorkspace
+            getToken={async () => accessToken || (await refreshAccessToken())}
+            company="FDS"
+            accounts={accounts}
+            students={students}
+            canManageFees={canManageFees}
+            canManageSettings={canManageFees}
+            canCreateReceipts={canManageFees}
+          />
         )}
 
         {/* ─── TAB 5: FEE CATALOG ─────────────────────────────────────────── */}
@@ -2137,6 +2262,23 @@ export default function FdsFeesPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {receiptStudioState.isOpen && (
+        <ReceiptStudioModal
+          isOpen={receiptStudioState.isOpen}
+          onClose={() => setReceiptStudioState(p => ({ ...p, isOpen: false, initialPayment: null, initialReceipt: null }))}
+          onSaved={() => {
+            fetchData();
+          }}
+          initialReceipt={receiptStudioState.initialReceipt}
+          initialPayment={receiptStudioState.initialPayment}
+          initialAccount={receiptStudioState.initialAccount}
+          initialStudent={receiptStudioState.initialStudent}
+          autoDownloadOnLoad={receiptStudioState.autoDownloadOnLoad}
+          company="FDS"
+          getToken={async () => accessToken || (await refreshAccessToken())}
+        />
       )}
     </div>
   );

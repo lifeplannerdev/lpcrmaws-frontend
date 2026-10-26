@@ -11,27 +11,57 @@ import {
   X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { DEFAULT_DISPLAY_OPTIONS, DEFAULT_ISSUER_SNAPSHOT } from '../../utils/receiptUtils';
+import { DEFAULT_DISPLAY_OPTIONS, getDefaultIssuerSnapshot } from '../../utils/receiptUtils';
+import { useAuth } from '../../context/AuthContext';
+import { usePermissions } from '../../context/PermissionsContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function ReceiptSettingsModal({ isOpen, onClose, getToken, company = 'FLAG', onSaved }) {
-  const [selectedCompany, setSelectedCompany] = useState(company || 'FLAG');
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions();
+  const isSuper = user?.is_superuser || ['MANAGING_DIRECTOR', 'MD', 'DIRECTOR', 'CEO', 'ADMIN'].some(r => user?.role_names?.includes(r) || user?.role === r);
+  const hasGlobal = isSuper || hasPermission('fees:accounts');
+
+  const canAccessCompany = (comp) => {
+    if (hasGlobal) return true;
+    if (comp === 'FDS') return hasPermission('fees:fds') || hasPermission('fds:admin') || hasPermission('fds_fees:manage');
+    if (comp === 'LP') return hasPermission('fees:lp') || hasPermission('processing_students:manage_fees');
+    if (comp === 'FLAG') return hasPermission('fees:flag') || hasPermission('flag:admin') || hasPermission('flag:fees') || hasPermission('fees:manage');
+    return false;
+  };
+
+  const allTabs = [
+    { id: 'FLAG', label: 'FLAG Academy' },
+    { id: 'LP', label: 'LifePlanner (LP)' },
+    { id: 'FDS', label: 'Filmaatic (FDS)' },
+  ];
+  const availableTabs = allTabs.filter(c => canAccessCompany(c.id));
+
+  const [selectedCompany, setSelectedCompany] = useState(() => {
+    if (availableTabs.some(t => t.id === company)) return company;
+    return availableTabs[0]?.id || 'FLAG';
+  });
+
+  useEffect(() => {
+    if (availableTabs.length > 0 && !availableTabs.some(t => t.id === selectedCompany)) {
+      setSelectedCompany(availableTabs[0].id);
+    }
+  }, [availableTabs, selectedCompany]);
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState('branding');
+  const initialSnap = getDefaultIssuerSnapshot(selectedCompany);
   const [form, setForm] = useState({
     company: selectedCompany,
-    ...DEFAULT_ISSUER_SNAPSHOT,
+    ...initialSnap,
     default_gst_mode: 'INCLUSIVE',
     default_gst_rate: '18.00',
     receipt_prefix: selectedCompany || 'FLAG',
     next_sequence_number: 1,
     default_template: 'EXECUTIVE',
-    default_terms_and_conditions:
-      '1. Fees once paid are non-refundable and non-transferable unless specified in the academy policy.\n' +
-      '2. This is a computer-generated digital receipt with cryptographic QR verification.\n' +
-      '3. Subject to Kochi jurisdiction.',
+    default_terms_and_conditions: initialSnap.terms || '',
     default_display_options: { ...DEFAULT_DISPLAY_OPTIONS },
   });
 
@@ -41,21 +71,34 @@ export default function ReceiptSettingsModal({ isOpen, onClose, getToken, compan
     const loadSettings = async () => {
       try {
         setLoading(true);
+        const compSnap = getDefaultIssuerSnapshot(selectedCompany);
         const token = await getToken();
         const res = await fetch(`${API_BASE_URL}/fees/receipt-settings/?company=${encodeURIComponent(selectedCompany)}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok && mounted) {
           const data = await res.json();
-          setForm((prev) => ({
-            ...prev,
+          setForm({
+            ...compSnap,
             ...data,
             company: selectedCompany,
             default_display_options: {
               ...DEFAULT_DISPLAY_OPTIONS,
               ...(data.default_display_options || {}),
             },
-          }));
+          });
+        } else if (mounted) {
+          setForm({
+            ...compSnap,
+            company: selectedCompany,
+            default_gst_mode: 'INCLUSIVE',
+            default_gst_rate: '18.00',
+            receipt_prefix: selectedCompany,
+            next_sequence_number: 1,
+            default_template: 'EXECUTIVE',
+            default_terms_and_conditions: compSnap.terms || '',
+            default_display_options: { ...DEFAULT_DISPLAY_OPTIONS },
+          });
         }
       } catch (err) {
         console.error('Failed to load receipt settings', err);
@@ -144,11 +187,7 @@ export default function ReceiptSettingsModal({ isOpen, onClose, getToken, compan
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
-              {[
-                { id: 'FLAG', label: 'FLAG Academy' },
-                { id: 'LP', label: 'LifePlanner (LP)' },
-                { id: 'FDS', label: 'Filmaatic (FDS)' },
-              ].map((c) => (
+              {availableTabs.map((c) => (
                 <button
                   key={c.id}
                   type="button"

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, List, Grid, Trello, X, Download, Columns, Table, Mail, Search, CalendarClock } from 'lucide-react';
+import { Plus, List, Grid, Trello, X, Download, Columns, Table, Mail, Search, CalendarClock, Receipt, Trash2, IndianRupee } from 'lucide-react';
 import Navbar from '../Components/layouts/Navbar';
 import RemindersPage from './RemindersPage';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
+import ReceiptStudioModal from '../Components/fees/ReceiptStudioModal';
 
 function debounce(func, wait) {
   let timeout;
@@ -57,7 +58,7 @@ export default function ProcessingStudentsPage() {
 
   const canEditAny = hasPermission('processing_students:edit_any');
   const canEditOwn = hasPermission('processing_students:edit_own');
-  const canManageFees = hasPermission('processing_students:manage_fees');
+  const canManageFees = hasPermission('processing_students:manage_fees') || hasPermission('fees:accounts') || hasPermission('fees:lp') || hasPermission('fees:manage') || user?.is_superuser;
 
   const categories = ['All Students', ...(categoryOptions.map(c => c.name))];
 
@@ -1014,6 +1015,88 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
   const [reminders, setReminders] = useState([]);
   const [newReminder, setNewReminder] = useState({ date: '', time: '', note: '' });
 
+  // Processing Fee Payments & Digital Receipts State
+  const [payments, setPayments] = useState([]);
+  const [paymentForm, setPaymentForm] = useState({
+    fee_head: 'REGISTRATION',
+    paid_amount: '',
+    pay_date: new Date().toISOString().slice(0, 16),
+    mode_of_pay: 'UPI',
+    transaction_reference: '',
+    notes: '',
+  });
+  const [recordingPayment, setRecordingPayment] = useState(false);
+  const [receiptStudioState, setReceiptStudioState] = useState({
+    isOpen: false,
+    initialPayment: null,
+    initialReceipt: null,
+  });
+
+  const fetchPayments = async () => {
+    if (!student) return;
+    try {
+      const res = await axios.get(`${API_BASE_URL}/processing-students/${student.id}/payments/`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setPayments(res.data?.results || (Array.isArray(res.data) ? res.data : []));
+    } catch (err) {
+      console.error('Error fetching processing fee payments', err);
+    }
+  };
+
+  const handleRecordPayment = async (e) => {
+    e.preventDefault();
+    if (!paymentForm.paid_amount || Number(paymentForm.paid_amount) <= 0) {
+      alert('Please enter a valid payment amount');
+      return;
+    }
+    setRecordingPayment(true);
+    try {
+      await axios.post(`${API_BASE_URL}/processing-students/${student.id}/payments/`, {
+        student: student.id,
+        fee_head: paymentForm.fee_head,
+        paid_amount: paymentForm.paid_amount,
+        pay_date: paymentForm.pay_date,
+        mode_of_pay: paymentForm.mode_of_pay,
+        transaction_reference: paymentForm.transaction_reference,
+        notes: paymentForm.notes,
+      }, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setPaymentForm({
+        fee_head: 'REGISTRATION',
+        paid_amount: '',
+        pay_date: new Date().toISOString().slice(0, 16),
+        mode_of_pay: 'UPI',
+        transaction_reference: '',
+        notes: '',
+      });
+      fetchPayments();
+      fetchTimeline();
+      if (onSave) onSave();
+    } catch (err) {
+      console.error('Failed to record payment', err);
+      alert(err.response?.data?.detail || 'Failed to record payment');
+    } finally {
+      setRecordingPayment(false);
+    }
+  };
+
+  const handleDeletePayment = async (payId) => {
+    if (!window.confirm('Are you sure you want to delete this payment record? This will adjust the student totals.')) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/processing-student-payments/${payId}/`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      fetchPayments();
+      fetchTimeline();
+      if (onSave) onSave();
+    } catch (err) {
+      console.error('Failed to delete payment', err);
+      alert('Failed to delete payment');
+    }
+  };
+
   const fetchTimeline = async () => {
     if (!student) return;
     try {
@@ -1061,6 +1144,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
       fetchTimeline();
       fetchDocuments();
       fetchReminders();
+      fetchPayments();
     } else if (!isOperationRole && user) {
       // Auto-assign to self if creating new and not OPERATION
       setFormData(prev => ({ ...prev, assigned_to: user.id }));
@@ -1234,6 +1318,12 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                   onClick={() => setActiveTab('reminders')}
                 >
                   Reminders
+                </button>
+                <button
+                  className={`px-4 py-2 font-medium text-sm border-b-2 flex items-center gap-1.5 ${activeTab === 'fees' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                  onClick={() => setActiveTab('fees')}
+                >
+                  <IndianRupee size={14} /> Fees & Receipts
                 </button>
               </div>
             )}
@@ -1734,6 +1824,191 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
             )}
           </div>
         )}
+
+        {activeTab === 'fees' && student && (
+          <div className="space-y-6">
+            {/* Fee Heads Summary Cards */}
+            <div>
+              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider mb-3">Fee Heads Overview</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {[
+                  { title: 'App / Reg Fee', amount: formData.processing_fee_amount, paid: formData.processing_fee_paid, status: formData.processing_fee_status },
+                  { title: 'Admission Fee', amount: formData.fee_admission_amount, paid: formData.fee_admission_paid, status: formData.fee_admission_status },
+                  { title: 'Language Fee', amount: formData.fee_language_amount, paid: formData.fee_language_paid, status: formData.fee_language_status },
+                  { title: 'Visa Approval', amount: formData.fee_visa_amount, paid: formData.fee_visa_paid, status: formData.fee_visa_status },
+                  { title: 'Ministry Letter', amount: formData.fee_ministry_amount, paid: formData.fee_ministry_paid, status: formData.fee_ministry_status },
+                ].map(h => {
+                  const due = Number(h.amount || 0);
+                  const pd = Number(h.paid || 0);
+                  const bal = due - pd;
+                  return (
+                    <div key={h.title} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-bold text-slate-600 truncate">{h.title}</span>
+                        <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${h.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' : h.status === 'PARTIAL' ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-600'}`}>
+                          {h.status || 'PENDING'}
+                        </span>
+                      </div>
+                      <div className="text-sm font-black text-slate-900">₹{due.toLocaleString('en-IN')}</div>
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-emerald-600 font-semibold">₹{pd.toLocaleString('en-IN')}</span>
+                        <span className={bal > 0 ? 'text-rose-600 font-bold' : 'text-slate-400'}>Bal: ₹{Math.max(0, bal).toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Record New Payment Form */}
+            {canManageFees && (
+              <form onSubmit={handleRecordPayment} className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Plus size={14} /> Record Student Fee Payment
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setReceiptStudioState({
+                      isOpen: true,
+                      initialPayment: null,
+                      initialReceipt: null,
+                    })}
+                    className="text-xs font-bold text-indigo-700 hover:text-indigo-900 flex items-center gap-1"
+                  >
+                    <Receipt size={13} /> Open Studio Directly
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Fee Head</label>
+                    <select
+                      value={paymentForm.fee_head}
+                      onChange={(e) => setPaymentForm(p => ({ ...p, fee_head: e.target.value }))}
+                      className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white outline-none"
+                    >
+                      <option value="REGISTRATION">Application / Registration Fee</option>
+                      <option value="ADMISSION">Admission Fee</option>
+                      <option value="LANGUAGE">Language Confirmation Fee</option>
+                      <option value="VISA">Visa Approval Fee</option>
+                      <option value="MINISTRY">Ministry Letter Fee</option>
+                      <option value="OTHER">Other Fee</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Paid Amount (₹) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={paymentForm.paid_amount}
+                      onChange={(e) => setPaymentForm(p => ({ ...p, paid_amount: e.target.value }))}
+                      placeholder="0.00"
+                      className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Payment Mode</label>
+                    <select
+                      value={paymentForm.mode_of_pay}
+                      onChange={(e) => setPaymentForm(p => ({ ...p, mode_of_pay: e.target.value }))}
+                      className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white outline-none"
+                    >
+                      <option value="UPI">UPI</option>
+                      <option value="BANK_TRANSFER">Bank Transfer</option>
+                      <option value="CASH">Cash</option>
+                      <option value="CARD">Card</option>
+                      <option value="CHEQUE">Cheque</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Transaction Ref / UTR</label>
+                    <input
+                      type="text"
+                      value={paymentForm.transaction_reference}
+                      onChange={(e) => setPaymentForm(p => ({ ...p, transaction_reference: e.target.value }))}
+                      placeholder="UTR / Txn Ref..."
+                      className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <input
+                    type="text"
+                    value={paymentForm.notes}
+                    onChange={(e) => setPaymentForm(p => ({ ...p, notes: e.target.value }))}
+                    placeholder="Optional notes or remarks..."
+                    className="flex-1 text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white outline-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={recordingPayment}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
+                  >
+                    <IndianRupee size={13} />
+                    {recordingPayment ? 'Recording...' : 'Record Payment'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Payment Transactions List & Receipts */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                <span>Payment Transactions ({payments.length})</span>
+                <span className="text-[11px] text-slate-400 font-normal">Click receipt to generate or preview official PDF receipt</span>
+              </h4>
+              {payments.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-400 bg-slate-50 border border-slate-100 rounded-2xl">
+                  No payment transactions recorded for this student yet.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {payments.map(p => (
+                    <div key={p.id} className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between hover:border-indigo-200 transition-colors shadow-xs">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-extrabold text-slate-900">{p.fee_head_display || p.fee_head}</span>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{p.mode_of_pay}</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          {p.pay_date?.slice(0, 10)} {p.transaction_reference ? `• Ref: ${p.transaction_reference}` : ''} {p.notes ? `• ${p.notes}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-black text-emerald-600">₹{Number(p.paid_amount || 0).toLocaleString('en-IN')}</span>
+                        <button
+                          type="button"
+                          onClick={() => setReceiptStudioState({
+                            isOpen: true,
+                            initialPayment: p,
+                            initialReceipt: null,
+                          })}
+                          className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1 transition-colors"
+                          title="Generate or view official digital receipt"
+                        >
+                          <Receipt size={13} />
+                          <span>Receipt</span>
+                        </button>
+                        {canManageFees && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePayment(p.id)}
+                            className="p-1 text-slate-400 hover:text-rose-600 rounded-md"
+                            title="Delete payment"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
 
@@ -1798,6 +2073,22 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
             </button>
           </div>
         </div>
+
+        {receiptStudioState.isOpen && (
+          <ReceiptStudioModal
+            isOpen={receiptStudioState.isOpen}
+            onClose={() => setReceiptStudioState(p => ({ ...p, isOpen: false, initialPayment: null, initialReceipt: null }))}
+            onSaved={() => {
+              fetchPayments();
+              if (onSave) onSave();
+            }}
+            initialReceipt={receiptStudioState.initialReceipt}
+            initialPayment={receiptStudioState.initialPayment}
+            initialStudent={student}
+            company="LP"
+            getToken={async () => accessToken}
+          />
+        )}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import {
   DEFAULT_DISPLAY_OPTIONS,
-  DEFAULT_ISSUER_SNAPSHOT,
+  getDefaultIssuerSnapshot,
   formatINR,
   generateQrMatrix,
   round2,
@@ -124,7 +124,8 @@ const METHOD_LABELS = {
 
 export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
   const data = receipt || {};
-  const issuer = { ...DEFAULT_ISSUER_SNAPSHOT, ...(data.issuer_snapshot || {}) };
+  const defaultIssuer = getDefaultIssuerSnapshot(data.company);
+  const issuer = { ...defaultIssuer, ...(data.issuer_snapshot || {}) };
   const opts = { ...DEFAULT_DISPLAY_OPTIONS, ...(data.display_options || {}) };
   const brandColor = issuer.brand_color || '#312e81';
   const templateStyle = (data.template_style || 'EXECUTIVE').toUpperCase();

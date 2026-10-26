@@ -23,6 +23,7 @@ const CompanySwitcher = ({ activeCompany, onChange, showAll = false }) => {
       user.role_names.includes('CEO') ||
       user.role_names.includes('BUSINESS_HEAD')
     )) ||
+    hasPermission('fees:accounts') ||
     hasPermission('staff:access_flag') ||
     hasPermission('license:admin') ||
     hasPermission('reports:kochi') ||

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, X, Edit2, Trash2, Sparkles, Users, CheckCircle } from 'lucide-react';
+import { Plus, X, Edit2, Trash2, Sparkles, Users, CheckCircle, Receipt } from 'lucide-react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
 import { fdsApi, getStatusBadgeClass } from './fdsApi';
 import FdsBranchSelector, { getBranchLabel, GlobalDataBadge } from './FdsBranchSelector';
+import ReceiptStudioModal from '../../Components/fees/ReceiptStudioModal';
 import './fds-theme.css';
 
 const PACKAGES = [
@@ -44,6 +45,11 @@ export default function FdsWeddingGroupsPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [receiptStudioState, setReceiptStudioState] = useState({
+    isOpen: false,
+    initialPayment: null,
+    initialReceipt: null,
+  });
 
   const authFetchJson = useCallback(async (url, opts = {}) => {
     let token = accessToken;
@@ -270,6 +276,43 @@ export default function FdsWeddingGroupsPage() {
                       ))}
                     </div>
 
+                    <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        onClick={() => setReceiptStudioState({
+                          isOpen: true,
+                          initialPayment: {
+                            paid_amount: g.amount_paid,
+                            pay_date: g.event_date || new Date().toISOString().split('T')[0],
+                            wedding_group: g.id,
+                            wedding_group_name: g.event_name,
+                            student_name: g.lead_contact_name,
+                            phone: g.lead_contact_phone,
+                            balance: balance,
+                            mode_of_pay: 'BANK_TRANSFER',
+                          },
+                          initialReceipt: null,
+                        })}
+                        className="fds-btn fds-btn-sm"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          background: 'rgba(99, 102, 241, 0.08)',
+                          color: '#4f46e5',
+                          border: '1px solid rgba(99, 102, 241, 0.2)',
+                          borderRadius: 8,
+                          padding: '4px 10px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                        }}
+                        title="Generate or view official digital receipt"
+                      >
+                        <Receipt size={13} />
+                        <span>Receipt</span>
+                      </button>
+                    </div>
+
                     {g.notes && (
                       <div style={{ marginTop: 10, fontSize: '0.78rem', color: 'var(--fds-text-muted)', borderTop: '1px solid var(--fds-border)', paddingTop: 8 }}>
                         {g.notes}
@@ -394,6 +437,20 @@ export default function FdsWeddingGroupsPage() {
               </form>
             </div>
           </div>
+        )}
+
+        {receiptStudioState.isOpen && (
+          <ReceiptStudioModal
+            isOpen={receiptStudioState.isOpen}
+            onClose={() => setReceiptStudioState(p => ({ ...p, isOpen: false, initialPayment: null, initialReceipt: null }))}
+            onSaved={() => {
+              load();
+            }}
+            initialReceipt={receiptStudioState.initialReceipt}
+            initialPayment={receiptStudioState.initialPayment}
+            company="FDS"
+            getToken={async () => accessToken || (await refreshAccessToken())}
+          />
         )}
       </div>
     </div>

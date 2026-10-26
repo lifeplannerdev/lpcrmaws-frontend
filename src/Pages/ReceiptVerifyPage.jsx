@@ -16,6 +16,7 @@ import ReceiptTemplateRenderer from '../Components/fees/ReceiptTemplateRenderer'
 import {
   exportReceiptElementToPdf,
   formatINR,
+  getDefaultIssuerSnapshot,
   printReceiptElement,
 } from '../utils/receiptUtils';
 
@@ -77,7 +78,9 @@ export default function ReceiptVerifyPage() {
     printReceiptElement(printRef.current, `Verified_Receipt_${data.receipt_number || ''}`);
   };
 
-  const issuer = data?.issuer_snapshot || {};
+  const company = data?.company || 'FLAG';
+  const defaultIssuer = getDefaultIssuerSnapshot(company);
+  const issuer = { ...defaultIssuer, ...(data?.issuer_snapshot || {}) };
   const vStatus = data?.verification_status || (error ? 'NOT_FOUND' : 'UNKNOWN');
 
   return (
@@ -86,12 +89,15 @@ export default function ReceiptVerifyPage() {
         {/* Top Academy Trust Header */}
         <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-5 py-4 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-xl bg-indigo-600 flex items-center justify-center font-black text-white text-sm tracking-tighter shadow">
-              FLAG
+            <div
+              className="h-11 w-11 rounded-xl flex items-center justify-center font-black text-white text-sm tracking-tighter shadow"
+              style={{ backgroundColor: issuer.brand_color || '#4f46e5' }}
+            >
+              {company}
             </div>
             <div>
               <h1 className="text-sm sm:text-base font-extrabold text-white">
-                {issuer.organization_name || 'FLAG German Language Academy'}
+                {issuer.organization_name || `${company} Official Receipt`}
               </h1>
               <p className="text-[11px] text-slate-400">
                 Cryptographic Receipt & Tax Invoice Verification Portal

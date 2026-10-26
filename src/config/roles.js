@@ -20,7 +20,8 @@ import {
   Heart,
   BarChart2,
   Building2,
-  Layers
+  Layers,
+  Receipt
 } from "lucide-react";
 
 export const masterNavigation = [
@@ -85,6 +86,9 @@ export const masterNavigation = [
   { id: "flagAttendance",label: "FLAG Attendance",  icon: CalendarCheck, path: "/flag/attendance",requiredPermissions: ["flag:admin","flag:trainer"],                          group: "flag", category: "divisions", description: "Class session attendance" },
   { id: "flagFees",      label: "FLAG Fees",        icon: IndianRupee,   path: "/fees",          requiredPermissions: ["flag:admin","flag:fees"], allowWithResource: "fees",   group: "flag", category: "divisions", description: "Fee collections, receipts & balances" },
   { id: "flagSettings",  label: "FLAG Settings",    icon: Settings,      path: "/flag/settings", requiredPermissions: ["flag:admin"],                                         group: "flag", category: "divisions", description: "Academy parameters & configuration" },
+
+  // ── Multi-Company Receipts & Invoices ──
+  { id: "receiptsMaster", label: "Receipts & Invoices", icon: Receipt, path: "/receipts", requiredPermissions: ["fees:accounts", "fees:view", "fees:manage", "fees:flag", "fees:fds", "fees:lp"], category: "divisions", description: "Centralized multi-company digital receipts & invoices" },
 
   // ── System & Administration ──
   { id: "roles", label: "Role Management", icon: ShieldAlert, path: "/roles", requiredResource: "staff", requiredPermissions: ["staff:edit_any", "staff:edit_tenant"], category: "admin", description: "RBAC roles & permission matrix" },

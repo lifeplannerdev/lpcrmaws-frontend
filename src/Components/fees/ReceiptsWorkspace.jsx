@@ -36,6 +36,7 @@ export default function ReceiptsWorkspace({
   const [loading, setLoading] = useState(true);
 
   // Filters
+  const [filterCompany, setFilterCompany] = useState(company && company !== 'ALL' ? company : '');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [docTypeFilter, setDocTypeFilter] = useState('');
@@ -54,6 +55,10 @@ export default function ReceiptsWorkspace({
   const [voidReason, setVoidReason] = useState('');
   const [voiding, setVoiding] = useState(false);
 
+  useEffect(() => {
+    setFilterCompany(company && company !== 'ALL' ? company : '');
+  }, [company]);
+
   const fetchReceipts = async () => {
     try {
       setLoading(true);
@@ -61,7 +66,7 @@ export default function ReceiptsWorkspace({
       if (!token) return;
 
       const params = new URLSearchParams();
-      if (company) params.append('company', company);
+      if (filterCompany) params.append('company', filterCompany);
       if (search.trim()) params.append('search', search.trim());
       if (statusFilter) params.append('status', statusFilter);
       if (docTypeFilter) params.append('document_type', docTypeFilter);
@@ -86,7 +91,7 @@ export default function ReceiptsWorkspace({
   useEffect(() => {
     fetchReceipts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [company, statusFilter, docTypeFilter, methodFilter, startDate, endDate]);
+  }, [company, filterCompany, statusFilter, docTypeFilter, methodFilter, startDate, endDate]);
 
   const stats = useMemo(() => {
     return receipts.reduce(
@@ -263,6 +268,17 @@ export default function ReceiptsWorkspace({
           </div>
 
           <select
+            value={filterCompany}
+            onChange={(e) => setFilterCompany(e.target.value)}
+            className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
+          >
+            <option value="">All Companies</option>
+            <option value="FLAG">FLAG Academy</option>
+            <option value="FDS">FILMAATIC (FDS)</option>
+            <option value="LP">Life Planner (LP)</option>
+          </select>
+
+          <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700"
@@ -340,6 +356,7 @@ export default function ReceiptsWorkspace({
               <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                 <tr>
                   <th className="px-4 py-3 text-left">Receipt No.</th>
+                  <th className="px-3 py-3 text-left">Company</th>
                   <th className="px-4 py-3 text-left">Date</th>
                   <th className="px-4 py-3 text-left">Recipient / Student</th>
                   <th className="px-4 py-3 text-left">Course & Batch</th>
@@ -372,6 +389,16 @@ export default function ReceiptsWorkspace({
                             <span className="text-indigo-600 font-semibold">• Customized</span>
                           )}
                         </div>
+                      </td>
+
+                      <td className="px-3 py-3.5 whitespace-nowrap">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                          r.company === 'FDS' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                          r.company === 'LP' ? 'bg-teal-100 text-teal-800 border border-teal-200' :
+                          'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                        }`}>
+                          {r.company || 'FLAG'}
+                        </span>
                       </td>
 
                       <td className="px-4 py-3.5 whitespace-nowrap text-slate-600">
