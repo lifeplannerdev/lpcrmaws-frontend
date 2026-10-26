@@ -8,7 +8,7 @@ import { Receipt } from 'lucide-react';
 
 export default function ReceiptsMasterPage() {
   const { accessToken, refreshAccessToken, user } = useAuth();
-  const { hasPermission, hasAnyPermission } = usePermissions();
+  const { hasPermission } = usePermissions();
 
   const isExecutive =
     user?.is_superuser === true ||

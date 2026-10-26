@@ -33,6 +33,7 @@ import {
   amountToWords,
   calculateReceiptFinancials,
   DEFAULT_DISPLAY_OPTIONS,
+  DEFAULT_ISSUER_SNAPSHOT,
   getDefaultIssuerSnapshot,
   exportReceiptElementToPdf,
   formatINR,
@@ -120,6 +121,7 @@ export default function ReceiptStudioModal({
     attach_pdf: true,
   });
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [showEmailDrawer, setShowEmailDrawer] = useState(false);
 
   const [form, setForm] = useState({
     id: null,
@@ -186,7 +188,7 @@ export default function ReceiptStudioModal({
     template_style: 'EXECUTIVE',
     display_options: { ...DEFAULT_DISPLAY_OPTIONS },
     line_items: [createEmptyLineItem('999293', 'Course Tuition Fee', '0.00', '')],
-    issuer_snapshot: { ...DEFAULT_ISSUER_SNAPSHOT },
+    issuer_snapshot: { ...(getDefaultIssuerSnapshot ? getDefaultIssuerSnapshot(company) : DEFAULT_ISSUER_SNAPSHOT) },
     snapshot_data: {},
     notes: '',
     terms_and_conditions:
@@ -685,8 +687,6 @@ export default function ReceiptStudioModal({
     return 'Mode C: 100% Standalone Manual Receipt / Proforma';
   }, [form.payment, form.account, form.student, form.is_manual_override]);
 
-  if (!isOpen) return null;
-
   // Auto-pull from selected Student or Fee Account
   const handleAutoPullFromLink = async (studentIdOverride, accountIdOverride) => {
     const stuId = studentIdOverride !== undefined ? studentIdOverride : form.student;
@@ -1161,6 +1161,8 @@ export default function ReceiptStudioModal({
     try {
       setExportingPdf(true);
       const companyPrefix = form.company || company || 'FLAG';
+      const rNo = (overrideReceiptNo || form.receipt_number || 'draft').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const rName = (form.recipient_name || 'student').replace(/[^a-zA-Z0-9_-]/g, '_');
       await exportReceiptElementToPdf(target, `${companyPrefix}_Receipt_${rNo}_${rName}.pdf`, false);
       toast.success('High-DPI A4 PDF downloaded');
     } catch (err) {
@@ -1266,6 +1268,8 @@ export default function ReceiptStudioModal({
   };
 
   const isVoidLocked = form.status === 'VOID';
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/85 backdrop-blur-md">
