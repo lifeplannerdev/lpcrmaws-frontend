@@ -64,6 +64,8 @@ export const AuthProvider = ({ children }) => {
     sessionStorage.setItem('login_session_id', loginSessionId);
     sessionStorage.removeItem('dismissed_doc_expiry_session');
     sessionStorage.removeItem('dismissed_doc_expiry_modal');
+    sessionStorage.removeItem('dismissed_followup_session');
+    sessionStorage.removeItem('dismissed_followup_modal');
   };
 
   // Logout handler
@@ -86,6 +88,8 @@ export const AuthProvider = ({ children }) => {
       sessionStorage.removeItem('login_session_id');
       sessionStorage.removeItem('dismissed_doc_expiry_session');
       sessionStorage.removeItem('dismissed_doc_expiry_modal');
+      sessionStorage.removeItem('dismissed_followup_session');
+      sessionStorage.removeItem('dismissed_followup_modal');
     }
   };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Components/layouts/Navbar';
+import FollowUpBigModal from '../Components/followups/FollowUpBigModal';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useVoxbayCall } from '../hooks/useVoxbayCall';
@@ -396,6 +397,7 @@ export default function AllFollowUpsPage() {
   const [filterDate,     setFilterDate]     = useState('');
   const [customItems,    setCustomItems]    = useState([]);
   const [searchTerm,     setSearchTerm]     = useState('');
+  const [isActionCenterOpen, setIsActionCenterOpen] = useState(false);
   const [filterStatus,   setFilterStatus]   = useState('all');
   const [filterType,     setFilterType]     = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
@@ -779,6 +781,15 @@ export default function AllFollowUpsPage() {
                 </button>
               </div>
 
+              <button
+                type="button"
+                onClick={() => setIsActionCenterOpen(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-600 via-orange-500 to-amber-600 hover:from-red-700 hover:to-orange-600 text-white rounded-xl text-sm font-bold shadow-md shadow-orange-100 transition-all cursor-pointer"
+                title="Open Follow-Up Action Center & Due Alerts Modal"
+              >
+                <Sparkles size={16} />
+                <span>Action Center</span>
+              </button>
               <button
                 onClick={() => { loadAll(); loadPast(); }}
                 disabled={loadingOverdue || loadingToday || loadingTomorrow || loadingOther || loadingPast}

@@ -22,6 +22,20 @@ import ReminderNotificationSettingsModal from './ReminderNotificationSettingsMod
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+function formatTimeDisplay(timeStr) {
+  if (!timeStr) return '';
+  try {
+    const parts = timeStr.split(':');
+    const h = parseInt(parts[0], 10);
+    const m = parts[1] || '00';
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const formattedH = h % 12 || 12;
+    return `${formattedH}:${m} ${ampm}`;
+  } catch (e) {
+    return timeStr.slice(0, 5);
+  }
+}
+
 // Web Audio API Synthesized Chime (no external audio files needed)
 function playReminderChime() {
   try {
@@ -80,6 +94,7 @@ export default function GlobalReminderNotifier() {
   const titleIntervalRef = useRef(null);
   const originalTitleRef = useRef(typeof document !== 'undefined' ? document.title : 'LifePlanner CRM');
   const lastAlertedIdsRef = useRef(new Set());
+  const nextAlertTimerRef = useRef(null);
 
   const canAccessReminders = 
     hasPermission('processing:reminders_admin') || 
@@ -119,10 +134,13 @@ export default function GlobalReminderNotifier() {
         ? '📋 APPROVAL REQUIRED'
         : 'REMINDER ALERT';
 
+      const timeText = alert.effective_deadline_time ? ` at ${formatTimeDisplay(alert.effective_deadline_time)}` : '';
+      const fullDeadline = `${alert.effective_deadline}${timeText}`;
+
       const n = new Notification(`${urgency}: ${alert.title}`, {
         body: alert.description 
-          ? `${alert.description} (Due: ${alert.effective_deadline})` 
-          : `Scheduled deadline: ${alert.effective_deadline}`,
+          ? `${alert.description} (Due: ${fullDeadline})` 
+          : `Scheduled deadline: ${fullDeadline}`,
         icon: '/favicon.ico',
         tag: `reminder-${alert.id}`,
         requireInteraction: alert.is_overdue // stays on Windows until clicked if overdue
@@ -185,6 +203,19 @@ export default function GlobalReminderNotifier() {
       const data = await res.json();
       setAlertsData(data);
 
+      // If backend indicates an upcoming reminder due later today, schedule exact trigger
+      if (nextAlertTimerRef.current) {
+        clearTimeout(nextAlertTimerRef.current);
+        nextAlertTimerRef.current = null;
+      }
+      if (data.next_alert_in_seconds && data.next_alert_in_seconds > 0) {
+        // Schedule next check right when that reminder becomes due
+        const delayMs = Math.min((data.next_alert_in_seconds + 1) * 1000, 3600000);
+        nextAlertTimerRef.current = setTimeout(() => {
+          checkReminderAlerts(true);
+        }, delayMs);
+      }
+
       if (data.total_alerts > 0) {
         setIsOpen(true);
 
@@ -229,14 +260,17 @@ export default function GlobalReminderNotifier() {
       checkReminderAlerts();
     }, 2500);
 
-    // Periodic polling every 5 minutes (300,000ms)
+    // Periodic polling every 45 seconds (45,000ms) to ensure timely reminders
     const intervalTimer = setInterval(() => {
       checkReminderAlerts();
-    }, 300000);
+    }, 45000);
 
     return () => {
       clearTimeout(initTimer);
       clearInterval(intervalTimer);
+      if (nextAlertTimerRef.current) {
+        clearTimeout(nextAlertTimerRef.current);
+      }
       stopTabTitleAlert();
     };
   }, [isAuthenticated, canAccessReminders, checkReminderAlerts, stopTabTitleAlert]);
@@ -415,7 +449,7 @@ export default function GlobalReminderNotifier() {
           <div className="flex items-center justify-between text-[11px] pt-1 text-slate-500 border-t border-slate-100">
             <div className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
-              <span>Target: <strong className={currentAlert.is_overdue ? 'text-red-600' : 'text-slate-800'}>{currentAlert.effective_deadline}</strong></span>
+              <span>Target: <strong className={currentAlert.is_overdue ? 'text-red-600' : 'text-slate-800'}>{currentAlert.effective_deadline}{currentAlert.effective_deadline_time && ` • ${formatTimeDisplay(currentAlert.effective_deadline_time)}`}</strong></span>
             </div>
             <div>
               <span>{currentAlert.user_name}</span>

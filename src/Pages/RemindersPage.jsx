@@ -115,7 +115,9 @@ export default function RemindersPage({ embedded = false }) {
     title: '',
     description: '',
     reminder_date: new Date().toISOString().split('T')[0],
+    reminder_time: '',
     deadline: '',
+    deadline_time: '',
     priority: 'MEDIUM',
     category: 'Processing',
     user: '',
@@ -225,7 +227,9 @@ export default function RemindersPage({ embedded = false }) {
         title: reminderToEdit.title,
         description: reminderToEdit.description || '',
         reminder_date: reminderToEdit.reminder_date,
+        reminder_time: reminderToEdit.reminder_time ? reminderToEdit.reminder_time.slice(0, 5) : '',
         deadline: reminderToEdit.deadline || '',
+        deadline_time: reminderToEdit.deadline_time ? reminderToEdit.deadline_time.slice(0, 5) : '',
         priority: reminderToEdit.priority || 'MEDIUM',
         category: reminderToEdit.category || 'Processing',
         user: reminderToEdit.user || '',
@@ -238,7 +242,9 @@ export default function RemindersPage({ embedded = false }) {
         title: '',
         description: '',
         reminder_date: new Date().toISOString().split('T')[0],
+        reminder_time: '',
         deadline: '',
+        deadline_time: '',
         priority: 'MEDIUM',
         category: 'Processing',
         user: user?.id || '',
@@ -294,7 +300,9 @@ export default function RemindersPage({ embedded = false }) {
         title: formData.title.trim(),
         description: formData.description.trim(),
         reminder_date: formData.reminder_date,
+        reminder_time: formData.reminder_time || null,
         deadline: formData.deadline || null,
+        deadline_time: formData.deadline_time || null,
         priority: formData.priority,
         category: formData.category,
         student: formData.student ? Number(formData.student) : null,
@@ -621,6 +629,21 @@ export default function RemindersPage({ embedded = false }) {
     }
   };
 
+  // Time format helper (HH:MM -> 12hr AM/PM)
+  const formatTimeDisplay = (timeStr) => {
+    if (!timeStr) return '';
+    try {
+      const parts = timeStr.split(':');
+      const h = parseInt(parts[0], 10);
+      const m = parts[1] || '00';
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const formattedH = h % 12 || 12;
+      return `${formattedH}:${m} ${ampm}`;
+    } catch (e) {
+      return timeStr.slice(0, 5);
+    }
+  };
+
   // Helper date chip presets
   const setQuickDate = (offsetDays) => {
     const target = new Date();
@@ -629,6 +652,26 @@ export default function RemindersPage({ embedded = false }) {
       ...prev,
       reminder_date: target.toISOString().split('T')[0]
     }));
+  };
+
+  // Helper time presets
+  const setQuickTime = (type) => {
+    const now = new Date();
+    if (type === 'now') {
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      setFormData(prev => ({ ...prev, reminder_time: `${hh}:${mm}` }));
+    } else if (type === '+30m') {
+      now.setMinutes(now.getMinutes() + 30);
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      setFormData(prev => ({ ...prev, reminder_time: `${hh}:${mm}` }));
+    } else if (type === '+1h') {
+      now.setHours(now.getHours() + 1);
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      setFormData(prev => ({ ...prev, reminder_time: `${hh}:${mm}` }));
+    }
   };
 
   // Priority Styles
@@ -689,6 +732,13 @@ export default function RemindersPage({ embedded = false }) {
         const dateB = b.deadline || b.reminder_date || '9999-99-99';
         if (dateA !== dateB) {
           return dateA.localeCompare(dateB);
+        }
+
+        // Chronological time comparison
+        const timeA = (a.deadline ? a.deadline_time : a.reminder_time) || '23:59:59';
+        const timeB = (b.deadline ? b.deadline_time : b.reminder_time) || '23:59:59';
+        if (timeA !== timeB) {
+          return timeA.localeCompare(timeB);
         }
 
         // Higher priority first
@@ -1164,11 +1214,16 @@ export default function RemindersPage({ embedded = false }) {
                         )}
                       </div>
 
-                      {/* Reminder date chip */}
+                      {/* Reminder date & time chip */}
                       <div className="flex items-center gap-1 shrink-0">
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
                         <span className={`text-[11px] font-semibold ${reminder.is_backdated ? 'text-violet-700' : 'text-slate-600'}`}>
                           {reminder.reminder_date}
+                          {reminder.reminder_time && (
+                            <span className="ml-1 text-indigo-600 font-bold">
+                              • {formatTimeDisplay(reminder.reminder_time)}
+                            </span>
+                          )}
                           {reminder.is_backdated && ' (Backdate)'}
                         </span>
                       </div>
@@ -1183,6 +1238,11 @@ export default function RemindersPage({ embedded = false }) {
                         </span>
                         <span className={`font-semibold ${reminder.is_overdue ? 'text-red-600' : 'text-slate-700'}`}>
                           {reminder.deadline}
+                          {reminder.deadline_time && (
+                            <span className="ml-1 text-slate-600 font-medium">
+                              at {formatTimeDisplay(reminder.deadline_time)}
+                            </span>
+                          )}
                           {reminder.is_overdue && ' (Overdue)'}
                         </span>
                       </div>
@@ -1507,60 +1567,124 @@ export default function RemindersPage({ embedded = false }) {
                 </select>
               </div>
 
-              {/* Date & Deadline row */}
+              {/* Date & Deadline row with Time */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Reminder Date */}
+                {/* Reminder Date & Time */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
-                      Reminder Date <span className="text-rose-500">*</span>
+                      Reminder Date & Time <span className="text-rose-500">*</span>
                     </label>
                     <span className="text-[10px] text-indigo-600 font-semibold">Supports Backdates</span>
                   </div>
-                  <input
-                    type="date"
-                    required
-                    value={formData.reminder_date}
-                    onChange={e => setFormData({ ...formData, reminder_date: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                  />
-                  {/* Quick preset chips */}
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setQuickDate(-1)}
-                      className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700"
-                    >
-                      Yesterday
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQuickDate(0)}
-                      className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700"
-                    >
-                      Today
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQuickDate(1)}
-                      className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700"
-                    >
-                      Tomorrow
-                    </button>
+                  <div className="grid grid-cols-12 gap-1.5">
+                    <div className="col-span-7">
+                      <input
+                        type="date"
+                        required
+                        value={formData.reminder_date}
+                        onChange={e => setFormData({ ...formData, reminder_date: e.target.value })}
+                        className="w-full border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                      />
+                    </div>
+                    <div className="col-span-5">
+                      <input
+                        type="time"
+                        value={formData.reminder_time}
+                        onChange={e => setFormData({ ...formData, reminder_time: e.target.value })}
+                        className="w-full border border-slate-200 rounded-xl px-2 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                        title="Reminder time (optional)"
+                      />
+                    </div>
+                  </div>
+                  {/* Quick preset chips for date & time */}
+                  <div className="flex items-center justify-between mt-1.5 flex-wrap gap-1 text-[10px]">
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setQuickDate(-1)}
+                        className="px-1.5 py-0.5 rounded font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                      >
+                        Yesterday
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuickDate(0)}
+                        className="px-1.5 py-0.5 rounded font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors"
+                      >
+                        Today
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuickDate(1)}
+                        className="px-1.5 py-0.5 rounded font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                      >
+                        Tomorrow
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setQuickTime('now')}
+                        className="px-1.5 py-0.5 rounded font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                        title="Set to current time"
+                      >
+                        Now
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuickTime('+30m')}
+                        className="px-1.5 py-0.5 rounded font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                        title="Add 30 minutes"
+                      >
+                        +30m
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuickTime('+1h')}
+                        className="px-1.5 py-0.5 rounded font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                        title="Add 1 hour"
+                      >
+                        +1h
+                      </button>
+                      {formData.reminder_time && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, reminder_time: '' }))}
+                          className="px-1 py-0.5 rounded font-bold text-slate-400 hover:text-rose-500"
+                          title="Clear time"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Optional Deadline */}
+                {/* Optional Deadline & Deadline Time */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Target Deadline <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                    Target Deadline & Time <span className="text-slate-400 font-normal lowercase">(optional)</span>
                   </label>
-                  <input
-                    type="date"
-                    value={formData.deadline}
-                    onChange={e => setFormData({ ...formData, deadline: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                  />
+                  <div className="grid grid-cols-12 gap-1.5">
+                    <div className="col-span-7">
+                      <input
+                        type="date"
+                        value={formData.deadline}
+                        onChange={e => setFormData({ ...formData, deadline: e.target.value })}
+                        className="w-full border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                      />
+                    </div>
+                    <div className="col-span-5">
+                      <input
+                        type="time"
+                        value={formData.deadline_time}
+                        onChange={e => setFormData({ ...formData, deadline_time: e.target.value })}
+                        className="w-full border border-slate-200 rounded-xl px-2 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                        title="Deadline time (optional)"
+                      />
+                    </div>
+                  </div>
                   <p className="text-[10px] text-slate-400 mt-1">Leaves open if no strict deadline applies.</p>
                 </div>
               </div>
@@ -1724,7 +1848,7 @@ export default function RemindersPage({ embedded = false }) {
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
                 <div className="text-xs font-bold text-slate-800">{completionModalReminder.title}</div>
                 <div className="text-[11px] text-slate-500 mt-0.5">
-                  Scheduled date: {completionModalReminder.reminder_date} • Assignee: {completionModalReminder.user_name}
+                  Scheduled date: {completionModalReminder.reminder_date}{completionModalReminder.reminder_time ? ` • ${formatTimeDisplay(completionModalReminder.reminder_time)}` : ''} • Assignee: {completionModalReminder.user_name}
                 </div>
               </div>
 
@@ -2066,7 +2190,7 @@ export default function RemindersPage({ embedded = false }) {
               )}
               <div className="flex items-center justify-between text-[11px]">
                 <span className="text-slate-500">Scheduled Date:</span>
-                <span className="font-semibold text-slate-700">{activeDiscussionReminder.reminder_date}</span>
+                <span className="font-semibold text-slate-700">{activeDiscussionReminder.reminder_date}{activeDiscussionReminder.reminder_time ? ` • ${formatTimeDisplay(activeDiscussionReminder.reminder_time)}` : ''}</span>
               </div>
               {activeDiscussionReminder.deadline && (
                 <div className="flex items-center justify-between text-[11px]">

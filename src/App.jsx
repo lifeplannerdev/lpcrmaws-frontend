@@ -50,6 +50,7 @@ import DocumentDetailsPage from "./Pages/DocumentDetailsPage.jsx";
 import GmailCallbackPage from "./Pages/GmailCallbackPage.jsx";
 import DocumentExpiryNotifier from "./Components/dashboard/DocumentExpiryNotifier.jsx";
 import GlobalReminderNotifier from "./Components/reminders/GlobalReminderNotifier.jsx";
+import GlobalFollowUpNotifier from "./Components/followups/GlobalFollowUpNotifier.jsx";
 import FdsDashboard from './Pages/FDS/FdsDashboard.jsx';
 import FdsEnquiryPage from './Pages/FDS/FdsEnquiryPage.jsx';
 import FdsTrialPage from './Pages/FDS/FdsTrialPage.jsx';
@@ -120,6 +121,7 @@ export default function App() {
       {isAuthenticated && <LiveCallModal />}
       <DocumentExpiryNotifier />
       <GlobalReminderNotifier />
+      <GlobalFollowUpNotifier />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/verify-receipt/:token" element={<ReceiptVerifyPage />} />

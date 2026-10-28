@@ -95,6 +95,7 @@ export default function ReminderNotificationSettingsModal({
   const [isEnabled, setIsEnabled] = useState(true);
   const [startMode, setStartMode] = useState('date'); // 'date' | 'lead_days'
   const [notifyStartDate, setNotifyStartDate] = useState('');
+  const [notifyStartTime, setNotifyStartTime] = useState('');
   const [leadDays, setLeadDays] = useState(0);
   const [intervalMinutes, setIntervalMinutes] = useState(30);
   const [enableInApp, setEnableInApp] = useState(true);
@@ -114,6 +115,7 @@ export default function ReminderNotificationSettingsModal({
     if (existing) {
       setIsEnabled(existing.is_enabled !== false);
       setNotifyStartDate(existing.notify_start_date || reminder.reminder_date || '');
+      setNotifyStartTime(existing.notify_start_time ? existing.notify_start_time.slice(0, 5) : (reminder.reminder_time ? reminder.reminder_time.slice(0, 5) : ''));
       setLeadDays(existing.lead_days || 0);
       setStartMode(existing.notify_start_date ? 'date' : (existing.lead_days > 0 ? 'lead_days' : 'date'));
       setIntervalMinutes(existing.interval_minutes || 30);
@@ -140,6 +142,7 @@ export default function ReminderNotificationSettingsModal({
       if (data) {
         setIsEnabled(data.is_enabled !== false);
         setNotifyStartDate(data.notify_start_date || reminder.reminder_date || '');
+        setNotifyStartTime(data.notify_start_time ? data.notify_start_time.slice(0, 5) : (reminder.reminder_time ? reminder.reminder_time.slice(0, 5) : ''));
         setLeadDays(data.lead_days || 0);
         setStartMode(data.notify_start_date ? 'date' : (data.lead_days > 0 ? 'lead_days' : 'date'));
         setIntervalMinutes(data.interval_minutes || 30);
@@ -168,6 +171,7 @@ export default function ReminderNotificationSettingsModal({
       const payload = {
         is_enabled: isEnabled,
         notify_start_date: startMode === 'date' ? (notifyStartDate || null) : null,
+        notify_start_time: startMode === 'date' ? (notifyStartTime || null) : null,
         lead_days: startMode === 'lead_days' ? Number(leadDays) : 0,
         interval_minutes: Number(intervalMinutes),
         enable_in_app: enableInApp,
@@ -364,16 +368,29 @@ export default function ReminderNotificationSettingsModal({
                 {startMode === 'date' ? (
                   <div className="space-y-1.5 bg-slate-50/70 p-3.5 rounded-2xl border border-slate-200/70">
                     <label className="text-[11px] font-semibold text-slate-700 block">
-                      Start Alerting From Date:
+                      Start Alerting From Date & Time:
                     </label>
-                    <input
-                      type="date"
-                      value={notifyStartDate}
-                      onChange={(e) => setNotifyStartDate(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
-                    />
+                    <div className="grid grid-cols-12 gap-2">
+                      <div className="col-span-7">
+                        <input
+                          type="date"
+                          value={notifyStartDate}
+                          onChange={(e) => setNotifyStartDate(e.target.value)}
+                          className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
+                        />
+                      </div>
+                      <div className="col-span-5">
+                        <input
+                          type="time"
+                          value={notifyStartTime}
+                          onChange={(e) => setNotifyStartTime(e.target.value)}
+                          className="w-full px-2.5 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
+                          title="Start time (optional)"
+                        />
+                      </div>
+                    </div>
                     <p className="text-[10px] text-slate-500">
-                      Notifications will strictly begin once the calendar reaches this date.
+                      Notifications will strictly begin once this specific date and time are reached.
                     </p>
                   </div>
                 ) : (
