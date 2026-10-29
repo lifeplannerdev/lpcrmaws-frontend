@@ -674,6 +674,11 @@ export default function AllFollowUpsPage() {
   }, [initiateCall, handleOpenFollowUpCall]);
 
   const applyFilter = (items) => items.filter(item => {
+    // Only show active members' follow-ups under active follow-ups view
+    if (activeTab === 'active' && item.assigned_to && item.assigned_to.is_active === false) {
+      return false;
+    }
+
     const q = searchTerm.toLowerCase();
     const dName = (item.lead_name || item.name || item.processing_student_name || '').toLowerCase();
     const dPhone = (item.lead_phone || item.phone_number || '').toLowerCase();

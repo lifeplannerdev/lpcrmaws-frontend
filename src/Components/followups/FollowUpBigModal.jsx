@@ -114,6 +114,11 @@ export default function FollowUpBigModal({
   // Apply search & filters
   const filteredItems = useMemo(() => {
     return tabItems.filter((item) => {
+      // Always exclude inactive staff members' follow-ups
+      if (item.assigned_to && item.assigned_to.is_active === false) {
+        return false;
+      }
+
       const q = searchTerm.toLowerCase().trim();
       const name = (item.lead_name || item.name || item.processing_student_name || '').toLowerCase();
       const phone = (item.lead_phone || item.phone_number || '').toLowerCase();
