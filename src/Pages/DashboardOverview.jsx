@@ -14,6 +14,7 @@ import LoadingSpinner from '../Components/dashboard/LoadingSpinner';
 import RecentActivities from '../Components/dashboard/RecentActivities';
 import LiveLeadsBoard from '../Components/dashboard/LiveLeadsBoard';
 import FeedsWidget from '../Components/dashboard/FeedsWidget';
+import UserPenaltyWidget from '../Components/dashboard/UserPenaltyWidget';
 import DocumentExpiryWidget from '../Components/dashboard/DocumentExpiryWidget';
 import { formatTimeAgo, formatTaskTime, getPriorityColor } from '../Components/utils/dashboardHelpers';
 import { LayoutDashboard, Activity } from 'lucide-react';
@@ -137,6 +138,7 @@ export default function DashboardOverview() {
             <div className="mt-6 mb-6">
               <FeedsWidget />
             </div>
+            <UserPenaltyWidget />
             <LiveLeadsBoard />
           </>
         ) : (
@@ -149,6 +151,7 @@ export default function DashboardOverview() {
             <div className="mt-6 mb-6">
               <FeedsWidget />
             </div>
+            <UserPenaltyWidget />
           </>
         )}
 
