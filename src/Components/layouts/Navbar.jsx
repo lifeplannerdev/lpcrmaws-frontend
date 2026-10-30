@@ -217,8 +217,8 @@ const Navbar = () => {
   const isFds = user?.company === 'FDS';
 
   return (
-    <div className={`p-3 lg:p-4 shadow-sm transition-colors relative z-40 ${isFds ? 'bg-[#1C1410] border-b border-[#C9A96E]/20' : 'bg-white border-b border-gray-100'}`}>
-      <div className="max-w-[1600px] mx-auto flex items-center gap-4 relative z-40">
+    <div className={`px-4 sm:px-6 md:px-8 lg:px-10 2xl:px-12 py-3 lg:py-4 shadow-sm transition-colors relative z-40 ${isFds ? 'bg-[#1C1410] border-b border-[#C9A96E]/20' : 'bg-white border-b border-gray-100'}`}>
+      <div className="w-full max-w-none flex items-center gap-4 relative z-40">
         {isFds && (
           <div 
             className="flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity mr-2" 

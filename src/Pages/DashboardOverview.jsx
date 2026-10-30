@@ -16,10 +16,10 @@ import LiveLeadsBoard from '../Components/dashboard/LiveLeadsBoard';
 import FeedsWidget from '../Components/dashboard/FeedsWidget';
 import UserPenaltyWidget from '../Components/dashboard/UserPenaltyWidget';
 import DocumentExpiryWidget from '../Components/dashboard/DocumentExpiryWidget';
-import { formatTimeAgo, formatTaskTime, getPriorityColor } from '../Components/utils/dashboardHelpers';
+import { formatTaskTime, getPriorityColor } from '../Components/utils/dashboardHelpers';
 import { LayoutDashboard, Activity } from 'lucide-react';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const TABS = [
   { id: 'overview',   label: 'Overview',    icon: LayoutDashboard },
@@ -37,9 +37,11 @@ export default function DashboardOverview() {
     total_leads: null, active_staff: null, total_students: null,
     staff_on_leave: null, pending_candidates: null,
     leads_change: 0, staff_change: 0, students_change: 0,
+    metrics: null, lead_pipeline: null, followup_stats: null, task_stats: null,
+    executive_financials: null, has_admin_dashboard: false, user_role: '',
   });
 
-  const [activities,      setActivities]      = useState([]);
+  const [_activities,     setActivities]      = useState([]);
   const [tasks,           setTasks]           = useState([]);
   const [upcomingTasks,   setUpcomingTasks]   = useState([]);
   const [todayFollowUps,  setTodayFollowUps]  = useState([]);
@@ -49,8 +51,8 @@ export default function DashboardOverview() {
   const userRole = user?.role_names?.length ? user.role_names.join(', ') : 'User';
   const userName = user?.name || user?.username || 'User';
   
-  // Replace role check with actual capabilities
-  const isAdmin  = hasPermission('staff:view_any') || hasPermission('staff:access_flag');
+  // Dynamic RBAC check: admin:dashboard is the primary determinant for admin dashboard and executive widgets
+  const isAdmin  = hasPermission('admin:dashboard');
 
   const fetchWithAuth = async (url, options = {}) => {
     let token = accessToken;
@@ -101,18 +103,41 @@ export default function DashboardOverview() {
 
       if (isAdmin) {
         fetchPromises.push(
-          fetchData('/stats/', (data) => {
-            setStats({
-              total_leads:     data.total_leads !== undefined ? data.total_leads : null,
-              active_staff:    data.active_staff !== undefined ? data.active_staff : null,
-              total_students:  data.total_students !== undefined ? data.total_students : null,
-              staff_on_leave:  data.staff_on_leave !== undefined ? data.staff_on_leave : null,
-              pending_candidates: data.pending_candidates !== undefined ? data.pending_candidates : null,
-              leads_change:    data.leads_change    || 0,
-              staff_change:    data.staff_change    || 0,
-              students_change: data.students_change || 0,
-            });
-          }, 'Failed to load dashboard statistics')
+          (async () => {
+            let data = null;
+            try {
+              data = await fetchWithAuth(`${API_BASE_URL}/dashboard/stats/`);
+            } catch (err) {
+              console.warn('Primary endpoint /dashboard/stats/ unavailable, falling back to /stats/:', err);
+              try {
+                data = await fetchWithAuth(`${API_BASE_URL}/stats/`);
+              } catch (fallbackErr) {
+                console.error('Failed to load dashboard statistics from fallback /stats/:', fallbackErr);
+                setError('Failed to load dashboard statistics');
+                return;
+              }
+            }
+
+            if (data) {
+              setStats({
+                total_leads: data.total_leads ?? data.metrics?.leads?.total ?? data.lead_pipeline?.total_leads ?? null,
+                active_staff: data.active_staff ?? null,
+                total_students: data.total_students ?? null,
+                staff_on_leave: data.staff_on_leave ?? null,
+                pending_candidates: data.pending_candidates ?? null,
+                leads_change: data.leads_change || 0,
+                staff_change: data.staff_change || 0,
+                students_change: data.students_change || 0,
+                metrics: data.metrics || null,
+                lead_pipeline: data.lead_pipeline || null,
+                followup_stats: data.followup_stats || null,
+                task_stats: data.task_stats || null,
+                executive_financials: data.metrics?.executive_financials || data.role_sections?.executive_financials || data.executive_financials || null,
+                has_admin_dashboard: data.has_admin_dashboard ?? true,
+                user_role: data.user_role || '',
+              });
+            }
+          })()
         );
       }
 
@@ -128,7 +153,7 @@ export default function DashboardOverview() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <Navbar />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="w-full max-w-none px-4 sm:px-6 md:px-8 lg:px-10 2xl:px-12 py-6 space-y-6">
         <DashboardHeader userName={userName} userRole={userRole} isAdmin={isAdmin} />
         <ErrorAlert message={error} />
 
@@ -157,18 +182,18 @@ export default function DashboardOverview() {
 
         {/* Tab bar */}
         <div className="flex gap-1 mb-6 bg-white border border-gray-200 rounded-xl p-1 w-fit shadow-sm">
-          {TABS.map(({ id, label, icon: Icon }) => (
+          {TABS.map((tab) => (
             <button
-              key={id}
-              onClick={() => setActiveTab(id)}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                activeTab === id
+                activeTab === tab.id
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
                   : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100'
               }`}
             >
-              <Icon className="w-4 h-4" />
-              {label}
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
             </button>
           ))}
         </div>
