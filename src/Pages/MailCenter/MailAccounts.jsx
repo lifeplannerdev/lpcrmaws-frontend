@@ -642,18 +642,16 @@ export const MailAccounts = ({ returnPath = '/mail-settings' }) => {
                       >
                         Sync Mail
                       </Button>
-                      {canManage && (
-                        <Button
-                          variant="outlined"
-                          color={connected ? 'primary' : 'warning'}
-                          size="small"
-                          onClick={() => handleConnectGmail(acc.module_scope, acc.company)}
-                          startIcon={<RefreshCw size={14} />}
-                          sx={{ textTransform: 'none', borderRadius: '8px' }}
-                        >
-                          Reconnect OAuth
-                        </Button>
-                      )}
+                      <Button
+                        variant="outlined"
+                        color={connected ? 'primary' : 'warning'}
+                        size="small"
+                        onClick={() => handleConnectGmail(acc.module_scope, acc.company)}
+                        startIcon={<RefreshCw size={14} />}
+                        sx={{ textTransform: 'none', borderRadius: '8px' }}
+                      >
+                        Reconnect OAuth
+                      </Button>
                       {canManage && (
                         <Button
                           variant="outlined"
