@@ -4,6 +4,7 @@ import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useVoxbayCall } from '../hooks/useVoxbayCall';
+import { useMailCompose, buildLeadAdvisorMailConfig, buildAdvisorPerformanceMailConfig } from '../context/MailComposeContext';
 import {
   allStatusOptions,
   statusOptions,
@@ -16,7 +17,7 @@ import {
   ArrowUpRight, Minus, X, Calendar, BarChart2, UserCheck, PhoneCall,
   PhoneIncoming, PhoneOutgoing, Clock, MessageSquare, SlidersHorizontal,
   ChevronLeft, Sparkles, Trophy, Award, Flame, Target, Star, Volume2,
-  ShieldCheck, ArrowRight, ExternalLink, Hash, Check, Info
+  ShieldCheck, ArrowRight, ExternalLink, Hash, Check, Info, Mail
 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -163,7 +164,7 @@ function parseFollowUpNotes(notes, explicitRecordingUrl = null) {
   };
 }
 
-function LeadRow({ lead, onCall }) {
+function LeadRow({ lead, onCall, onMailLead }) {
   const [expanded, setExpanded] = useState(false);
   const statusCls = STATUS_COLOR_MAP[lead.status] || 'bg-gray-100 text-gray-700 border-gray-200';
 
@@ -226,18 +227,63 @@ function LeadRow({ lead, onCall }) {
         <td className="px-3 py-3 text-xs font-bold text-gray-700">{lead.followups?.length ?? 0}</td>
         <td className="px-3 py-3 text-xs text-gray-500">{lead.created_at ? new Date(lead.created_at).toLocaleDateString('en-IN') : '—'}</td>
         <td className="px-3 py-3">
-          <button
-            onClick={e => { e.stopPropagation(); onCall(lead.phone, lead); }}
-            className="p-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition-all hover:scale-105 active:scale-95 shadow-sm"
-            title="Call with Voxbay"
-          >
-            <PhoneCall size={14} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {onMailLead && (
+              <button
+                onClick={e => { e.stopPropagation(); onMailLead(lead, 'advisor'); }}
+                className="p-2 rounded-xl bg-violet-100 hover:bg-violet-200 text-violet-800 transition-all hover:scale-105 active:scale-95 shadow-sm"
+                title="Mail Advisor / Lead about this Lead"
+              >
+                <Mail size={14} />
+              </button>
+            )}
+            <button
+              onClick={e => { e.stopPropagation(); onCall(lead.phone, lead); }}
+              className="p-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition-all hover:scale-105 active:scale-95 shadow-sm"
+              title="Call with Voxbay"
+            >
+              <PhoneCall size={14} />
+            </button>
+          </div>
         </td>
       </tr>
       {expanded && (
         <tr>
           <td colSpan={9} className="px-6 pb-4 pt-2 bg-indigo-50/30">
+            {onMailLead && (
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 bg-white border border-violet-200 rounded-xl px-4 py-2.5 shadow-sm">
+                <div className="flex items-center gap-2 text-xs text-slate-700 font-semibold">
+                  <Mail size={14} className="text-violet-600" />
+                  <span>Executive Lead Communication:</span>
+                  {lead.assigned_to_name && (
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+                      Advisor: {lead.assigned_to_name}
+                    </span>
+                  )}
+                  {lead.email && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-mono text-[11px] border border-emerald-200">
+                      Lead: {lead.email}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={e => { e.stopPropagation(); onMailLead(lead, 'advisor'); }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer"
+                  >
+                    <Mail size={12} /> Mail Advisor about Lead
+                  </button>
+                  <button
+                    type="button"
+                    onClick={e => { e.stopPropagation(); onMailLead(lead, 'lead'); }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-violet-50 text-violet-700 border border-violet-200 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    <Mail size={12} /> Mail Lead Directly
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
                 <h5 className="text-xs font-bold text-gray-600 uppercase mb-2 flex items-center gap-1.5">
@@ -297,6 +343,7 @@ export default function StaffAnalysisPage() {
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const { initiateCall } = useVoxbayCall();
+  const { openMailComposer } = useMailCompose();
 
   // Date filters
   const [datePreset, setDatePreset] = useState('all_time');
@@ -1039,6 +1086,14 @@ export default function StaffAnalysisPage() {
                     <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
                       <Flame size={20} />
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => openMailComposer(buildAdvisorPerformanceMailConfig(focusedData))}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-extrabold shadow-sm transition-all cursor-pointer"
+                      title={`Send Performance Review Mail to ${focusedData.employee.full_name}`}
+                    >
+                      <Mail size={14} /> Mail Advisor
+                    </button>
                   </div>
                 )}
               </div>
@@ -1340,7 +1395,12 @@ export default function StaffAnalysisPage() {
                       </thead>
                       <tbody>
                         {leadsData.results.map(lead => (
-                          <LeadRow key={lead.id} lead={lead} onCall={(phone, l) => initiateCall(phone, l)} />
+                          <LeadRow
+                            key={lead.id}
+                            lead={lead}
+                            onCall={(phone, l) => initiateCall(phone, l)}
+                            onMailLead={(l, mode) => openMailComposer(buildLeadAdvisorMailConfig(l, focusedData?.employee, mode))}
+                          />
                         ))}
                       </tbody>
                     </table>
@@ -1470,13 +1530,34 @@ export default function StaffAnalysisPage() {
                               })()}
                             </td>
                             <td className="px-4 py-3">
-                              <button
-                                onClick={() => initiateCall(f.phone || f.lead?.phone, f.lead)}
-                                className="p-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition-all hover:scale-105"
-                                title="Call now"
-                              >
-                                <PhoneCall size={14} />
-                              </button>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => openMailComposer(buildLeadAdvisorMailConfig({
+                                    ...f.lead,
+                                    id: f.lead?.id || f.id,
+                                    name: f.name || f.lead?.name,
+                                    phone: f.phone || f.lead?.phone,
+                                    email: f.email || f.lead?.email,
+                                    assigned_to_id: f.assigned_to_id || f.lead?.assigned_to_id,
+                                    assigned_to_name: f.assigned_to_name || f.lead?.assigned_to_name,
+                                    assigned_to_email: f.assigned_to_email || f.lead?.assigned_to_email,
+                                    remarks: f.notes || f.lead?.remarks,
+                                    latest_followup: f,
+                                  }, focusedData?.employee, 'advisor'))}
+                                  className="p-2 rounded-xl bg-violet-100 hover:bg-violet-200 text-violet-800 transition-all hover:scale-105 cursor-pointer"
+                                  title="Mail Advisor / Lead about this Follow-up"
+                                >
+                                  <Mail size={14} />
+                                </button>
+                                <button
+                                  onClick={() => initiateCall(f.phone || f.lead?.phone, f.lead)}
+                                  className="p-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition-all hover:scale-105"
+                                  title="Call now"
+                                >
+                                  <PhoneCall size={14} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1809,15 +1890,25 @@ export default function StaffAnalysisPage() {
                               {summary.total_leads}
                             </td>
                             <td className="px-4 py-3">
-                              <button
-                                onClick={() => {
-                                  setFocusedEmployee(employee.id);
-                                  setActiveTab('overview');
-                                }}
-                                className="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl transition-colors"
-                              >
-                                View 360°
-                              </button>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => openMailComposer(buildAdvisorPerformanceMailConfig(empData))}
+                                  className="p-1.5 rounded-xl bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200 transition-colors cursor-pointer"
+                                  title={`Mail Performance Review to ${employee.full_name}`}
+                                >
+                                  <Mail size={13} />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setFocusedEmployee(employee.id);
+                                    setActiveTab('overview');
+                                  }}
+                                  className="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs rounded-xl transition-colors"
+                                >
+                                  View 360°
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );

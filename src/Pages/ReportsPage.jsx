@@ -6,10 +6,11 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../Components/layouts/Navbar';
 import CompanySwitcher from '../Components/common/CompanySwitcher';
 import Pagination from '../Components/common/Pagination';
-import { Calendar, FileText, Download, FolderOpen, TrendingUp, Clock, CheckCircle, Eye, AlertCircle, XCircle, Paperclip } from 'lucide-react';
+import { Calendar, FileText, Download, FolderOpen, TrendingUp, Clock, CheckCircle, Eye, AlertCircle, XCircle, Paperclip, Mail } from 'lucide-react';
+import { useMailCompose, buildReportMailConfig } from '../context/MailComposeContext';
 import { downloadCSV, downloadPDF } from '../utils/exportUtils';
 
-const ReportRow = React.memo(({ report, isLate, getStatusBadge, navigate, downloadFile }) => {
+const ReportRow = React.memo(({ report, isLate, getStatusBadge, navigate, downloadFile, canUseMail, onMailReport }) => {
   return (
     <tr className={`hover:bg-gradient-to-r transition-all duration-200 ${report.status === 'rejected' ? 'bg-red-50 hover:from-red-100 hover:to-red-50' : (isLate ? 'bg-amber-50/50 hover:from-amber-100 hover:to-amber-50' : 'hover:from-blue-50 hover:to-indigo-50')}`}>
       <td className="px-6 py-4">
@@ -50,6 +51,16 @@ const ReportRow = React.memo(({ report, isLate, getStatusBadge, navigate, downlo
       <td className="px-6 py-4">{getStatusBadge(report)}</td>
       <td className="px-6 py-4">
         <div className="flex items-center gap-2">
+          {canUseMail && (
+            <button
+              onClick={() => onMailReport(report)}
+              className="px-3 py-2 text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-all duration-200 flex items-center gap-1.5 text-xs font-bold shadow-xs"
+              title={report.status === 'missing' ? 'Send Missing Report Reminder Email' : 'Email Employee about this Report'}
+            >
+              <Mail size={14} />
+              <span>{report.status === 'missing' ? 'Send Reminder' : 'Mail'}</span>
+            </button>
+          )}
           {/* View Report Details */}
           {report.status !== 'missing' && (
             <button
@@ -87,6 +98,8 @@ const ReportRow = React.memo(({ report, isLate, getStatusBadge, navigate, downlo
 export default function ReportsPage() {
   const { accessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
+  const { openMailComposer } = useMailCompose();
+  const canUseMail = hasPermission('mail:manage') || hasPermission('mail:use') || user?.is_superuser;
   const navigate = useNavigate();
 
   const isKochiOnly = hasPermission('reports:kochi') && !hasPermission('reports:read_all') && !user?.is_superuser;
@@ -111,6 +124,12 @@ export default function ReportsPage() {
 
   const PAGE_SIZE = 50;
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
+
+  const handleMailReport = useCallback((report) => {
+    const empObj = employees.find(e => Number(e.id) === Number(report.user || report.id));
+    const isMissing = report.status === 'missing';
+    openMailComposer(buildReportMailConfig(report, empObj, isMissing, report.report_date));
+  }, [employees, openMailComposer]);
 
   const fetchStats = async () => {
     if (!accessToken) return;
@@ -523,6 +542,8 @@ export default function ReportsPage() {
                             getStatusBadge={getStatusBadge}
                             navigate={navigate}
                             downloadFile={downloadFile}
+                            canUseMail={canUseMail}
+                            onMailReport={handleMailReport}
                           />
                         ))}
                       </React.Fragment>

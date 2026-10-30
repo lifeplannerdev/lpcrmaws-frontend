@@ -12,12 +12,12 @@ export default function GmailCallbackPage() {
   const location = useLocation();
   const [status, setStatus] = useState('processing'); // processing, success, error
   const [message, setMessage] = useState('Connecting your Gmail account...');
+  const returnTo = sessionStorage.getItem('gmail_oauth_return_to') || '/mail-settings';
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const code = params.get('code');
     const error = params.get('error');
-
     const state = params.get('state');
 
     if (error) {
@@ -36,25 +36,39 @@ export default function GmailCallbackPage() {
 
     const savedModule = sessionStorage.getItem('gmail_oauth_module_scope');
     const savedCompany = sessionStorage.getItem('gmail_oauth_company');
+    const savedRoles = sessionStorage.getItem('gmail_oauth_role_ids');
+    const savedPagesRaw = sessionStorage.getItem('gmail_oauth_allowed_pages');
+    let savedPages = undefined;
+    try {
+      if (savedPagesRaw) savedPages = JSON.parse(savedPagesRaw);
+    } catch {
+      savedPages = undefined;
+    }
 
     axios.post(`${API_BASE_URL}/mail/callback/`, {
       code,
       state,
       module_scope: savedModule || undefined,
       company: savedCompany || undefined,
+      role_ids: savedRoles || undefined,
+      allowed_pages: savedPages,
     }, {
       headers: { Authorization: `Bearer ${accessToken}` }
     })
     .then(res => {
       setStatus('success');
+      const targetUrl = sessionStorage.getItem('gmail_oauth_return_to') || '/mail-settings';
       sessionStorage.removeItem('gmail_oauth_module_scope');
       sessionStorage.removeItem('gmail_oauth_company');
+      sessionStorage.removeItem('gmail_oauth_role_ids');
+      sessionStorage.removeItem('gmail_oauth_allowed_pages');
+      sessionStorage.removeItem('gmail_oauth_return_to');
       const aliasInfo = res.data.send_as_email ? ` with Sender Alias: ${res.data.send_as_email}` : '';
-      const scopeInfo = res.data.module_scope === 'FEES' ? ' [FLAG Fees & Accounts]' : ' [Processing & Admissions]';
+      const scopeInfo = res.data.module_scope ? ` [${res.data.module_scope}]` : '';
       setMessage(`Connected ${res.data.email || 'Gmail'}${scopeInfo}${aliasInfo} successfully!`);
       setTimeout(() => {
-        navigate('/mail-center');
-      }, 2500);
+        navigate(targetUrl);
+      }, 2200);
     })
     .catch(err => {
       setStatus('error');
@@ -80,10 +94,10 @@ export default function GmailCallbackPage() {
             <h2 className="text-xl font-bold text-gray-800">Success!</h2>
             <p className="text-gray-500 mt-2">{message}</p>
             <button 
-              onClick={() => navigate('/mail-center')}
+              onClick={() => navigate(returnTo)}
               className="mt-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-2.5 rounded-xl font-semibold shadow-md transition-all"
             >
-              Return to Mail Center
+              Return to Mail Settings
             </button>
           </div>
         )}
@@ -94,7 +108,7 @@ export default function GmailCallbackPage() {
             <h2 className="text-xl font-bold text-gray-800">Connection Failed</h2>
             <p className="text-red-500 mt-2">{message}</p>
             <button 
-              onClick={() => navigate('/mail-center')}
+              onClick={() => navigate(returnTo)}
               className="mt-6 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-6 py-2.5 rounded-xl font-semibold transition-all"
             >
               Go Back

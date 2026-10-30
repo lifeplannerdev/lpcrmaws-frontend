@@ -4,7 +4,7 @@ import {
   Search, Plus, Calendar, User, Flag,
   CheckCircle, Circle, AlertCircle,
   ListTodo, Loader, CheckCheck,
-  AlertTriangle, XCircle, Filter, LayoutGrid, List, MessageSquare, Trash2, Clock
+  AlertTriangle, XCircle, Filter, LayoutGrid, List, MessageSquare, Trash2, Clock, Mail
 } from 'lucide-react';
 
 import Navbar from '../Components/layouts/Navbar';
@@ -13,12 +13,15 @@ import { usePermissions } from '../context/PermissionsContext';
 import KanbanBoard from '../Components/KanbanBoard';
 import { downloadCSV, downloadPDF } from '../utils/exportUtils';
 import CompanySwitcher from '../Components/common/CompanySwitcher';
+import { useMailCompose, buildTaskMailConfig } from '../context/MailComposeContext';
 
 
 export default function TasksPage({ isMyTasks = false }) {
   const navigate = useNavigate();
   const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
+  const { openMailComposer } = useMailCompose();
+  const canUseMail = hasPermission('mail:manage') || hasPermission('mail:use') || user?.is_superuser;
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const [tasks, setTasks]   = useState([]);
@@ -648,7 +651,18 @@ export default function TasksPage({ isMyTasks = false }) {
                   </div>
 
                   {/* Actions */}
+                    {/* Actions */}
                   <div className="flex items-center gap-2 flex-wrap lg:flex-col lg:items-stretch lg:min-w-[160px]">
+                    {canUseMail && (
+                      <button
+                        onClick={() => openMailComposer(buildTaskMailConfig(task))}
+                        className="flex-1 lg:flex-none px-4 py-2.5 text-purple-700 bg-purple-50/70 hover:bg-purple-100 rounded-xl transition-all duration-200 text-sm font-semibold border border-purple-200 hover:border-purple-300 hover:shadow-md flex items-center justify-center gap-1.5"
+                        title="Send email or open conversation thread about this task"
+                      >
+                        <Mail size={15} />
+                        Mail Assignee
+                      </button>
+                    )}
                     <button
                       onClick={() => navigate(`/tasks/${task.id}`)}
                       className="flex-1 lg:flex-none px-4 py-2.5 text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 text-sm font-semibold border border-blue-200 hover:border-blue-300 hover:shadow-md"

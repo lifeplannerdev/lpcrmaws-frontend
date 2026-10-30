@@ -2,12 +2,13 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Components/layouts/Navbar';
 import { useAuth } from '../context/AuthContext';
+import { useMailCompose, buildAdvisorPerformanceMailConfig } from '../context/MailComposeContext';
 import {
   FileText, Download, Users, User, Calendar,
   TrendingUp, Phone, CheckCircle2, AlertTriangle, Clock,
   Target, Flame, Trophy, PhoneCall,
   PhoneIncoming, PhoneOutgoing, ArrowLeft, RefreshCw,
-  BarChart2, Activity, Search, Sparkles,
+  BarChart2, Activity, Search, Sparkles, Mail,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -236,6 +237,7 @@ function ReportFooter({ dateLabel, generatedAt }) {
 // ══════════════════════════════════════════════════════════════════════════════
 export default function StaffAnalysisReportPage() {
   const { accessToken } = useAuth();
+  const { openMailComposer } = useMailCompose();
   const navigate = useNavigate();
 
   // Controls
@@ -373,10 +375,20 @@ export default function StaffAnalysisReportPage() {
               <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>Stunning PDF performance reports · select employee + period → generate</p>
             </div>
             {reportData && (
-              <button onClick={handlePrint}
-                style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', borderRadius: 10, border: '1.5px solid #10b981', background: 'white', color: '#10b981', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                <Download size={15}/> Export PDF
-              </button>
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+                {reportData.mode === 'single' && reportData.empData && (
+                  <button
+                    onClick={() => openMailComposer(buildAdvisorPerformanceMailConfig(reportData.empData))}
+                    style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 2px 8px rgba(124,58,237,0.28)' }}
+                  >
+                    <Mail size={15}/> Mail Report to Advisor
+                  </button>
+                )}
+                <button onClick={handlePrint}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', borderRadius: 10, border: '1.5px solid #10b981', background: 'white', color: '#10b981', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                  <Download size={15}/> Export PDF
+                </button>
+              </div>
             )}
           </div>
 

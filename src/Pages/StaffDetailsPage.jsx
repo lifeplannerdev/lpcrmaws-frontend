@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import StaffPermissionsModal from '../Components/staffs/StaffPermissionsModal';
 import { Can, usePermissions } from '../context/PermissionsContext';
+import { useMailCompose } from '../context/MailComposeContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -26,6 +27,7 @@ export default function StaffDetailsPage() {
   const [activeTab, setActiveTab] = useState('profile'); // profile, assets
   const [permissionsModalOpen, setPermissionsModalOpen] = useState(false);
   const { hasPermission } = usePermissions();
+  const { openMailComposer } = useMailCompose();
   const canEditStaff = hasPermission('staff:edit_any') || hasPermission('staff:edit_tenant');
 
   const authFetch = useCallback(async (url, options = {}, retry = true) => {
@@ -169,7 +171,28 @@ export default function StaffDetailsPage() {
                 </div>
               </div>
               
-              <div className="mt-4 sm:mt-0 flex gap-3">
+              <div className="mt-4 sm:mt-0 flex flex-wrap gap-3">
+                <button
+                  onClick={() => openMailComposer({
+                    recipientStaffId: staff.id,
+                    recipientStaffName: fullName,
+                    recipientStaffEmail: staff.email || '',
+                    toEmails: staff.email ? [staff.email] : [],
+                    contextModule: 'EXECUTIVE',
+                    contextId: String(staff.id),
+                    contextLabel: `Staff: ${fullName}`,
+                    subject: `Executive Communication: ${fullName}`,
+                    customVariables: {
+                      staff_name: fullName,
+                      staff_email: staff.email || '',
+                      staff_role: (staff.role_names?.join(', ') || '').replace(/_/g, ' '),
+                      staff_department: staff.team || staff.department || '',
+                    },
+                  })}
+                  className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl hover:from-violet-700 hover:to-indigo-700 transition-all shadow-md shadow-violet-200 font-semibold flex items-center gap-2 cursor-pointer"
+                >
+                  <Mail size={18} /> Mail Staff / Thread
+                </button>
                 {canEditStaff && (
                   <>
                     <button

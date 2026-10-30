@@ -40,6 +40,8 @@ import RoleManagementPage from "./Pages/RoleManagementPage.jsx";
 import CredentialsVault from "./Pages/CredentialsVault.jsx";
 import ProcessingStudentsPage from "./Pages/ProcessingStudentsPage.jsx";
 import MailControlCenter from './Pages/MailCenter/MailControlCenter.jsx';
+import MailSettingsPage from './Pages/MailCenter/MailSettingsPage.jsx';
+import { MailComposeProvider } from './context/MailComposeContext.jsx';
 import StudentMailPage from './Pages/MailCenter/StudentMailPage.jsx';
 import FeedsPage from "./Pages/FeedsPage.jsx";
 import ProgramsPage from "./Pages/ProgramsPage.jsx";
@@ -117,6 +119,7 @@ export default function App() {
 
   return (
     <Router>
+      <MailComposeProvider>
       <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
       {isAuthenticated && <LiveCallModal />}
       <DocumentExpiryNotifier />
@@ -157,7 +160,8 @@ export default function App() {
 
         <Route path="/processing-students" element={<PermissionRoute resources={['processing_students']}><ProcessingStudentsPage /></PermissionRoute>} />
         <Route path="/processing-students/:id/mail" element={<PermissionRoute resources={['processing_students']}><StudentMailPage /></PermissionRoute>} />
-        <Route path="/mail-center" element={<PermissionRoute permissions={['mail:manage']}><MailControlCenter /></PermissionRoute>} />
+        <Route path="/mail-center" element={<PermissionRoute permissions={['mail:manage', 'mail:use']}><MailControlCenter /></PermissionRoute>} />
+        <Route path="/mail-settings" element={<PermissionRoute permissions={['mail:manage', 'mail:use']}><MailSettingsPage /></PermissionRoute>} />
         <Route path="/gmail-callback" element={<ProtectedRoute><GmailCallbackPage /></ProtectedRoute>} />
         
         <Route path="/hr/documents" element={<PermissionRoute permissions={['license:admin']}><DocumentDetailsPage /></PermissionRoute>} />
@@ -210,6 +214,7 @@ export default function App() {
 
         <Route path="*" element={<div>404 Not Found</div>} />
       </Routes>
+      </MailComposeProvider>
     </Router>
   );
 }

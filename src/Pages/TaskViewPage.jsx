@@ -7,9 +7,10 @@ import {
   ArrowLeft, Calendar, User, FileText, Clock,
   Edit2, CheckCircle, AlertTriangle, Loader,
   Circle, AlertCircle, XCircle, MessageSquare,
-  StickyNote, Flag, Trash2, Send
+  StickyNote, Flag, Trash2, Send, Mail
 } from 'lucide-react';
 import Navbar from '../Components/layouts/Navbar';
+import { useMailCompose, buildTaskMailConfig } from '../context/MailComposeContext';
 
 
 export default function TaskViewPage() {
@@ -17,6 +18,8 @@ export default function TaskViewPage() {
   const navigate     = useNavigate();
   const { accessToken, refreshAccessToken, user } = useAuth();
   const { hasPermission } = usePermissions();
+  const { openMailComposer } = useMailCompose();
+  const canUseMail = hasPermission('mail:manage') || hasPermission('mail:use') || user?.is_superuser;
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const [task,    setTask]    = useState(null);
@@ -421,6 +424,15 @@ export default function TaskViewPage() {
 
           {/* Action buttons */}
           <div className="flex flex-wrap gap-4 items-center">
+            {canUseMail && (
+              <button
+                onClick={() => openMailComposer(buildTaskMailConfig(task))}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all shadow-md hover:shadow-lg"
+              >
+                <Mail className="w-4 h-4" />
+                Mail Assignee ({task.assigned_to_full_name || task.assigned_to_name})
+              </button>
+            )}
             {canEditTask() && (
               <>
                 <button

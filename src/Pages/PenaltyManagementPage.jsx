@@ -15,8 +15,10 @@ import {
   Loader2,
   AlertTriangle,
   TrendingDown,
-  Filter
+  Filter,
+  Mail
 } from 'lucide-react';
+import { useMailCompose, buildPenaltyMailConfig } from '../context/MailComposeContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -46,7 +48,17 @@ export default function PenaltyManagementPage() {
 
   const [errors, setErrors] = useState({});
   const { hasPermission } = usePermissions();
-  const canManagePenalties = hasPermission('penalties:edit_any');
+  const { openMailComposer } = useMailCompose();
+  const canManagePenalties = hasPermission('penalties:edit_any') || hasPermission('penalties:manage') || user?.is_superuser;
+  const canUseMail = hasPermission('mail:manage') || hasPermission('mail:use') || user?.is_superuser;
+
+  const handleMailPenalty = (penalty) => {
+    const empObj = employees.find(e => e.id === penalty.user || e.user === penalty.user);
+    const enrichedEmp = empObj
+      ? { ...empObj, name: empObj.full_name || empObj.username || empObj.name }
+      : { id: penalty.user, name: getEmployeeName(penalty.user) };
+    openMailComposer(buildPenaltyMailConfig(penalty, enrichedEmp));
+  };
   const generateMonthOptions = () => {
     const months = [
       'January', 'February', 'March', 'April', 'May', 'June',
@@ -501,7 +513,7 @@ export default function PenaltyManagementPage() {
                       <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Amount</th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Month</th>
                       <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Date</th>
-                      {canManagePenalties && (
+                      {(canManagePenalties || canUseMail) && (
                         <th className="px-6 py-4 text-center text-sm font-bold text-gray-900">Actions</th>
                       )}
                     </tr>
@@ -537,23 +549,37 @@ export default function PenaltyManagementPage() {
                             <span>{formatDate(penalty.date)}</span>
                           </div>
                         </td>
-                        {canManagePenalties && (
+                        {(canManagePenalties || canUseMail) && (
                           <td className="px-6 py-4">
                             <div className="flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => handleEdit(penalty)}
-                                className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
-                                title="Edit"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(penalty.id)}
-                                className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {canUseMail && (
+                                <button
+                                  onClick={() => handleMailPenalty(penalty)}
+                                  className="px-2.5 py-2 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors flex items-center gap-1.5 text-xs font-bold"
+                                  title="Send official penalty email & view thread"
+                                >
+                                  <Mail className="w-4 h-4" />
+                                  <span>Mail</span>
+                                </button>
+                              )}
+                              {canManagePenalties && (
+                                <>
+                                  <button
+                                    onClick={() => handleEdit(penalty)}
+                                    className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
+                                    title="Edit"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(penalty.id)}
+                                    className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         )}
@@ -599,20 +625,33 @@ export default function PenaltyManagementPage() {
                       <Calendar className="w-4 h-4" />
                       <span>{formatDate(penalty.date)}</span>
                     </div>
-                    {canManagePenalties && (
+                    {(canManagePenalties || canUseMail) && (
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleEdit(penalty)}
-                          className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(penalty.id)}
-                          className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canUseMail && (
+                          <button
+                            onClick={() => handleMailPenalty(penalty)}
+                            className="px-2.5 py-2 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors flex items-center gap-1 text-xs font-bold"
+                          >
+                            <Mail className="w-4 h-4" />
+                            Mail
+                          </button>
+                        )}
+                        {canManagePenalties && (
+                          <>
+                            <button
+                              onClick={() => handleEdit(penalty)}
+                              className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(penalty.id)}
+                              className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>

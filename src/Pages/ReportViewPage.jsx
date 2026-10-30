@@ -23,12 +23,16 @@ import {
 } from 'lucide-react';
 import SpreadsheetView from '../Components/leads/SpreadsheetView';
 import Select from 'react-select';
+import { Mail } from 'lucide-react';
+import { useMailCompose, buildReportMailConfig } from '../context/MailComposeContext';
 
 export default function ReportViewPage() {
   const { id } = useParams();
   const { accessToken, user } = useAuth();
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
+  const { openMailComposer } = useMailCompose();
+  const canUseMail = hasPermission('mail:manage') || hasPermission('mail:use') || user?.is_superuser;
 
   const [report, setReport] = useState(null);
 
@@ -325,7 +329,17 @@ export default function ReportViewPage() {
           </div>
 
           {/* Action Buttons */}
+          {/* Action Buttons */}
           <div className="flex gap-3 pt-4 border-t border-gray-200 flex-wrap">
+            {canUseMail && (
+              <button
+                onClick={() => openMailComposer(buildReportMailConfig(report))}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+              >
+                <Mail size={18} />
+                Mail Employee ({report.user_name || report.name})
+              </button>
+            )}
             {hasAttachments && (
               <button
                 onClick={() => viewAttachment(report.attachments[0])}
