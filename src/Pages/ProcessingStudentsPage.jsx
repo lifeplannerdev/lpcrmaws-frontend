@@ -1032,6 +1032,38 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
     initialReceipt: null,
   });
 
+  const handleOpenFeeReceipt = (particular, paidAmount, fullAmount) => {
+    const studentData = student || formData;
+    const amountVal = Number(paidAmount || fullAmount || 0);
+    const amountStr = amountVal > 0 ? amountVal.toFixed(2) : '0.00';
+    const enrollmentCode = studentData.id ? ('LP-PROC-' + String(studentData.id).padStart(4, '0')) : '';
+
+    setReceiptStudioState({
+      isOpen: true,
+      initialPayment: null,
+      initialReceipt: {
+        company: 'LP',
+        recipient_name: studentData.name || formData.name || '',
+        recipient_phone: studentData.mobile_number || studentData.whatsapp_number || formData.mobile_number || '',
+        recipient_email: studentData.email || formData.email || '',
+        student_enrollment_code: enrollmentCode,
+        processing_student: studentData.id || null,
+        total_amount: amountStr,
+        subtotal_amount: amountStr,
+        line_items: [
+          {
+            sac_code: '999293',
+            description: particular,
+            amount: amountStr,
+            tax_rate: 0,
+            tax_amount: '0.00',
+            total_amount: amountStr,
+          }
+        ],
+      },
+    });
+  };
+
   const fetchPayments = async () => {
     if (!student) return;
     try {
@@ -1492,9 +1524,22 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
               <div className="md:col-span-2 pt-4 border-t mt-4">
                 {(!canManageFees && !formData.processing_fee_applicable) ? null : (
                   <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <input type="checkbox" name="processing_fee_applicable" checked={formData.processing_fee_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
-                      <h4 className="text-md font-semibold text-gray-700">Application/Registration Fee</h4>
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" name="processing_fee_applicable" checked={formData.processing_fee_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
+                        <h4 className="text-md font-semibold text-gray-700">Application/Registration Fee</h4>
+                      </div>
+                      {formData.processing_fee_applicable && (Number(formData.processing_fee_paid || formData.processing_fee_amount || 0) > 0) && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenFeeReceipt('Application/Registration Fee', formData.processing_fee_paid, formData.processing_fee_amount)}
+                          className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1 transition-colors shadow-xs"
+                          title="Generate receipt for Application/Registration Fee"
+                        >
+                          <Receipt size={13} />
+                          <span>Receipt</span>
+                        </button>
+                      )}
                     </div>
                     <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.processing_fee_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
                       <div>
@@ -1519,9 +1564,22 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
 
                 {(!canManageFees && !formData.fee_admission_applicable) ? null : (
                   <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <input type="checkbox" name="fee_admission_applicable" checked={formData.fee_admission_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
-                      <h4 className="text-md font-semibold text-gray-700">On Admission/Ausbildung/Offer Letter</h4>
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" name="fee_admission_applicable" checked={formData.fee_admission_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
+                        <h4 className="text-md font-semibold text-gray-700">On Admission/Ausbildung/Offer Letter</h4>
+                      </div>
+                      {formData.fee_admission_applicable && (Number(formData.fee_admission_paid || formData.fee_admission_amount || 0) > 0) && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenFeeReceipt('On Admission/Ausbildung/Offer Letter', formData.fee_admission_paid, formData.fee_admission_amount)}
+                          className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1 transition-colors shadow-xs"
+                          title="Generate receipt for On Admission/Ausbildung/Offer Letter"
+                        >
+                          <Receipt size={13} />
+                          <span>Receipt</span>
+                        </button>
+                      )}
                     </div>
                     <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_admission_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
                       <div>
@@ -1546,9 +1604,22 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
 
                 {(!canManageFees && !formData.fee_language_applicable) ? null : (
                   <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <input type="checkbox" name="fee_language_applicable" checked={formData.fee_language_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
-                      <h4 className="text-md font-semibold text-gray-700">On Language Confirmation</h4>
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" name="fee_language_applicable" checked={formData.fee_language_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
+                        <h4 className="text-md font-semibold text-gray-700">On Language Confirmation</h4>
+                      </div>
+                      {formData.fee_language_applicable && (Number(formData.fee_language_paid || formData.fee_language_amount || 0) > 0) && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenFeeReceipt('On Language Confirmation', formData.fee_language_paid, formData.fee_language_amount)}
+                          className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1 transition-colors shadow-xs"
+                          title="Generate receipt for On Language Confirmation"
+                        >
+                          <Receipt size={13} />
+                          <span>Receipt</span>
+                        </button>
+                      )}
                     </div>
                     <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_language_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
                       <div>
@@ -1573,9 +1644,22 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
 
                 {(!canManageFees && !formData.fee_visa_applicable) ? null : (
                   <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <input type="checkbox" name="fee_visa_applicable" checked={formData.fee_visa_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
-                      <h4 className="text-md font-semibold text-gray-700">On Visa Approval</h4>
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" name="fee_visa_applicable" checked={formData.fee_visa_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
+                        <h4 className="text-md font-semibold text-gray-700">On Visa Approval</h4>
+                      </div>
+                      {formData.fee_visa_applicable && (Number(formData.fee_visa_paid || formData.fee_visa_amount || 0) > 0) && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenFeeReceipt('On Visa Approval', formData.fee_visa_paid, formData.fee_visa_amount)}
+                          className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1 transition-colors shadow-xs"
+                          title="Generate receipt for On Visa Approval"
+                        >
+                          <Receipt size={13} />
+                          <span>Receipt</span>
+                        </button>
+                      )}
                     </div>
                     <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_visa_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
                       <div>
@@ -1600,9 +1684,22 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
 
                 {(!canManageFees && !formData.fee_ministry_applicable) ? null : (
                   <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <input type="checkbox" name="fee_ministry_applicable" checked={formData.fee_ministry_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
-                      <h4 className="text-md font-semibold text-gray-700">On Ministry Letter</h4>
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" name="fee_ministry_applicable" checked={formData.fee_ministry_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
+                        <h4 className="text-md font-semibold text-gray-700">On Ministry Letter</h4>
+                      </div>
+                      {formData.fee_ministry_applicable && (Number(formData.fee_ministry_paid || formData.fee_ministry_amount || 0) > 0) && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenFeeReceipt('On Ministry Letter', formData.fee_ministry_paid, formData.fee_ministry_amount)}
+                          className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1 transition-colors shadow-xs"
+                          title="Generate receipt for On Ministry Letter"
+                        >
+                          <Receipt size={13} />
+                          <span>Receipt</span>
+                        </button>
+                      )}
                     </div>
                     <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_ministry_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
                       <div>

@@ -283,15 +283,17 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
                     <span className="text-[10px] text-slate-500 block">Ph: {data.recipient_phone}</span>
                   )}
                 </div>
-                <div>
-                  <span className="text-[10px] uppercase text-slate-400 font-bold block">Academic Details</span>
-                  <span className="font-semibold text-slate-800">{data.course_or_package_name || '-'}</span>
-                  <span className="text-[10px] text-slate-500 block">
-                    {[data.batch_name && `Batch: ${data.batch_name}`, data.campus_name && `Campus: ${data.campus_name}`]
-                      .filter(Boolean)
-                      .join(' • ') || 'Standard Enrollment'}
-                  </span>
-                </div>
+                {data.company !== 'LP' && (
+                  <div>
+                    <span className="text-[10px] uppercase text-slate-400 font-bold block">Academic Details</span>
+                    <span className="font-semibold text-slate-800">{data.course_or_package_name || '-'}</span>
+                    <span className="text-[10px] text-slate-500 block">
+                      {[data.batch_name && `Batch: ${data.batch_name}`, data.campus_name && `Campus: ${data.campus_name}`]
+                        .filter(Boolean)
+                        .join(' • ') || 'Standard Enrollment'}
+                    </span>
+                  </div>
+                )}
                 <div>
                   <span className="text-[10px] uppercase text-slate-400 font-bold block">Payment Details</span>
                   <span className="font-semibold text-slate-800">
@@ -549,17 +551,21 @@ export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
 
               <div className="col-span-6 p-3.5">
                 <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-1">
-                  Academic & Payment Reference
+                  {data.company === 'LP' ? 'Payment Reference' : 'Academic & Payment Reference'}
                 </div>
                 <div className="grid grid-cols-2 gap-y-1 text-[11px]">
                   <div className="text-slate-500">Student ID:</div>
                   <div className="font-semibold text-slate-900">{data.student_enrollment_code || '-'}</div>
-                  <div className="text-slate-500">Course / Package:</div>
-                  <div className="font-semibold text-slate-900">{data.course_or_package_name || '-'}</div>
-                  <div className="text-slate-500">Batch & Campus:</div>
-                  <div className="font-semibold text-slate-900">
-                    {[data.batch_name, data.campus_name].filter(Boolean).join(' • ') || '-'}
-                  </div>
+                  {data.company !== 'LP' && (
+                    <>
+                      <div className="text-slate-500">Course / Package:</div>
+                      <div className="font-semibold text-slate-900">{data.course_or_package_name || '-'}</div>
+                      <div className="text-slate-500">Batch & Campus:</div>
+                      <div className="font-semibold text-slate-900">
+                        {[data.batch_name, data.campus_name].filter(Boolean).join(' • ') || '-'}
+                      </div>
+                    </>
+                  )}
                   <div className="text-slate-500">Payment Date:</div>
                   <div className="font-semibold text-slate-900">
                     {data.payment_date ? formatDateShort(data.payment_date) : formatDateShort(data.issue_date)}

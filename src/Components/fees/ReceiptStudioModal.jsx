@@ -107,6 +107,54 @@ export default function ReceiptStudioModal({
   const [manualWordsOverride, setManualWordsOverride] = useState(false);
   const [manualLedgerOverride, setManualLedgerOverride] = useState(false);
 
+  const [internalStudents, setInternalStudents] = useState(students || []);
+  const [internalAccounts, setInternalAccounts] = useState(accounts || []);
+
+  useEffect(() => {
+    let active = true;
+    const activeComp = String(form.company || company || 'FLAG').toUpperCase();
+    if (activeComp === 'LP') {
+      getToken().then((token) => {
+        if (!token || !active) return;
+        fetch(`${API_BASE_URL}/fees/students/?company=LP`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+          .then(res => res.ok ? res.json() : { results: [] })
+          .then(data => {
+            if (!active) return;
+            const resList = data.results || [];
+            const mappedStudents = resList.map(s => ({
+              id: s.id,
+              name: s.student_name,
+              branch_name: s.division,
+              email: s.email,
+              phone: s.phone,
+              balance_due: s.balance_due,
+              total_fee: s.total_fee,
+              total_paid: s.total_paid,
+            }));
+            setInternalStudents(mappedStudents);
+            const mappedAccounts = resList.map(s => ({
+              id: s.id,
+              student: s.id,
+              student_name: s.student_name,
+              plan_name: s.division || 'Processing Fee',
+              balance_due: s.balance_due,
+              total_due: s.total_fee,
+              total_paid: s.total_paid,
+            }));
+            setInternalAccounts(mappedAccounts);
+          })
+          .catch(err => console.error('Error fetching LP students for modal', err));
+      });
+    } else {
+      // Never show processing students when not in LifePlanner
+      setInternalStudents((students || []).filter(s => !String(s.student_id || '').startsWith('LP-')));
+      setInternalAccounts((accounts || []).filter(a => !String(a.student_id || '').startsWith('LP-')));
+    }
+    return () => { active = false; };
+  }, [company, form.company, students, accounts]);
+
   // Email popover state
   const getCompanyDefaultEmailMessage = (c) => {
     if (c === 'FDS') return 'Thank you for your fee payment at Filmaatic Dance Studio. Please find your official digital receipt attached.';
@@ -705,6 +753,9 @@ export default function ReceiptStudioModal({
 
     try {
       const token = await getToken();
+      const currentComp = String(form.company || company || 'FLAG').toUpperCase();
+      const isLp = currentComp === 'LP';
+      const isFds = currentComp === 'FDS';
       const res = await fetch(`${API_BASE_URL}/fees/receipts/calculate-preview/`, {
         method: 'POST',
         headers: {
@@ -712,9 +763,12 @@ export default function ReceiptStudioModal({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          company,
-          student: stuId || null,
-          account: accId || null,
+          company: currentComp,
+          student: (!isLp && !isFds) ? (stuId || null) : null,
+          account: (!isLp && !isFds) ? (accId || null) : null,
+          fds_student: isFds ? (stuId || null) : null,
+          fds_account: isFds ? (accId || null) : null,
+          processing_student: isLp ? (stuId || accId || null) : null,
           payment: form.payment || null,
           tax_mode: form.tax_mode,
           supply_type: form.supply_type,
@@ -1690,7 +1744,7 @@ export default function ReceiptStudioModal({
                             className="w-full px-3 py-2 rounded-xl border border-indigo-200 bg-white text-xs"
                           >
                             <option value="">-- Standalone / No Account --</option>
-                            {accounts.map((acc) => (
+                            {internalAccounts.map((acc) => (
                               <option key={acc.id} value={acc.id}>
                                 {acc.student_name} — {acc.plan_name || acc.plan_code} (Bal: {formatINR(acc.balance_due)})
                               </option>
@@ -1718,7 +1772,7 @@ export default function ReceiptStudioModal({
                               className="flex-1 px-3 py-2 rounded-xl border border-indigo-200 bg-white text-xs"
                             >
                               <option value="">-- Walk-in / Ad-Hoc Recipient --</option>
-                              {students.map((s) => (
+                              {internalStudents.map((s) => (
                                 <option key={s.id} value={s.id}>
                                   {s.name} {s.branch_name ? `(${s.branch_name})` : ''}
                                 </option>
@@ -1911,6 +1965,7 @@ export default function ReceiptStudioModal({
                     </div>
 
                     {/* Academic Context Override */}
+                    {String(form.company || company || '').toUpperCase() !== 'LP' && (
                     <div className="p-4 rounded-2xl border border-slate-200 space-y-3">
                       <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
                         Academic Context Snapshot
@@ -1982,6 +2037,7 @@ export default function ReceiptStudioModal({
                         </div>
                       </div>
                     </div>
+                    )}
                   </div>
                 )}
 
