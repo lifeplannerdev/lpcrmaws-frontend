@@ -107,54 +107,6 @@ export default function ReceiptStudioModal({
   const [manualWordsOverride, setManualWordsOverride] = useState(false);
   const [manualLedgerOverride, setManualLedgerOverride] = useState(false);
 
-  const [internalStudents, setInternalStudents] = useState(students || []);
-  const [internalAccounts, setInternalAccounts] = useState(accounts || []);
-
-  useEffect(() => {
-    let active = true;
-    const activeComp = String(form.company || company || 'FLAG').toUpperCase();
-    if (activeComp === 'LP') {
-      getToken().then((token) => {
-        if (!token || !active) return;
-        fetch(`${API_BASE_URL}/fees/students/?company=LP`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-          .then(res => res.ok ? res.json() : { results: [] })
-          .then(data => {
-            if (!active) return;
-            const resList = data.results || [];
-            const mappedStudents = resList.map(s => ({
-              id: s.id,
-              name: s.student_name,
-              branch_name: s.division,
-              email: s.email,
-              phone: s.phone,
-              balance_due: s.balance_due,
-              total_fee: s.total_fee,
-              total_paid: s.total_paid,
-            }));
-            setInternalStudents(mappedStudents);
-            const mappedAccounts = resList.map(s => ({
-              id: s.id,
-              student: s.id,
-              student_name: s.student_name,
-              plan_name: s.division || 'Processing Fee',
-              balance_due: s.balance_due,
-              total_due: s.total_fee,
-              total_paid: s.total_paid,
-            }));
-            setInternalAccounts(mappedAccounts);
-          })
-          .catch(err => console.error('Error fetching LP students for modal', err));
-      });
-    } else {
-      // Never show processing students when not in LifePlanner
-      setInternalStudents((students || []).filter(s => !String(s.student_id || '').startsWith('LP-')));
-      setInternalAccounts((accounts || []).filter(a => !String(a.student_id || '').startsWith('LP-')));
-    }
-    return () => { active = false; };
-  }, [company, form.company, students, accounts]);
-
   // Email popover state
   const getCompanyDefaultEmailMessage = (c) => {
     if (c === 'FDS') return 'Thank you for your fee payment at Filmaatic Dance Studio. Please find your official digital receipt attached.';
@@ -246,6 +198,54 @@ export default function ReceiptStudioModal({
     version: 1,
     void_reason: '',
   });
+
+  const [internalStudents, setInternalStudents] = useState(students || []);
+  const [internalAccounts, setInternalAccounts] = useState(accounts || []);
+
+  useEffect(() => {
+    let active = true;
+    const activeComp = String(form.company || company || 'FLAG').toUpperCase();
+    if (activeComp === 'LP') {
+      getToken().then((token) => {
+        if (!token || !active) return;
+        fetch(`${API_BASE_URL}/fees/students/?company=LP`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+          .then(res => res.ok ? res.json() : { results: [] })
+          .then(data => {
+            if (!active) return;
+            const resList = data.results || [];
+            const mappedStudents = resList.map(s => ({
+              id: s.id,
+              name: s.student_name,
+              branch_name: s.division,
+              email: s.email,
+              phone: s.phone,
+              balance_due: s.balance_due,
+              total_fee: s.total_fee,
+              total_paid: s.total_paid,
+            }));
+            setInternalStudents(mappedStudents);
+            const mappedAccounts = resList.map(s => ({
+              id: s.id,
+              student: s.id,
+              student_name: s.student_name,
+              plan_name: s.division || 'Processing Fee',
+              balance_due: s.balance_due,
+              total_due: s.total_fee,
+              total_paid: s.total_paid,
+            }));
+            setInternalAccounts(mappedAccounts);
+          })
+          .catch(err => console.error('Error fetching LP students for modal', err));
+      });
+    } else {
+      // Never show processing students when not in LifePlanner
+      setInternalStudents((students || []).filter(s => !String(s.student_id || '').startsWith('LP-')));
+      setInternalAccounts((accounts || []).filter(a => !String(a.student_id || '').startsWith('LP-')));
+    }
+    return () => { active = false; };
+  }, [company, form.company, students, accounts]);
 
   const recalculateLedgerValues = (state) => {
     if (manualLedgerOverride) return state;
