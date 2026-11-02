@@ -79,6 +79,7 @@ import FlagAttendancePage from './Pages/FLAG/AttendancePage.jsx';
 import FlagSettingsPage from './Pages/FLAG/SettingsPage.jsx';
 import ReceiptVerifyPage from './Pages/ReceiptVerifyPage.jsx';
 import ReceiptsMasterPage from './Pages/Fees/ReceiptsMasterPage.jsx';
+import GlobalFeesPage from './Pages/Fees/GlobalFeesPage.jsx';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -178,6 +179,8 @@ export default function App() {
         <Route path="/hr/assets" element={<PermissionRoute resources={['assets']}><AssetManagementPage /></PermissionRoute>} />
         <Route path="/fees" element={<PermissionRoute resources={['fees']} permissions={['flag:fees', 'flag:admin']}><FeesManagementPage /></PermissionRoute>} />
         <Route path="/receipts" element={<PermissionRoute permissions={['fees:accounts', 'fees:view', 'fees:manage', 'fees:flag', 'fees:fds', 'fees:lp']}><ReceiptsMasterPage /></PermissionRoute>} />
+        <Route path="/accounts/global-fees" element={<PermissionRoute permissions={['fees:accounts']}><GlobalFeesPage /></PermissionRoute>} />
+        <Route path="/fees/accounts" element={<Navigate to="/accounts/global-fees" replace />} />
         <Route path="/roles" element={<PermissionRoute permissions={['staff:edit_any', 'staff:edit_tenant']}><RoleManagementPage /></PermissionRoute>} />
         <Route path="/credentials" element={<PermissionRoute resources={['credentials']}><CredentialsVault /></PermissionRoute>} />
         <Route path="/programs" element={<PermissionRoute permissions={['programs:view', 'programs:manage']}><ProgramsPage /></PermissionRoute>} />

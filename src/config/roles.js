@@ -90,6 +90,7 @@ export const masterNavigation = [
 
   // ── Multi-Company Receipts & Invoices ──
   { id: "receiptsMaster", label: "Receipts & Invoices", icon: Receipt, path: "/receipts", requiredPermissions: ["fees:accounts", "fees:view", "fees:manage", "fees:flag", "fees:fds", "fees:lp"], category: "divisions", description: "Centralized multi-company digital receipts & invoices" },
+  { id: "globalFees", label: "Global Fees", title: "Global Fees", icon: Receipt, path: "/accounts/global-fees", requiredPermissions: ["fees:accounts"], category: "accounts", description: "Centralized multi-company fee records, ledgers & receipt studio" },
 
   // ── System & Administration ──
   { id: "roles", label: "Role Management", icon: ShieldAlert, path: "/roles", requiredResource: "staff", requiredPermissions: ["staff:edit_any", "staff:edit_tenant"], category: "admin", description: "RBAC roles & permission matrix" },
@@ -99,6 +100,7 @@ export const masterNavigation = [
 export const CATEGORIES = [
   { id: "sales", label: "Sales", icon: Users, description: "Leads, calling analytics & pipelines" },
   { id: "academics", label: "Academics", icon: GraduationCap, description: "Students, batches & attendance" },
+  { id: "accounts", label: "Accounts", icon: Receipt, description: "Multi-company fee records, ledgers & receipts" },
   { id: "hr", label: "HR & Ops", icon: UserCheck, description: "Staff roster, recruitment & assets" },
   { id: "tasks", label: "Tasks", icon: ListTodo, description: "Personal & team task management" },
   { id: "reports", label: "Reports", icon: BarChart2, description: "Staff reports & performance analytics" },
@@ -176,7 +178,7 @@ export const getCategorizedMenu = (allowedItems, user) => {
 };
 
 // Fallback for legacy imports until fully removed
-export const getMenuForRole = (role) => {
+export const getMenuForRole = () => {
   console.warn("getMenuForRole is deprecated. Use getMenuForPermissions instead.");
   return [];
 };
