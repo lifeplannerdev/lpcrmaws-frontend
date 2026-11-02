@@ -56,7 +56,11 @@ export default function PenaltyManagementPage() {
     const empObj = employees.find(e => e.id === penalty.user || e.user === penalty.user);
     const enrichedEmp = empObj
       ? { ...empObj, name: empObj.full_name || empObj.username || empObj.name }
-      : { id: penalty.user, name: getEmployeeName(penalty.user) };
+      : { 
+          id: penalty.user, 
+          name: getEmployeeName(penalty.user, penalty),
+          email: penalty.user_email || penalty.user_details?.email || ''
+        };
     openMailComposer(buildPenaltyMailConfig(penalty, enrichedEmp));
   };
   const generateMonthOptions = () => {
@@ -321,23 +325,37 @@ export default function PenaltyManagementPage() {
     });
   };
 
-  // Get employee name by user ID
-  const getEmployeeName = (userId) => {
+  // Get employee name by user ID or penalty object
+  const getEmployeeName = (userId, penalty = null) => {
+    if (penalty?.user_name) return penalty.user_name;
+    if (penalty?.user_details?.full_name) return penalty.user_details.full_name;
+    if (penalty?.user_details?.name) return penalty.user_details.name;
+    if (penalty?.user_details?.username) return penalty.user_details.username;
     if (!userId) return 'Unknown';
     const employee = employees.find(e => e.id === userId || e.user === userId);
-    if (!employee) return 'Unknown';
-    // Use full_name from backend serializer
-    return employee.full_name || employee.username || `Employee #${userId}`;
+    if (employee) {
+      return employee.full_name || employee.username || `Employee #${userId}`;
+    }
+    const matchedPenalty = penalties.find(
+      p => ((typeof p.user === 'object' ? p.user?.id : p.user) === userId) &&
+           (p.user_name || p.user_details?.full_name || p.user_details?.username)
+    );
+    if (matchedPenalty) {
+      return matchedPenalty.user_name || matchedPenalty.user_details?.full_name || matchedPenalty.user_details?.username;
+    }
+    return `Employee #${userId}`;
   };
 
   // Filter penalties
   const filteredPenalties = penalties.filter(penalty => {
     const matchesMonth = !selectedMonth || penalty.month === selectedMonth;
-    const matchesEmployee = !selectedEmployee || penalty.user === parseInt(selectedEmployee);
+    const penaltyUserId = typeof penalty.user === 'object' ? penalty.user?.id : penalty.user;
+    const matchesEmployee = !selectedEmployee || penaltyUserId === parseInt(selectedEmployee);
+    const empName = getEmployeeName(penaltyUserId, penalty);
     const matchesSearch =
       !searchTerm ||
       penalty.act?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getEmployeeName(penalty.user).toLowerCase().includes(searchTerm.toLowerCase());
+      empName.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesMonth && matchesEmployee && matchesSearch;
   });
 
@@ -345,6 +363,28 @@ export default function PenaltyManagementPage() {
 
   // Filter out ADMIN role from employee list for dropdowns
   const nonAdminEmployees = employees.filter(emp => !emp.role_names?.some(r => r.toLowerCase() === 'admin'));
+
+  // Include inactive staff present in penalties list for employee filter dropdown
+  const employeeFilterOptions = (() => {
+    const map = new Map();
+    nonAdminEmployees.forEach(emp => {
+      map.set(emp.id, {
+        id: emp.id,
+        label: emp.full_name || emp.username || `Employee #${emp.id}`
+      });
+    });
+    penalties.forEach(p => {
+      const uId = typeof p.user === 'object' ? p.user?.id : p.user;
+      if (uId && !map.has(uId)) {
+        const name = p.user_name || p.user_details?.full_name || p.user_details?.username || `Employee #${uId}`;
+        map.set(uId, {
+          id: uId,
+          label: `${name} (Inactive)`
+        });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+  })();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -453,9 +493,9 @@ export default function PenaltyManagementPage() {
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">All Employees</option>
-                {nonAdminEmployees.map(emp => (
+                {employeeFilterOptions.map(emp => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.full_name || emp.username || `Employee #${emp.id}`}
+                    {emp.label}
                   </option>
                 ))}
               </select>
@@ -524,10 +564,10 @@ export default function PenaltyManagementPage() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <div className="w-8 h-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                              {getEmployeeName(penalty.user).charAt(0).toUpperCase()}
+                              {(getEmployeeName(penalty.user, penalty).replace(/[^a-zA-Z]/g, '').charAt(0) || 'U').toUpperCase()}
                             </div>
                             <span className="font-medium text-gray-900">
-                              {getEmployeeName(penalty.user)}
+                              {getEmployeeName(penalty.user, penalty)}
                             </span>
                           </div>
                         </td>
@@ -600,11 +640,11 @@ export default function PenaltyManagementPage() {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                        {getEmployeeName(penalty.user).charAt(0).toUpperCase()}
+                        {(getEmployeeName(penalty.user, penalty).replace(/[^a-zA-Z]/g, '').charAt(0) || 'U').toUpperCase()}
                       </div>
                       <div>
                         <p className="font-bold text-gray-900">
-                          {getEmployeeName(penalty.user)}
+                          {getEmployeeName(penalty.user, penalty)}
                         </p>
                         <p className="text-sm text-gray-500">{formatMonth(penalty.month)}</p>
                       </div>
@@ -703,6 +743,11 @@ export default function PenaltyManagementPage() {
                       }`}
                     >
                       <option value="">Select Employee</option>
+                      {editingPenalty && !nonAdminEmployees.some(emp => emp.id === (editingPenalty.user?.id || editingPenalty.user)) && (
+                        <option value={typeof editingPenalty.user === 'object' ? editingPenalty.user.id : editingPenalty.user}>
+                          {editingPenalty.user_name || editingPenalty.user_details?.full_name || editingPenalty.user_details?.username || `Employee #${typeof editingPenalty.user === 'object' ? editingPenalty.user.id : editingPenalty.user}`} (Inactive)
+                        </option>
+                      )}
                       {nonAdminEmployees.map(emp => (
                         <option key={emp.id} value={emp.id}>
                           {emp.full_name || emp.username || `Employee #${emp.id}`}
