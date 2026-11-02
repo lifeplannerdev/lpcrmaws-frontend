@@ -124,8 +124,20 @@ const METHOD_LABELS = {
 
 export default function ReceiptTemplateRenderer({ receipt, containerRef }) {
   const data = receipt || {};
-  const defaultIssuer = getDefaultIssuerSnapshot(data.company);
-  const issuer = { ...defaultIssuer, ...(data.issuer_snapshot || {}) };
+  const currentComp = String(data.company || '').toUpperCase();
+  const defaultIssuer = getDefaultIssuerSnapshot(currentComp);
+  const rawIssuer = data.issuer_snapshot || {};
+  const isForeignWatermark =
+    (currentComp === 'LP' && rawIssuer.watermark_text === 'FLAG GERMAN ACADEMY') ||
+    (currentComp === 'FDS' && rawIssuer.watermark_text === 'FLAG GERMAN ACADEMY');
+
+  const issuer = {
+    ...defaultIssuer,
+    ...rawIssuer,
+    watermark_text: isForeignWatermark
+      ? defaultIssuer.watermark_text
+      : (rawIssuer.watermark_text || defaultIssuer.watermark_text),
+  };
   const opts = { ...DEFAULT_DISPLAY_OPTIONS, ...(data.display_options || {}) };
   const brandColor = issuer.brand_color || '#312e81';
   const templateStyle = (data.template_style || 'EXECUTIVE').toUpperCase();

@@ -409,7 +409,8 @@ export default function ReceiptStudioModal({
 
         if (!mounted) return;
 
-        const defIssuer = getDefaultIssuerSnapshot(company);
+        const targetComp = String(form.company || initialReceipt?.company || company || 'FLAG').toUpperCase();
+        const defIssuer = getDefaultIssuerSnapshot(targetComp);
         const issuerSnap = {
           ...defIssuer,
           ...(previewMeta?.issuer_snapshot || {}),
@@ -1154,17 +1155,21 @@ export default function ReceiptStudioModal({
         : `${API_BASE_URL}/fees/receipts/`;
       const method = isEditing ? 'PATCH' : 'POST';
 
+      const currentComp = String(form.company || company || 'FLAG').toUpperCase();
+      const isLp = currentComp === 'LP';
+      const isFds = currentComp === 'FDS';
+
       const payload = {
         ...form,
-        company: form.company || company,
-        student: form.student ? Number(form.student) : null,
-        account: form.account ? Number(form.account) : null,
-        payment: form.payment ? Number(form.payment) : null,
-        fds_student: form.fds_student ? Number(form.fds_student) : null,
-        fds_account: form.fds_account ? Number(form.fds_account) : null,
-        fds_payment: form.fds_payment ? Number(form.fds_payment) : null,
+        company: currentComp,
+        student: (!isLp && !isFds && form.student) ? Number(form.student) : null,
+        account: (!isLp && !isFds && form.account) ? Number(form.account) : null,
+        payment: (!isLp && !isFds && form.payment) ? Number(form.payment) : null,
+        fds_student: (isFds && (form.fds_student || form.student)) ? Number(form.fds_student || form.student) : null,
+        fds_account: (isFds && (form.fds_account || form.account)) ? Number(form.fds_account || form.account) : null,
+        fds_payment: (isFds && (form.fds_payment || form.payment)) ? Number(form.fds_payment || form.payment) : null,
         fds_wedding_group: form.fds_wedding_group ? Number(form.fds_wedding_group) : null,
-        processing_student: form.processing_student ? Number(form.processing_student) : null,
+        processing_student: (isLp && (form.processing_student || form.student || form.account || initialStudent?.id)) ? Number(form.processing_student || form.student || form.account || initialStudent?.id) : null,
         processing_payment: form.processing_payment ? Number(form.processing_payment) : null,
         receipt_number: manualNumberUnlock || isEditing ? form.receipt_number : '',
         issue_date: form.issue_date ? new Date(form.issue_date).toISOString() : new Date().toISOString(),
@@ -1343,7 +1348,7 @@ export default function ReceiptStudioModal({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="text-base font-extrabold tracking-tight truncate">
-                {isReadOnly ? 'View Official Receipt' : 'FLAG Digital Receipt & Invoice Studio'}
+                {isReadOnly ? 'View Official Receipt' : `${(form.company || company) === 'LP' ? 'LifePlanner' : (form.company || company) === 'FDS' ? 'FILMAATIC' : 'FLAG'} Digital Receipt & Invoice Studio`}
               </h2>
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${
                 isReadOnly
