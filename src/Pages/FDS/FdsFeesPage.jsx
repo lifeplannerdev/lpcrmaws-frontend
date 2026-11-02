@@ -446,6 +446,8 @@ export default function FdsFeesPage() {
     try {
       if (editingEntity.type === 'ACCOUNT') {
         await fdsApi.updateFeeAccount(authFetchJson, editingEntity.data.id, {
+          monthly_fee: editingEntity.data.monthly_fee,
+          due_day: editingEntity.data.due_day ? Number(editingEntity.data.due_day) : 10,
           total_due: editingEntity.data.total_due,
           registration_amount: editingEntity.data.registration_amount,
           status: editingEntity.data.status,
@@ -804,13 +806,19 @@ export default function FdsFeesPage() {
                               <p className="text-xs text-gray-500 mt-0.5">
                                 {acc.student_id_code || ''} • {acc.batch_name || acc.class_category || 'No Batch'}
                               </p>
-                              <div className="mt-1.5 flex items-center gap-2">
+                              <div className="mt-1.5 flex items-center gap-2 flex-wrap">
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${getStatusBadgeClass(acc.status)}`}>
-                                  {acc.status}
+                                  {acc.is_wedding ? acc.status : (acc.current_month_status ? `${acc.current_month_status} (${acc.current_month_label})` : acc.status)}
                                 </span>
-                                <span className="text-[11px] text-gray-500">
-                                  {acc.plan_name || acc.plan_code || acc.plan_type}
-                                </span>
+                                {acc.is_wedding ? (
+                                  <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">
+                                    ★ Wedding Fixed Package
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded">
+                                    {currency(acc.monthly_fee || acc.effective_monthly_fee || 1600)}/mo
+                                  </span>
+                                )}
                               </div>
                             </div>
                             <div className="text-right">
@@ -879,9 +887,20 @@ export default function FdsFeesPage() {
                               {selectedAccount.status}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                          <p className="text-xs text-gray-500 mt-1 flex flex-wrap gap-x-3 gap-y-1 items-center">
                             <span>ID: <strong className="text-gray-700">{selectedAccount.student_id_code || 'N/A'}</strong></span>
                             <span>Category: <strong className="text-gray-700">{selectedAccount.class_category || 'DANCE'}</strong></span>
+                            {selectedAccount.is_wedding ? (
+                              <span>Package Type: <strong className="text-purple-700 font-bold">Fixed Wedding Package (Non-Recurring)</strong></span>
+                            ) : (
+                              <span>Monthly Rate: <strong className="text-indigo-700 font-bold">{currency(selectedAccount.monthly_fee || selectedAccount.effective_monthly_fee || 1600)}/month</strong></span>
+                            )}
+                            {selectedAccount.next_due_date && !selectedAccount.is_wedding && (
+                              <span>Next Due: <strong className="text-gray-800 font-semibold">{selectedAccount.next_due_date}</strong></span>
+                            )}
+                            {selectedAccount.paid_until_label && (
+                              <span>Paid Until: <strong className="text-emerald-700 font-semibold">{selectedAccount.paid_until_label}</strong></span>
+                            )}
                             <span>Batch: <strong className="text-gray-700">{selectedAccount.batch_name || 'N/A'}</strong></span>
                             {selectedAccount.trainer_name && (
                               <span>Trainer: <strong className="text-gray-700">{selectedAccount.trainer_name}</strong></span>
@@ -979,7 +998,60 @@ export default function FdsFeesPage() {
                     {/* SUB-TAB 1: RECORD PAYMENT */}
                     {activeSubTab === 'recordPayment' && (
                       <form onSubmit={handleRecordPayment} className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="bg-indigo-50/60 p-3 rounded-xl border border-indigo-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <span className="font-semibold text-indigo-900">
+                            {selectedAccount.is_wedding
+                              ? <>Wedding Package: <strong className="text-sm font-extrabold text-purple-700">{currency(selectedAccount.total_due)} (Fixed Package Fee)</strong></>
+                              : <>Studio Monthly Tuition: <strong className="text-sm font-extrabold text-indigo-700">{currency(selectedAccount.monthly_fee || selectedAccount.effective_monthly_fee || 1600)}/month</strong></>
+                            }
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentForm(p => ({
+                              ...p,
+                              amount: String(selectedAccount.is_wedding ? (selectedAccount.balance_due || selectedAccount.total_due) : (selectedAccount.monthly_fee || selectedAccount.effective_monthly_fee || 1600)),
+                              fee_month: new Date().getMonth() + 1,
+                              fee_year: new Date().getFullYear(),
+                            }))}
+                            className="px-3 py-1 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-lg font-bold shadow-2xs transition-colors"
+                          >
+                            {selectedAccount.is_wedding ? 'Fill Balance Due' : `Fill Monthly Fee (${currency(selectedAccount.monthly_fee || selectedAccount.effective_monthly_fee || 1600)})`}
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">Fee Billing Month*</label>
+                            <select
+                              value={paymentForm.fee_month}
+                              onChange={(e) => setPaymentForm(p => ({ ...p, fee_month: Number(e.target.value) }))}
+                              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-slate-50 text-sm font-medium outline-none"
+                              required
+                            >
+                              {[
+                                [1, 'January'], [2, 'February'], [3, 'March'], [4, 'April'],
+                                [5, 'May'], [6, 'June'], [7, 'July'], [8, 'August'],
+                                [9, 'September'], [10, 'October'], [11, 'November'], [12, 'December']
+                              ].map(([m, name]) => (
+                                <option key={m} value={m}>{name}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">Fee Year*</label>
+                            <select
+                              value={paymentForm.fee_year}
+                              onChange={(e) => setPaymentForm(p => ({ ...p, fee_year: Number(e.target.value) }))}
+                              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-slate-50 text-sm font-medium outline-none"
+                              required
+                            >
+                              {[2024, 2025, 2026, 2027, 2028].map(yr => (
+                                <option key={yr} value={yr}>{yr}</option>
+                              ))}
+                            </select>
+                          </div>
+
                           <div>
                             <label className="block text-xs font-semibold text-gray-700 mb-1">Payment Amount (₹)*</label>
                             <input
@@ -987,27 +1059,27 @@ export default function FdsFeesPage() {
                               step="0.01"
                               value={paymentForm.amount}
                               onChange={(e) => setPaymentForm(p => ({ ...p, amount: e.target.value }))}
-                              placeholder="e.g. 2500"
+                              placeholder="e.g. 1600"
                               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-slate-50 text-sm font-medium focus:ring-1 focus:ring-indigo-500 outline-none"
                               required
                             />
                           </div>
+                        </div>
 
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-1">Allocate to Installment</label>
-                            <select
-                              value={paymentForm.installment}
-                              onChange={(e) => setPaymentForm(p => ({ ...p, installment: e.target.value }))}
-                              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-slate-50 text-sm outline-none"
-                            >
-                              <option value="">Auto-allocate across pending installments</option>
-                              {(selectedAccount.installments || []).map(inst => (
-                                <option key={inst.id} value={inst.id}>
-                                  #{inst.sequence_number} {inst.label} — {currency(inst.balance_amount)} balance
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Allocate to Specific Installment (Optional)</label>
+                          <select
+                            value={paymentForm.installment}
+                            onChange={(e) => setPaymentForm(p => ({ ...p, installment: e.target.value }))}
+                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-slate-50 text-sm outline-none"
+                          >
+                            <option value="">Auto-allocate across pending monthly cycles</option>
+                            {(selectedAccount.installments || []).map(inst => (
+                              <option key={inst.id} value={inst.id}>
+                                #{inst.sequence_number} {inst.label} — {currency(inst.balance_amount)} balance ({inst.status})
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1175,24 +1247,47 @@ export default function FdsFeesPage() {
                     {/* SUB-TAB 3: INSTALLMENTS */}
                     {activeSubTab === 'installments' && (
                       <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-bold text-gray-900">Installment Schedule</h4>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <h4 className="text-sm font-bold text-gray-900">Monthly Tuition Billing Schedule</h4>
+                            <p className="text-xs text-gray-500">Recurring monthly cycles billed for this dance student</p>
+                          </div>
                           {canManageFees && (
-                            <button
-                              onClick={() => {
-                                setNewInstallmentForm({
-                                  sequence_number: (selectedAccount.installments?.length || 0) + 1,
-                                  label: `Installment ${(selectedAccount.installments?.length || 0) + 1}`,
-                                  due_date: new Date().toISOString().split('T')[0],
-                                  scheduled_amount: '',
-                                  notes: '',
-                                });
-                                setIsInstallmentModalOpen(true);
-                              }}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-semibold transition-colors"
-                            >
-                              <Plus size={14} /> Add Installment
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  setSaving(true);
+                                  try {
+                                    await authFetchJson(`${API_BASE_URL}/fds/fee-accounts/${selectedAccount.id}/sync-schedule/`, { method: 'POST' });
+                                    await fetchData();
+                                    setMessage({ type: 'success', text: 'Monthly tuition schedule refreshed successfully.' });
+                                  } catch (err) {
+                                    setMessage({ type: 'error', text: err.message || 'Failed to sync schedule.' });
+                                  } finally {
+                                    setSaving(false);
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl text-xs font-semibold transition-colors"
+                              >
+                                <RefreshCw size={13} className={saving ? 'animate-spin' : ''} /> Sync Monthly Schedule
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setNewInstallmentForm({
+                                    sequence_number: (selectedAccount.installments?.length || 0) + 1,
+                                    label: `Installment ${(selectedAccount.installments?.length || 0) + 1}`,
+                                    due_date: new Date().toISOString().split('T')[0],
+                                    scheduled_amount: String(selectedAccount.monthly_fee || 1600),
+                                    notes: '',
+                                  });
+                                  setIsInstallmentModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-semibold transition-colors"
+                              >
+                                <Plus size={14} /> Add Cycle
+                              </button>
+                            </div>
                           )}
                         </div>
 
@@ -1912,8 +2007,32 @@ export default function FdsFeesPage() {
             <form onSubmit={handleSaveEditEntity} className="space-y-4">
               {editingEntity.type === 'ACCOUNT' && (
                 <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Monthly Fee (₹)*</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editingEntity.data.monthly_fee ?? 1600}
+                        onChange={(e) => setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, monthly_fee: e.target.value } })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Due Day of Month</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="28"
+                        value={editingEntity.data.due_day ?? 10}
+                        onChange={(e) => setEditingEntity({ ...editingEntity, data: { ...editingEntity.data, due_day: e.target.value } })}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none"
+                      />
+                    </div>
+                  </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Total Due</label>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Total Due (Overall)</label>
                     <input
                       type="number"
                       step="0.01"

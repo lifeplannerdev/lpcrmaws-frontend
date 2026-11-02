@@ -7,21 +7,25 @@ import { fdsApi } from './fdsApi';
 import './fds-theme.css';
 
 const FEE_CATEGORIES = [
-  { value: 'MONTHLY', label: 'Monthly Fee' },
-  { value: 'PACKAGE_3M', label: 'Package 3 Months' },
-  { value: 'PACKAGE_6M', label: 'Package 6 Months' },
-  { value: 'ADMISSION', label: 'Admission / Registration Fee' },
-  { value: 'TRIAL', label: 'Trial Fee' },
-  { value: 'WEDDING_BASIC', label: 'Wedding - Basic' },
-  { value: 'WEDDING_COUPLE', label: 'Wedding - Couple' },
-  { value: 'WEDDING_PREMIUM', label: 'Wedding - Premium' },
-  { value: 'WEDDING_GROUP', label: 'Wedding - Family/Group' },
+  { value: 'MONTHLY', label: 'Monthly Fee (Recurs Monthly)' },
+  { value: 'DANCE', label: 'Dance Monthly (Recurs Monthly)' },
+  { value: 'ZUMBA', label: 'Zumba Monthly (Recurs Monthly)' },
+  { value: 'YOGA', label: 'Yoga Monthly (Recurs Monthly)' },
+  { value: 'PACKAGE_3M', label: 'Package 3 Months (Recurs every 3 Months)' },
+  { value: 'PACKAGE_6M', label: 'Package 6 Months (Recurs every 6 Months)' },
+  { value: 'ADMISSION', label: 'Admission / Registration Fee (One-Time)' },
+  { value: 'TRIAL', label: 'Trial Fee (One-Time)' },
+  { value: 'WEDDING_BASIC', label: 'Wedding - Basic (Fixed Package - Never Recurs)' },
+  { value: 'WEDDING_COUPLE', label: 'Wedding - Couple (Fixed Package - Never Recurs)' },
+  { value: 'WEDDING_PREMIUM', label: 'Wedding - Premium (Fixed Package - Never Recurs)' },
+  { value: 'WEDDING_GROUP', label: 'Wedding - Family/Group (Fixed Package - Never Recurs)' },
 ];
 
 const EMPTY_FORM = {
   category: 'MONTHLY',
   details: '',
   amount: '',
+  duration_months: 1,
   notes: '',
   is_active: true,
 };
@@ -82,6 +86,7 @@ export default function FdsFeePoliciesPage() {
       category: p.category,
       details: p.details || '',
       amount: p.amount || '',
+      duration_months: p.duration_months || 1,
       notes: p.notes || '',
       is_active: p.is_active ?? true,
     });
@@ -198,7 +203,21 @@ export default function FdsFeePoliciesPage() {
                 <tbody>
                   {policies.map(p => (
                     <tr key={p.id}>
-                      <td style={{ fontWeight: 600 }}>{p.category_display || p.category}</td>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{p.category_display || p.category}</div>
+                        <span style={{
+                          display: 'inline-block',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          marginTop: '4px',
+                          background: p.is_recurring ? '#e0e7ff' : '#f3e8ff',
+                          color: p.is_recurring ? '#4338ca' : '#7e22ce'
+                        }}>
+                          {p.is_recurring ? '↻ Recurring Monthly' : '★ Fixed / One-Time'}
+                        </span>
+                      </td>
                       <td>{p.details || '-'}</td>
                       <td style={{ fontWeight: 600, color: 'var(--fds-primary)' }}>₹{parseFloat(p.amount).toLocaleString()}</td>
                       <td style={{ fontSize: '0.85rem' }}>{p.notes || '-'}</td>
@@ -247,9 +266,15 @@ export default function FdsFeePoliciesPage() {
                       </select>
                     </div>
 
-                    <div>
-                      <label className="fds-label">Amount (₹) *</label>
-                      <input className="fds-input" type="number" step="0.01" min="0" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} required />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div>
+                        <label className="fds-label">Amount (₹) *</label>
+                        <input className="fds-input" type="number" step="0.01" min="0" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} required />
+                      </div>
+                      <div>
+                        <label className="fds-label">Duration (Months)</label>
+                        <input className="fds-input" type="number" min="1" max="36" value={form.duration_months} onChange={e => setForm(f => ({ ...f, duration_months: parseInt(e.target.value) || 1 }))} />
+                      </div>
                     </div>
 
                     <div>

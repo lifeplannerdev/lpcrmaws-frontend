@@ -326,8 +326,10 @@ export default function ReceiptStudioModal({
 
         const accountPayments = Array.isArray(initialAccount?.payments) ? initialAccount.payments : [];
         const targetPayment = initialPayment || (accountPayments.length > 0 ? accountPayments[accountPayments.length - 1] : null);
-        const hasPayment = Boolean(targetPayment && targetPayment.amount);
-        const isAccountSettled = Number(initialAccount?.balance_due || 0) <= 0 && Number(initialAccount?.total_paid || 0) > 0;
+        const targetPaymentAmount = targetPayment ? (targetPayment.paid_amount ?? targetPayment.amount ?? '0.00') : '0.00';
+        const hasPayment = Boolean(targetPayment && Number(targetPaymentAmount) > 0);
+        const isFds = company === 'FDS' || Boolean(initialAccount?.class_category) || Boolean(targetPayment?.fees_type);
+        const isAccountSettled = !isFds && Number(initialAccount?.balance_due || 0) <= 0 && Number(initialAccount?.total_paid || 0) > 0;
 
         let previewMeta = null;
         if (targetStudentId || targetAccountId) {
@@ -339,11 +341,14 @@ export default function ReceiptStudioModal({
             },
             body: JSON.stringify({
               company,
-              student: targetStudentId || null,
-              account: targetAccountId || null,
-              payment: targetPayment?.id || null,
+              student: !isFds ? (targetStudentId || null) : null,
+              account: !isFds ? (targetAccountId || null) : null,
+              payment: !isFds ? (targetPayment?.id || null) : null,
+              fds_student: isFds ? (targetStudentId || initialAccount?.student || null) : null,
+              fds_account: isFds ? (targetAccountId || null) : null,
+              fds_payment: isFds ? (targetPayment?.id || null) : null,
               subtotal_amount: hasPayment
-                ? targetPayment.amount
+                ? targetPaymentAmount
                 : isAccountSettled
                 ? initialAccount?.total_paid || '0.00'
                 : initialAccount?.balance_due || '0.00',
@@ -392,7 +397,7 @@ export default function ReceiptStudioModal({
 
         let defaultAmount = '0.00';
         if (hasPayment) {
-          defaultAmount = round2(targetPayment.amount).toFixed(2);
+          defaultAmount = round2(targetPaymentAmount).toFixed(2);
         } else if (isAccountSettled) {
           defaultAmount = round2(initialAccount?.total_paid || initialAccount?.total_due || 0).toFixed(2);
         } else {
@@ -412,7 +417,7 @@ export default function ReceiptStudioModal({
         const disc = ledMeta.ledger_discount || String(initialAccount?.discount || '0.00');
         let prevPaid = '0.00';
         if (hasPayment && initialAccount?.total_paid) {
-          prevPaid = Math.max(0, round2(Number(initialAccount.total_paid) - Number(targetPayment.amount))).toFixed(2);
+          prevPaid = Math.max(0, round2(Number(initialAccount.total_paid) - Number(targetPaymentAmount))).toFixed(2);
         } else if (ledMeta.ledger_previously_paid) {
           prevPaid = ledMeta.ledger_previously_paid;
         }
@@ -481,12 +486,14 @@ export default function ReceiptStudioModal({
             createEmptyLineItem(
               settingsData.sac_code || '999293',
               hasPayment
-                ? `${courseTitle} - Payment (${targetPayment.latest_receipt_number || targetPayment.receipt_number || targetPayment.payment_method})`
+                ? (isFds
+                    ? `${courseTitle} - ${targetPayment.fee_month_display || targetPayment.installment?.label || 'Monthly Tuition'}`
+                    : `${courseTitle} - Payment (${targetPayment.latest_receipt_number || targetPayment.receipt_number || targetPayment.payment_method})`)
                 : isAccountSettled
-                ? `${courseTitle} - Full Course Settlement`
+                ? `${courseTitle} - Settlement`
                 : courseTitle,
               defaultAmount,
-              targetPayment?.installment?.label || ''
+              targetPayment?.installment?.label || targetPayment?.fee_month_display || (targetPayment?.fee_month && targetPayment?.fee_year ? `${targetPayment.fee_month}/${targetPayment.fee_year}` : '')
             ),
           ],
           issuer_snapshot: issuerSnap,

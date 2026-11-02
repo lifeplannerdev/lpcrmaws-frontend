@@ -87,6 +87,7 @@ export const fdsApi = {
   updateFeeAccount: (af, id, data) => af(`${FDS_BASE}/fee-accounts/${id}/`, { method: 'PATCH', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
   deleteFeeAccount: (af, id) => af(`${FDS_BASE}/fee-accounts/${id}/`, { method: 'DELETE' }),
   recalculateFeeAccount: (af, id) => af(`${FDS_BASE}/fee-accounts/${id}/recalculate/`, { method: 'POST' }),
+  syncFeeSchedule: (af, id) => af(`${FDS_BASE}/fee-accounts/${id}/sync-schedule/`, { method: 'POST' }),
   recordFeeAccountPayment: (af, id, data) => af(`${FDS_BASE}/fee-accounts/${id}/payments/`, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
   restructureFeeAccount: (af, id, data) => af(`${FDS_BASE}/fee-accounts/${id}/restructure/`, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }),
   feeInstallments: (af, id) => af(`${FDS_BASE}/fee-accounts/${id}/installments/`),
