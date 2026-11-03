@@ -28,6 +28,7 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 import ReceiptTemplateRenderer from './ReceiptTemplateRenderer';
 import {
   amountToWords,
@@ -77,7 +78,7 @@ const createEmptyLineItem = (sacCode = '999293', title = 'Course Tuition Fee', a
 export default function ReceiptStudioModal({
   isOpen,
   onClose,
-  getToken,
+  getToken: propGetToken,
   company = 'FLAG',
   initialReceipt = null,
   initialPayment = null,
@@ -90,6 +91,8 @@ export default function ReceiptStudioModal({
   readOnly = false,
   canManageFees = true,
 }) {
+  const auth = useAuth ? useAuth() : {};
+  const getToken = propGetToken || auth?.getToken || (async () => localStorage.getItem('access_token') || localStorage.getItem('token') || '');
   const isReadOnly = Boolean(readOnly || !canManageFees);
   const [noReceiptError, setNoReceiptError] = useState(null);
   const previewRef = useRef(null);
@@ -199,53 +202,228 @@ export default function ReceiptStudioModal({
     void_reason: '',
   });
 
-  const [internalStudents, setInternalStudents] = useState(students || []);
-  const [internalAccounts, setInternalAccounts] = useState(accounts || []);
+  const [internalStudents, setInternalStudents] = useState([]);
+  const [internalAccounts, setInternalAccounts] = useState([]);
 
   useEffect(() => {
     let active = true;
     const activeComp = String(form.company || company || 'FLAG').toUpperCase();
-    if (activeComp === 'LP') {
-      getToken().then((token) => {
-        if (!token || !active) return;
-        fetch(`${API_BASE_URL}/fees/students/?company=LP`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-          .then(res => res.ok ? res.json() : { results: [] })
-          .then(data => {
-            if (!active) return;
-            const resList = data.results || [];
-            const mappedStudents = resList.map(s => ({
-              id: s.id,
-              name: s.student_name,
-              branch_name: s.division,
-              email: s.email,
-              phone: s.phone,
-              balance_due: s.balance_due,
-              total_fee: s.total_fee,
-              total_paid: s.total_paid,
-            }));
-            setInternalStudents(mappedStudents);
-            const mappedAccounts = resList.map(s => ({
-              id: s.id,
-              student: s.id,
-              student_name: s.student_name,
-              plan_name: s.division || 'Processing Fee',
-              balance_due: s.balance_due,
-              total_due: s.total_fee,
-              total_paid: s.total_paid,
-            }));
-            setInternalAccounts(mappedAccounts);
-          })
-          .catch(err => console.error('Error fetching LP students for modal', err));
-      });
-    } else {
-      // Never show processing students when not in LifePlanner
-      setInternalStudents((students || []).filter(s => !String(s.student_id || '').startsWith('LP-')));
-      setInternalAccounts((accounts || []).filter(a => !String(a.student_id || '').startsWith('LP-')));
-    }
+
+    const loadModalData = async () => {
+      try {
+        const token = getToken ? await getToken() : (localStorage.getItem('access_token') || '');
+
+        if (activeComp === 'LP') {
+          let resList = (students || []).filter(s => String(s.student_id || '').startsWith('LP-') || s.company === 'LP');
+          if (resList.length === 0 && token) {
+            try {
+              const res = await fetch(`${API_BASE_URL}/fees/students/?company=LP`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (res.ok) {
+                const data = await res.json();
+                resList = data.results || (Array.isArray(data) ? data : []);
+              }
+            } catch (err) {
+              console.warn('Error fetching LP students for modal', err);
+            }
+          }
+          if (!active) return;
+          const mappedStudents = resList.map(s => ({
+            id: s.id,
+            name: s.student_name || s.name || `Student #${s.id}`,
+            student_name: s.student_name || s.name || `Student #${s.id}`,
+            student_id: s.student_id || `LP-${s.id}`,
+            branch_name: s.division || s.branch_name || 'Study Abroad',
+            division: s.division || s.branch_name || 'Study Abroad',
+            email: s.email || '',
+            phone: s.phone || s.mobile_number || '',
+            balance_due: s.balance_due,
+            total_fee: s.total_fee,
+            total_paid: s.total_paid,
+          }));
+          setInternalStudents(mappedStudents);
+          const mappedAccounts = resList.map(s => ({
+            id: s.id,
+            student: s.id,
+            student_name: s.student_name || s.name || `Student #${s.id}`,
+            plan_name: s.division || 'Processing Fee',
+            balance_due: s.balance_due,
+            total_due: s.total_fee,
+            total_paid: s.total_paid,
+            company: 'LP',
+            payments: [],
+          }));
+          setInternalAccounts(mappedAccounts);
+        } else if (activeComp === 'FLAG') {
+          let stuList = (students || []).filter(s => !String(s.student_id || '').startsWith('LP-') && !String(s.student_id || '').startsWith('FDS-'));
+          if (stuList.length === 0 && token) {
+            try {
+              const res = await fetch(`${API_BASE_URL}/fees/students/?company=FLAG`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (res.ok) {
+                const data = await res.json();
+                stuList = data.results || (Array.isArray(data) ? data : []);
+              }
+            } catch (err) {
+              console.warn('Error fetching FLAG students for modal', err);
+            }
+          }
+
+          let accList = (accounts || []).filter(a => a.company === 'FLAG' || (!a.company && !String(a.student_id || '').startsWith('LP-') && !String(a.student_id || '').startsWith('FDS-')));
+          if (accList.length === 0 && token) {
+            try {
+              const res = await fetch(`${API_BASE_URL}/fees/accounts/?company=FLAG`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (res.ok) {
+                const data = await res.json();
+                accList = Array.isArray(data) ? data : (data.results || []);
+              }
+            } catch (err) {
+              console.warn('Error fetching FLAG accounts for modal', err);
+            }
+          }
+
+          if (!active) return;
+
+          const mappedStudents = stuList.map(s => ({
+            ...s,
+            id: s.id,
+            name: s.student_name || s.name || `Student #${s.id}`,
+            student_name: s.student_name || s.name || `Student #${s.id}`,
+            student_id: s.student_id || `STU-${String(s.id).padStart(4, '0')}`,
+            branch_name: s.branch_name || s.division || (s.campus?.name) || '',
+            division: s.division || s.branch_name || '',
+            email: s.email || '',
+            phone: s.phone || '',
+            fee_account_id: s.fee_account_id || null,
+            balance_due: s.balance_due,
+            total_fee: s.total_fee,
+            total_paid: s.total_paid,
+          }));
+          setInternalStudents(mappedStudents);
+
+          let mappedAccounts = accList.map(a => ({
+            ...a,
+            id: a.id,
+            student: a.student || a.student_id,
+            student_name: a.student_name || a.student?.name || (mappedStudents.find(s => String(s.id) === String(a.student || a.student_id))?.student_name) || `Account #${a.id}`,
+            plan_name: a.plan_name || a.plan_code || 'FLAG Course Plan',
+            plan_code: a.plan_code || '',
+            balance_due: a.balance_due ?? '0.00',
+            total_due: a.total_due ?? '0.00',
+            total_paid: a.total_paid ?? '0.00',
+            company: 'FLAG',
+            payments: Array.isArray(a.payments) ? a.payments : [],
+          }));
+
+          // Fallback: If no accounts returned but students have fee_account_id or non-zero fees
+          if (mappedAccounts.length === 0) {
+            mappedAccounts = mappedStudents
+              .filter(s => s.fee_account_id || Number(s.total_fee || 0) > 0)
+              .map(s => ({
+                id: s.fee_account_id || s.id,
+                student: s.id,
+                student_name: s.student_name,
+                plan_name: s.division ? `${s.division} Fee Plan` : 'FLAG Tuition Plan',
+                balance_due: s.balance_due ?? '0.00',
+                total_due: s.total_fee ?? '0.00',
+                total_paid: s.total_paid ?? '0.00',
+                company: 'FLAG',
+                payments: [],
+              }));
+          }
+          setInternalAccounts(mappedAccounts);
+        } else if (activeComp === 'FDS') {
+          let stuList = (students || []).filter(s => String(s.student_id || '').startsWith('FDS-') || s.company === 'FDS');
+          if (stuList.length === 0 && token) {
+            try {
+              const res = await fetch(`${API_BASE_URL}/fees/students/?company=FDS`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (res.ok) {
+                const data = await res.json();
+                stuList = data.results || (Array.isArray(data) ? data : []);
+              }
+            } catch (err) {
+              console.warn('Error fetching FDS students for modal', err);
+            }
+          }
+
+          let accList = (accounts || []).filter(a => a.company === 'FDS');
+          if (accList.length === 0 && token) {
+            try {
+              const res = await fetch(`${API_BASE_URL}/fds/fee-accounts/`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (res.ok) {
+                const data = await res.json();
+                accList = Array.isArray(data) ? data : (data.results || []);
+              }
+            } catch (err) {
+              console.warn('Error fetching FDS accounts for modal', err);
+            }
+          }
+
+          if (!active) return;
+
+          const mappedStudents = stuList.map(s => ({
+            ...s,
+            id: s.id,
+            name: s.student_name || s.name || `Student #${s.id}`,
+            student_name: s.student_name || s.name || `Student #${s.id}`,
+            student_id: s.student_id || `FDS-${s.id}`,
+            branch_name: s.division || s.branch || '',
+            division: s.division || s.branch || '',
+            email: s.email || '',
+            phone: s.phone || '',
+            fee_account_id: s.fee_account_id || null,
+            balance_due: s.balance_due,
+            total_fee: s.total_fee,
+            total_paid: s.total_paid,
+          }));
+          setInternalStudents(mappedStudents);
+
+          let mappedAccounts = accList.map(a => ({
+            ...a,
+            id: a.id,
+            student: a.student || a.student_id,
+            student_name: a.student_name || a.student?.name || (mappedStudents.find(s => String(s.id) === String(a.student || a.student_id))?.student_name) || `Account #${a.id}`,
+            plan_name: a.plan_name || a.active_package || 'Dance Fee Account',
+            balance_due: a.balance_due ?? '0.00',
+            total_due: a.total_due ?? '0.00',
+            total_paid: a.total_paid ?? '0.00',
+            company: 'FDS',
+            payments: Array.isArray(a.payments) ? a.payments : [],
+          }));
+          if (mappedAccounts.length === 0) {
+            mappedAccounts = mappedStudents
+              .filter(s => s.fee_account_id || Number(s.total_fee || 0) > 0)
+              .map(s => ({
+                id: s.fee_account_id || s.id,
+                student: s.id,
+                student_name: s.student_name,
+                plan_name: s.division ? `${s.division} Batch` : 'Dance Fee Account',
+                balance_due: s.balance_due ?? '0.00',
+                total_due: s.total_fee ?? '0.00',
+                total_paid: s.total_paid ?? '0.00',
+                company: 'FDS',
+                payments: [],
+              }));
+          }
+          setInternalAccounts(mappedAccounts);
+        }
+      } catch (err) {
+        console.error('Error loading modal students/accounts:', err);
+      }
+    };
+
+    loadModalData();
+
     return () => { active = false; };
-  }, [company, form.company, students, accounts]);
+  }, [company, form.company, students, accounts, getToken]);
 
   const recalculateLedgerValues = (state) => {
     if (manualLedgerOverride) return state;
@@ -370,7 +548,7 @@ export default function ReceiptStudioModal({
 
         const targetStudentId =
           initialStudent?.id || initialAccount?.student || '';
-        const targetAccountId = initialAccount?.id || '';
+        const targetAccountId = initialAccount?.id || initialStudent?.fee_account_id || '';
 
         const accountPayments = Array.isArray(initialAccount?.payments) ? initialAccount.payments : [];
         const targetPayment = initialPayment || (accountPayments.length > 0 ? accountPayments[accountPayments.length - 1] : null);
@@ -490,18 +668,18 @@ export default function ReceiptStudioModal({
           is_manual_override: false,
 
           billed_to_type: 'STUDENT',
-          recipient_name: stuMeta.recipient_name || initialStudent?.name || initialAccount?.student_name || '',
+          recipient_name: stuMeta.recipient_name || initialStudent?.student_name || initialStudent?.name || initialAccount?.student_name || '',
           recipient_phone: stuMeta.recipient_phone || initialStudent?.phone || '',
           recipient_email: stuMeta.recipient_email || initialStudent?.email || '',
           parent_or_sponsor_name: stuMeta.parent_or_sponsor_name || initialStudent?.parent_name || '',
           recipient_address: stuMeta.recipient_address || '',
           recipient_gstin: '',
           place_of_supply: settingsData.place_of_supply || 'Kerala (32)',
-          student_enrollment_code: stuMeta.student_enrollment_code || '',
+          student_enrollment_code: stuMeta.student_enrollment_code || initialStudent?.student_id || '',
 
           course_or_package_name: courseTitle,
           batch_name: stuMeta.batch_name || initialStudent?.batch_name || '',
-          campus_name: stuMeta.campus_name || initialAccount?.branch_name || '',
+          campus_name: stuMeta.campus_name || initialStudent?.division || initialStudent?.branch_name || initialAccount?.branch_name || '',
           grade_level: stuMeta.grade_level || '',
           mode_of_study: stuMeta.mode_of_study || '',
 
@@ -745,8 +923,22 @@ export default function ReceiptStudioModal({
 
   // Auto-pull from selected Student or Fee Account
   const handleAutoPullFromLink = async (studentIdOverride, accountIdOverride) => {
-    const stuId = studentIdOverride !== undefined ? studentIdOverride : form.student;
-    const accId = accountIdOverride !== undefined ? accountIdOverride : form.account;
+    let stuId = studentIdOverride !== undefined ? studentIdOverride : form.student;
+    let accId = accountIdOverride !== undefined ? accountIdOverride : form.account;
+
+    const accList = internalAccounts.length > 0 ? internalAccounts : accounts;
+    const stuList = internalStudents.length > 0 ? internalStudents : students;
+
+    if (stuId && !accId) {
+      const stuObj = stuList.find((s) => String(s.id) === String(stuId));
+      const matched = accList.find((a) => String(a.student) === String(stuId)) ||
+        (stuObj?.fee_account_id ? accList.find(a => String(a.id) === String(stuObj.fee_account_id)) : null);
+      if (matched) accId = matched.id;
+    } else if (accId && !stuId) {
+      const matched = accList.find((a) => String(a.id) === String(accId));
+      if (matched?.student) stuId = matched.student;
+    }
+
     if (!stuId && !accId && !form.payment) {
       toast.error('Select a student or fee account to auto-populate.');
       return;
@@ -836,8 +1028,9 @@ export default function ReceiptStudioModal({
 
   const selectedAccountObj = useMemo(() => {
     if (!form.account) return null;
-    return accounts.find((a) => String(a.id) === String(form.account)) || initialAccount || null;
-  }, [form.account, accounts, initialAccount]);
+    const accList = internalAccounts.length > 0 ? internalAccounts : accounts;
+    return accList.find((a) => String(a.id) === String(form.account)) || initialAccount || null;
+  }, [form.account, internalAccounts, accounts, initialAccount]);
 
   const availablePayments = useMemo(() => {
     if (!selectedAccountObj) return [];
@@ -1026,7 +1219,8 @@ export default function ReceiptStudioModal({
 
   const handleSplitRegistrationAndTuition = () => {
     const currentTotal = round2(form.total_amount || form.subtotal_amount || 0);
-    const matchingAccount = accounts.find((a) => String(a.id) === String(form.account));
+    const accList = internalAccounts.length > 0 ? internalAccounts : accounts;
+    const matchingAccount = accList.find((a) => String(a.id) === String(form.account));
     const regFee = round2(matchingAccount?.registration_amount || 10000);
     const splitReg = currentTotal > regFee ? regFee : round2(currentTotal * 0.25);
     const splitTuition = Math.max(0, round2(currentTotal - splitReg));
@@ -1738,20 +1932,22 @@ export default function ReceiptStudioModal({
                             Link Fee Account
                           </label>
                           <select
+                            data-testid="link-fee-account-select"
                             value={form.account || ''}
                             onChange={(e) => {
                               const accId = e.target.value;
-                              const accObj = accounts.find((a) => String(a.id) === String(accId));
+                              const accList = internalAccounts.length > 0 ? internalAccounts : accounts;
+                              const accObj = accList.find((a) => String(a.id) === String(accId));
                               const stuId = accObj?.student || form.student;
                               setForm((prev) => ({ ...prev, account: accId, student: stuId }));
-                              if (accId) handleAutoPullFromLink(stuId, accId);
+                              if (accId || stuId) handleAutoPullFromLink(stuId, accId);
                             }}
                             className="w-full px-3 py-2 rounded-xl border border-indigo-200 bg-white text-xs"
                           >
                             <option value="">-- Standalone / No Account --</option>
                             {internalAccounts.map((acc) => (
                               <option key={acc.id} value={acc.id}>
-                                {acc.student_name} — {acc.plan_name || acc.plan_code} (Bal: {formatINR(acc.balance_due)})
+                                {acc.student_name || `Student #${acc.student}`} — {acc.plan_name || acc.plan_code || 'Fee Account'} (Bal: {formatINR(acc.balance_due)})
                               </option>
                             ))}
                           </select>
@@ -1763,23 +1959,29 @@ export default function ReceiptStudioModal({
                           </label>
                           <div className="flex gap-2">
                             <select
+                              data-testid="link-enrolled-student-select"
                               value={form.student || ''}
                               onChange={(e) => {
                                 const stuId = e.target.value;
-                                const matchingAcc = accounts.find((a) => String(a.student) === String(stuId));
+                                const accList = internalAccounts.length > 0 ? internalAccounts : accounts;
+                                const stuList = internalStudents.length > 0 ? internalStudents : students;
+                                const stuObj = stuList.find((s) => String(s.id) === String(stuId));
+                                const matchingAcc = accList.find((a) => String(a.student) === String(stuId)) ||
+                                  (stuObj?.fee_account_id ? accList.find(a => String(a.id) === String(stuObj.fee_account_id)) : null);
+                                const newAccId = matchingAcc ? matchingAcc.id : (stuObj?.fee_account_id || '');
                                 setForm((prev) => ({
                                   ...prev,
                                   student: stuId,
-                                  account: matchingAcc ? matchingAcc.id : prev.account,
+                                  account: newAccId,
                                 }));
-                                if (stuId) handleAutoPullFromLink(stuId, matchingAcc?.id || '');
+                                if (stuId || newAccId) handleAutoPullFromLink(stuId, newAccId);
                               }}
                               className="flex-1 px-3 py-2 rounded-xl border border-indigo-200 bg-white text-xs"
                             >
                               <option value="">-- Walk-in / Ad-Hoc Recipient --</option>
                               {internalStudents.map((s) => (
                                 <option key={s.id} value={s.id}>
-                                  {s.name} {s.branch_name ? `(${s.branch_name})` : ''}
+                                  {s.student_name || s.name || `Student #${s.id}`} {s.student_id ? `[${s.student_id}]` : ''} {(s.branch_name || s.division) ? `(${s.branch_name || s.division})` : ''}
                                 </option>
                               ))}
                             </select>

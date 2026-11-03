@@ -80,6 +80,7 @@ export default function GlobalFeesPage() {
 
   // Active dataset state (strictly company-isolated)
   const [students, setStudents] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('students'); // 'students' | 'receipts'
   const [search, setSearch] = useState('');
@@ -166,9 +167,47 @@ export default function GlobalFeesPage() {
       });
 
       setStudents(isolatedList);
+
+      // Also fetch company fee accounts for receipt studio and ledger linking
+      try {
+        if (companyToLoad.toUpperCase() === 'FLAG') {
+          const accRes = await fetch(`${API_BASE_URL}/fees/accounts/?company=FLAG`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (accRes.ok && activeCompanyRef.current === companyToLoad) {
+            const accData = await accRes.json();
+            setAccounts(Array.isArray(accData) ? accData : (accData.results || []));
+          }
+        } else if (companyToLoad.toUpperCase() === 'FDS') {
+          const accRes = await fetch(`${API_BASE_URL}/fds/fee-accounts/`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (accRes.ok && activeCompanyRef.current === companyToLoad) {
+            const accData = await accRes.json();
+            setAccounts(Array.isArray(accData) ? accData : (accData.results || []));
+          }
+        } else if (companyToLoad.toUpperCase() === 'LP') {
+          const lpAccounts = isolatedList.map((s) => ({
+            id: s.id,
+            student: s.id,
+            student_name: s.student_name,
+            plan_name: s.division || 'Processing Fee',
+            balance_due: s.balance_due,
+            total_due: s.total_fee,
+            total_paid: s.total_paid,
+            company: 'LP',
+          }));
+          if (activeCompanyRef.current === companyToLoad) {
+            setAccounts(lpAccounts);
+          }
+        }
+      } catch (accErr) {
+        console.warn('Error loading company fee accounts', accErr);
+      }
     } catch {
       if (activeCompanyRef.current === companyToLoad) {
         setStudents([]);
+        setAccounts([]);
       }
     } finally {
       if (activeCompanyRef.current === companyToLoad) {
@@ -183,6 +222,7 @@ export default function GlobalFeesPage() {
 
     // 1. IMMEDIATELY WIPE ALL DATA TO PREVENT CROSS-COMPANY DATA BLEED
     setStudents([]);
+    setAccounts([]);
     setSelectedStudent(null);
     setStudioInitialStudent(null);
     setStudioInitialReceipt(null);
@@ -842,6 +882,7 @@ export default function GlobalFeesPage() {
           initialStudent={studioInitialStudent}
           initialReceipt={studioInitialReceipt}
           students={students}
+          accounts={accounts}
           onSaved={() => {
             fetchStudents(activeCompany);
             setStudioOpen(false);
