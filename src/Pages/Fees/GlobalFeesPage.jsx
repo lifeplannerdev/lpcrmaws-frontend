@@ -729,6 +729,7 @@ export default function GlobalFeesPage() {
                                   status === 'EXITED'
                                     ? 'bg-amber-100 text-amber-800 border border-amber-200'
                                     : status === 'PAID'
+                                    ? 'bg-emerald-100 text-emerald-700'
                                     : status === 'OVERDUE'
                                     ? 'bg-rose-100 text-rose-700'
                                     : status === 'PARTIAL' || status === 'PARTIALLY_PAID'
@@ -827,6 +828,7 @@ export default function GlobalFeesPage() {
                                 Number(selectedStudent.total_fee || 0) - Number(selectedStudent.total_paid || 0)
                               ))
                       )}
+                    </span>
                   </div>
 
                   {/* Multiple Fee Accounts Breakdown if student has > 1 account */}
