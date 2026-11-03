@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, List, Grid, Trello, X, Download, Columns, Table, Mail, Search, CalendarClock, Receipt, Trash2, IndianRupee } from 'lucide-react';
+import { Plus, List, Grid, Trello, X, Download, Columns, Table, Mail, Search, CalendarClock, Receipt, Trash2, IndianRupee, Edit3, Eye } from 'lucide-react';
 import Navbar from '../Components/layouts/Navbar';
 import RemindersPage from './RemindersPage';
 import * as XLSX from 'xlsx';
@@ -1017,11 +1017,17 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
 
   // Processing Fee Payments & Digital Receipts State
   const [payments, setPayments] = useState([]);
+  const [isEditingTargets, setIsEditingTargets] = useState(false);
+  const [savingTargets, setSavingTargets] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     fee_head: 'REGISTRATION',
+    amount: '',
     paid_amount: '',
-    pay_date: new Date().toISOString().slice(0, 16),
+    payment_date: new Date().toISOString().slice(0, 10),
+    pay_date: new Date().toISOString().slice(0, 10),
+    payment_method: 'UPI',
     mode_of_pay: 'UPI',
+    reference: '',
     transaction_reference: '',
     notes: '',
   });
@@ -1032,36 +1038,32 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
     initialReceipt: null,
   });
 
-  const handleOpenFeeReceipt = (particular, paidAmount, fullAmount) => {
-    const studentData = student || formData;
-    const amountVal = Number(paidAmount || fullAmount || 0);
-    const amountStr = amountVal > 0 ? amountVal.toFixed(2) : '0.00';
-    const enrollmentCode = studentData.id ? ('LP-PROC-' + String(studentData.id).padStart(4, '0')) : '';
-
-    setReceiptStudioState({
-      isOpen: true,
-      initialPayment: null,
-      initialReceipt: {
-        company: 'LP',
-        recipient_name: studentData.name || formData.name || '',
-        recipient_phone: studentData.mobile_number || studentData.whatsapp_number || formData.mobile_number || '',
-        recipient_email: studentData.email || formData.email || '',
-        student_enrollment_code: enrollmentCode,
-        processing_student: studentData.id || null,
-        total_amount: amountStr,
-        subtotal_amount: amountStr,
-        line_items: [
-          {
-            sac_code: '999293',
-            description: particular,
-            amount: amountStr,
-            tax_rate: 0,
-            tax_amount: '0.00',
-            total_amount: amountStr,
-          }
-        ],
-      },
-    });
+  const handleSaveTargetFees = async () => {
+    if (!student) return;
+    setSavingTargets(true);
+    try {
+      await axios.patch(`${API_BASE_URL}/processing-students/${student.id}/`, {
+        processing_fee_applicable: Boolean(Number(formData.processing_fee_amount || 0) > 0),
+        processing_fee_amount: formData.processing_fee_amount === '' ? null : formData.processing_fee_amount,
+        fee_admission_applicable: Boolean(Number(formData.fee_admission_amount || 0) > 0),
+        fee_admission_amount: formData.fee_admission_amount === '' ? null : formData.fee_admission_amount,
+        fee_language_applicable: Boolean(Number(formData.fee_language_amount || 0) > 0),
+        fee_language_amount: formData.fee_language_amount === '' ? null : formData.fee_language_amount,
+        fee_visa_applicable: Boolean(Number(formData.fee_visa_amount || 0) > 0),
+        fee_visa_amount: formData.fee_visa_amount === '' ? null : formData.fee_visa_amount,
+        fee_ministry_applicable: Boolean(Number(formData.fee_ministry_amount || 0) > 0),
+        fee_ministry_amount: formData.fee_ministry_amount === '' ? null : formData.fee_ministry_amount,
+      }, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      setIsEditingTargets(false);
+      if (onSave) onSave();
+    } catch (err) {
+      console.error('Error saving target fees', err);
+      alert('Failed to save target fees');
+    } finally {
+      setSavingTargets(false);
+    }
   };
 
   const fetchPayments = async () => {
@@ -1076,46 +1078,68 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
     }
   };
 
-  const handleRecordPayment = async (e) => {
-    e.preventDefault();
-    if (!paymentForm.paid_amount || Number(paymentForm.paid_amount) <= 0) {
+  const handleRecordPayment = async (e, shouldOpenReceiptStudio = false) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const amountVal = Number(paymentForm.amount || paymentForm.paid_amount);
+    if (!amountVal || amountVal <= 0) {
       alert('Please enter a valid payment amount');
       return;
     }
+    const payDate = paymentForm.payment_date || paymentForm.pay_date || new Date().toISOString().slice(0, 10);
+    const payMethod = paymentForm.payment_method || paymentForm.mode_of_pay || 'UPI';
+    const payRef = paymentForm.reference || paymentForm.transaction_reference || '';
+
     setRecordingPayment(true);
     try {
-      await axios.post(`${API_BASE_URL}/processing-students/${student.id}/payments/`, {
+      const res = await axios.post(`${API_BASE_URL}/processing-students/${student.id}/payments/`, {
         student: student.id,
         fee_head: paymentForm.fee_head,
-        paid_amount: paymentForm.paid_amount,
-        pay_date: paymentForm.pay_date,
-        mode_of_pay: paymentForm.mode_of_pay,
-        transaction_reference: paymentForm.transaction_reference,
-        notes: paymentForm.notes,
+        amount: amountVal,
+        payment_method: payMethod,
+        payment_date: payDate,
+        reference: payRef,
+        notes: paymentForm.notes || '',
       }, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
+
+      const savedPayment = res.data;
+
       setPaymentForm({
         fee_head: 'REGISTRATION',
+        amount: '',
         paid_amount: '',
-        pay_date: new Date().toISOString().slice(0, 16),
+        payment_date: new Date().toISOString().slice(0, 10),
+        pay_date: new Date().toISOString().slice(0, 10),
+        payment_method: 'UPI',
         mode_of_pay: 'UPI',
+        reference: '',
         transaction_reference: '',
         notes: '',
       });
-      fetchPayments();
+
+      await fetchPayments();
       fetchTimeline();
       if (onSave) onSave();
+
+      if (shouldOpenReceiptStudio && savedPayment) {
+        setReceiptStudioState({
+          isOpen: true,
+          initialPayment: savedPayment,
+          initialReceipt: null,
+        });
+      }
     } catch (err) {
       console.error('Failed to record payment', err);
-      alert(err.response?.data?.detail || 'Failed to record payment');
+      const msg = err.response?.data?.amount?.[0] || err.response?.data?.detail || 'Failed to record payment';
+      alert(msg);
     } finally {
       setRecordingPayment(false);
     }
   };
 
   const handleDeletePayment = async (payId) => {
-    if (!window.confirm('Are you sure you want to delete this payment record? This will adjust the student totals.')) return;
+    if (!window.confirm('Are you sure you want to delete this payment record? This will adjust the student totals and automatically void any issued receipt for this payment.')) return;
     try {
       await axios.delete(`${API_BASE_URL}/processing-student-payments/${payId}/`, {
         headers: { Authorization: `Bearer ${accessToken}` }
@@ -1284,8 +1308,15 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
       const payload = { ...formData, dynamic_data: dynamicData };
       if (!payload.assigned_to) payload.assigned_to = null;
       if (!payload.source) payload.source = null;
-      if (payload.processing_fee_amount === '') payload.processing_fee_amount = null;
-      if (payload.processing_fee_paid === '') payload.processing_fee_paid = null;
+      [
+        'processing_fee_amount', 'processing_fee_paid',
+        'fee_admission_amount', 'fee_admission_paid',
+        'fee_language_amount', 'fee_language_paid',
+        'fee_visa_amount', 'fee_visa_paid',
+        'fee_ministry_amount', 'fee_ministry_paid'
+      ].forEach(f => {
+        if (payload[f] === '') payload[f] = null;
+      });
 
       if (student) {
         await axios.put(`${API_BASE_URL}/processing-students/${student.id}/`, payload, {
@@ -1520,211 +1551,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                 </select>
               </div>
               
-              {/* Fee Section */}
-              <div className="md:col-span-2 pt-4 border-t mt-4">
-                {(!canManageFees && !formData.processing_fee_applicable) ? null : (
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between gap-2 mb-4">
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" name="processing_fee_applicable" checked={formData.processing_fee_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
-                        <h4 className="text-md font-semibold text-gray-700">Application/Registration Fee</h4>
-                      </div>
-                      {formData.processing_fee_applicable && (Number(formData.processing_fee_paid || formData.processing_fee_amount || 0) > 0) && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFeeReceipt('Application/Registration Fee', formData.processing_fee_paid, formData.processing_fee_amount)}
-                          className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1 transition-colors shadow-xs"
-                          title="Generate receipt for Application/Registration Fee"
-                        >
-                          <Receipt size={13} />
-                          <span>Receipt</span>
-                        </button>
-                      )}
-                    </div>
-                    <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.processing_fee_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                        <input type="number" name="processing_fee_amount" value={formData.processing_fee_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                        <input type="number" name="processing_fee_paid" value={formData.processing_fee_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                        <select name="processing_fee_status" value={formData.processing_fee_status} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white disabled:bg-gray-100 disabled:text-gray-500">
-                          <option value="PENDING">Pending</option>
-                          <option value="PARTIAL">Partial</option>
-                          <option value="PAID">Paid</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {(!canManageFees && !formData.fee_admission_applicable) ? null : (
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between gap-2 mb-4">
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" name="fee_admission_applicable" checked={formData.fee_admission_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
-                        <h4 className="text-md font-semibold text-gray-700">On Admission/Ausbildung/Offer Letter</h4>
-                      </div>
-                      {formData.fee_admission_applicable && (Number(formData.fee_admission_paid || formData.fee_admission_amount || 0) > 0) && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFeeReceipt('On Admission/Ausbildung/Offer Letter', formData.fee_admission_paid, formData.fee_admission_amount)}
-                          className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1 transition-colors shadow-xs"
-                          title="Generate receipt for On Admission/Ausbildung/Offer Letter"
-                        >
-                          <Receipt size={13} />
-                          <span>Receipt</span>
-                        </button>
-                      )}
-                    </div>
-                    <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_admission_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                        <input type="number" name="fee_admission_amount" value={formData.fee_admission_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                        <input type="number" name="fee_admission_paid" value={formData.fee_admission_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                        <select name="fee_admission_status" value={formData.fee_admission_status} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white disabled:bg-gray-100 disabled:text-gray-500">
-                          <option value="PENDING">Pending</option>
-                          <option value="PARTIAL">Partial</option>
-                          <option value="PAID">Paid</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {(!canManageFees && !formData.fee_language_applicable) ? null : (
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between gap-2 mb-4">
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" name="fee_language_applicable" checked={formData.fee_language_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
-                        <h4 className="text-md font-semibold text-gray-700">On Language Confirmation</h4>
-                      </div>
-                      {formData.fee_language_applicable && (Number(formData.fee_language_paid || formData.fee_language_amount || 0) > 0) && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFeeReceipt('On Language Confirmation', formData.fee_language_paid, formData.fee_language_amount)}
-                          className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1 transition-colors shadow-xs"
-                          title="Generate receipt for On Language Confirmation"
-                        >
-                          <Receipt size={13} />
-                          <span>Receipt</span>
-                        </button>
-                      )}
-                    </div>
-                    <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_language_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                        <input type="number" name="fee_language_amount" value={formData.fee_language_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                        <input type="number" name="fee_language_paid" value={formData.fee_language_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                        <select name="fee_language_status" value={formData.fee_language_status} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white disabled:bg-gray-100 disabled:text-gray-500">
-                          <option value="PENDING">Pending</option>
-                          <option value="PARTIAL">Partial</option>
-                          <option value="PAID">Paid</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {(!canManageFees && !formData.fee_visa_applicable) ? null : (
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between gap-2 mb-4">
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" name="fee_visa_applicable" checked={formData.fee_visa_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
-                        <h4 className="text-md font-semibold text-gray-700">On Visa Approval</h4>
-                      </div>
-                      {formData.fee_visa_applicable && (Number(formData.fee_visa_paid || formData.fee_visa_amount || 0) > 0) && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFeeReceipt('On Visa Approval', formData.fee_visa_paid, formData.fee_visa_amount)}
-                          className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1 transition-colors shadow-xs"
-                          title="Generate receipt for On Visa Approval"
-                        >
-                          <Receipt size={13} />
-                          <span>Receipt</span>
-                        </button>
-                      )}
-                    </div>
-                    <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_visa_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                        <input type="number" name="fee_visa_amount" value={formData.fee_visa_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                        <input type="number" name="fee_visa_paid" value={formData.fee_visa_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                        <select name="fee_visa_status" value={formData.fee_visa_status} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white disabled:bg-gray-100 disabled:text-gray-500">
-                          <option value="PENDING">Pending</option>
-                          <option value="PARTIAL">Partial</option>
-                          <option value="PAID">Paid</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {(!canManageFees && !formData.fee_ministry_applicable) ? null : (
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between gap-2 mb-4">
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" name="fee_ministry_applicable" checked={formData.fee_ministry_applicable} onChange={handleChange} disabled={!canManageFees} className="w-4 h-4 accent-indigo-600 rounded cursor-pointer disabled:cursor-not-allowed" />
-                        <h4 className="text-md font-semibold text-gray-700">On Ministry Letter</h4>
-                      </div>
-                      {formData.fee_ministry_applicable && (Number(formData.fee_ministry_paid || formData.fee_ministry_amount || 0) > 0) && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenFeeReceipt('On Ministry Letter', formData.fee_ministry_paid, formData.fee_ministry_amount)}
-                          className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1 transition-colors shadow-xs"
-                          title="Generate receipt for On Ministry Letter"
-                        >
-                          <Receipt size={13} />
-                          <span>Receipt</span>
-                        </button>
-                      )}
-                    </div>
-                    <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${!formData.fee_ministry_applicable ? 'opacity-50 pointer-events-none' : ''}`}>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Amount</label>
-                        <input type="number" name="fee_ministry_amount" value={formData.fee_ministry_amount || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Paid</label>
-                        <input type="number" name="fee_ministry_paid" value={formData.fee_ministry_paid || ''} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all disabled:bg-gray-100 disabled:text-gray-500" placeholder="0.00" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Status</label>
-                        <select name="fee_ministry_status" value={formData.fee_ministry_status} onChange={handleChange} disabled={!canManageFees} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all bg-white disabled:bg-gray-100 disabled:text-gray-500">
-                          <option value="PENDING">Pending</option>
-                          <option value="PARTIAL">Partial</option>
-                          <option value="PAID">Paid</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {!canManageFees && (
-                  <p className="text-xs text-amber-600 mt-2">Only accounts with fee management permissions can edit processing fees.</p>
-                )}
-              </div>
+              
               
               </div>
             </div>
@@ -1924,9 +1751,95 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
 
         {activeTab === 'fees' && student && (
           <div className="space-y-6">
-            {/* Fee Heads Summary Cards */}
+            {/* Fee Heads Summary Cards & Target Management */}
             <div>
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider mb-3">Fee Heads Overview</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Fee Heads Overview</h3>
+                {canManageFees && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingTargets(v => !v)}
+                    className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 flex items-center gap-1 transition-all"
+                  >
+                    <Edit3 size={12} />
+                    {isEditingTargets ? 'Close Targets' : 'Configure Target Fees'}
+                  </button>
+                )}
+              </div>
+
+              {isEditingTargets && canManageFees && (
+                <div className="mb-4 p-3.5 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-indigo-900">Set Fee Plan Targets for this Student</span>
+                    <button
+                      type="button"
+                      disabled={savingTargets}
+                      onClick={handleSaveTargetFees}
+                      className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm disabled:opacity-50"
+                    >
+                      {savingTargets ? 'Saving...' : 'Save Target Amounts'}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">App / Reg Fee</label>
+                      <input
+                        type="number"
+                        name="processing_fee_amount"
+                        value={formData.processing_fee_amount || ''}
+                        onChange={handleChange}
+                        placeholder="0.00"
+                        className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Admission Fee</label>
+                      <input
+                        type="number"
+                        name="fee_admission_amount"
+                        value={formData.fee_admission_amount || ''}
+                        onChange={handleChange}
+                        placeholder="0.00"
+                        className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Language Fee</label>
+                      <input
+                        type="number"
+                        name="fee_language_amount"
+                        value={formData.fee_language_amount || ''}
+                        onChange={handleChange}
+                        placeholder="0.00"
+                        className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Visa Approval</label>
+                      <input
+                        type="number"
+                        name="fee_visa_amount"
+                        value={formData.fee_visa_amount || ''}
+                        onChange={handleChange}
+                        placeholder="0.00"
+                        className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Ministry Letter</label>
+                      <input
+                        type="number"
+                        name="fee_ministry_amount"
+                        value={formData.fee_ministry_amount || ''}
+                        onChange={handleChange}
+                        placeholder="0.00"
+                        className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {[
                   { title: 'App / Reg Fee', amount: formData.processing_fee_amount, paid: formData.processing_fee_paid, status: formData.processing_fee_status },
@@ -1964,19 +1877,11 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                   <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
                     <Plus size={14} /> Record Student Fee Payment
                   </h4>
-                  <button
-                    type="button"
-                    onClick={() => setReceiptStudioState({
-                      isOpen: true,
-                      initialPayment: null,
-                      initialReceipt: null,
-                    })}
-                    className="text-xs font-bold text-indigo-700 hover:text-indigo-900 flex items-center gap-1"
-                  >
-                    <Receipt size={13} /> Open Studio Directly
-                  </button>
+                  <span className="text-[11px] text-slate-500 font-normal">
+                    Strict receipt pairing: Receipts are issued directly against recorded payments
+                  </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 mb-1">Fee Head</label>
                     <select
@@ -1989,7 +1894,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                       <option value="LANGUAGE">Language Confirmation Fee</option>
                       <option value="VISA">Visa Approval Fee</option>
                       <option value="MINISTRY">Ministry Letter Fee</option>
-                      <option value="OTHER">Other Fee</option>
+                      <option value="OTHER">Other / Ad-hoc Fee</option>
                     </select>
                   </div>
                   <div>
@@ -1998,17 +1903,27 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                       type="number"
                       step="0.01"
                       required
-                      value={paymentForm.paid_amount}
-                      onChange={(e) => setPaymentForm(p => ({ ...p, paid_amount: e.target.value }))}
+                      value={paymentForm.amount || paymentForm.paid_amount || ''}
+                      onChange={(e) => setPaymentForm(p => ({ ...p, amount: e.target.value, paid_amount: e.target.value }))}
                       placeholder="0.00"
+                      className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Payment Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={(paymentForm.payment_date || paymentForm.pay_date || '').slice(0, 10)}
+                      onChange={(e) => setPaymentForm(p => ({ ...p, payment_date: e.target.value, pay_date: e.target.value }))}
                       className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white outline-none"
                     />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 mb-1">Payment Mode</label>
                     <select
-                      value={paymentForm.mode_of_pay}
-                      onChange={(e) => setPaymentForm(p => ({ ...p, mode_of_pay: e.target.value }))}
+                      value={paymentForm.payment_method || paymentForm.mode_of_pay}
+                      onChange={(e) => setPaymentForm(p => ({ ...p, payment_method: e.target.value, mode_of_pay: e.target.value }))}
                       className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white outline-none"
                     >
                       <option value="UPI">UPI</option>
@@ -2023,29 +1938,40 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                     <label className="block text-[11px] font-bold text-slate-600 mb-1">Transaction Ref / UTR</label>
                     <input
                       type="text"
-                      value={paymentForm.transaction_reference}
-                      onChange={(e) => setPaymentForm(p => ({ ...p, transaction_reference: e.target.value }))}
+                      value={paymentForm.reference || paymentForm.transaction_reference || ''}
+                      onChange={(e) => setPaymentForm(p => ({ ...p, reference: e.target.value, transaction_reference: e.target.value }))}
                       placeholder="UTR / Txn Ref..."
                       className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white outline-none"
                     />
                   </div>
                 </div>
-                <div className="flex items-center justify-between gap-3 pt-1">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
                   <input
                     type="text"
-                    value={paymentForm.notes}
+                    value={paymentForm.notes || ''}
                     onChange={(e) => setPaymentForm(p => ({ ...p, notes: e.target.value }))}
                     placeholder="Optional notes or remarks..."
-                    className="flex-1 text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white outline-none"
+                    className="w-full sm:flex-1 text-xs px-3 py-2 border border-slate-200 rounded-xl bg-white outline-none"
                   />
-                  <button
-                    type="submit"
-                    disabled={recordingPayment}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
-                  >
-                    <IndianRupee size={13} />
-                    {recordingPayment ? 'Recording...' : 'Record Payment'}
-                  </button>
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button
+                      type="submit"
+                      disabled={recordingPayment}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
+                    >
+                      <IndianRupee size={13} />
+                      {recordingPayment ? 'Recording...' : 'Record Payment'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={recordingPayment}
+                      onClick={(e) => handleRecordPayment(e, true)}
+                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
+                    >
+                      <Receipt size={13} />
+                      {recordingPayment ? 'Recording...' : 'Record & Issue Receipt'}
+                    </button>
+                  </div>
                 </div>
               </form>
             )}
@@ -2062,45 +1988,62 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                 </div>
               ) : (
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {payments.map(p => (
-                    <div key={p.id} className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between hover:border-indigo-200 transition-colors shadow-xs">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-extrabold text-slate-900">{p.fee_head_display || p.fee_head}</span>
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{p.mode_of_pay}</span>
+                  {payments.map(p => {
+                    const payAmount = Number(p.amount ?? p.paid_amount ?? 0);
+                    const payMethod = p.payment_method || p.mode_of_pay || 'UPI';
+                    const payDate = (p.payment_date || p.pay_date || '').slice(0, 10);
+                    const payRef = p.reference || p.transaction_reference || '';
+                    const hasReceipt = Boolean(p.latest_receipt_number && p.latest_receipt_status !== 'VOID');
+
+                    return (
+                      <div key={p.id} className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between hover:border-indigo-200 transition-colors shadow-xs">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-extrabold text-slate-900">{p.fee_head_display || p.fee_head}</span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{payMethod}</span>
+                            {hasReceipt && (
+                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                {p.latest_receipt_number}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500">
+                            {payDate} {payRef ? `• Ref: ${payRef}` : ''} {p.notes ? `• ${p.notes}` : ''}
+                          </p>
                         </div>
-                        <p className="text-[11px] text-slate-500">
-                          {p.pay_date?.slice(0, 10)} {p.transaction_reference ? `• Ref: ${p.transaction_reference}` : ''} {p.notes ? `• ${p.notes}` : ''}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-black text-emerald-600">₹{Number(p.paid_amount || 0).toLocaleString('en-IN')}</span>
-                        <button
-                          type="button"
-                          onClick={() => setReceiptStudioState({
-                            isOpen: true,
-                            initialPayment: p,
-                            initialReceipt: null,
-                          })}
-                          className="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 flex items-center gap-1 transition-colors"
-                          title="Generate or view official digital receipt"
-                        >
-                          <Receipt size={13} />
-                          <span>Receipt</span>
-                        </button>
-                        {canManageFees && (
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-black text-emerald-600">₹{payAmount.toLocaleString('en-IN')}</span>
                           <button
                             type="button"
-                            onClick={() => handleDeletePayment(p.id)}
-                            className="p-1 text-slate-400 hover:text-rose-600 rounded-md"
-                            title="Delete payment"
+                            onClick={() => setReceiptStudioState({
+                              isOpen: true,
+                              initialPayment: p,
+                              initialReceipt: null,
+                            })}
+                            className={`px-2.5 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-colors ${
+                              hasReceipt
+                                ? 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border-indigo-200'
+                                : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200'
+                            }`}
+                            title={hasReceipt ? `View official receipt ${p.latest_receipt_number}` : 'Issue official receipt for this payment'}
                           >
-                            <Trash2 size={13} />
+                            {hasReceipt ? <Eye size={13} /> : <Receipt size={13} />}
+                            <span>{hasReceipt ? 'View Receipt' : 'Issue Receipt'}</span>
                           </button>
-                        )}
+                          {canManageFees && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePayment(p.id)}
+                              className="p-1 text-slate-400 hover:text-rose-600 rounded-md transition-colors"
+                              title="Delete payment (and void any linked receipt)"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

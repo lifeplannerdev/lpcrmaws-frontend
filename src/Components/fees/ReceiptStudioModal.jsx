@@ -1217,6 +1217,24 @@ export default function ReceiptStudioModal({
     });
   };
 
+  const handleSelectLpFeeHead = (headTitle) => {
+    setForm((prev) => {
+      const items = [...(prev.line_items || [])];
+      if (items.length === 1 && (!items[0].title || items[0].title === 'Course Tuition Fee' || items[0].title.startsWith('Processing Fee'))) {
+        items[0] = { ...items[0], title: headTitle };
+      } else {
+        items.push(createEmptyLineItem(prev.issuer_snapshot?.sac_code || '999293', headTitle, '0.00', headTitle));
+      }
+      return recomputeFromItems({
+        ...prev,
+        installment_label: headTitle,
+        line_items: items,
+        is_manual_override: true,
+      });
+    });
+    toast.success(`Selected ${headTitle}`);
+  };
+
   const handleSplitRegistrationAndTuition = () => {
     const currentTotal = round2(form.total_amount || form.subtotal_amount || 0);
     const accList = internalAccounts.length > 0 ? internalAccounts : accounts;
@@ -2257,32 +2275,81 @@ export default function ReceiptStudioModal({
                         <div className="flex flex-wrap gap-1.5">
                           <button
                             type="button"
-                            onClick={() => handleAddLineItem('Course Tuition Fee', '0.00')}
+                            onClick={() => handleAddLineItem(String(form.company || company || '').toUpperCase() === 'LP' ? 'Application / Registration Fee' : 'Course Tuition Fee', '0.00')}
                             className="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold flex items-center gap-1"
                           >
                             <Plus size={13} /> Add Row
                           </button>
-                          <button
-                            type="button"
-                            onClick={handleSplitRegistrationAndTuition}
-                            className="px-2.5 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold"
-                          >
-                            Split Reg. + Tuition
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleAddLineItem('Exam / Goethe Prep Fee', '3500.00')}
-                            className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold"
-                          >
-                            + Exam Fee
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleAddLineItem('Study Material & Books', '2000.00')}
-                            className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold"
-                          >
-                            + Study Material
-                          </button>
+                          {String(form.company || company || '').toUpperCase() === 'LP' ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectLpFeeHead('Application / Registration Fee')}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold"
+                              >
+                                + App / Reg Fee
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectLpFeeHead('Admission Fee')}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold"
+                              >
+                                + Admission Fee
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectLpFeeHead('Language Confirmation Fee')}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold"
+                              >
+                                + Language Fee
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectLpFeeHead('Visa Approval Fee')}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold"
+                              >
+                                + Visa Fee
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectLpFeeHead('Ministry Letter Fee')}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold"
+                              >
+                                + Ministry Fee
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectLpFeeHead('Other / Ad-hoc Fee')}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold"
+                              >
+                                + Other Fee
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={handleSplitRegistrationAndTuition}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold"
+                              >
+                                Split Reg. + Tuition
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleAddLineItem('Exam / Goethe Prep Fee', '3500.00')}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold"
+                              >
+                                + Exam Fee
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleAddLineItem('Study Material & Books', '2000.00')}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold"
+                              >
+                                + Study Material
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     )}
@@ -2317,9 +2384,34 @@ export default function ReceiptStudioModal({
                               <input
                                 value={item.title}
                                 onChange={(e) => handleLineItemChange(idx, 'title', e.target.value)}
-                                placeholder="e.g. German A1-B2 Tuition Fee"
+                                placeholder={String(form.company || company || '').toUpperCase() === 'LP' ? "e.g. Application / Registration Fee, Admission Fee, Other Fee" : "e.g. German A1-B2 Tuition Fee"}
                                 className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold"
                               />
+                              {String(form.company || company || '').toUpperCase() === 'LP' && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {[
+                                    { label: 'App / Reg', value: 'Application / Registration Fee' },
+                                    { label: 'Admission', value: 'Admission Fee' },
+                                    { label: 'Language', value: 'Language Confirmation Fee' },
+                                    { label: 'Visa', value: 'Visa Approval Fee' },
+                                    { label: 'Ministry', value: 'Ministry Letter Fee' },
+                                    { label: 'Other', value: 'Other / Ad-hoc Fee' },
+                                  ].map(h => (
+                                    <button
+                                      key={h.value}
+                                      type="button"
+                                      onClick={() => handleLineItemChange(idx, 'title', h.value)}
+                                      className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${
+                                        item.title === h.value
+                                          ? 'bg-indigo-600 text-white border-indigo-600 font-bold'
+                                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                      }`}
+                                    >
+                                      {h.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                             <div className="md:col-span-3">
                               <label className="block text-[10px] font-bold text-slate-500 mb-0.5">

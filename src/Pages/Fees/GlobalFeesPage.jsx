@@ -691,8 +691,16 @@ export default function GlobalFeesPage() {
                             }`}
                           >
                             <td className="px-4 py-3">
-                              <div className="font-bold text-slate-900">
-                                {s.student_name || s.name}
+                              <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                                <span>{s.student_name || s.name}</span>
+                                {s.account_count > 1 && (
+                                  <span
+                                    className="px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-100"
+                                    title={`${s.account_count} fee accounts linked`}
+                                  >
+                                    {s.account_count} Accounts
+                                  </span>
+                                )}
                               </div>
                               <div className="text-[11px] text-slate-400">
                                 {s.email || s.phone || '—'}
@@ -818,6 +826,32 @@ export default function GlobalFeesPage() {
                       )}
                     </span>
                   </div>
+
+                  {/* Multiple Fee Accounts Breakdown if student has > 1 account */}
+                  {selectedStudent.fee_accounts && selectedStudent.fee_accounts.length > 1 && (
+                    <div className="pt-3 border-t border-slate-100">
+                      <div className="text-[11px] font-bold text-slate-700 mb-2 flex items-center justify-between">
+                        <span>Fee Accounts ({selectedStudent.fee_accounts.length})</span>
+                        <span className="px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold">
+                          Multi-Account
+                        </span>
+                      </div>
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-0.5">
+                        {selectedStudent.fee_accounts.map((acc, idx) => (
+                          <div key={acc.id || idx} className="p-2 rounded-xl bg-slate-50 border border-slate-100 text-[11px]">
+                            <div className="flex justify-between font-semibold text-slate-800">
+                              <span className="truncate max-w-[130px]">{acc.plan_name || `Account #${acc.id}`}</span>
+                              <span className="text-slate-900 font-bold">{formatINR(acc.total_due)}</span>
+                            </div>
+                            <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                              <span>Paid: <strong className="text-emerald-600">{formatINR(acc.total_paid)}</strong></span>
+                              <span>Due: <strong className="text-rose-600">{formatINR(acc.balance_due)}</strong></span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}

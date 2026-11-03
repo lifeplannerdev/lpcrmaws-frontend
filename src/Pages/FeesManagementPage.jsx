@@ -62,6 +62,7 @@ export default function FeesManagementPage() {
     due_day: 10,
     notes: '',
     source_label: 'manual',
+    company: 'FLAG',
   });
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -153,17 +154,19 @@ export default function FeesManagementPage() {
       const token = await getToken();
       if (!token) return;
 
+      const companyParam = 'company=FLAG';
+
       const [templatesRes, accountsRes, studentsRes, summaryRes, pendingRes, policyRes, pendingStudentsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/fees/catalog/`, {
+        fetch(`${API_BASE_URL}/fees/catalog/?${companyParam}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`${API_BASE_URL}/fees/accounts/?${search ? `search=${encodeURIComponent(search)}` : ''}`, {
+        fetch(`${API_BASE_URL}/fees/accounts/?${companyParam}${search ? `&search=${encodeURIComponent(search)}` : ''}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`${API_BASE_URL}/fees/students/`, {
+        fetch(`${API_BASE_URL}/fees/students/?${companyParam}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch(`${API_BASE_URL}/fees/summary/`, {
+        fetch(`${API_BASE_URL}/fees/summary/?${companyParam}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`${API_BASE_URL}/students/attendance-records/?status=pending`, {
@@ -340,6 +343,7 @@ export default function FeesManagementPage() {
         due_day: 10,
         notes: '',
         source_label: 'manual',
+        company: 'FLAG',
       });
       setMessage({ type: 'success', text: 'Fee account created.' });
       await fetchData();

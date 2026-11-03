@@ -55,6 +55,7 @@ const FeesAnalyticsWorkspace = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
+      params.append('company', 'FLAG');
       if (filters.branch) params.append('branch', filters.branch);
       if (filters.batch) params.append('batch', filters.batch);
       
