@@ -689,10 +689,10 @@ export default function ReceiptStudioModal({
           supply_type: 'INTRA_STATE',
           gst_rate: String(settingsData.default_gst_rate || '18.00'),
 
-          payment_method: targetPayment?.payment_method || 'UPI',
-          payment_reference: targetPayment?.reference || '',
-          payment_date: targetPayment?.payment_date ? toLocalDatetimeInput(targetPayment.payment_date) : toLocalDatetimeInput(),
-          installment_label: targetPayment?.installment?.label || (targetPayment?.installment ? `Installment #${targetPayment.installment.sequence_number || ''}` : ''),
+          payment_method: targetPayment?.payment_method || targetPayment?.mode_of_pay || 'UPI',
+          payment_reference: targetPayment?.reference || targetPayment?.payment_id || '',
+          payment_date: (targetPayment?.payment_date || targetPayment?.pay_date) ? toLocalDatetimeInput(targetPayment.payment_date || targetPayment.pay_date) : toLocalDatetimeInput(),
+          installment_label: targetPayment?.installment?.label || (targetPayment?.installment ? `Installment #${targetPayment.installment.sequence_number || ''}` : '') || (targetPayment?.fee_month_display ? targetPayment.fee_month_display : ''),
           payment_status_badge: initialBadge,
 
           ledger_total_fee: totFee,
@@ -1051,12 +1051,14 @@ export default function ReceiptStudioModal({
     if (!payObj) return;
 
     setForm((prev) => {
-      const payAmount = round2(payObj.amount).toFixed(2);
-      const payDate = payObj.payment_date ? toLocalDatetimeInput(payObj.payment_date) : prev.payment_date;
-      const ref = payObj.reference || '';
-      const method = payObj.payment_method || 'UPI';
-      const rNum = payObj.latest_receipt_number || payObj.receipt_number || `Payment #${payObj.id}`;
-      const courseTitle = prev.course_or_package_name || selectedAccountObj?.plan_name || 'Course Tuition Fee';
+      const payAmount = round2(payObj.amount ?? payObj.paid_amount ?? 0).toFixed(2);
+      const payDate = (payObj.payment_date || payObj.pay_date) ? toLocalDatetimeInput(payObj.payment_date || payObj.pay_date) : prev.payment_date;
+      const ref = payObj.reference || payObj.payment_id || '';
+      const method = payObj.payment_method || payObj.mode_of_pay || 'UPI';
+      const rNum = payObj.latest_receipt_number || payObj.receipt_number || payObj.payment_id || `Payment #${payObj.id}`;
+      const currentComp = String(prev.company || company || 'FLAG').toUpperCase();
+      const courseTitle = prev.course_or_package_name || selectedAccountObj?.plan_name || (currentComp === 'FDS' ? 'Dance Tuition Fee' : 'Course Tuition Fee');
+      const fdsFeeType = payObj.fees_type_detail?.name || payObj.fee_month_display || '';
 
       const totFee = round2(prev.ledger_total_fee || selectedAccountObj?.total_due || payAmount);
       const disc = round2(prev.ledger_discount || selectedAccountObj?.discount || 0);
@@ -1069,13 +1071,14 @@ export default function ReceiptStudioModal({
       const updated = {
         ...prev,
         payment: payObj.id,
+        fds_payment: currentComp === 'FDS' ? payObj.id : prev.fds_payment,
         document_type: 'RECEIPT',
         payment_status_badge: balDue <= 0 ? 'SETTLED' : 'PAID',
         payment_method: method,
         payment_reference: ref,
         payment_date: payDate,
         subtotal_amount: payAmount,
-        installment_label: payObj.installment?.label || prev.installment_label || '',
+        installment_label: payObj.installment?.label || fdsFeeType || prev.installment_label || '',
         ledger_total_fee: totFee.toFixed(2),
         ledger_discount: disc.toFixed(2),
         ledger_previously_paid: prevPaid,
@@ -1085,15 +1088,17 @@ export default function ReceiptStudioModal({
         line_items: [
           createEmptyLineItem(
             prev.issuer_snapshot?.sac_code || '999293',
-            `${courseTitle} - Payment (${rNum})`,
+            currentComp === 'FDS'
+              ? `${courseTitle}${fdsFeeType ? ` - ${fdsFeeType}` : ''}`
+              : `${courseTitle} - Payment (${rNum})`,
             payAmount,
-            payObj.installment?.label || ''
+            payObj.installment?.label || fdsFeeType || ''
           ),
         ],
       };
       return recomputeFromItems(updated, true);
     });
-    toast.success(`Loaded payment record: ${formatINR(payObj.amount)}`);
+    toast.success(`Loaded payment record: ${formatINR(payObj.amount ?? payObj.paid_amount ?? 0)}`);
   };
 
   const handleLoadSettlementReceipt = () => {
@@ -1224,6 +1229,25 @@ export default function ReceiptStudioModal({
         items[0] = { ...items[0], title: headTitle };
       } else {
         items.push(createEmptyLineItem(prev.issuer_snapshot?.sac_code || '999293', headTitle, '0.00', headTitle));
+      }
+      return recomputeFromItems({
+        ...prev,
+        installment_label: headTitle,
+        line_items: items,
+        is_manual_override: true,
+      });
+    });
+    toast.success(`Selected ${headTitle}`);
+  };
+
+  const handleSelectFdsFeeHead = (headTitle, defaultAmount = null) => {
+    setForm((prev) => {
+      const items = [...(prev.line_items || [])];
+      const amountToUse = defaultAmount !== null ? String(defaultAmount) : (items[0]?.rate || prev.subtotal_amount || '0.00');
+      if (items.length === 1 && (!items[0].title || items[0].title === 'Course Tuition Fee' || items[0].title.startsWith('Processing Fee') || items[0].title.startsWith('Dance Tuition'))) {
+        items[0] = { ...items[0], title: headTitle, rate: amountToUse, amount: amountToUse };
+      } else {
+        items.push(createEmptyLineItem(prev.issuer_snapshot?.sac_code || '999293', headTitle, amountToUse, headTitle));
       }
       return recomputeFromItems({
         ...prev,
@@ -1377,9 +1401,9 @@ export default function ReceiptStudioModal({
         student: (!isLp && !isFds && form.student) ? Number(form.student) : null,
         account: (!isLp && !isFds && form.account) ? Number(form.account) : null,
         payment: (!isLp && !isFds && form.payment) ? Number(form.payment) : null,
-        fds_student: (isFds && (form.fds_student || form.student)) ? Number(form.fds_student || form.student) : null,
-        fds_account: (isFds && (form.fds_account || form.account)) ? Number(form.fds_account || form.account) : null,
-        fds_payment: (isFds && (form.fds_payment || form.payment)) ? Number(form.fds_payment || form.payment) : null,
+        fds_student: (isFds && (form.fds_student || form.student || initialStudent?.id)) ? Number(form.fds_student || form.student || initialStudent?.id) : null,
+        fds_account: (isFds && (form.fds_account || form.account || initialStudent?.fee_account_id)) ? Number(form.fds_account || form.account || initialStudent?.fee_account_id) : null,
+        fds_payment: (isFds && (form.fds_payment || form.payment || initialPayment?.id)) ? Number(form.fds_payment || form.payment || initialPayment?.id) : null,
         fds_wedding_group: form.fds_wedding_group ? Number(form.fds_wedding_group) : null,
         processing_student: (isLp && (form.processing_student || form.student || form.account || initialStudent?.id)) ? Number(form.processing_student || form.student || form.account || initialStudent?.id) : null,
         processing_payment: form.processing_payment ? Number(form.processing_payment) : null,
@@ -2035,7 +2059,7 @@ export default function ReceiptStudioModal({
                             <option value="">-- Custom / Manual Bill (No specific payment linked) --</option>
                             {availablePayments.map((p) => (
                               <option key={p.id} value={p.id}>
-                                {p.latest_receipt_number || p.receipt_number || `Payment #${p.id}`} — {formatINR(p.amount)} via {p.payment_method} on {p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'} {p.reference ? `(Ref: ${p.reference})` : ''}
+                                {p.latest_receipt_number || p.receipt_number || p.payment_id || `Payment #${p.id}`} — {formatINR(p.amount ?? p.paid_amount ?? 0)} via {p.payment_method || p.mode_of_pay} on {(p.payment_date || p.pay_date) ? new Date(p.payment_date || p.pay_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'} {(p.reference || p.payment_id) ? `(Ref: ${p.reference || p.payment_id})` : ''}
                               </option>
                             ))}
                           </select>
@@ -2053,7 +2077,7 @@ export default function ReceiptStudioModal({
                                     : 'bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50'
                                 }`}
                               >
-                                {p.latest_receipt_number || p.receipt_number || `Pay #${p.id}`}: {formatINR(p.amount)}
+                                {p.latest_receipt_number || p.receipt_number || p.payment_id || `Pay #${p.id}`}: {formatINR(p.amount ?? p.paid_amount ?? 0)}
                               </button>
                             ))}
                             {isCurrentAccountSettled && (
@@ -2275,7 +2299,12 @@ export default function ReceiptStudioModal({
                         <div className="flex flex-wrap gap-1.5">
                           <button
                             type="button"
-                            onClick={() => handleAddLineItem(String(form.company || company || '').toUpperCase() === 'LP' ? 'Application / Registration Fee' : 'Course Tuition Fee', '0.00')}
+                            onClick={() => handleAddLineItem(
+                              String(form.company || company || '').toUpperCase() === 'LP'
+                                ? 'Application / Registration Fee'
+                                : (String(form.company || company || '').toUpperCase() === 'FDS' ? 'Dance Tuition Fee' : 'Course Tuition Fee'),
+                              '0.00'
+                            )}
                             className="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold flex items-center gap-1"
                           >
                             <Plus size={13} /> Add Row
@@ -2320,6 +2349,51 @@ export default function ReceiptStudioModal({
                               <button
                                 type="button"
                                 onClick={() => handleSelectLpFeeHead('Other / Ad-hoc Fee')}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold"
+                              >
+                                + Other Fee
+                              </button>
+                            </>
+                          ) : String(form.company || company || '').toUpperCase() === 'FDS' ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectFdsFeeHead('Dance Tuition Fee')}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold"
+                              >
+                                + Monthly Tuition
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectFdsFeeHead('Zumba Regular / Fitness Fee', '2200.00')}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold"
+                              >
+                                + Zumba / Fitness
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectFdsFeeHead('Wedding Choreography Package', '15000.00')}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold"
+                              >
+                                + Wedding Choreography
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectFdsFeeHead('Workshop / Masterclass Fee')}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold"
+                              >
+                                + Workshop Fee
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectFdsFeeHead('Admission & Registration Fee')}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold"
+                              >
+                                + Reg. / Admission
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectFdsFeeHead('Other / Studio Fee')}
                                 className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold"
                               >
                                 + Other Fee
@@ -2384,7 +2458,13 @@ export default function ReceiptStudioModal({
                               <input
                                 value={item.title}
                                 onChange={(e) => handleLineItemChange(idx, 'title', e.target.value)}
-                                placeholder={String(form.company || company || '').toUpperCase() === 'LP' ? "e.g. Application / Registration Fee, Admission Fee, Other Fee" : "e.g. German A1-B2 Tuition Fee"}
+                                placeholder={
+                                  String(form.company || company || '').toUpperCase() === 'LP'
+                                    ? "e.g. Application / Registration Fee, Admission Fee, Other Fee"
+                                    : (String(form.company || company || '').toUpperCase() === 'FDS'
+                                        ? "e.g. Dance Tuition Fee, Zumba Regular, Wedding Couple Choreography"
+                                        : "e.g. German A1-B2 Tuition Fee")
+                                }
                                 className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold"
                               />
                               {String(form.company || company || '').toUpperCase() === 'LP' && (
@@ -2396,6 +2476,31 @@ export default function ReceiptStudioModal({
                                     { label: 'Visa', value: 'Visa Approval Fee' },
                                     { label: 'Ministry', value: 'Ministry Letter Fee' },
                                     { label: 'Other', value: 'Other / Ad-hoc Fee' },
+                                  ].map(h => (
+                                    <button
+                                      key={h.value}
+                                      type="button"
+                                      onClick={() => handleLineItemChange(idx, 'title', h.value)}
+                                      className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${
+                                        item.title === h.value
+                                          ? 'bg-indigo-600 text-white border-indigo-600 font-bold'
+                                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                      }`}
+                                    >
+                                      {h.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                              {String(form.company || company || '').toUpperCase() === 'FDS' && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {[
+                                    { label: 'Tuition', value: 'Dance Tuition Fee' },
+                                    { label: 'Zumba', value: 'Zumba Regular / Fitness Fee' },
+                                    { label: 'Wedding', value: 'Wedding Choreography Package' },
+                                    { label: 'Workshop', value: 'Workshop / Masterclass Fee' },
+                                    { label: 'Reg/Adm', value: 'Admission & Registration Fee' },
+                                    { label: 'Other', value: 'Other / Studio Fee' },
                                   ].map(h => (
                                     <button
                                       key={h.value}

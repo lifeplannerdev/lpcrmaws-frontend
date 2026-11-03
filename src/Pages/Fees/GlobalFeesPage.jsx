@@ -93,6 +93,7 @@ export default function GlobalFeesPage() {
   const [studioOpen, setStudioOpen] = useState(false);
   const [studioInitialStudent, setStudioInitialStudent] = useState(null);
   const [studioInitialReceipt, setStudioInitialReceipt] = useState(null);
+  const [studioInitialPayment, setStudioInitialPayment] = useState(null);
 
   // Direct Viewing & Printing Modal
   const [viewingReceipt, setViewingReceipt] = useState(null);
@@ -327,13 +328,19 @@ export default function GlobalFeesPage() {
         name: student.student_name || student.name,
         email: student.email || '',
         phone: student.phone || '',
-        division: student.division || student.campus || '',
+        division: student.division || student.campus || student.branch_name || '',
+        branch_name: student.branch_name || student.division || student.campus || '',
         balance_due: student.balance_due,
         total_fee: student.total_fee,
+        total_paid: student.total_paid,
         fee_account_id: student.fee_account_id,
+        class_category: student.class_category,
+        batch_name: student.batch_name,
       });
+      setStudioInitialPayment(student.latest_payment || null);
     } else {
       setStudioInitialStudent(null);
+      setStudioInitialPayment(null);
     }
     setStudioOpen(true);
   };
@@ -914,16 +921,21 @@ export default function GlobalFeesPage() {
       {studioOpen && (
         <ReceiptStudioModal
           isOpen={studioOpen}
-          onClose={() => setStudioOpen(false)}
+          onClose={() => {
+            setStudioOpen(false);
+            setStudioInitialPayment(null);
+          }}
           getToken={getToken}
           company={activeCompany}
           initialStudent={studioInitialStudent}
           initialReceipt={studioInitialReceipt}
+          initialPayment={studioInitialPayment}
           students={students}
           accounts={accounts}
           onSaved={() => {
             fetchStudents(activeCompany);
             setStudioOpen(false);
+            setStudioInitialPayment(null);
           }}
         />
       )}

@@ -910,6 +910,35 @@ export default function FdsFeesPage() {
                         {canManageFees && (
                           <div className="flex items-center gap-2">
                             <button
+                              type="button"
+                              onClick={() => setReceiptStudioState({
+                                isOpen: true,
+                                initialAccount: selectedAccount,
+                                initialStudent: {
+                                  id: selectedAccount.student,
+                                  name: selectedAccount.student_name,
+                                  student_name: selectedAccount.student_name,
+                                  student_id: selectedAccount.student_id_code,
+                                  division: selectedAccount.branch,
+                                  branch_name: selectedAccount.branch,
+                                  class_category: selectedAccount.class_category,
+                                  batch_name: selectedAccount.batch_name,
+                                  phone: selectedAccount.contact_no || selectedAccount.whatsapp_no,
+                                  balance_due: selectedAccount.balance_due,
+                                  total_fee: selectedAccount.total_due,
+                                  total_paid: selectedAccount.total_paid,
+                                },
+                                initialPayment: (selectedAccount.payments && selectedAccount.payments.length > 0) ? selectedAccount.payments[0] : null,
+                                initialReceipt: null,
+                                autoDownloadOnLoad: false,
+                              })}
+                              className="px-3 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5"
+                              title="Open Receipt Studio for this Account"
+                            >
+                              <Receipt size={13} />
+                              <span>Receipt Studio</span>
+                            </button>
+                            <button
                               onClick={() => setEditingEntity({ type: 'ACCOUNT', data: { ...selectedAccount } })}
                               className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 rounded-xl text-xs font-semibold shadow-xs"
                             >
@@ -1005,18 +1034,49 @@ export default function FdsFeesPage() {
                               : <>Studio Monthly Tuition: <strong className="text-sm font-extrabold text-indigo-700">{currency(selectedAccount.monthly_fee || selectedAccount.effective_monthly_fee || 1600)}/month</strong></>
                             }
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => setPaymentForm(p => ({
-                              ...p,
-                              amount: String(selectedAccount.is_wedding ? (selectedAccount.balance_due || selectedAccount.total_due) : (selectedAccount.monthly_fee || selectedAccount.effective_monthly_fee || 1600)),
-                              fee_month: new Date().getMonth() + 1,
-                              fee_year: new Date().getFullYear(),
-                            }))}
-                            className="px-3 py-1 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-lg font-bold shadow-2xs transition-colors"
-                          >
-                            {selectedAccount.is_wedding ? 'Fill Balance Due' : `Fill Monthly Fee (${currency(selectedAccount.monthly_fee || selectedAccount.effective_monthly_fee || 1600)})`}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setPaymentForm(p => ({
+                                ...p,
+                                amount: String(selectedAccount.is_wedding ? (selectedAccount.balance_due || selectedAccount.total_due) : (selectedAccount.monthly_fee || selectedAccount.effective_monthly_fee || 1600)),
+                                fee_month: new Date().getMonth() + 1,
+                                fee_year: new Date().getFullYear(),
+                              }))}
+                              className="px-3 py-1 bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-lg font-bold shadow-2xs transition-colors"
+                            >
+                              {selectedAccount.is_wedding ? 'Fill Balance Due' : `Fill Monthly Fee (${currency(selectedAccount.monthly_fee || selectedAccount.effective_monthly_fee || 1600)})`}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setReceiptStudioState({
+                                isOpen: true,
+                                initialAccount: selectedAccount,
+                                initialStudent: {
+                                  id: selectedAccount.student,
+                                  name: selectedAccount.student_name,
+                                  student_name: selectedAccount.student_name,
+                                  student_id: selectedAccount.student_id_code,
+                                  division: selectedAccount.branch,
+                                  branch_name: selectedAccount.branch,
+                                  class_category: selectedAccount.class_category,
+                                  batch_name: selectedAccount.batch_name,
+                                  phone: selectedAccount.contact_no || selectedAccount.whatsapp_no,
+                                  balance_due: selectedAccount.balance_due,
+                                  total_fee: selectedAccount.total_due,
+                                  total_paid: selectedAccount.total_paid,
+                                },
+                                initialPayment: null,
+                                initialReceipt: null,
+                                autoDownloadOnLoad: false,
+                              })}
+                              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold shadow-2xs transition-colors flex items-center gap-1"
+                              title="Open Receipt Studio Directly"
+                            >
+                              <Receipt size={12} />
+                              <span>Open Studio Directly</span>
+                            </button>
+                          </div>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
