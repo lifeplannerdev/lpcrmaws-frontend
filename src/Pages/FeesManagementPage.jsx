@@ -211,8 +211,11 @@ export default function FeesManagementPage() {
       (acc, curr) => {
         acc.totalDue += Number(curr.total_due || 0);
         acc.totalPaid += Number(curr.total_paid || 0);
-        acc.balanceDue += Number(curr.balance_due || 0);
-        acc.overdueAmount += Number(curr.overdue_amount || 0);
+        const isExited = curr.status === 'EXITED' || curr.student_status === 'exited';
+        if (!isExited) {
+          acc.balanceDue += Number(curr.balance_due || 0);
+          acc.overdueAmount += Number(curr.overdue_amount || 0);
+        }
         return acc;
       },
       { totalDue: 0, totalPaid: 0, balanceDue: 0, overdueAmount: 0 }
@@ -1039,11 +1042,19 @@ export default function FeesManagementPage() {
                         <td className="px-4 py-3 text-sm text-gray-500">{account.trainer_name || '-'}</td>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">{account.plan_name || account.plan_code || '-'}</td>
                         <td className="px-4 py-3 text-sm text-gray-500">{account.plan_type}</td>
-                        <td className="px-4 py-3"><span className="px-2 py-1 rounded bg-slate-100 text-xs font-semibold">{account.status}</span></td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                            account.status === 'EXITED' || account.student_status === 'exited'
+                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}>
+                            {account.status === 'EXITED' || account.student_status === 'exited' ? 'EXITED' : account.status}
+                          </span>
+                        </td>
                         <td className="px-4 py-3 text-right text-gray-900">{currency(account.total_due)}</td>
                         <td className="px-4 py-3 text-right text-green-600">{currency(account.total_paid)}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-indigo-700">{currency(account.balance_due)}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-red-600">{currency(account.overdue_amount)}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-indigo-700">{currency((account.status === 'EXITED' || account.student_status === 'exited') ? 0 : account.balance_due)}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-red-600">{currency((account.status === 'EXITED' || account.student_status === 'exited') ? 0 : account.overdue_amount)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1120,10 +1131,16 @@ export default function FeesManagementPage() {
                             <div className="text-xs text-gray-500">{account.plan_type}</div>
                           </td>
                           <td className="px-4 py-4">
-                            <span className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">{account.status}</span>
+                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                              account.status === 'EXITED' || account.student_status === 'exited'
+                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              {account.status === 'EXITED' || account.student_status === 'exited' ? 'EXITED' : account.status}
+                            </span>
                           </td>
-                          <td className="px-4 py-4 font-semibold text-indigo-700">{currency(account.balance_due)}</td>
-                          <td className="px-4 py-4 font-semibold text-red-600">{currency(account.overdue_amount)}</td>
+                          <td className="px-4 py-4 font-semibold text-indigo-700">{currency((account.status === 'EXITED' || account.student_status === 'exited') ? 0 : account.balance_due)}</td>
+                          <td className="px-4 py-4 font-semibold text-red-600">{currency((account.status === 'EXITED' || account.student_status === 'exited') ? 0 : account.overdue_amount)}</td>
                           <td className="px-4 py-4 text-right">
                             {canManageFees && (
                               <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
@@ -1179,7 +1196,14 @@ export default function FeesManagementPage() {
               ) : (
                 <div className="space-y-4">
                   <div className="rounded-2xl bg-slate-50 p-4">
-                    <div className="font-semibold text-gray-900">{selectedAccount.student_name}</div>
+                    <div className="flex items-center justify-between">
+                      <div className="font-semibold text-gray-900">{selectedAccount.student_name}</div>
+                      {(selectedAccount.status === 'EXITED' || selectedAccount.student_status === 'exited') && (
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                          STUDENT EXITED
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm text-gray-500">{selectedAccount.plan_name || selectedAccount.plan_code || selectedAccount.plan_type}</div>
                     <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                       <div>
@@ -1192,11 +1216,15 @@ export default function FeesManagementPage() {
                       </div>
                       <div>
                         <div className="text-gray-500">Balance</div>
-                        <div className="font-bold text-indigo-700">{currency(selectedAccount.balance_due)}</div>
+                        <div className="font-bold text-indigo-700">
+                          {currency((selectedAccount.status === 'EXITED' || selectedAccount.student_status === 'exited') ? 0 : selectedAccount.balance_due)}
+                        </div>
                       </div>
                       <div>
                         <div className="text-gray-500">Overdue</div>
-                        <div className="font-bold text-red-600">{currency(selectedAccount.overdue_amount)}</div>
+                        <div className="font-bold text-red-600">
+                          {currency((selectedAccount.status === 'EXITED' || selectedAccount.student_status === 'exited') ? 0 : selectedAccount.overdue_amount)}
+                        </div>
                       </div>
                     </div>
                   </div>

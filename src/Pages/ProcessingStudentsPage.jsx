@@ -1014,6 +1014,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [reminders, setReminders] = useState([]);
   const [newReminder, setNewReminder] = useState({ date: '', time: '', note: '' });
+  const [submittingReminder, setSubmittingReminder] = useState(false);
 
   // Processing Fee Payments & Digital Receipts State
   const [payments, setPayments] = useState([]);
@@ -1207,6 +1208,12 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
     }
   }, [student, isOperationRole, user]);
 
+  useEffect(() => {
+    if (activeTab === 'reminders' && student) {
+      fetchReminders();
+    }
+  }, [activeTab, student]);
+
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
     try {
@@ -1270,13 +1277,17 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
   const handleCreateReminder = async (e) => {
     e.preventDefault();
     if (!newReminder.date || !newReminder.time) return alert("Date and Time are required.");
+    setSubmittingReminder(true);
     try {
       await axios.post(`${API_BASE_URL}/followups/`, {
         processing_student: student.id,
+        follow_up_date: newReminder.date,
+        follow_up_time: newReminder.time,
         followup_date: newReminder.date,
         followup_time: newReminder.time,
+        name: student.name || '',
         notes: newReminder.note,
-        phone_number: student.mobile_number || "0000000000",
+        phone_number: student.mobile_number || student.phone || "0000000000",
         status: "pending",
         followup_type: "call",
         priority: "medium"
@@ -1288,7 +1299,40 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
       fetchTimeline();
     } catch (err) {
       console.error('Error creating reminder', err);
-      alert('Failed to schedule reminder');
+      const detail = err.response?.data ? (typeof err.response.data === 'string' ? err.response.data : JSON.stringify(err.response.data)) : err.message;
+      alert(`Failed to schedule reminder: ${detail}`);
+    } finally {
+      setSubmittingReminder(false);
+    }
+  };
+
+  const handleDeleteReminder = async (reminderId) => {
+    if (!window.confirm('Are you sure you want to delete this reminder?')) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/followups/${reminderId}/`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      fetchReminders();
+      fetchTimeline();
+    } catch (err) {
+      console.error('Error deleting reminder', err);
+      alert('Failed to delete reminder');
+    }
+  };
+
+  const handleToggleReminderStatus = async (reminder) => {
+    try {
+      const nextStatus = reminder.status === 'completed' ? 'pending' : 'completed';
+      await axios.patch(`${API_BASE_URL}/followups/${reminder.id}/`, {
+        status: nextStatus
+      }, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      fetchReminders();
+      fetchTimeline();
+    } catch (err) {
+      console.error('Error updating reminder status', err);
+      alert('Failed to update reminder status');
     }
   };
 
@@ -1717,8 +1761,8 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                 <textarea rows="2" value={newReminder.note} onChange={e => setNewReminder({...newReminder, note: e.target.value})} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white hover:border-gray-300 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all resize-none" placeholder="E.g. Call to check visa status..."></textarea>
               </div>
               <div className="md:col-span-3 flex justify-end">
-                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors">
-                  Add Reminder
+                <button type="submit" disabled={submittingReminder} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm transition-colors disabled:opacity-50">
+                  {submittingReminder ? 'Adding...' : 'Add Reminder'}
                 </button>
               </div>
             </form>
@@ -1730,20 +1774,65 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4">
-                {reminders.map(rem => (
-                  <div key={rem.id} className="flex items-start justify-between p-4 bg-white border rounded-lg shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-amber-50 text-amber-600 rounded">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                {reminders.map(rem => {
+                  const reminderDate = rem.follow_up_date || rem.followup_date || '';
+                  const reminderTime = rem.follow_up_time || rem.followup_time || '';
+                  const isCompleted = rem.status === 'completed';
+                  return (
+                    <div key={rem.id} className="flex items-start justify-between p-4 bg-white border rounded-lg shadow-sm hover:shadow transition-shadow">
+                      <div className="flex items-start gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleReminderStatus(rem)}
+                          title={isCompleted ? "Mark as pending" : "Mark as completed"}
+                          className={`p-2 rounded mt-0.5 transition-colors ${isCompleted ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            {isCompleted ? (
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                            ) : (
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            )}
+                          </svg>
+                        </button>
+                        <div>
+                          <p className={`font-medium ${isCompleted ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                            {rem.notes || 'Reminder'}
+                          </p>
+                          <p className="text-xs text-gray-500 font-semibold mt-0.5">
+                            {reminderDate} {reminderTime ? `at ${reminderTime}` : ''}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                              {rem.status}
+                            </span>
+                            {rem.assigned_to?.username && (
+                              <span className="text-[11px] text-gray-400">
+                                By: {rem.assigned_to.first_name || rem.assigned_to.username}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-800">{rem.notes || 'Reminder'}</p>
-                        <p className="text-xs text-gray-500 font-semibold">{rem.followup_date} at {rem.followup_time}</p>
-                        <p className="text-xs text-gray-400 mt-1">Status: {rem.status}</p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleReminderStatus(rem)}
+                          className={`px-2.5 py-1 text-xs font-semibold rounded border transition-colors ${isCompleted ? 'border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100' : 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'}`}
+                        >
+                          {isCompleted ? 'Reopen' : 'Done'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteReminder(rem.id)}
+                          className="px-2.5 py-1 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded border border-red-200 transition-colors"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

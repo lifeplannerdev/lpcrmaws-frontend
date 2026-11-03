@@ -726,8 +726,9 @@ export default function GlobalFeesPage() {
                             <td className="px-4 py-3 text-center">
                               <span
                                 className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase ${
-                                  status === 'PAID'
-                                    ? 'bg-emerald-100 text-emerald-700'
+                                  status === 'EXITED'
+                                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                    : status === 'PAID'
                                     : status === 'OVERDUE'
                                     ? 'bg-rose-100 text-rose-700'
                                     : status === 'PARTIAL' || status === 'PARTIALLY_PAID'
@@ -818,13 +819,14 @@ export default function GlobalFeesPage() {
                     <span className="text-slate-500">Balance Due:</span>
                     <span className="font-bold text-rose-600">
                       {formatINR(
-                        selectedStudent.balance_due ||
-                          Math.max(
-                            0,
-                            Number(selectedStudent.total_fee || 0) - Number(selectedStudent.total_paid || 0)
-                          )
+                        (selectedStudent.status === 'EXITED' || selectedStudent.student_status === 'exited')
+                          ? 0
+                          : (selectedStudent.balance_due ||
+                              Math.max(
+                                0,
+                                Number(selectedStudent.total_fee || 0) - Number(selectedStudent.total_paid || 0)
+                              ))
                       )}
-                    </span>
                   </div>
 
                   {/* Multiple Fee Accounts Breakdown if student has > 1 account */}
@@ -845,7 +847,7 @@ export default function GlobalFeesPage() {
                             </div>
                             <div className="flex justify-between text-[10px] text-slate-500 mt-1">
                               <span>Paid: <strong className="text-emerald-600">{formatINR(acc.total_paid)}</strong></span>
-                              <span>Due: <strong className="text-rose-600">{formatINR(acc.balance_due)}</strong></span>
+                              <span>Due: <strong className="text-rose-600">{formatINR((selectedStudent.status === 'EXITED' || selectedStudent.student_status === 'exited' || acc.status === 'EXITED') ? 0 : acc.balance_due)}</strong></span>
                             </div>
                           </div>
                         ))}
