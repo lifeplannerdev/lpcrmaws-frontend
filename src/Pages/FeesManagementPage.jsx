@@ -1459,43 +1459,139 @@ export default function FeesManagementPage() {
               </div>
               <div className="p-6 overflow-y-auto flex-1">
                 <form className="space-y-4" onSubmit={handleCreateAccount} id="create-fee-form">
-                  <select value={createForm.student} onChange={(e) => setCreateForm((p) => ({ ...p, student: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
-                    <option value="">Select student</option>
-                    {students.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name} {s.branch_name ? `(${s.branch_name})` : ''}</option>
-                    ))}
-                  </select>
-                  <select value={createForm.template} onChange={handleCreateTemplateChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
-                    <option value="">Select template</option>
-                    {templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
-                  </select>
-                  <input value={createForm.plan_name} onChange={(e) => setCreateForm((p) => ({ ...p, plan_name: e.target.value }))} placeholder="Plan name" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
-                  <select value={createForm.plan_type} onChange={(e) => setCreateForm((p) => ({ ...p, plan_type: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50">
-                    <option value="CUSTOM">Custom</option>
-                    <option value="ONE_TIME">One Time</option>
-                    <option value="INSTALLMENT">Installment</option>
-                    <option value="MONTHLY">Monthly</option>
-                    <option value="PACKAGE">Package</option>
-                  </select>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input value={createForm.total_due} onChange={(e) => setCreateForm((p) => ({ ...p, total_due: e.target.value }))} placeholder="Total due" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
-                    <input value={createForm.registration_amount} onChange={(e) => setCreateForm((p) => ({ ...p, registration_amount: e.target.value }))} placeholder="Registration" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Select Student *</label>
+                    <select
+                      value={createForm.student}
+                      onChange={(e) => setCreateForm((p) => ({ ...p, student: e.target.value }))}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 font-medium focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                      required
+                    >
+                      <option value="" className="text-gray-400">Select student...</option>
+                      {students.map((s) => {
+                        const sName = s.name || s.student_name || `Student #${s.id}`;
+                        const sBranch = s.branch_name || s.division || '';
+                        const isExited = s.status === 'EXITED' || s.student_status === 'exited';
+                        return (
+                          <option key={s.id} value={s.id} className="text-gray-900 bg-white py-1">
+                            {sName} {sBranch ? `(${sBranch})` : ''} {isExited ? '— [EXITED]' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input value={createForm.plan_code} onChange={(e) => setCreateForm((p) => ({ ...p, plan_code: e.target.value }))} placeholder="Plan code" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
-                    <input value={createForm.due_day} onChange={(e) => setCreateForm((p) => ({ ...p, due_day: e.target.value }))} placeholder="Due day (1-31)" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50" readOnly={createFormLocked} />
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Fee Plan Template</label>
+                    <select
+                      value={createForm.template}
+                      onChange={handleCreateTemplateChange}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 font-medium focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                    >
+                      <option value="" className="text-gray-400">Select template (Optional)...</option>
+                      {templates.map((template) => (
+                        <option key={template.id} value={template.id} className="text-gray-900 bg-white py-1">
+                          {template.name} ({template.company})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Plan Name</label>
+                    <input
+                      value={createForm.plan_name}
+                      onChange={(e) => setCreateForm((p) => ({ ...p, plan_name: e.target.value }))}
+                      placeholder="Plan name"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500"
+                      readOnly={createFormLocked}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Plan Type</label>
+                    <select
+                      value={createForm.plan_type}
+                      onChange={(e) => setCreateForm((p) => ({ ...p, plan_type: e.target.value }))}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="CUSTOM">Custom</option>
+                      <option value="ONE_TIME">One Time</option>
+                      <option value="INSTALLMENT">Installment</option>
+                      <option value="MONTHLY">Monthly</option>
+                      <option value="PACKAGE">Package</option>
+                    </select>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Registration Date (Start)</label>
-                      <input type="date" value={createForm.start_date} onChange={(e) => setCreateForm((p) => ({ ...p, start_date: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 text-sm" />
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Total Fee Amount (₹)</label>
+                      <input
+                        value={createForm.total_due}
+                        onChange={(e) => setCreateForm((p) => ({ ...p, total_due: e.target.value }))}
+                        placeholder="Total due (₹)"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500"
+                        readOnly={createFormLocked}
+                      />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">First Installment Date</label>
-                      <input type="date" value={createForm.first_installment_date} onChange={(e) => setCreateForm((p) => ({ ...p, first_installment_date: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 text-sm" />
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Registration Fee (₹)</label>
+                      <input
+                        value={createForm.registration_amount}
+                        onChange={(e) => setCreateForm((p) => ({ ...p, registration_amount: e.target.value }))}
+                        placeholder="Registration (₹)"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500"
+                        readOnly={createFormLocked}
+                      />
                     </div>
                   </div>
-                  <textarea value={createForm.notes} onChange={(e) => setCreateForm((p) => ({ ...p, notes: e.target.value }))} placeholder="Notes" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 min-h-24" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Plan Code</label>
+                      <input
+                        value={createForm.plan_code}
+                        onChange={(e) => setCreateForm((p) => ({ ...p, plan_code: e.target.value }))}
+                        placeholder="Plan code"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500"
+                        readOnly={createFormLocked}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Monthly Due Day</label>
+                      <input
+                        value={createForm.due_day}
+                        onChange={(e) => setCreateForm((p) => ({ ...p, due_day: e.target.value }))}
+                        placeholder="Due day (1-31)"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500"
+                        readOnly={createFormLocked}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Registration Date (Start)</label>
+                      <input
+                        type="date"
+                        value={createForm.start_date}
+                        onChange={(e) => setCreateForm((p) => ({ ...p, start_date: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-sm focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">First Installment Date</label>
+                      <input
+                        type="date"
+                        value={createForm.first_installment_date}
+                        onChange={(e) => setCreateForm((p) => ({ ...p, first_installment_date: e.target.value }))}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-sm focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Notes / Remarks</label>
+                    <textarea
+                      value={createForm.notes}
+                      onChange={(e) => setCreateForm((p) => ({ ...p, notes: e.target.value }))}
+                      placeholder="Notes or internal remarks"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 min-h-24 focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
                   {selectedCreateTemplate ? (
                     <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
                       Template selected: <span className="font-semibold">{selectedCreateTemplate.name}</span>. Standard fields are auto-filled; switch to Custom to override.
