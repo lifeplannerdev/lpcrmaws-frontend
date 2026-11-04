@@ -231,16 +231,23 @@
 
 .fds-tab.active-all  { background: var(--fds-surface-2); color: var(--fds-text); }
 .fds-tab.active-dance { background: var(--fds-dance-bg); color: var(--fds-dance); }
+.fds-tab.active-dance-classical { background: rgba(201, 169, 110, 0.18); color: var(--fds-dance); }
+.fds-tab.active-dance-semi-classical { background: rgba(220, 180, 100, 0.18); color: #dfb15b; }
 .fds-tab.active-zumba { background: var(--fds-zumba-bg); color: var(--fds-zumba); }
 .fds-tab.active-yoga  { background: var(--fds-yoga-bg);  color: var(--fds-yoga);  }
 
 .fds-dot-dance { color: var(--fds-dance); }
+.fds-dot-dance-classical { color: var(--fds-dance); }
+.fds-dot-dance-semi-classical { color: #dfb15b; }
 .fds-dot-zumba { color: var(--fds-zumba); }
 .fds-dot-yoga  { color: var(--fds-yoga);  }
 
 /* ── Category Badges ────────────────────────────────── */
 .fds-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .fds-badge-dance  { background: var(--fds-dance-bg);  color: var(--fds-dance); }
+.fds-badge-dance-classical { background: rgba(201, 169, 110, 0.18); color: var(--fds-dance); }
+.fds-badge-dance-semi-classical,
+.fds-badge-dance-semi_classical { background: rgba(220, 180, 100, 0.18); color: #dfb15b; }
 .fds-badge-zumba  { background: var(--fds-zumba-bg);  color: var(--fds-zumba); }
 .fds-badge-yoga   { background: var(--fds-yoga-bg);   color: var(--fds-yoga);  }
 .fds-badge-gold   { background: var(--fds-primary-muted); color: var(--fds-primary-light); }

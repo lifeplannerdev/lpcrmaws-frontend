@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
-import { fdsApi, FDS_CATEGORIES, getStatusBadgeClass, downloadExcelFromResponse } from './fdsApi';
+import { fdsApi, FDS_CATEGORIES, FDS_CLASS_CATEGORIES, getStatusBadgeClass, downloadExcelFromResponse } from './fdsApi';
 import FdsBranchSelector, { getBranchLabel, GlobalDataBadge } from './FdsBranchSelector';
 import './fds-theme.css';
 
@@ -524,7 +524,7 @@ export default function FdsTrialPage() {
                     <div>
                       <label className="fds-label">Class Category</label>
                       <select className="fds-input fds-select" value={form.class_category} onChange={e => setForm(f => ({ ...f, class_category: e.target.value }))}>
-                        {['DANCE','ZUMBA','YOGA'].map(c => <option key={c} value={c}>{c}</option>)}
+                        {FDS_CLASS_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                       </select>
                     </div>
                     <div>

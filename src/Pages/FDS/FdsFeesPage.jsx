@@ -2354,6 +2354,8 @@ export default function FdsFeesPage() {
                     className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm outline-none"
                   >
                     <option value="DANCE">Dance</option>
+                    <option value="DANCE-classical">Dance - Classical</option>
+                    <option value="DANCE-semi_classical">Dance - Semi Classical</option>
                     <option value="ZUMBA">Zumba</option>
                     <option value="YOGA">Yoga</option>
                   </select>

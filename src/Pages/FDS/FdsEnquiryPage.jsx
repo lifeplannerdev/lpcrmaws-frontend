@@ -610,7 +610,7 @@ export default function FdsEnquiryPage() {
                     <div>
                       <label className="fds-label">Class Interest</label>
                       <select className="fds-input fds-select" value={form.class_interest} onChange={e => setForm(f => ({ ...f, class_interest: e.target.value }))}>
-                        {['DANCE', 'ZUMBA', 'YOGA', 'MULTIPLE'].map(c => <option key={c} value={c}>{c}</option>)}
+                        {['DANCE', 'DANCE-classical', 'DANCE-semi_classical', 'ZUMBA', 'YOGA', 'MULTIPLE'].map(c => <option key={c} value={c}>{c === 'DANCE-classical' ? 'Dance - Classical' : c === 'DANCE-semi_classical' ? 'Dance - Semi Classical' : c}</option>)}
                       </select>
                     </div>
                     {/* Source */}

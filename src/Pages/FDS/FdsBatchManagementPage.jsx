@@ -3,7 +3,7 @@ import { Plus, X, Edit2, Trash2, Users, Music, Clock } from 'lucide-react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
-import { fdsApi, FDS_CATEGORIES } from './fdsApi';
+import { fdsApi, FDS_CATEGORIES, FDS_CLASS_CATEGORIES } from './fdsApi';
 import FdsBranchSelector, { getBranchLabel, GlobalDataBadge } from './FdsBranchSelector';
 import './fds-theme.css';
 
@@ -112,7 +112,12 @@ export default function FdsBatchManagementPage() {
     catch { alert('Delete failed'); }
   };
 
-  const catColor = (cat) => ({ DANCE: 'var(--fds-dance)', ZUMBA: 'var(--fds-zumba)', YOGA: 'var(--fds-yoga)' }[cat] || 'var(--fds-primary)');
+  const catColor = (cat) => {
+  if (cat === 'ZUMBA') return 'var(--fds-zumba)';
+  if (cat === 'YOGA') return 'var(--fds-yoga)';
+  if (cat === 'DANCE-classical' || cat === 'DANCE-semi_classical' || (cat && cat.startsWith('DANCE'))) return 'var(--fds-dance)';
+  return 'var(--fds-primary)';
+};
 
   return (
     <div className="min-h-screen bg-slate-50"><Navbar />
@@ -278,7 +283,7 @@ export default function FdsBatchManagementPage() {
                     <div>
                       <label className="fds-label">Class Category</label>
                       <select className="fds-input fds-select" value={form.class_category} onChange={e => setForm(f => ({ ...f, class_category: e.target.value }))}>
-                        {['DANCE','ZUMBA','YOGA'].map(c => <option key={c} value={c}>{c}</option>)}
+                        {FDS_CLASS_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                       </select>
                     </div>
                     <div>

@@ -9,6 +9,8 @@ import './fds-theme.css';
 const FEE_CATEGORIES = [
   { value: 'MONTHLY', label: 'Monthly Fee (Recurs Monthly)' },
   { value: 'DANCE', label: 'Dance Monthly (Recurs Monthly)' },
+  { value: 'DANCE-classical', label: 'Dance - Classical Monthly (Recurs Monthly)' },
+  { value: 'DANCE-semi_classical', label: 'Dance - Semi Classical Monthly (Recurs Monthly)' },
   { value: 'ZUMBA', label: 'Zumba Monthly (Recurs Monthly)' },
   { value: 'YOGA', label: 'Yoga Monthly (Recurs Monthly)' },
   { value: 'PACKAGE_3M', label: 'Package 3 Months (Recurs every 3 Months)' },

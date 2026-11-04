@@ -108,10 +108,20 @@ export const fdsApi = {
 
 // Category meta
 export const FDS_CATEGORIES = [
-  { key: 'ALL',   label: 'All Classes', tabClass: 'active-all',   dotClass: '' },
-  { key: 'DANCE', label: 'Dance',       tabClass: 'active-dance',  dotClass: 'fds-dot-dance' },
-  { key: 'ZUMBA', label: 'Zumba',       tabClass: 'active-zumba',  dotClass: 'fds-dot-zumba' },
-  { key: 'YOGA',  label: 'Yoga',        tabClass: 'active-yoga',   dotClass: 'fds-dot-yoga'  },
+  { key: 'ALL',                  label: 'All Classes',           tabClass: 'active-all',                  dotClass: '' },
+  { key: 'DANCE',                label: 'Dance',                 tabClass: 'active-dance',                dotClass: 'fds-dot-dance' },
+  { key: 'DANCE-classical',      label: 'Dance - Classical',     tabClass: 'active-dance-classical',      dotClass: 'fds-dot-dance-classical' },
+  { key: 'DANCE-semi_classical', label: 'Dance - Semi Classical',tabClass: 'active-dance-semi-classical', dotClass: 'fds-dot-dance-semi-classical' },
+  { key: 'ZUMBA',                label: 'Zumba',                 tabClass: 'active-zumba',                dotClass: 'fds-dot-zumba' },
+  { key: 'YOGA',                 label: 'Yoga',                  tabClass: 'active-yoga',                 dotClass: 'fds-dot-yoga'  },
+];
+
+export const FDS_CLASS_CATEGORIES = [
+  { value: 'DANCE', label: 'Dance' },
+  { value: 'DANCE-classical', label: 'Dance - Classical' },
+  { value: 'DANCE-semi_classical', label: 'Dance - Semi Classical' },
+  { value: 'ZUMBA', label: 'Zumba' },
+  { value: 'YOGA', label: 'Yoga' },
 ];
 
 export const FDS_STATUS_ENQUIRY = ['NEW', 'CONTACTED', 'TRIAL_SCHEDULED', 'CONVERTED', 'LOST'];
@@ -122,7 +132,11 @@ export const FDS_MODES_OF_PAY   = ['CASH', 'UPI', 'BANK_TRANSFER', 'CARD', 'OTHE
 
 export function getCategoryBadgeClass(cat) {
   if (!cat) return 'fds-badge-gray';
-  return `fds-badge-${cat.toLowerCase()}`;
+  const c = cat.toLowerCase();
+  if (c === 'dance-classical') return 'fds-badge-dance-classical';
+  if (c === 'dance-semi_classical' || c === 'dance-semi-classical') return 'fds-badge-dance-semi-classical';
+  if (c.startsWith('dance')) return 'fds-badge-dance';
+  return `fds-badge-${c}`;
 }
 
 export function getStatusBadgeClass(status) {
