@@ -297,9 +297,9 @@ export default function ProcessingStudentsPage() {
       "Visa Approval Fee Amount": student.fee_visa_amount || 0,
       "Visa Approval Fee Paid": student.fee_visa_paid || 0,
       "Visa Approval Fee Status": student.fee_visa_status,
-      "Ministry Letter Fee Amount": student.fee_ministry_amount || 0,
-      "Ministry Letter Fee Paid": student.fee_ministry_paid || 0,
-      "Ministry Letter Fee Status": student.fee_ministry_status,
+      "GCC VU WELCOME LETTER Fee Amount": student.fee_ministry_amount || 0,
+      "GCC VU WELCOME LETTER Fee Paid": student.fee_ministry_paid || 0,
+      "GCC VU WELCOME LETTER Fee Status": student.fee_ministry_status,
       ...student.dynamic_data
     }));
 
@@ -696,9 +696,9 @@ function SpreadsheetView({ students, dynamicFields, handleUpdateField, staffList
     { key: 'fee_visa_amount', label: 'Visa Approval Fee Amount' },
     { key: 'fee_visa_paid', label: 'Visa Approval Fee Paid' },
     { key: 'fee_visa_status', label: 'Visa Approval Fee Status' },
-    { key: 'fee_ministry_amount', label: 'Ministry Letter Fee Amount' },
-    { key: 'fee_ministry_paid', label: 'Ministry Letter Fee Paid' },
-    { key: 'fee_ministry_status', label: 'Ministry Letter Fee Status' },
+    { key: 'fee_ministry_amount', label: 'GCC VU WELCOME LETTER Fee Amount' },
+    { key: 'fee_ministry_paid', label: 'GCC VU WELCOME LETTER Fee Paid' },
+    { key: 'fee_ministry_status', label: 'GCC VU WELCOME LETTER Fee Status' },
     { key: 'student_file_status', label: 'File Status' }
   ];
 
@@ -1915,7 +1915,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Ministry Letter</label>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">GCC VU WELCOME LETTER</label>
                       <input
                         type="number"
                         name="fee_ministry_amount"
@@ -1935,7 +1935,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                   { title: 'Admission Fee', amount: formData.fee_admission_amount, paid: formData.fee_admission_paid, status: formData.fee_admission_status },
                   { title: 'Language Fee', amount: formData.fee_language_amount, paid: formData.fee_language_paid, status: formData.fee_language_status },
                   { title: 'Visa Approval', amount: formData.fee_visa_amount, paid: formData.fee_visa_paid, status: formData.fee_visa_status },
-                  { title: 'Ministry Letter', amount: formData.fee_ministry_amount, paid: formData.fee_ministry_paid, status: formData.fee_ministry_status },
+                  { title: 'GCC VU WELCOME LETTER', amount: formData.fee_ministry_amount, paid: formData.fee_ministry_paid, status: formData.fee_ministry_status },
                 ].map(h => {
                   const due = Number(h.amount || 0);
                   const pd = Number(h.paid || 0);
@@ -1982,7 +1982,7 @@ function StudentModal({ student, dynamicFields, staffList, sourceStaffList, inta
                       <option value="ADMISSION">Admission Fee</option>
                       <option value="LANGUAGE">Language Confirmation Fee</option>
                       <option value="VISA">Visa Approval Fee</option>
-                      <option value="MINISTRY">Ministry Letter Fee</option>
+                      <option value="MINISTRY">GCC VU WELCOME LETTER</option>
                       <option value="OTHER">Other / Ad-hoc Fee</option>
                     </select>
                   </div>

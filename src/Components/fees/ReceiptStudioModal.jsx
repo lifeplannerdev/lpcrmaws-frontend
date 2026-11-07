@@ -2341,10 +2341,10 @@ export default function ReceiptStudioModal({
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleSelectLpFeeHead('Ministry Letter Fee')}
+                                onClick={() => handleSelectLpFeeHead('GCC VU WELCOME LETTER')}
                                 className="px-2.5 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold"
                               >
-                                + Ministry Fee
+                                + GCC VU WELCOME LETTER
                               </button>
                               <button
                                 type="button"
@@ -2474,7 +2474,7 @@ export default function ReceiptStudioModal({
                                     { label: 'Admission', value: 'Admission Fee' },
                                     { label: 'Language', value: 'Language Confirmation Fee' },
                                     { label: 'Visa', value: 'Visa Approval Fee' },
-                                    { label: 'Ministry', value: 'Ministry Letter Fee' },
+                                    { label: 'GCC VU Welcome Letter', value: 'GCC VU WELCOME LETTER' },
                                     { label: 'Other', value: 'Other / Ad-hoc Fee' },
                                   ].map(h => (
                                     <button
