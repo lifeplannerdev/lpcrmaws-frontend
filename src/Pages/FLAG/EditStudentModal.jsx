@@ -251,9 +251,8 @@ export default function EditStudentModal({ student, isOpen, onClose, onSuccess }
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Academic Batch *</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Academic Batch</label>
                   <select
-                    required
                     name="batch"
                     value={formData.batch}
                     onChange={handleChange}
