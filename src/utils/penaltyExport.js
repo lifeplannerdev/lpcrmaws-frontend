@@ -16,8 +16,17 @@ export const MONTHS_LIST = [
   { value: '12', label: 'December' },
 ];
 
+export const COMPANY_OPTIONS = [
+  { key: 'LP', label: 'LP Group' },
+  { key: 'FLAG', label: 'FLAG' },
+  { key: 'FDS', label: 'FDS' },
+];
+
 export const getPenaltyUserId = (penalty) =>
   typeof penalty?.user === 'object' ? penalty.user?.id : penalty?.user;
+
+export const getPenaltyCompany = (penalty) =>
+  (penalty?.user_details?.company || penalty?.company || '').toUpperCase();
 
 const escapeHtml = (value) =>
   String(value ?? '')
@@ -51,6 +60,9 @@ const formatDisplayMonth = (monthStr) => {
  */
 export const filterPenaltiesForExport = (penalties = [], filters = {}) => {
   const {
+    companyScope = 'all',
+    singleCompany = '',
+    selectedCompanies = [],
     dateMode = 'all',
     year = '',
     month = '',
@@ -63,8 +75,16 @@ export const filterPenaltiesForExport = (penalties = [], filters = {}) => {
   } = filters;
 
   const selectedIdSet = new Set((selectedEmployeeIds || []).map(String));
+  const selectedCompanySet = new Set((selectedCompanies || []).map((c) => String(c).toUpperCase()));
 
   return penalties.filter((penalty) => {
+    const pCompany = getPenaltyCompany(penalty);
+    if (companyScope === 'single') {
+      if (!singleCompany || pCompany !== String(singleCompany).toUpperCase()) return false;
+    } else if (companyScope === 'multiple') {
+      if (selectedCompanySet.size === 0 || !selectedCompanySet.has(pCompany)) return false;
+    }
+
     const uId = getPenaltyUserId(penalty);
 
     // Employee scope filter
@@ -105,14 +125,30 @@ export const buildEmployeeSummary = (penalties = [], getEmployeeName) => {
   penalties.forEach((p) => {
     const uId = getPenaltyUserId(p);
     const name = getEmployeeName ? getEmployeeName(uId, p) : (p.user_name || `Employee #${uId}`);
+    const company = getPenaltyCompany(p) || '-';
     const key = String(uId ?? name);
     const amount = parseFloat(p.amount) || 0;
-    const existing = summaryMap.get(key) || { employee: name, count: 0, total: 0 };
+    const existing = summaryMap.get(key) || { employee: name, company, count: 0, total: 0 };
     existing.count += 1;
     existing.total += amount;
     summaryMap.set(key, existing);
   });
   return Array.from(summaryMap.values()).sort((a, b) => b.total - a.total);
+};
+
+export const buildCompanyScopeLabel = (filters = {}) => {
+  const { companyScope = 'all', singleCompany = '', selectedCompanies = [] } = filters;
+  if (companyScope === 'single') {
+    const found = COMPANY_OPTIONS.find((c) => c.key === singleCompany);
+    return found ? found.label : singleCompany || 'Single Company';
+  }
+  if (companyScope === 'multiple') {
+    if (!selectedCompanies.length) return 'No Company Selected';
+    return selectedCompanies
+      .map((k) => COMPANY_OPTIONS.find((c) => c.key === k)?.label || k)
+      .join(', ');
+  }
+  return 'All Companies (LP, FLAG, FDS)';
 };
 
 export const buildPeriodLabel = (filters = {}) => {
@@ -150,6 +186,7 @@ export const exportPenaltiesToExcel = ({
     const empName = getEmployeeName ? getEmployeeName(uId, p) : (p.user_name || `Employee #${uId}`);
     return {
       '#': idx + 1,
+      Company: getPenaltyCompany(p) || '-',
       Employee: empName,
       'Act / Reason': p.act || '-',
       'Amount (INR)': Number((parseFloat(p.amount) || 0).toFixed(2)),
@@ -160,6 +197,7 @@ export const exportPenaltiesToExcel = ({
 
   detailRows.push({
     '#': '',
+    Company: '',
     Employee: 'TOTAL',
     'Act / Reason': `${penalties.length} record(s) | ${company} | ${periodLabel} | ${employeeScopeLabel}`,
     'Amount (INR)': Number(totalAmount.toFixed(2)),
@@ -170,6 +208,7 @@ export const exportPenaltiesToExcel = ({
   const wsDetails = XLSX.utils.json_to_sheet(detailRows);
   wsDetails['!cols'] = [
     { wch: 5 },
+    { wch: 10 },
     { wch: 24 },
     { wch: 48 },
     { wch: 15 },
@@ -179,19 +218,21 @@ export const exportPenaltiesToExcel = ({
 
   const summaryRows = buildEmployeeSummary(penalties, getEmployeeName).map((row, idx) => ({
     '#': idx + 1,
+    Company: row.company,
     Employee: row.employee,
     'Penalty Count': row.count,
     'Total Amount (INR)': Number(row.total.toFixed(2)),
   }));
   summaryRows.push({
     '#': '',
+    Company: '',
     Employee: 'GRAND TOTAL',
     'Penalty Count': penalties.length,
     'Total Amount (INR)': Number(totalAmount.toFixed(2)),
   });
 
   const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
-  wsSummary['!cols'] = [{ wch: 5 }, { wch: 28 }, { wch: 16 }, { wch: 20 }];
+  wsSummary['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 28 }, { wch: 16 }, { wch: 20 }];
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, wsDetails, 'Penalties');
@@ -219,10 +260,12 @@ export const buildPenaltyReportHtml = ({
     .map((p, idx) => {
       const uId = getPenaltyUserId(p);
       const empName = getEmployeeName ? getEmployeeName(uId, p) : (p.user_name || `Employee #${uId}`);
+      const comp = getPenaltyCompany(p) || '-';
       const amount = (parseFloat(p.amount) || 0).toFixed(2);
       return `
         <tr>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280;">${idx + 1}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#4f46e5;font-weight:600;">${escapeHtml(comp)}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-weight:600;color:#111827;">${escapeHtml(empName)}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#374151;">${escapeHtml(p.act || '-')}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;color:#b91c1c;">₹${amount}</td>
@@ -237,6 +280,7 @@ export const buildPenaltyReportHtml = ({
     .map(
       (s) => `
       <tr>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;color:#4f46e5;font-weight:600;">${escapeHtml(s.company)}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;color:#111827;">${escapeHtml(s.employee)}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center;color:#4b5563;">${s.count}</td>
         <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;color:#b91c1c;">₹${s.total.toFixed(2)}</td>
@@ -268,6 +312,7 @@ export const buildPenaltyReportHtml = ({
         <thead>
           <tr style="background:#f3f4f6;text-align:left;">
             <th style="padding:8px 10px;border-bottom:2px solid #d1d5db;">#</th>
+            <th style="padding:8px 10px;border-bottom:2px solid #d1d5db;">Company</th>
             <th style="padding:8px 10px;border-bottom:2px solid #d1d5db;">Employee</th>
             <th style="padding:8px 10px;border-bottom:2px solid #d1d5db;">Act / Reason</th>
             <th style="padding:8px 10px;border-bottom:2px solid #d1d5db;text-align:right;">Amount</th>
@@ -276,11 +321,11 @@ export const buildPenaltyReportHtml = ({
           </tr>
         </thead>
         <tbody>
-          ${rowsHtml || '<tr><td colspan="6" style="padding:16px;text-align:center;color:#6b7280;">No penalties match the selected filters.</td></tr>'}
+          ${rowsHtml || '<tr><td colspan="7" style="padding:16px;text-align:center;color:#6b7280;">No penalties match the selected filters.</td></tr>'}
         </tbody>
         <tfoot>
           <tr style="background:#eef2ff;font-weight:700;">
-            <td colspan="3" style="padding:9px 10px;border-top:2px solid #4f46e5;">Grand Total (${penalties.length} records)</td>
+            <td colspan="4" style="padding:9px 10px;border-top:2px solid #4f46e5;">Grand Total (${penalties.length} records)</td>
             <td style="padding:9px 10px;border-top:2px solid #4f46e5;text-align:right;color:#b91c1c;">₹${totalAmount.toFixed(2)}</td>
             <td colspan="2" style="padding:9px 10px;border-top:2px solid #4f46e5;"></td>
           </tr>
@@ -291,9 +336,10 @@ export const buildPenaltyReportHtml = ({
         summaryRows.length > 1
           ? `
         <h3 style="margin:0 0 8px;font-size:14px;color:#312e81;">Employee-wise Summary</h3>
-        <table style="width:60%;border-collapse:collapse;font-size:12px;">
+        <table style="width:65%;border-collapse:collapse;font-size:12px;">
           <thead>
             <tr style="background:#f3f4f6;text-align:left;">
+              <th style="padding:6px 10px;border-bottom:1px solid #d1d5db;">Company</th>
               <th style="padding:6px 10px;border-bottom:1px solid #d1d5db;">Employee</th>
               <th style="padding:6px 10px;border-bottom:1px solid #d1d5db;text-align:center;">Count</th>
               <th style="padding:6px 10px;border-bottom:1px solid #d1d5db;text-align:right;">Total Amount</th>

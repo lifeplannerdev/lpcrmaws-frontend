@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   X,
   Printer,
@@ -6,33 +6,45 @@ import {
   FileText,
   Calendar,
   Users,
+  Building2,
   Search,
   CheckSquare,
   Square,
   Loader2,
 } from 'lucide-react';
 import {
+  COMPANY_OPTIONS,
   MONTHS_LIST,
   filterPenaltiesForExport,
   buildPeriodLabel,
+  buildCompanyScopeLabel,
   exportPenaltiesToExcel,
   exportPenaltiesToPDF,
   printPenaltiesReport,
   getPenaltyUserId,
+  getPenaltyCompany,
 } from '../../utils/penaltyExport';
 
 export default function PenaltyExportModal({
   isOpen,
   onClose,
   penalties = [],
-  employeeOptions = [],
+  employees = [],
   company = 'LP',
   getEmployeeName,
+  fetchAllPenalties,
   initialMonth = '',
   initialEmployee = '',
 }) {
   const initialYear = initialMonth ? initialMonth.split('-')[0] : String(new Date().getFullYear());
   const initialMonthPart = initialMonth ? initialMonth.split('-')[1] : '';
+
+  const [allPenalties, setAllPenalties] = useState(null);
+  const [loadingAll, setLoadingAll] = useState(false);
+
+  const [companyScope, setCompanyScope] = useState('single');
+  const [singleCompany, setSingleCompany] = useState(company || 'LP');
+  const [selectedCompanies, setSelectedCompanies] = useState([company || 'LP']);
 
   const [dateMode, setDateMode] = useState(initialMonth ? 'month_year' : 'all');
   const [year, setYear] = useState(initialYear);
@@ -48,23 +60,96 @@ export default function PenaltyExportModal({
   const [exportingType, setExportingType] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  useEffect(() => {
+    if (!isOpen) return;
+    setSingleCompany(company || 'LP');
+    setSelectedCompanies([company || 'LP']);
+    if (fetchAllPenalties) {
+      let cancelled = false;
+      setLoadingAll(true);
+      fetchAllPenalties()
+        .then((list) => {
+          if (!cancelled && Array.isArray(list)) {
+            setAllPenalties(list);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load cross-company penalties for export:', err);
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingAll(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [isOpen, company, fetchAllPenalties]);
+
+  const sourcePenalties = allPenalties ?? penalties;
+
+  const activeCompanySet = useMemo(() => {
+    if (companyScope === 'all') return null;
+    if (companyScope === 'single') return new Set([String(singleCompany).toUpperCase()]);
+    return new Set(selectedCompanies.map((c) => String(c).toUpperCase()));
+  }, [companyScope, singleCompany, selectedCompanies]);
+
+  const scopedEmployeeOptions = useMemo(() => {
+    const map = new Map();
+    const matchesCompany = (comp) => {
+      if (!activeCompanySet) return true;
+      return activeCompanySet.has(String(comp || '').toUpperCase());
+    };
+
+    employees.forEach((emp) => {
+      const empComp = (emp.company || '').toUpperCase();
+      if (!matchesCompany(empComp)) return;
+      const baseName = emp.full_name || emp.username || `Employee #${emp.id}`;
+      map.set(emp.id, {
+        id: emp.id,
+        company: empComp,
+        label: companyScope === 'single' ? baseName : `${baseName}${empComp ? ` (${empComp})` : ''}`,
+      });
+    });
+
+    sourcePenalties.forEach((p) => {
+      const uId = getPenaltyUserId(p);
+      const pComp = getPenaltyCompany(p);
+      if (!uId || !matchesCompany(pComp) || map.has(uId)) return;
+      const baseName =
+        p.user_name || p.user_details?.full_name || p.user_details?.username || `Employee #${uId}`;
+      map.set(uId, {
+        id: uId,
+        company: pComp,
+        label:
+          companyScope === 'single'
+            ? `${baseName} (Inactive)`
+            : `${baseName}${pComp ? ` (${pComp})` : ''} (Inactive)`,
+      });
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [employees, sourcePenalties, activeCompanySet, companyScope]);
+
   const availableYears = useMemo(() => {
     const yearsSet = new Set([String(new Date().getFullYear())]);
-    penalties.forEach((p) => {
+    sourcePenalties.forEach((p) => {
       const y = (p.month || p.date || '').slice(0, 4);
       if (/^\d{4}$/.test(y)) yearsSet.add(y);
     });
     return Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
-  }, [penalties]);
+  }, [sourcePenalties]);
 
   const filteredEmployeeOptions = useMemo(() => {
     const term = employeeSearch.trim().toLowerCase();
-    if (!term) return employeeOptions;
-    return employeeOptions.filter((emp) => emp.label.toLowerCase().includes(term));
-  }, [employeeOptions, employeeSearch]);
+    if (!term) return scopedEmployeeOptions;
+    return scopedEmployeeOptions.filter((emp) => emp.label.toLowerCase().includes(term));
+  }, [scopedEmployeeOptions, employeeSearch]);
 
   const filters = useMemo(
     () => ({
+      companyScope,
+      singleCompany,
+      selectedCompanies,
       dateMode,
       year,
       month,
@@ -75,12 +160,25 @@ export default function PenaltyExportModal({
       singleEmployeeId,
       selectedEmployeeIds,
     }),
-    [dateMode, year, month, specificDate, startDate, endDate, employeeScope, singleEmployeeId, selectedEmployeeIds]
+    [
+      companyScope,
+      singleCompany,
+      selectedCompanies,
+      dateMode,
+      year,
+      month,
+      specificDate,
+      startDate,
+      endDate,
+      employeeScope,
+      singleEmployeeId,
+      selectedEmployeeIds,
+    ]
   );
 
   const matchedPenalties = useMemo(
-    () => filterPenaltiesForExport(penalties, filters),
-    [penalties, filters]
+    () => filterPenaltiesForExport(sourcePenalties, filters),
+    [sourcePenalties, filters]
   );
 
   const totalAmount = useMemo(
@@ -88,18 +186,25 @@ export default function PenaltyExportModal({
     [matchedPenalties]
   );
 
+  const companyLabel = useMemo(() => buildCompanyScopeLabel(filters), [filters]);
   const periodLabel = useMemo(() => buildPeriodLabel(filters), [filters]);
 
   const employeeScopeLabel = useMemo(() => {
     if (employeeScope === 'all') return 'All Staff';
     if (employeeScope === 'single') {
-      const emp = employeeOptions.find((e) => String(e.id) === String(singleEmployeeId));
+      const emp = scopedEmployeeOptions.find((e) => String(e.id) === String(singleEmployeeId));
       return emp ? emp.label : 'Single Employee';
     }
     return `${selectedEmployeeIds.length} Selected Staff`;
-  }, [employeeScope, singleEmployeeId, selectedEmployeeIds, employeeOptions]);
+  }, [employeeScope, singleEmployeeId, selectedEmployeeIds, scopedEmployeeOptions]);
 
   if (!isOpen) return null;
+
+  const toggleCompany = (key) => {
+    setSelectedCompanies((prev) =>
+      prev.includes(key) ? prev.filter((c) => c !== key) : [...prev, key]
+    );
+  };
 
   const toggleMultiEmployee = (id) => {
     const strId = String(id);
@@ -117,16 +222,23 @@ export default function PenaltyExportModal({
     setSelectedEmployeeIds([]);
   };
 
+  const resolveEmployeeName = (uId, p) => {
+    if (p?.user_name) return p.user_name;
+    if (p?.user_details?.full_name) return p.user_details.full_name;
+    if (p?.user_details?.username) return p.user_details.username;
+    return getEmployeeName ? getEmployeeName(uId, p) : `Employee #${uId}`;
+  };
+
   const handleExcel = () => {
     setErrorMsg('');
     try {
       setExportingType('excel');
       exportPenaltiesToExcel({
         penalties: matchedPenalties,
-        company,
+        company: companyLabel,
         periodLabel,
         employeeScopeLabel,
-        getEmployeeName,
+        getEmployeeName: resolveEmployeeName,
       });
     } catch (err) {
       console.error('Excel export failed:', err);
@@ -142,10 +254,10 @@ export default function PenaltyExportModal({
       setExportingType('pdf');
       await exportPenaltiesToPDF({
         penalties: matchedPenalties,
-        company,
+        company: companyLabel,
         periodLabel,
         employeeScopeLabel,
-        getEmployeeName,
+        getEmployeeName: resolveEmployeeName,
       });
     } catch (err) {
       console.error('PDF export failed:', err);
@@ -160,10 +272,10 @@ export default function PenaltyExportModal({
     try {
       printPenaltiesReport({
         penalties: matchedPenalties,
-        company,
+        company: companyLabel,
         periodLabel,
         employeeScopeLabel,
-        getEmployeeName,
+        getEmployeeName: resolveEmployeeName,
       });
     } catch (err) {
       console.error('Print failed:', err);
@@ -183,7 +295,7 @@ export default function PenaltyExportModal({
             <div>
               <h2 className="text-xl font-bold">Print & Export Penalties</h2>
               <p className="text-indigo-100 text-xs mt-0.5">
-                Company: {company} • Filter by period & staff, then export as Excel, PDF, or Print
+                Filter by company, period & staff, then export as Excel, PDF, or Print
               </p>
             </div>
           </div>
@@ -197,12 +309,98 @@ export default function PenaltyExportModal({
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto space-y-6">
-          {/* 1. Date / Period Selection */}
+        <div className="p-6 overflow-y-auto space-y-5">
+          {/* 1. Company Selection */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                <Building2 className="w-4 h-4 text-indigo-600" />
+                <span>1. Select Company</span>
+              </div>
+              {loadingAll && (
+                <span className="text-xs text-indigo-600 flex items-center gap-1">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading all companies...
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'all', label: 'All Companies' },
+                { id: 'single', label: 'Single Company' },
+                { id: 'multiple', label: 'Multiple Companies' },
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setCompanyScope(opt.id)}
+                  className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                    companyScope === opt.id
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {companyScope === 'single' && (
+              <div className="grid grid-cols-3 gap-2">
+                {COMPANY_OPTIONS.map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => setSingleCompany(c.key)}
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                      singleCompany === c.key
+                        ? 'bg-indigo-50 text-indigo-700 border-indigo-500 ring-1 ring-indigo-500'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {companyScope === 'multiple' && (
+              <div className="grid grid-cols-3 gap-2">
+                {COMPANY_OPTIONS.map((c) => {
+                  const checked = selectedCompanies.includes(c.key);
+                  return (
+                    <label
+                      key={c.key}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border cursor-pointer transition-all ${
+                        checked
+                          ? 'bg-indigo-50 text-indigo-700 border-indigo-500'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleCompany(c.key)}
+                        className="sr-only"
+                      />
+                      {checked ? (
+                        <CheckSquare className="w-4 h-4 text-indigo-600 shrink-0" />
+                      ) : (
+                        <Square className="w-4 h-4 text-gray-400 shrink-0" />
+                      )}
+                      <span>{c.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 2. Date / Period Selection */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
               <Calendar className="w-4 h-4 text-indigo-600" />
-              <span>1. Select Period</span>
+              <span>2. Select Period</span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -298,11 +496,11 @@ export default function PenaltyExportModal({
             )}
           </div>
 
-          {/* 2. Employee Scope Selection */}
+          {/* 3. Employee Scope Selection */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
               <Users className="w-4 h-4 text-indigo-600" />
-              <span>2. Select Staff / Employees</span>
+              <span>3. Select Staff / Employees</span>
             </div>
 
             <div className="grid grid-cols-3 gap-2">
@@ -335,7 +533,7 @@ export default function PenaltyExportModal({
                   className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">-- Choose an employee --</option>
-                  {employeeOptions.map((emp) => (
+                  {scopedEmployeeOptions.map((emp) => (
                     <option key={emp.id} value={emp.id}>
                       {emp.label}
                     </option>
@@ -407,7 +605,7 @@ export default function PenaltyExportModal({
             )}
           </div>
 
-          {/* 3. Live Preview Summary */}
+          {/* 4. Live Preview Summary */}
           <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
@@ -416,7 +614,8 @@ export default function PenaltyExportModal({
                 </p>
                 <p className="text-sm text-gray-700 mt-0.5">
                   <span className="font-semibold">{matchedPenalties.length}</span>{' '}
-                  {matchedPenalties.length === 1 ? 'record' : 'records'} • {periodLabel} • {employeeScopeLabel}
+                  {matchedPenalties.length === 1 ? 'record' : 'records'} • {companyLabel} • {periodLabel} •{' '}
+                  {employeeScopeLabel}
                 </p>
               </div>
               <div className="text-right">
@@ -430,6 +629,7 @@ export default function PenaltyExportModal({
                 <table className="w-full text-xs">
                   <thead className="bg-indigo-50/70 text-gray-600 sticky top-0">
                     <tr>
+                      <th className="px-3 py-1.5 text-left">Company</th>
                       <th className="px-3 py-1.5 text-left">Employee</th>
                       <th className="px-3 py-1.5 text-left">Act / Reason</th>
                       <th className="px-3 py-1.5 text-right">Amount</th>
@@ -439,11 +639,14 @@ export default function PenaltyExportModal({
                   <tbody className="divide-y divide-gray-100">
                     {matchedPenalties.slice(0, 8).map((p) => {
                       const uId = getPenaltyUserId(p);
-                      const name = getEmployeeName ? getEmployeeName(uId, p) : p.user_name;
+                      const name = resolveEmployeeName(uId, p);
                       return (
                         <tr key={p.id}>
+                          <td className="px-3 py-1.5 font-semibold text-indigo-700 whitespace-nowrap">
+                            {getPenaltyCompany(p) || '-'}
+                          </td>
                           <td className="px-3 py-1.5 font-medium text-gray-800 whitespace-nowrap">{name}</td>
-                          <td className="px-3 py-1.5 text-gray-600 truncate max-w-[240px]">{p.act}</td>
+                          <td className="px-3 py-1.5 text-gray-600 truncate max-w-[200px]">{p.act}</td>
                           <td className="px-3 py-1.5 text-right font-semibold text-red-600 whitespace-nowrap">
                             ₹{(parseFloat(p.amount) || 0).toFixed(2)}
                           </td>
