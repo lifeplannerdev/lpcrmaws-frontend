@@ -1181,9 +1181,13 @@ export default function PenaltyManagementPage() {
           isOpen={showExportModal}
           onClose={() => setShowExportModal(false)}
           penalties={penalties}
-          employeeOptions={employeeFilterOptions}
+          employees={nonAdminEmployees}
           company={companyFilter}
           getEmployeeName={getEmployeeName}
+          fetchAllPenalties={async () => {
+            const data = await fetchWithAuth(`${API_BASE_URL}/penalties/`);
+            return data.results || data || [];
+          }}
           initialMonth={selectedMonth}
           initialEmployee={selectedEmployee}
         />
