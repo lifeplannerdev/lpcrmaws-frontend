@@ -380,7 +380,7 @@ export const LiveCallProvider = ({ children }) => {
         location: item.location || item.lead_location || '',
         interested_country: item.interested_country || item.lead_country || '',
         interested_course: item.interested_course || item.lead_course || '',
-        remarks: item.remarks || (item.notes ? `[Follow-up Notes]: ${item.notes}` : ''),
+        remarks: '',
         follow_up_date: item.follow_up_date || '',
         follow_up_time: item.follow_up_time || '',
       }
