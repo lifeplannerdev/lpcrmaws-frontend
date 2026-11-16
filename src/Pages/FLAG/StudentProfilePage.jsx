@@ -433,7 +433,7 @@ export default function StudentProfilePage() {
                       <span className="font-semibold text-gray-900">{student.batch_name || 'Unassigned'}</span>
                     </div>
                     <div className="flex justify-between pb-3 border-b border-gray-100">
-                      <span className="text-gray-500">Package</span>
+                      <span className="text-gray-500">Batch Scope</span>
                       <span className="font-semibold text-gray-900">{student.package_name || 'None'}</span>
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-gray-100 gap-2 pt-1">
