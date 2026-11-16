@@ -4,13 +4,15 @@ import 'react-data-grid/lib/styles.css';
 import { format, isToday, parseISO, isSameDay, subDays } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
 import { Can } from '../../context/PermissionsContext';
-import { Phone, PhoneCall } from 'lucide-react';
+import { Phone, PhoneCall, Eye } from 'lucide-react';
 import { useLiveCall } from '../../context/LiveCallContext';
 import RemarkModal from './RemarkModal';
 
 const STATUS_OPTIONS = [
   'ENQUIRY', 'JOB_ENQUIRY', 'B2B', 'COLD', 'WARM', 'HOT', 'CLOSED', 'CONVERTED'
 ];
+const PRIORITY_OPTIONS = ['HIGH', 'MEDIUM', 'LOW'];
+const TERMINAL_STATUSES = new Set(['CLOSED', 'CONVERTED', 'REGISTERED', 'LOST', 'NOT_INTERESTED', 'CNR']);
 
 function statusEditor({ row, onRowChange }) {
   return (
@@ -22,6 +24,21 @@ function statusEditor({ row, onRowChange }) {
     >
       {STATUS_OPTIONS.map(opt => (
         <option key={opt} value={opt}>{opt.replace('_', ' ')}</option>
+      ))}
+    </select>
+  );
+}
+
+function priorityEditor({ row, onRowChange }) {
+  return (
+    <select
+      autoFocus
+      className="w-full h-full border-none outline-none bg-white text-gray-900 px-2"
+      value={row.priority?.toUpperCase() || 'MEDIUM'}
+      onChange={(e) => onRowChange({ ...row, priority: e.target.value }, true)}
+    >
+      {PRIORITY_OPTIONS.map(opt => (
+        <option key={opt} value={opt}>{opt}</option>
       ))}
     </select>
   );
@@ -107,148 +124,306 @@ function NameEditor({ row, column, onRowChange, onClose }) {
   );
 }
 
-const columns = [
-  { key: 'call_action', name: 'Call', width: 75, renderCell: (p) => (
-    <div className="w-full h-full flex items-center justify-center gap-1.5 px-1">
-      {/* Quick Direct Call */}
-      <button 
-        className="text-emerald-600 hover:text-emerald-800 p-1 rounded-md hover:bg-emerald-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-        onClick={(e) => {
-          e.stopPropagation();
-          if (p.row.phone) {
-            window.dispatchEvent(new CustomEvent('initiateVoxbayCall', { detail: { phone: p.row.phone, lead: p.row } }));
-          }
-        }}
-        title="Direct Call (Voxbay)"
-        disabled={!p.row.phone}
-      >
-        <Phone size={13} />
-      </button>
+const buildColumns = ({
+  initiateCall,
+  openLiveCall,
+  onOpenRemark,
+  onOpenLeadPanel,
+  showLifecycleColumns = false,
+}) => {
+  const todayStr = new Date().toISOString().split('T')[0];
 
-      {/* Open Live Call Modal */}
-      <button 
-        className="text-indigo-600 hover:text-indigo-800 p-1 rounded-md hover:bg-indigo-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-        onClick={(e) => {
-          e.stopPropagation();
-          window.dispatchEvent(new CustomEvent('openLiveCallModal', { detail: p.row }));
-        }}
-        title="Open Live Call Modal (Dossier & Dialer)"
-        disabled={!p.row.phone && !p.row.id}
-      >
-        <PhoneCall size={13} />
-      </button>
-    </div>
-  )},
-  { key: 'agenda_type', name: 'Type', width: 100, renderCell: (p) => (
-    <span className={`font-semibold text-xs px-2 py-1 rounded ${p.row.agenda_type === 'Follow-up' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>
-      {p.row.agenda_type || 'Fresh'}
-    </span>
-  )},
-  { key: 'created_at', name: 'Date', width: 120, renderCell: (p) => p.row.created_at ? format(parseISO(p.row.created_at), 'dd/MM/yyyy') : '' },
-  { key: 'id', name: 'Serial Number', width: 80 },
-  { key: 'name', name: 'Name', width: 150, renderEditCell: NameEditor },
-  { key: 'phone', name: 'Phone Number', width: 150, renderEditCell: textEditor },
-  { key: 'email', name: 'Email Address', width: 200, renderEditCell: textEditor },
-  { key: 'interested_country', name: 'Interested Country', width: 150, renderEditCell: textEditor },
-  { key: 'interested_course', name: 'Interested Course', width: 200, renderEditCell: textEditor },
-  { key: 'previous_qualification', name: 'Previous Qual.', width: 150, renderEditCell: textEditor },
-  { key: 'work_experience', name: 'Work Experience', width: 150, renderEditCell: textEditor },
-  { key: 'location', name: 'Location', width: 150, renderEditCell: textEditor },
-  { key: 'budget', name: 'Budget', width: 120, renderEditCell: textEditor },
-  { 
-    key: 'remarks', 
-    name: 'Remarks', 
-    width: 350, 
-    renderCell: (p) => {
-      const remarks = p.row.remarks;
-      let lastRemark = '';
-      if (remarks) {
-        const parts = remarks.split('\n\n');
-        lastRemark = parts[parts.length - 1];
-      }
-      return (
-        <div className="w-full h-full flex items-center justify-between px-2 gap-2 hover:bg-gray-50 transition-colors">
-          <div 
-            title={remarks || ''} 
-            className="truncate text-gray-700 text-xs flex-1 cursor-pointer"
-            onClick={() => window.dispatchEvent(new CustomEvent('openRemarkModal', { detail: p.row }))}
-          >
-            {lastRemark || <span className="text-gray-400 italic">No remarks</span>}
-          </div>
-          <button 
+  const baseCols = [
+    {
+      key: 'call_action',
+      name: onOpenLeadPanel ? 'Actions' : 'Call',
+      width: onOpenLeadPanel ? 105 : 75,
+      renderCell: (p) => (
+        <div className="w-full h-full flex items-center justify-center gap-1 px-1">
+          {/* Quick Direct Call */}
+          <button
+            className="text-emerald-600 hover:text-emerald-800 p-1 rounded-md hover:bg-emerald-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             onClick={(e) => {
               e.stopPropagation();
-              window.dispatchEvent(new CustomEvent('openRemarkModal', { detail: p.row }));
+              if (p.row.phone) {
+                initiateCall(p.row.phone, p.row);
+              }
             }}
-            className="flex-shrink-0 text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 transition-colors whitespace-nowrap"
+            title="Direct Call (Voxbay)"
+            disabled={!p.row.phone}
           >
-            + Add
+            <Phone size={13} />
           </button>
+
+          {/* Open Live Call Modal */}
+          <button
+            className="text-indigo-600 hover:text-indigo-800 p-1 rounded-md hover:bg-indigo-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            onClick={(e) => {
+              e.stopPropagation();
+              openLiveCall(p.row);
+            }}
+            title="Open Live Call Modal (Dossier & Dialer)"
+            disabled={!p.row.phone && !p.row.id}
+          >
+            <PhoneCall size={13} />
+          </button>
+
+          {onOpenLeadPanel && (
+            <button
+              className="text-purple-600 hover:text-purple-800 p-1 rounded-md hover:bg-purple-50 transition-colors disabled:opacity-30"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenLeadPanel(p.row);
+              }}
+              title="Open Lead Follow-ups & Lifecycle Panel"
+              disabled={!p.row.id || String(p.row.id).startsWith('temp-')}
+            >
+              <Eye size={13} />
+            </button>
+          )}
         </div>
-      );
-    }
-  },
-  { 
-    key: 'current_handler', 
-    name: 'Handled By', 
-    width: 150,
-    renderCell: (p) => {
-      const h = p.row.current_handler;
-      return (
-        <span className="text-gray-700 text-xs">
-          {h ? (h.first_name ? `${h.first_name} ${h.last_name || ''}`.trim() : h.email) : 'Unassigned'}
-        </span>
-      );
-    }
-  },
-  { 
-    key: 'status', 
-    name: 'Status', 
-    width: 150, 
-    renderEditCell: statusEditor,
-    renderCell: (p) => (
-      <span className="font-semibold text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
-        {p.row.status?.toUpperCase().replace('_', ' ')}
-      </span>
-    )
-  },
-  { 
-    key: 'voxbay_status', 
-    name: 'Voxbay Status', 
-    width: 150, 
-    renderCell: (p) => {
-      if (!p.row.voxbay_status) return null;
-      const status = p.row.voxbay_status.toLowerCase();
-      let colorClass = 'bg-gray-100 text-gray-700';
-      if (status === 'answered') colorClass = 'bg-green-100 text-green-700';
-      else if (status === 'missed') colorClass = 'bg-red-100 text-red-700';
-      else if (status === 'outgoing') colorClass = 'bg-blue-100 text-blue-700';
-      return (
-        <span className={`font-semibold text-xs px-2 py-1 rounded ${colorClass}`}>
-          {p.row.voxbay_status}
-        </span>
-      );
-    }
-  },
-];
+      ),
+    },
+    ...(showLifecycleColumns
+      ? []
+      : [
+          {
+            key: 'agenda_type',
+            name: 'Type',
+            width: 100,
+            renderCell: (p) => (
+              <span
+                className={`font-semibold text-xs px-2 py-1 rounded ${
+                  p.row.agenda_type === 'Follow-up'
+                    ? 'bg-purple-100 text-purple-700'
+                    : 'bg-green-100 text-green-700'
+                }`}
+              >
+                {p.row.agenda_type || 'Fresh'}
+              </span>
+            ),
+          },
+        ]),
+    {
+      key: 'created_at',
+      name: 'Date',
+      width: 110,
+      renderCell: (p) =>
+        p.row.created_at ? format(parseISO(p.row.created_at), 'dd/MM/yyyy') : '',
+    },
+    { key: 'id', name: 'Serial Number', width: 85 },
+    { key: 'name', name: 'Name', width: 160, renderEditCell: NameEditor },
+    { key: 'phone', name: 'Phone Number', width: 145, renderEditCell: textEditor },
+    ...(showLifecycleColumns
+      ? [
+          {
+            key: 'status',
+            name: 'Status',
+            width: 135,
+            renderEditCell: statusEditor,
+            renderCell: (p) => (
+              <span className="font-semibold text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
+                {p.row.status?.toUpperCase().replace('_', ' ')}
+              </span>
+            ),
+          },
+          {
+            key: 'priority',
+            name: 'Priority',
+            width: 105,
+            renderEditCell: priorityEditor,
+            renderCell: (p) => {
+              const prio = (p.row.priority || 'MEDIUM').toUpperCase();
+              const cls =
+                prio === 'HIGH'
+                  ? 'bg-red-100 text-red-700'
+                  : prio === 'LOW'
+                  ? 'bg-gray-100 text-gray-600'
+                  : 'bg-amber-100 text-amber-700';
+              return <span className={`font-semibold text-xs px-2 py-0.5 rounded ${cls}`}>{prio}</span>;
+            },
+          },
+          {
+            key: 'next_follow_up_date',
+            name: 'Next Follow-up',
+            width: 130,
+            renderCell: (p) => {
+              const d = p.row.next_follow_up_date;
+              if (!d) return <span className="text-xs text-gray-400 italic">Not scheduled</span>;
+              const isTerminal = TERMINAL_STATUSES.has((p.row.status || '').toUpperCase());
+              const isOverdue = !isTerminal && d < todayStr;
+              return (
+                <span
+                  className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                    isOverdue ? 'bg-red-100 text-red-700' : 'bg-indigo-50 text-indigo-700'
+                  }`}
+                >
+                  {format(parseISO(d), 'dd/MM/yyyy')}
+                  {isOverdue ? ' (Overdue)' : ''}
+                </span>
+              );
+            },
+          },
+          {
+            key: 'last_follow_up_date',
+            name: 'Last Follow-up',
+            width: 120,
+            renderCell: (p) =>
+              p.row.last_follow_up_date ? (
+                <span className="text-xs text-gray-700">
+                  {format(parseISO(p.row.last_follow_up_date), 'dd/MM/yyyy')}
+                </span>
+              ) : (
+                <span className="text-xs text-gray-400">—</span>
+              ),
+          },
+        ]
+      : []),
+    { key: 'email', name: 'Email Address', width: 200, renderEditCell: textEditor },
+    { key: 'interested_country', name: 'Interested Country', width: 150, renderEditCell: textEditor },
+    { key: 'interested_course', name: 'Interested Course', width: 200, renderEditCell: textEditor },
+    { key: 'previous_qualification', name: 'Previous Qual.', width: 150, renderEditCell: textEditor },
+    { key: 'work_experience', name: 'Work Experience', width: 150, renderEditCell: textEditor },
+    { key: 'location', name: 'Location', width: 150, renderEditCell: textEditor },
+    { key: 'budget', name: 'Budget', width: 120, renderEditCell: textEditor },
+    {
+      key: 'remarks',
+      name: 'Remarks',
+      width: 350,
+      renderCell: (p) => {
+        const remarks = p.row.remarks;
+        let lastRemark = '';
+        if (remarks) {
+          const parts = remarks.split('\n\n');
+          lastRemark = parts[parts.length - 1];
+        }
+        return (
+          <div className="w-full h-full flex items-center justify-between px-2 gap-2 hover:bg-gray-50 transition-colors">
+            <div
+              title={remarks || ''}
+              className="truncate text-gray-700 text-xs flex-1 cursor-pointer"
+              onClick={() => onOpenRemark(p.row)}
+            >
+              {lastRemark || <span className="text-gray-400 italic">No remarks</span>}
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenRemark(p.row);
+              }}
+              className="flex-shrink-0 text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 transition-colors whitespace-nowrap"
+            >
+              + Add
+            </button>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'current_handler',
+      name: 'Handled By',
+      width: 150,
+      renderCell: (p) => {
+        const h = p.row.current_handler;
+        return (
+          <span className="text-gray-700 text-xs">
+            {h ? (h.first_name ? `${h.first_name} ${h.last_name || ''}`.trim() : h.email) : 'Unassigned'}
+          </span>
+        );
+      },
+    },
+    ...(showLifecycleColumns
+      ? [
+          {
+            key: 'is_reassigned_out',
+            name: 'Batch State',
+            width: 130,
+            renderCell: (p) =>
+              p.row.is_reassigned_out ? (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                  Reassigned Out
+                </span>
+              ) : (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">
+                  Active
+                </span>
+              ),
+          },
+        ]
+      : [
+          {
+            key: 'status',
+            name: 'Status',
+            width: 150,
+            renderEditCell: statusEditor,
+            renderCell: (p) => (
+              <span className="font-semibold text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
+                {p.row.status?.toUpperCase().replace('_', ' ')}
+              </span>
+            ),
+          },
+        ]),
+    {
+      key: 'voxbay_status',
+      name: 'Voxbay Status',
+      width: 150,
+      renderCell: (p) => {
+        if (!p.row.voxbay_status) return null;
+        const st = p.row.voxbay_status.toLowerCase();
+        let colorClass = 'bg-gray-100 text-gray-700';
+        if (st === 'answered') colorClass = 'bg-green-100 text-green-700';
+        else if (st === 'missed') colorClass = 'bg-red-100 text-red-700';
+        else if (st === 'outgoing') colorClass = 'bg-blue-100 text-blue-700';
+        return (
+          <span className={`font-semibold text-xs px-2 py-1 rounded ${colorClass}`}>
+            {p.row.voxbay_status}
+          </span>
+        );
+      },
+    },
+  ];
+
+  return baseCols;
+};
 
 import { useVoxbayCall } from '../../hooks/useVoxbayCall';
 
-export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isReportMode = false, onLeadsChange }) {
+export default function SpreadsheetView({
+  leads,
+  onUpdateLead,
+  authFetch,
+  isReportMode = false,
+  onLeadsChange,
+  showLifecycleColumns = false,
+  hideAddRow = false,
+  preserveOrder = false,
+  onOpenLeadPanel = null,
+}) {
   const { user } = useAuth();
   const [localLeads, setLocalLeads] = useState(() => {
     const incoming = [...(leads || [])];
-    incoming.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (!preserveOrder) {
+      incoming.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    }
     return incoming;
   });
   const [remarkModalLead, setRemarkModalLead] = useState(null);
   const { initiateCall } = useVoxbayCall();
   const { openLiveCall } = useLiveCall();
 
+  const columns = useMemo(
+    () =>
+      buildColumns({
+        initiateCall,
+        openLiveCall,
+        onOpenRemark: (lead) => setRemarkModalLead(lead),
+        onOpenLeadPanel,
+        showLifecycleColumns,
+      }),
+    [initiateCall, openLiveCall, onOpenLeadPanel, showLifecycleColumns]
+  );
+
   useEffect(() => {
-    const handleOpenModal = (e) => setRemarkModalLead(e.detail);
-    const handleCall = (e) => initiateCall(e.detail?.phone || e.detail, e.detail?.lead || null);
-    const handleOpenLiveCall = (e) => openLiveCall(e.detail);
     const handleLeadUpdated = (e) => {
       const updated = e.detail;
       if (updated?.id) {
@@ -271,21 +446,15 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
         if (onUpdateLead) onUpdateLead(created);
       }
     };
-    
-    window.addEventListener('openRemarkModal', handleOpenModal);
-    window.addEventListener('initiateVoxbayCall', handleCall);
-    window.addEventListener('openLiveCallModal', handleOpenLiveCall);
+
     window.addEventListener('leadUpdated', handleLeadUpdated);
     window.addEventListener('leadCreated', handleLeadCreated);
-    
+
     return () => {
-      window.removeEventListener('openRemarkModal', handleOpenModal);
-      window.removeEventListener('initiateVoxbayCall', handleCall);
-      window.removeEventListener('openLiveCallModal', handleOpenLiveCall);
       window.removeEventListener('leadUpdated', handleLeadUpdated);
       window.removeEventListener('leadCreated', handleLeadCreated);
     };
-  }, [initiateCall, openLiveCall, onUpdateLead, isReportMode, onLeadsChange]);
+  }, [onUpdateLead, isReportMode, onLeadsChange]);
 
   const handleRemarkSubmit = async (leadToUpdate, newRemarkText) => {
     const timestamp = format(new Date(), 'dd/MM/yyyy HH:mm');
@@ -326,14 +495,15 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
     setLocalLeads(prev => {
       const tempRows = prev.filter(l => String(l.id).startsWith('temp-'));
       const incoming = [...(leads || [])];
-      // Sort incoming leads newest first chronologically
-      incoming.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-      
+      if (!preserveOrder) {
+        incoming.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      }
+
       const incomingIds = new Set(incoming.map(l => l.id));
       const uniqueTempRows = tempRows.filter(l => !incomingIds.has(l.id));
       return [...uniqueTempRows, ...incoming];
     });
-  }, [leads]);
+  }, [leads, preserveOrder]);
   
   // Track updates to push to backend
   const handleRowsChange = async (newRows, { indexes, column }) => {
@@ -461,7 +631,7 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
                 <span className="text-lg leading-none">+</span> Add Row
               </button>
           </div>
-        ) : (
+        ) : !hideAddRow ? (
           <div className="flex items-center justify-end px-4 py-3 bg-white border-b border-gray-100">
             <Can perform="leads:create">
               <button onClick={handleAddRow} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition shadow-sm flex items-center gap-2">
@@ -469,12 +639,13 @@ export default function SpreadsheetView({ leads, onUpdateLead, authFetch, isRepo
               </button>
             </Can>
           </div>
-        )}
-        <div className="flex-1 w-full bg-white relative">
-          <DataGrid 
-            columns={columns} 
-            rows={localLeads} 
-            onRowsChange={handleRowsChange} 
+        ) : null}
+        <div className="flex-1 w-full bg-white relative min-h-[340px]">
+          <DataGrid
+            columns={columns}
+            rows={localLeads}
+            onRowsChange={handleRowsChange}
+            rowClass={(row) => (row.is_reassigned_out ? 'opacity-60 bg-amber-50/40' : undefined)}
             className="rdg-light absolute inset-0 h-full w-full border-none"
           />
         </div>
