@@ -34,7 +34,7 @@ vi.mock('react-data-grid', () => ({
       <thead>
         <tr>
           {columns.map((c) => (
-            <th key={c.key}>{c.name}</th>
+            <th key={c.key} data-frozen={c.frozen ? 'true' : 'false'}>{c.name}</th>
           ))}
         </tr>
       </thead>
@@ -180,6 +180,14 @@ describe('AssignedBatchesView', () => {
       expect(screen.getByText('Next Follow-up')).toBeInTheDocument();
       expect(screen.getByText('Last Follow-up')).toBeInTheDocument();
     });
+
+    // Verify columns up to Name are frozen and subsequent columns scroll
+    expect(screen.getByText('Actions').closest('th')).toHaveAttribute('data-frozen', 'true');
+    expect(screen.getByText('Date').closest('th')).toHaveAttribute('data-frozen', 'true');
+    expect(screen.getByText('Serial Number').closest('th')).toHaveAttribute('data-frozen', 'true');
+    expect(screen.getByText('Name').closest('th')).toHaveAttribute('data-frozen', 'true');
+    expect(screen.getByText('Phone Number').closest('th')).toHaveAttribute('data-frozen', 'false');
+    expect(screen.getByText('Next Follow-up').closest('th')).toHaveAttribute('data-frozen', 'false');
 
     // Verify Direct Call, Live Call Modal, and Side Panel buttons work
     fireEvent.click(screen.getByTitle('Direct Call (Voxbay)'));
