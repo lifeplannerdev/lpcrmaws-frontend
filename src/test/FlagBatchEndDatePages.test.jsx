@@ -111,6 +111,7 @@ describe('FLAG batch end_date display across 3 pages', () => {
       </MemoryRouter>
     );
     await waitFor(() => {
+      expect(screen.getByText('Batch Scope')).toBeInTheDocument();
       expect(screen.getByText('Batch End Date')).toBeInTheDocument();
       expect(
         screen.getByText(new Date('2026-12-15T00:00:00').toLocaleDateString())
