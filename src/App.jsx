@@ -39,6 +39,7 @@ import FeesManagementPage from "./Pages/FeesManagementPage.jsx";
 import RoleManagementPage from "./Pages/RoleManagementPage.jsx";
 import CredentialsVault from "./Pages/CredentialsVault.jsx";
 import ProcessingStudentsPage from "./Pages/ProcessingStudentsPage.jsx";
+import AssignedProgramsStudentsPage from "./Pages/AssignedProgramsStudentsPage.jsx";
 import MailControlCenter from './Pages/MailCenter/MailControlCenter.jsx';
 import MailSettingsPage from './Pages/MailCenter/MailSettingsPage.jsx';
 import { MailComposeProvider } from './context/MailComposeContext.jsx';
@@ -161,6 +162,7 @@ export default function App() {
 
         <Route path="/processing-students" element={<PermissionRoute resources={['processing_students']}><ProcessingStudentsPage /></PermissionRoute>} />
         <Route path="/processing-students/:id/mail" element={<PermissionRoute resources={['processing_students']}><StudentMailPage /></PermissionRoute>} />
+        <Route path="/assigned-program-students" element={<PermissionRoute permissions={['processing:prog_stud_manage', 'processing:prog_stud_assigned']}><AssignedProgramsStudentsPage /></PermissionRoute>} />
         <Route path="/mail-center" element={<PermissionRoute permissions={['mail:manage', 'mail:use']}><MailControlCenter /></PermissionRoute>} />
         <Route path="/mail-settings" element={<PermissionRoute permissions={['mail:manage', 'mail:use']}><MailSettingsPage /></PermissionRoute>} />
         <Route path="/gmail-callback" element={<ProtectedRoute><GmailCallbackPage /></ProtectedRoute>} />
