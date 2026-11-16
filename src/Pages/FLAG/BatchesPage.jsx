@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../../Components/layouts/Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { usePermissions } from '../../context/PermissionsContext';
-import { BookOpen, Search, Plus, Filter, Users, Loader2, Trash2 } from 'lucide-react';
+import { BookOpen, Search, Plus, Filter, Users, Loader2, Trash2, Calendar } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -182,6 +182,16 @@ export default function BatchesPage() {
                       <div className="flex items-center text-sm text-gray-600">
                         <BookOpen className="w-4 h-4 mr-2 text-gray-400" />
                         Trainer: {batch.trainer_name || 'Unassigned'}
+                      </div>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                        End Date: {batch.end_date
+                          ? new Date(`${batch.end_date}T00:00:00`).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })
+                          : 'Not set'}
                       </div>
                     </div>
                   </div>

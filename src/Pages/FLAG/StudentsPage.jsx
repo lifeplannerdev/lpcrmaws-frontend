@@ -164,6 +164,17 @@ export default function StudentsPage() {
                             {student.trainer_name && (
                               <span className="text-[11px] text-indigo-600 font-semibold mt-0.5">Trainer: {student.trainer_name}</span>
                             )}
+                            {student.batch_name && (
+                              <span className="text-[11px] text-amber-700 font-medium mt-0.5">
+                                Ends: {student.batch_end_date
+                                  ? new Date(`${student.batch_end_date}T00:00:00`).toLocaleDateString('en-IN', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })
+                                  : 'Not set'}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4">
