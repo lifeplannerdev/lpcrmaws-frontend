@@ -21,7 +21,8 @@ import {
   BarChart2,
   Building2,
   Layers,
-  Receipt
+  Receipt,
+  FileSpreadsheet
 } from "lucide-react";
 
 export const masterNavigation = [
@@ -38,6 +39,7 @@ export const masterNavigation = [
   { id: "registry", label: "Student Registry", icon: GraduationCap, path: "/registry", requiredPermissions: ["students:registry_manage"], category: "academics", description: "Master student database & records" },
   { id: "academicBatches", label: "Academic Batches", icon: GraduationCap, path: "/academic-batches", requiredPermissions: ["students:batch_manage"], category: "academics", description: "Batch scheduling & trainer allocations" },
   { id: "processingStudents", label: "Processing Students", icon: GraduationCap, path: "/processing-students", requiredResource: "processing_students", category: "academics", description: "Admissions & processing workflow" },
+  { id: "assignedProgramStudents", label: "Assigned Programs & Students", icon: FileSpreadsheet, path: "/assigned-program-students", requiredPermissions: ["processing:prog_stud_manage", "processing:prog_stud_assigned"], category: "academics", description: "Assigned programs & assigned students database tracker" },
   { id: "mailCenter", label: "Mail Center", icon: FileText, path: "/mail-center", requiredPermissions: ["mail:manage", "mail:use"], category: "academics", description: "Role-scoped mailboxes, inbox, sent & templates" },
   { id: "mailSettings", label: "Mail Settings", icon: Settings, path: "/mail-settings", requiredPermissions: ["mail:manage", "mail:use"], category: "admin", description: "Role mail pairing, webmail aliases & access matrix" },
   { id: "myStudents",        label: "My Students",        icon: GraduationCap, path: "/my-students",         requiredPermissions: ["attendance:mark"], category: "academics", description: "Trainer assigned students roster" },
