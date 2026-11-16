@@ -472,6 +472,14 @@ export default function StudentProfilePage() {
                       <span className="text-gray-500">Last Updated</span>
                       <span className="font-semibold text-gray-900">{student.updated_at ? new Date(student.updated_at).toLocaleDateString() : (student.joined_date ? new Date(student.joined_date).toLocaleDateString() : (student.created_at ? new Date(student.created_at).toLocaleDateString() : 'N/A'))}</span>
                     </div>
+                    <div className="flex justify-between pb-3 border-b border-gray-100">
+                      <span className="text-gray-500">Batch End Date</span>
+                      <span className="font-semibold text-gray-900">
+                        {student.batch_end_date
+                          ? new Date(`${student.batch_end_date}T00:00:00`).toLocaleDateString()
+                          : 'Not set'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
