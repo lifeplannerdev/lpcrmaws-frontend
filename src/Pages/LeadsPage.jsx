@@ -7,8 +7,9 @@ import LeadsFilters from '../Components/leads/LeadsFilters';
 import LeadsTable from '../Components/leads/LeadsTable';
 import LeadsKanbanBoard from '../Components/leads/LeadsKanbanBoard';
 import SpreadsheetView from '../Components/leads/SpreadsheetView';
+import AssignedBatchesView from '../Components/leads/AssignedBatchesView';
 import LeadSidePanel from '../Components/leads/LeadSidePanel';
-import { Users, UserPlus, CheckCircle, TrendingUp, LayoutList, LayoutGrid, FileSpreadsheet, Activity } from 'lucide-react';
+import { Users, UserPlus, CheckCircle, TrendingUp, LayoutList, LayoutGrid, FileSpreadsheet, Activity, Layers } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useLeadsChannel } from '../hooks/useLeadsChannel';
@@ -134,6 +135,7 @@ export default function LeadsPage() {
   // User-specific Channel Updates (Tasks, Assignments, Live Calls)
   useUserChannel({
     onLeadAssigned: (data) => {
+      setBatchesRefreshKey((k) => k + 1);
       if (data?.lead_id) {
         // Trigger page re-fetch or manual check
         fetchLeadsRef.current?.();
@@ -149,6 +151,8 @@ export default function LeadsPage() {
 
   const [leads, setLeads]                     = useState([]);
   const [selectedLeads, setSelectedLeads]     = useState([]);
+  const [batchesRefreshKey, setBatchesRefreshKey] = useState(0);
+  const [assignmentBatchCount, setAssignmentBatchCount] = useState(null);
   const [stats, setStats]                     = useState({ new: 0, qualified: 0, converted: 0 });
   const [searchTerm, setSearchTerm]           = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -469,6 +473,22 @@ export default function LeadsPage() {
               <FileSpreadsheet size={18} />
               Spreadsheet
             </button>
+            <button
+              onClick={() => setViewMode('assignments')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
+                viewMode === 'assignments'
+                  ? 'bg-indigo-50 text-indigo-700 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <Layers size={18} />
+              Assignments
+              {assignmentBatchCount !== null && assignmentBatchCount > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.5 text-[11px] font-bold rounded-full bg-indigo-100 text-indigo-700">
+                  {assignmentBatchCount}
+                </span>
+              )}
+            </button>
             {hasGlobalRead && (
               <button
                 onClick={() => setViewMode('admin_feed')}
@@ -506,29 +526,57 @@ export default function LeadsPage() {
           </Can>
         </div>
 
-        {/* Stats + filters always visible — no layout jump on load */}
-        <LeadsStatsCards stats={statsCards} />
+        {/* Stats + filters visible on standard lead views */}
+        {viewMode !== 'assignments' && (
+          <>
+            <LeadsStatsCards stats={statsCards} />
 
-        <LeadsFilters
-          searchTerm={searchTerm}
-          setSearchTerm={handleSearchChange}
-          filterStatus={filterStatus}
-          setFilterStatus={handleSetFilterStatus}
-          filterPriority={filterPriority}
-          setFilterPriority={handleSetFilterPriority}
-          filterSource={filterSource}
-          setFilterSource={handleSetFilterSource}
-          filterStaff={filterStaff}
-          setFilterStaff={handleSetFilterStaff}
-          staffMembers={staffMembers}
-          filterCampaign={filterCampaign}
-          setFilterCampaign={(v) => { setPage(1); setFilterCampaign(v); }}
-          filterToday={filterToday}
-          setFilterToday={(v) => { setPage(1); setFilterToday(v); }}
-        />
+            <LeadsFilters
+              searchTerm={searchTerm}
+              setSearchTerm={handleSearchChange}
+              filterStatus={filterStatus}
+              setFilterStatus={handleSetFilterStatus}
+              filterPriority={filterPriority}
+              setFilterPriority={handleSetFilterPriority}
+              filterSource={filterSource}
+              setFilterSource={handleSetFilterSource}
+              filterStaff={filterStaff}
+              setFilterStaff={handleSetFilterStaff}
+              staffMembers={staffMembers}
+              filterCampaign={filterCampaign}
+              setFilterCampaign={(v) => { setPage(1); setFilterCampaign(v); }}
+              filterToday={filterToday}
+              setFilterToday={(v) => { setPage(1); setFilterToday(v); }}
+            />
+          </>
+        )}
 
         {/* Skeleton on first load; stale table + subtle banner on filter changes */}
-        {initialLoad && loading ? (
+        {viewMode === 'assignments' ? (
+          <div className="flex relative">
+            <div className={`transition-all duration-300 ease-in-out ${leadId ? 'w-full lg:w-[calc(100%-400px)] lg:pr-6 hidden lg:block' : 'w-full'}`}>
+              <AssignedBatchesView
+                authFetch={authFetch}
+                companyFilter={companyFilter}
+                filterStaff={filterStaff}
+                staffMembers={staffMembers}
+                hasGlobalRead={hasGlobalRead}
+                refreshKey={batchesRefreshKey}
+                onBatchCountChange={setAssignmentBatchCount}
+                onOpenLeadPanel={(lead) => navigate(`/leads/${lead.id}`)}
+              />
+            </div>
+
+            {leadId && (
+              <>
+                <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => navigate('/leads')} />
+                <div className="fixed inset-y-0 right-0 z-50 w-[400px] max-w-[90vw] lg:static lg:w-[400px] lg:z-auto bg-white shadow-2xl lg:shadow-none transform transition-transform duration-300 ease-in-out translate-x-0 overflow-hidden rounded-l-2xl lg:rounded-2xl border border-gray-200">
+                  <LeadSidePanel leadId={leadId} authFetch={authFetch} onClose={() => navigate('/leads')} />
+                </div>
+              </>
+            )}
+          </div>
+        ) : initialLoad && loading ? (
           <TableSkeleton />
         ) : (
           <div className="flex relative">
