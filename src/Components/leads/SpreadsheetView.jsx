@@ -138,6 +138,7 @@ const buildColumns = ({
       key: 'call_action',
       name: onOpenLeadPanel ? 'Actions' : 'Call',
       width: onOpenLeadPanel ? 105 : 75,
+      frozen: true,
       renderCell: (p) => (
         <div className="w-full h-full flex items-center justify-center gap-1 px-1">
           {/* Quick Direct Call */}
@@ -191,6 +192,7 @@ const buildColumns = ({
             key: 'agenda_type',
             name: 'Type',
             width: 100,
+            frozen: true,
             renderCell: (p) => (
               <span
                 className={`font-semibold text-xs px-2 py-1 rounded ${
@@ -208,11 +210,12 @@ const buildColumns = ({
       key: 'created_at',
       name: 'Date',
       width: 110,
+      frozen: true,
       renderCell: (p) =>
         p.row.created_at ? format(parseISO(p.row.created_at), 'dd/MM/yyyy') : '',
     },
-    { key: 'id', name: 'Serial Number', width: 85 },
-    { key: 'name', name: 'Name', width: 160, renderEditCell: NameEditor },
+    { key: 'id', name: 'Serial Number', width: 85, frozen: true },
+    { key: 'name', name: 'Name', width: 160, frozen: true, renderEditCell: NameEditor },
     { key: 'phone', name: 'Phone Number', width: 145, renderEditCell: textEditor },
     ...(showLifecycleColumns
       ? [
@@ -645,7 +648,7 @@ export default function SpreadsheetView({
             columns={columns}
             rows={localLeads}
             onRowsChange={handleRowsChange}
-            rowClass={(row) => (row.is_reassigned_out ? 'opacity-60 bg-amber-50/40' : undefined)}
+            rowClass={(row) => (row.is_reassigned_out ? 'opacity-75 bg-amber-50' : undefined)}
             className="rdg-light absolute inset-0 h-full w-full border-none"
           />
         </div>
