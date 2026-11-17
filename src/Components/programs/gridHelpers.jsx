@@ -2,10 +2,11 @@ import React from 'react';
 import { History, Trash2 } from 'lucide-react';
 
 export const getStaffDisplayName = (staff) =>
-  staff.full_name ||
-  `${staff.first_name || ''} ${staff.last_name || ''}`.trim() ||
-  staff.username ||
-  `Staff #${staff.id}`;
+  staff?.name ||
+  staff?.full_name ||
+  `${staff?.first_name || ''} ${staff?.last_name || ''}`.trim() ||
+  staff?.username ||
+  `Staff #${staff?.id ?? ''}`;
 
 export const parseOptionalInt = (val) => {
   if (val === '' || val === null || val === undefined) return null;
