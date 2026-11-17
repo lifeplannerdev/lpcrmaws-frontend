@@ -128,8 +128,8 @@ const SAMPLE_STUDENTS = [
 ];
 
 const SAMPLE_STAFF = [
-  { id: 20, full_name: 'Navya Doc', username: 'navya' },
-  { id: 21, full_name: 'Akhil Ops', username: 'akhil' },
+  { id: 20, name: 'Navya Doc', role: 'DOCUMENTATION' },
+  { id: 21, name: 'Akhil Ops', role: 'OPERATION' },
 ];
 
 describe('AssignedProgramsStudentsPage & tracker workflow', () => {
@@ -202,11 +202,24 @@ describe('AssignedProgramsStudentsPage & tracker workflow', () => {
     expect(progHeaders.find((th) => th.dataset.key === 'project').dataset.frozen).toBe('true');
     expect(progHeaders.find((th) => th.dataset.key === 'country').dataset.frozen).toBe('false');
 
-    // Manager sees DOCUMENTATION,OPERATION staff fetch and management buttons
+    // Manager sees DOCUMENTATION,OPERATION staff fetch, real employee names, and management buttons
     expect(axios.get).toHaveBeenCalledWith(
       expect.stringContaining('/employees/?roles=DOCUMENTATION,OPERATION'),
       expect.any(Object)
     );
+    const filterSelect = screen.getByLabelText(/Filter by assigned staff/i);
+    expect(Array.from(filterSelect.options).map((o) => o.textContent)).toEqual([
+      'All Staff',
+      'Unassigned',
+      'Navya Doc',
+      'Akhil Ops',
+    ]);
+    const rowAssigneeSelect = screen.getByLabelText(/Assign staff for row/i);
+    expect(Array.from(rowAssigneeSelect.options).map((o) => o.textContent)).toEqual([
+      'Unassigned',
+      'Navya Doc',
+      'Akhil Ops',
+    ]);
     expect(screen.getByRole('button', { name: /Add Row/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Import Excel/i })).toBeInTheDocument();
 

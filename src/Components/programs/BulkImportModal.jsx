@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import axios from 'axios';
 import { X, Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getStaffDisplayName } from './gridHelpers';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -79,12 +80,6 @@ export const mapImportedRows = (rawRows, mode) => {
 
   return mapped;
 };
-
-const getStaffLabel = (staff) =>
-  staff.full_name ||
-  `${staff.first_name || ''} ${staff.last_name || ''}`.trim() ||
-  staff.username ||
-  `Staff #${staff.id}`;
 
 const BulkImportModal = ({
   isOpen,
@@ -232,7 +227,7 @@ const BulkImportModal = ({
               <option value="">Unassigned</option>
               {staffList.map((staff) => (
                 <option key={staff.id} value={staff.id}>
-                  {getStaffLabel(staff)}
+                  {getStaffDisplayName(staff)}
                 </option>
               ))}
             </select>
