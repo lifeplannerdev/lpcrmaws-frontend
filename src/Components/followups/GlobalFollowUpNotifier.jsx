@@ -63,6 +63,32 @@ function playFollowUpChime() {
   }
 }
 
+export function hasFollowUpsDueWithinTwoDays(data, now = new Date()) {
+  if (!data) return false;
+
+  const overdueCount = data.counts?.overdue ?? data.overdue?.length ?? 0;
+  const todayCount = data.counts?.today ?? data.today?.length ?? 0;
+  const tomorrowCount = data.counts?.tomorrow ?? data.tomorrow?.length ?? 0;
+
+  if (overdueCount > 0 || todayCount > 0 || tomorrowCount > 0) {
+    return true;
+  }
+
+  const upcomingList = data.upcoming || [];
+  if (upcomingList.length === 0) return false;
+
+  const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+  const yyyy = cutoff.getFullYear();
+  const mm = String(cutoff.getMonth() + 1).padStart(2, '0');
+  const dd = String(cutoff.getDate()).padStart(2, '0');
+  const cutoffStr = `${yyyy}-${mm}-${dd}`;
+
+  return upcomingList.some((item) => {
+    if (!item?.follow_up_date) return false;
+    return String(item.follow_up_date).slice(0, 10) <= cutoffStr;
+  });
+}
+
 export default function GlobalFollowUpNotifier() {
   const { accessToken, isAuthenticated, user } = useAuth();
   const { hasPermission, hasAnyPermission } = usePermissions();
@@ -198,7 +224,6 @@ export default function GlobalFollowUpNotifier() {
         const data = await res.json();
         setAlertsData(data);
 
-        const totalActive = data.counts?.total_active || 0;
         const overdueCount = data.counts?.overdue || 0;
         const todayCount = data.counts?.today || 0;
 
@@ -209,8 +234,8 @@ export default function GlobalFollowUpNotifier() {
           (currentSession && dismissedSession === currentSession) ||
           (!currentSession && sessionStorage.getItem('dismissed_followup_modal'));
 
-        // Open Big Modal on login if not dismissed and active items exist
-        if (!isDismissedForSession && totalActive > 0 && !isSnoozed) {
+        // Open Big Modal on login if not dismissed and follow-ups are due within 2 days
+        if (!isDismissedForSession && hasFollowUpsDueWithinTwoDays(data) && !isSnoozed) {
           setIsBigModalOpen(true);
         }
 
