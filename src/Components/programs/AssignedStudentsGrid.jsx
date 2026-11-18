@@ -10,7 +10,6 @@ import {
 } from './gridHelpers';
 
 const STUDENT_EDITABLE_KEYS = [
-  'sl_no',
   'name',
   'age',
   'phone',
@@ -25,7 +24,6 @@ const STUDENT_EDITABLE_KEYS = [
   'german_status',
   'source',
 ];
-const STUDENT_INT_KEYS = new Set(['sl_no']);
 
 const SOURCE_OPTIONS = [
   { value: 'whatsapp', label: 'WhatsApp' },
@@ -56,7 +54,6 @@ const AssignedStudentsGrid = ({
         width: 75,
         frozen: true,
         resizable: true,
-        renderEditCell: renderTextEditor,
       },
       {
         key: 'name',
@@ -206,7 +203,6 @@ const AssignedStudentsGrid = ({
               prevRows: rows,
               indexes,
               editableKeys: STUDENT_EDITABLE_KEYS,
-              intKeys: STUDENT_INT_KEYS,
               onUpdateRow,
             })
           }

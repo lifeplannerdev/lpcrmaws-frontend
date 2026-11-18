@@ -386,4 +386,23 @@ describe('AssignedProgramsStudentsPage & tracker workflow', () => {
       );
     });
   });
+
+  it('keeps SL NO / SL.NO. non-editable in both Assigned Programs and Assigned Students Database grids', async () => {
+    render(<AssignedProgramsStudentsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('AUSBILDUNG')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByLabelText('SL.NO.-11')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('PROJECT-11')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Assigned Students Database/i }));
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Joshua Shaji')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByLabelText('SL NO-21')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('NAME-21')).toBeInTheDocument();
+  });
 });

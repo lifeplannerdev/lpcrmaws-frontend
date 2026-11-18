@@ -10,7 +10,6 @@ import {
 } from './gridHelpers';
 
 const PROGRAM_EDITABLE_KEYS = [
-  'sl_no',
   'project',
   'country',
   'assignment',
@@ -18,7 +17,6 @@ const PROGRAM_EDITABLE_KEYS = [
   'presentation',
   'training_to_team',
 ];
-const PROGRAM_INT_KEYS = new Set(['sl_no']);
 
 const AssignedProgramsGrid = ({
   rows,
@@ -39,7 +37,6 @@ const AssignedProgramsGrid = ({
         width: 85,
         frozen: true,
         resizable: true,
-        renderEditCell: renderTextEditor,
       },
       {
         key: 'project',
@@ -114,7 +111,6 @@ const AssignedProgramsGrid = ({
               prevRows: rows,
               indexes,
               editableKeys: PROGRAM_EDITABLE_KEYS,
-              intKeys: PROGRAM_INT_KEYS,
               onUpdateRow,
             })
           }
