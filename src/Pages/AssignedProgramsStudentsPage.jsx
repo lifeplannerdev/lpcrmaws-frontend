@@ -203,11 +203,12 @@ const AssignedProgramsStudentsPage = () => {
           return next;
         });
         toast.success('Row deleted');
+        fetchRows();
       } catch (err) {
         toast.error(err.response?.data?.detail || 'Failed to delete row');
       }
     },
-    [endpointPrefix, accessToken]
+    [endpointPrefix, accessToken, fetchRows]
   );
 
   const handleBulkAssign = async () => {
@@ -320,7 +321,6 @@ const AssignedProgramsStudentsPage = () => {
   const addModalFields = useMemo(() => {
     if (activeTab === TABS.PROGRAMS) {
       return [
-        { key: 'sl_no', label: 'SL.NO.', type: 'number' },
         { key: 'project', label: 'PROJECT', required: true },
         { key: 'country', label: 'COUNTRY' },
         { key: 'assignment', label: 'ASSIGNMENT' },
@@ -330,7 +330,6 @@ const AssignedProgramsStudentsPage = () => {
       ];
     }
     return [
-      { key: 'sl_no', label: 'SL NO', type: 'number' },
       { key: 'name', label: 'NAME', required: true },
       { key: 'age', label: 'AGE', type: 'number' },
       { key: 'phone', label: 'PHONE' },
