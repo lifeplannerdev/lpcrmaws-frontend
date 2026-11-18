@@ -23,8 +23,18 @@ const STUDENT_EDITABLE_KEYS = [
   'aps_status',
   'ielts_status',
   'german_status',
+  'source',
 ];
-const STUDENT_INT_KEYS = new Set(['sl_no', 'age']);
+const STUDENT_INT_KEYS = new Set(['sl_no']);
+
+const SOURCE_OPTIONS = [
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'insta', label: 'Insta' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'chatgpt', label: 'ChatGPT' },
+  { value: 'voxbay', label: 'Voxbay' },
+  { value: 'walkin', label: 'Walk-in' },
+];
 
 const AssignedStudentsGrid = ({
   rows,
@@ -136,6 +146,35 @@ const AssignedStudentsGrid = ({
         width: 150,
         resizable: true,
         renderEditCell: renderTextEditor,
+      },
+      {
+        key: 'source',
+        name: 'SOURCE',
+        width: 140,
+        resizable: true,
+        renderCell: ({ row }) => {
+          const currentVal = row.source || '';
+          const matched = SOURCE_OPTIONS.find((opt) => opt.value === currentVal);
+          if (!canManage) {
+            return <span className="text-xs text-slate-700">{matched ? matched.label : currentVal}</span>;
+          }
+          return (
+            <select
+              aria-label={`Source for ${row.name || row.id}`}
+              value={currentVal}
+              onChange={(e) => onUpdateRow(row.id, { source: e.target.value })}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full rounded border border-slate-200 bg-white px-1.5 py-1 text-xs text-slate-700 focus:border-indigo-500 focus:outline-none"
+            >
+              <option value="">—</option>
+              {SOURCE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          );
+        },
       },
     ];
 

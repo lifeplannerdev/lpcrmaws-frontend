@@ -246,6 +246,7 @@ describe('AssignedProgramsStudentsPage & tracker workflow', () => {
       'APS STATUS',
       'IELTS STATUS',
       'GERMAN STATUS',
+      'SOURCE',
       'ASSIGNED TO',
       'TIMELINE',
       'DELETE',
@@ -352,6 +353,37 @@ describe('AssignedProgramsStudentsPage & tracker workflow', () => {
       completed: 'DONE',
       presentation: '-',
       training_to_team: 'Done by Navya',
+    });
+  });
+
+  it('creates assigned student record with empty string age (not null) and source options', async () => {
+    render(<AssignedProgramsStudentsPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Assigned Students Database/i }));
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Joshua Shaji')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Add Row/i }));
+
+    const sourceSelect = screen.getByLabelText('SOURCE');
+    const optionValues = Array.from(sourceSelect.querySelectorAll('option')).map((o) => o.value);
+    expect(optionValues).toEqual(['', 'whatsapp', 'insta', 'facebook', 'chatgpt', 'voxbay', 'walkin']);
+
+    fireEvent.change(screen.getByLabelText('NAME'), { target: { value: 'Akash' } });
+    fireEvent.change(sourceSelect, { target: { value: 'whatsapp' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save Row/i }));
+
+    await waitFor(() => {
+      expect(axios.post).toHaveBeenCalledWith(
+        expect.stringContaining('/assigned-students-db/'),
+        expect.objectContaining({
+          name: 'Akash',
+          age: '',
+          source: 'whatsapp',
+        }),
+        expect.any(Object)
+      );
     });
   });
 });

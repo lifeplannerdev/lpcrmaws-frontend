@@ -42,6 +42,7 @@ const STUDENTS_HEADER_MAP = {
   APS_STATUS: 'aps_status',
   IELTS_STATUS: 'ielts_status',
   GERMAN_STATUS: 'german_status',
+  SOURCE: 'source',
 };
 
 const parseIntOrNull = (val) => {

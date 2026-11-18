@@ -45,6 +45,15 @@ const INITIAL_PROGRAM_FORM = {
   assigned_to: '',
 };
 
+const SOURCE_OPTIONS = [
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'insta', label: 'Insta' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'chatgpt', label: 'ChatGPT' },
+  { value: 'voxbay', label: 'Voxbay' },
+  { value: 'walkin', label: 'Walk-in' },
+];
+
 const INITIAL_STUDENT_FORM = {
   sl_no: '',
   name: '',
@@ -59,6 +68,7 @@ const INITIAL_STUDENT_FORM = {
   aps_status: '',
   ielts_status: '',
   german_status: '',
+  source: '',
   assigned_to: '',
 };
 
@@ -232,7 +242,7 @@ const AssignedProgramsStudentsPage = () => {
       const payload = { ...addForm };
       payload.sl_no = parseOptionalInt(payload.sl_no);
       if (activeTab === TABS.STUDENTS) {
-        payload.age = parseOptionalInt(payload.age);
+        payload.age = String(payload.age ?? '').trim();
       }
       payload.assigned_to = payload.assigned_to ? Number(payload.assigned_to) : null;
 
@@ -243,7 +253,16 @@ const AssignedProgramsStudentsPage = () => {
       setShowAddModal(false);
       fetchRows();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to create row');
+      const data = err.response?.data;
+      let errMsg = data?.detail || 'Failed to create row';
+      if (!data?.detail && data && typeof data === 'object') {
+        const firstEntry = Object.entries(data)[0];
+        if (firstEntry) {
+          const [field, msgs] = firstEntry;
+          errMsg = `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`;
+        }
+      }
+      toast.error(errMsg);
     } finally {
       setCreating(false);
     }
@@ -279,6 +298,7 @@ const AssignedProgramsStudentsPage = () => {
         'APS STATUS': r.aps_status ?? '',
         'IELTS STATUS': r.ielts_status ?? '',
         'GERMAN STATUS': r.german_status ?? '',
+        SOURCE: r.source ?? '',
       };
       if (canManage) base['ASSIGNED TO'] = r.assigned_to_name || '';
       return base;
@@ -323,6 +343,7 @@ const AssignedProgramsStudentsPage = () => {
       { key: 'aps_status', label: 'APS STATUS' },
       { key: 'ielts_status', label: 'IELTS STATUS' },
       { key: 'german_status', label: 'GERMAN STATUS' },
+      { key: 'source', label: 'SOURCE', type: 'select', options: SOURCE_OPTIONS },
     ];
   }, [activeTab]);
 
@@ -538,14 +559,31 @@ const AssignedProgramsStudentsPage = () => {
                     <label htmlFor={`add-${field.key}`} className="block text-[11px] font-semibold uppercase tracking-wide text-slate-600 mb-1">
                       {field.label}
                     </label>
-                    <input
-                      id={`add-${field.key}`}
-                      type={field.type || 'text'}
-                      required={Boolean(field.required)}
-                      value={addForm[field.key] ?? ''}
-                      onChange={(e) => setAddForm((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none"
-                    />
+                    {field.type === 'select' ? (
+                      <select
+                        id={`add-${field.key}`}
+                        required={Boolean(field.required)}
+                        value={addForm[field.key] ?? ''}
+                        onChange={(e) => setAddForm((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none"
+                      >
+                        <option value="">Select {field.label}</option>
+                        {(field.options || []).map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        id={`add-${field.key}`}
+                        type={field.type || 'text'}
+                        required={Boolean(field.required)}
+                        value={addForm[field.key] ?? ''}
+                        onChange={(e) => setAddForm((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none"
+                      />
+                    )}
                   </div>
                 ))}
                 <div>
